@@ -1,40 +1,40 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-
-import LoginPage from "./components/pages/LoginPage/LoginPage.jsx";
-import RegisterPage from "./components/pages/RegisterPage/RegisterGoogle.jsx";
-import CompleteProfile from "./components/pages/RegisterPage/CompleteProfile.jsx";
-import OTPVerification from "./components/pages/RegisterPage/OTPVerification.jsx";
 import DashboardLayout from "./components/layout/Dashboard/Dashboard.jsx";
-import ForgotPassword from "./components/pages/LoginPage/ForgotPassword.jsx";
-import ResetPassword from "./components/pages/LoginPage/ResetPassword.jsx";
-import ProtectedRoute from "./components/common/ProtectedRoute/ProtectedRoute.jsx";
-import ChatBot from "./components/pages/AIchatbot/ChatBot.jsx";
+import HomePage from "./components/pages/HomePage/HomePage.jsx";
+import MyLibraryPage from "./components/pages/MyLibraryPage/MyLibraryPage.jsx";
+import CreateLibraryPage from "./components/pages/CreateLibraryPage/CreateLibraryPage.jsx";
+import CreateWorkSpacePage from "./components/pages/CreateWorkSpacePage/CreateWorkSpacePage.jsx";
+import MyWorkSpace from "./components/pages/MyWorkSpace/MyWorkSpace.jsx";
+import WorkSpacePage from "./components/pages/WorkSpacePage/WorkSpacePage.jsx";
+import LibraryPage from "./components/pages/LibraryPage/LibraryPage.jsx";
+import PersonalProfilePage from "./components/pages/PersonalProfilePage/PersonalProfilePage.jsx";
 
 function App() {
   return (
     <BrowserRouter>
-      <div className="app-container">
-        <Routes>
-          <Route path="/" element={<Navigate to="/login" replace />} />
+      <Routes>
+        <Route path="/" element={<Navigate to="/dashboard/home" replace />} />
 
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/register" element={<RegisterPage />} />
-          <Route path="/verify-otp" element={<OTPVerification />} />
-          <Route path="/complete-profile" element={<CompleteProfile />} />
-          <Route path="/forgot-password" element={<ForgotPassword />} />
-          <Route path="/reset-password-otp" element={<ResetPassword />} />
+        <Route path="/dashboard" element={<DashboardLayout />}>
+          <Route index element={<Navigate to="/dashboard/home" replace />} />
 
-          <Route path="/study-hub-chatbot" element={<ChatBot />} />
-          <Route
-            path="/dashboard"
-            element={
-              <ProtectedRoute>
-                <DashboardLayout />
-              </ProtectedRoute>
-            }
-          />
-        </Routes>
-      </div>
+          <Route path="home" element={<HomePage />} />
+
+          <Route path="libraries" element={<MyLibraryPage />} />
+          <Route path="libraries/:libraryId" element={<LibraryPage />} />
+          <Route path="create-library" element={<CreateLibraryPage />} />
+
+          <Route path="workspaces" element={<MyWorkSpace />} />
+          <Route path="workspaces/:workspaceId" element={<WorkSpacePage />} />
+          <Route path="create-workspace" element={<CreateWorkSpacePage />} />
+
+          <Route path="profile" element={<PersonalProfilePage />} />
+
+          <Route path="uploads" element={<div>Uploads page</div>} />
+          <Route path="subjects" element={<div>Subjects page</div>} />
+          <Route path="settings" element={<div>Settings page</div>} />
+        </Route>
+      </Routes>
     </BrowserRouter>
   );
 }
