@@ -125,6 +125,80 @@
   font-size: 13px;
 }
 
+.create_library_actions {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.return_library_btn,
+.create_library_btn {
+  padding: 12px 22px;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.return_library_btn {
+  background: #fffaf0;
+  color: #3b2618;
+  border: 1px solid #e2d3bc;
+}
+
+.return_library_btn:hover {
+  background: #ead7bd;
+}
+
+.create_library_btn {
+  border: none;
+  background: #b4531a;
+  color: #ffffff;
+  box-shadow: 0 8px 18px rgba(180, 83, 26, 0.22);
+}
+
+.create_library_btn:hover {
+  background: #923f12;
+}
+
+@media (max-width: 760px) {
+  .create_library_page {
+    padding: 28px 16px;
+  }
+
+  .library_name_row {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .create_library_actions {
+    flex-direction: column-reverse;
+  }
+
+  .return_library_btn,
+  .create_library_btn {
+    width: 100%;
+  }
+}
+
+.return_library_btn {
+  border: 1px solid #e2d3bc;
+  background: #fffaf0;
+  color: #3b2618;
+  padding: 12px 22px;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.return_library_btn:hover {
+  background: #ead7bd;
+}
+
+
+/* Visibility */
+
 .visibility_options {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -137,6 +211,7 @@
   background: #ffffff;
   padding: 18px;
   display: flex;
+  align-items: flex-start;
   gap: 12px;
   cursor: pointer;
   transition: 0.2s ease;
@@ -164,53 +239,14 @@
 
 .visibility_card p {
   margin: 0;
-  font-size: 14px;
   color: #735f4c;
+  font-size: 14px;
   line-height: 1.45;
 }
 
-.create_library_actions {
-  display: flex;
-  justify-content: flex-end;
-}
-
-.create_library_btn {
-  border: none;
-  background: #b4531a;
-  color: #ffffff;
-  padding: 12px 22px;
-  border-radius: 8px;
-  font-size: 15px;
-  font-weight: 700;
-  cursor: pointer;
-  box-shadow: 0 8px 18px rgba(180, 83, 26, 0.22);
-}
-
-.create_library_btn:hover {
-  background: #923f12;
-}
-
-/* Responsive */
 
 @media (max-width: 760px) {
-  .create_library_page {
-    padding: 28px 16px;
-  }
-
-  .library_name_row {
-    grid-template-columns: 1fr;
-    gap: 12px;
-  }
-
   .visibility_options {
     grid-template-columns: 1fr;
-  }
-
-  .create_library_actions {
-    justify-content: stretch;
-  }
-
-  .create_library_btn {
-    width: 100%;
   }
 }
