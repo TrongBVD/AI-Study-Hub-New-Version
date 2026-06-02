@@ -1,10 +1,20 @@
 import { useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import "./CreateLibraryPage.css";
 
 function CreateLibraryPage() {
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const returnPath = location.state?.from || "/dashboard/home";
+
   const [libraryName, setLibraryName] = useState("");
   const [description, setDescription] = useState("");
   const [visibility, setVisibility] = useState("public");
+
+  function handleReturn() {
+    navigate(returnPath);
+  }
 
   function handleCreateLibrary(e) {
     e.preventDefault();
@@ -15,14 +25,35 @@ function CreateLibraryPage() {
     }
 
     const newLibrary = {
+      id: `library-${Date.now()}`,
       owner: "dangkhoabi456",
-      libraryName,
-      description,
+      name: libraryName.trim(),
+      description:
+        description.trim() ||
+        "This library helps students manage learning resources, upload documents, and use AI to summarize or ask questions from files.",
       visibility,
+      documents: 0,
+      updatedAt: "Updated just now",
+      icon: "ti-archive",
+      highlight: false,
+      createdAt: new Date().toISOString(),
     };
 
-    console.log("New library:", newLibrary);
-    alert("Library created successfully!");
+    const savedLibraries = JSON.parse(
+      localStorage.getItem("aiStudyHubLibraries") || "[]"
+    );
+
+    localStorage.setItem(
+      "aiStudyHubLibraries",
+      JSON.stringify([newLibrary, ...savedLibraries])
+    );
+
+    navigate(`/dashboard/libraries/${newLibrary.id}`, {
+      state: {
+        library: newLibrary,
+        from: "/dashboard/create-library",
+      },
+    });
   }
 
   return (
@@ -88,7 +119,7 @@ function CreateLibraryPage() {
           </div>
 
           <div className="form_section">
-            <h2>Visibility</h2>
+            <h2>Privacy & Visibility</h2>
 
             <div className="visibility_options">
               <label
@@ -106,7 +137,10 @@ function CreateLibraryPage() {
 
                 <div>
                   <h3>Public</h3>
-                  <p>Anyone can see this library.</p>
+                  <p>
+                    Visible to all members and searchable within the University
+                    Hub.
+                  </p>
                 </div>
               </label>
 
@@ -125,13 +159,24 @@ function CreateLibraryPage() {
 
                 <div>
                   <h3>Private</h3>
-                  <p>You choose who can see this library.</p>
+                  <p>
+                    Only visible to you and invited collaborators. Hidden from
+                    search.
+                  </p>
                 </div>
               </label>
             </div>
           </div>
 
           <div className="create_library_actions">
+            <button
+              type="button"
+              className="return_library_btn"
+              onClick={handleReturn}
+            >
+              Return
+            </button>
+
             <button type="submit" className="create_library_btn">
               Create library
             </button>
