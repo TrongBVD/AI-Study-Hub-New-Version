@@ -4,7 +4,7 @@ function authMiddleware(req, res, next) {
   try {
     const authHeader = req.headers.authorization;
 
-    if (!authHeader || !authHeader.startsWith("Beaerer")) {
+    if (!authHeader || !authHeader.startsWith("Bearer")) {
       return res.status(401).json({
         status: "error",
         message: "Missing or invalid Authorization header",
@@ -16,7 +16,7 @@ function authMiddleware(req, res, next) {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
     const userID =
-      decoded.userID || decoded.id || decoded.user_id || decoded.sub;
+      decoded.userId || decoded.id || decoded.user_id || decoded.sub;
 
     if (!userID) {
       return res.status(401).json({

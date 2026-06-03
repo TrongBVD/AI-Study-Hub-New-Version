@@ -3,7 +3,7 @@ const path = require("path");
 const supabase = require("../config/supabase");
 
 
-const BUCKER = process.env.SUPABASE_DOCUMENT_BUCKET || "documents";
+const BUCKET = process.env.SUPABASE_DOCUMENT_BUCKET || "documents";
 
 function sanitizeFileName(fileName) {
     const baseName = path.basename(fileName || "upload.bin");
@@ -52,7 +52,7 @@ exports.uploadDocuments = async (req, res) => {
         const userID = req.user.id;
         const files = req.files || [];
 
-        if (files.lenght === 0) {
+        if (files.length === 0) {
             return res.status(400).json({
                 status: "error",
                 message: "Vui lòng chọn ít nhất một tệp để upload.",
@@ -63,7 +63,7 @@ exports.uploadDocuments = async (req, res) => {
 
         for (const file of files) {
             const safeFileName = sanitizeFileName(file.originalname);
-            const storagePath = `${userId}/${Date.now()}-${crypto.randomUUID()}-${safeFileName}`;
+            const storagePath = `${userID}/${Date.now()}-${crypto.randomUUID()}-${safeFileName}`;
 
             const { error: uploadError } = await supabase.storage
                 .from(BUCKET)
@@ -94,7 +94,7 @@ exports.uploadDocuments = async (req, res) => {
         }
 
 
-        uploaderDocuments.push(document); 
+        uploadedDocuments.push(document); 
     }
 
     return res.status(201).json({
@@ -118,7 +118,7 @@ exports.downloadDocument = async (req, res) => {
         const userID = req.user.id;
         const { documentId } = req.params;
 
-        const {data: document, eorror: documentError} = await supabase
+        const {data: document, error: documentError} = await supabase
             .from("documents")
             .select("*")
             .eq("id", documentId)
@@ -138,7 +138,7 @@ exports.downloadDocument = async (req, res) => {
 
         const isOwner = String(document.uploader_id) === String(userID);
 
-        if (!isOwner && !document.is_public !== true){
+        if (!isOwner && document.is_public !== true){
             return res.status(403).json({
                 status: "error",
                 message: "Bạn không có quyền truy cập tài liệu này.",
