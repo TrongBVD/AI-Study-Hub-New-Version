@@ -18,6 +18,8 @@ import LibraryPage from "./components/pages/LibraryPage/LibraryPage.jsx";
 import PersonalProfilePage from "./components/pages/PersonalProfilePage/PersonalProfilePage.jsx";
 import ChatBot from "./components/pages/AIchatbot/ChatBot.jsx";
 
+import CreateWorkSpacePage from "./components/pages/CreateWorkSpacePage/CreateWorkSpacePage.jsx";
+
 function ProtectedRoute({ children }) {
   const token = localStorage.getItem("accessToken");
 
@@ -61,7 +63,10 @@ function App() {
 
           <Route path="libraries" element={<MyLibraryPage />} />
           <Route path="libraries/create" element={<CreateLibraryPage />} />
+          <Route path="create-library" element={<CreateLibraryPage />} />
           <Route path="libraries/:libraryId" element={<LibraryPage />} />
+
+          <Route path="create-workspace" element={<CreateWorkSpacePage />} />
 
           <Route path="profile" element={<PersonalProfilePage />} />
           <Route path="ai-chat" element={<ChatBot />} />
