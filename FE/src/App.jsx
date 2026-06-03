@@ -17,7 +17,6 @@ import CreateLibraryPage from "./components/pages/CreateLibraryPage/CreateLibrar
 import LibraryPage from "./components/pages/LibraryPage/LibraryPage.jsx";
 import PersonalProfilePage from "./components/pages/PersonalProfilePage/PersonalProfilePage.jsx";
 import ChatBot from "./components/pages/AIchatbot/ChatBot.jsx";
-
 import CreateWorkSpacePage from "./components/pages/CreateWorkSpacePage/CreateWorkSpacePage.jsx";
 
 function ProtectedRoute({ children }) {
@@ -31,15 +30,10 @@ function ProtectedRoute({ children }) {
 }
 
 function App() {
-  const token = localStorage.getItem("accessToken");
-
   return (
     <BrowserRouter>
       <Routes>
-        <Route
-          path="/"
-          element={<Navigate to={token ? "/dashboard/home" : "/login"} replace />}
-        />
+        <Route path="/" element={<Navigate to="/login" replace />} />
 
         <Route path="/login" element={<LoginPage />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
@@ -48,6 +42,7 @@ function App() {
         <Route path="/register" element={<RegisterGoogle />} />
         <Route path="/complete-profile" element={<CompleteProfile />} />
         <Route path="/enter-username-password" element={<EnterUserNamePass />} />
+        <Route path="/verify-otp" element={<OTPVerification />} />
         <Route path="/otp-verification" element={<OTPVerification />} />
 
         <Route
@@ -72,7 +67,7 @@ function App() {
           <Route path="ai-chat" element={<ChatBot />} />
         </Route>
 
-        <Route path="*" element={<Navigate to="/" replace />} />
+        <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
     </BrowserRouter>
   );

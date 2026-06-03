@@ -59,7 +59,7 @@ exports.uploadDocuments = async (req, res) => {
             });
         }
 
-        const uploadDocuments = [];
+        const uploadedDocuments = [];
 
         for (const file of files) {
             const safeFileName = sanitizeFileName(file.originalname);
@@ -100,7 +100,7 @@ exports.uploadDocuments = async (req, res) => {
     return res.status(201).json({
         status: "success",
         message: "Upload thành công.",
-        data: uploadDocuments,
+        data: uploadedDocuments,
     });
 } catch (error) {
     console.error(" lỗi uploadDocument: ", error);

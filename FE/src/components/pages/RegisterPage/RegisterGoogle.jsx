@@ -1,6 +1,6 @@
 import React from "react";
 import { GoogleLogin, GoogleOAuthProvider } from "@react-oauth/google"; // Thêm import GoogleOAuthProvider
-import axios from "axios";
+import api from "../../../utils/api.js";
 import { useNavigate } from "react-router-dom";
 import "./Register.css";
 
@@ -13,7 +13,7 @@ function Register() {
   const handleGoogleSuccess = async (credentialResponse) => {
     try {
       const googleToken = credentialResponse.credential;
-      const res = await axios.post("https://ai-student-hub-xtw6.onrender.com/api/auth/google", { token: googleToken });
+      const res = await api.post("/auth/google", { token: googleToken });
 
       if (res.data.data.requiresOTP) {
         navigate('/verify-otp', { state: { email: res.data.data.email } });
