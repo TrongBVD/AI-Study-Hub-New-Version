@@ -6,7 +6,7 @@ import { IoIosSend } from "react-icons/io";
 import { RiResetRightLine } from "react-icons/ri";
 import { IoMdClose } from "react-icons/io";
 import { IoChatbubbleEllipses } from "react-icons/io5";
-import { FaPaperclip } from "react-icons/fa";
+
 import { FaHistory } from "react-icons/fa";
 import { RiRobot2Fill } from "react-icons/ri";
 import { FaUser } from "react-icons/fa6";
@@ -15,7 +15,7 @@ function ChatBot() {
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState("");
   const [showHistory, setShowHistory] = useState(false);
-  const [file, setFile] = useState(null);
+
   const [loading, setLoading] = useState(false);
 
   const [documents, setDocuments] = useState([]);
@@ -24,7 +24,11 @@ function ChatBot() {
   const bottomRef = useRef(null);
 
   const [messages, setMessages] = useState([
-    { id: 1, role: "ai", text: "Hello 👋 Select an approved document and ask me something." },
+    {
+      id: 1,
+      role: "ai",
+      text: "Hello 👋 Select an approved document and ask me something.",
+    },
   ]);
 
   const [history, setHistory] = useState([]);
@@ -51,7 +55,7 @@ function ChatBot() {
         }
 
         const approvedDocs = (result.data || []).filter(
-          (doc) => doc.status === "APPROVED"
+          (doc) => doc.status === "APPROVED",
         );
 
         setDocuments(approvedDocs);
@@ -70,7 +74,7 @@ function ChatBot() {
   }, [open]);
 
   const sendMessage = async () => {
-    if ((input.trim() === "" && !file) || loading) return;
+    if (input.trim() === "" || loading) return;
 
     if (!selectedDocumentId) {
       const aiMessage = {
@@ -86,21 +90,20 @@ function ChatBot() {
     const currentInput = input.trim();
 
     const selectedDocument = documents.find(
-      (doc) => doc.id === selectedDocumentId
+      (doc) => doc.id === selectedDocumentId,
     );
 
     const userMessage = {
       id: Date.now(),
       role: "user",
       text: currentInput,
-      fileName: selectedDocument?.title || null,
     };
 
     setMessages((prev) => [...prev, userMessage]);
     setHistory((prev) => [...prev, userMessage]);
 
     setInput("");
-    setFile(null);
+
     setLoading(true);
 
     try {
@@ -148,12 +151,12 @@ function ChatBot() {
 
   const resetChat = () => {
     setMessages([
-      { id: 1, role: "ai", text: "Hello 👋 Select an approved document and ask me something." },
+      {
+        id: 1,
+        role: "ai",
+        text: "Hello 👋 Select an approved document and ask me something.",
+      },
     ]);
-  };
-
-  const handleFileChange = (e) => {
-    setFile(e.target.files[0]);
   };
 
   return (
@@ -184,16 +187,11 @@ function ChatBot() {
             </div>
           </div>
 
-          <div style={{ padding: "8px" }}>
+          <div className="document-select-container">
             <select
               value={selectedDocumentId}
               onChange={(e) => setSelectedDocumentId(e.target.value)}
-              style={{
-                width: "100%",
-                padding: "8px",
-                borderRadius: "8px",
-                border: "1px solid #ddd",
-              }}
+              className="document-select"
               disabled={loading}
             >
               {documents.length === 0 && (
@@ -207,7 +205,6 @@ function ChatBot() {
               ))}
             </select>
           </div>
-
           {showHistory && (
             <div className="chat-history">
               <h4>Chat History</h4>
@@ -237,11 +234,6 @@ function ChatBot() {
                   }`}
                 >
                   {m.text}
-                  {m.fileName && (
-                    <div className="file-tag">
-                      <FaPaperclip /> {m.fileName}
-                    </div>
-                  )}
                 </div>
               </div>
             ))}
@@ -256,11 +248,6 @@ function ChatBot() {
           </div>
 
           <div className="chat-input">
-            <label className="upload-btn">
-              <FaPaperclip />
-              <input type="file" hidden onChange={handleFileChange} />
-            </label>
-
             <textarea
               value={input}
               onChange={(e) => setInput(e.target.value)}
