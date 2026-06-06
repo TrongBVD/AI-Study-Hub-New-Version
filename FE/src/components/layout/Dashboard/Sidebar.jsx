@@ -36,6 +36,12 @@ function Sidebar({ isOpen, onClose }) {
       enabled: true,
     },
     {
+      icon: "ti-layout-grid2",
+      label: "AI Flashcards",
+      path: "/dashboard/flashcards",
+      enabled: true,
+    },
+    {
       icon: "ti-settings",
       label: "Settings",
       path: null,

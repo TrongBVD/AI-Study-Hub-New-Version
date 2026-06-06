@@ -10,6 +10,7 @@ import { FaPaperclip } from "react-icons/fa";
 import { FaHistory } from "react-icons/fa";
 import { RiRobot2Fill } from "react-icons/ri";
 import { FaUser } from "react-icons/fa6";
+
 function ChatBot() {
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState("");
@@ -17,29 +18,82 @@ function ChatBot() {
   const [file, setFile] = useState(null);
   const [loading, setLoading] = useState(false);
 
+  const [documents, setDocuments] = useState([]);
+  const [selectedDocumentId, setSelectedDocumentId] = useState("");
+
   const bottomRef = useRef(null);
 
-  // CHAT HIỆN TẠI
   const [messages, setMessages] = useState([
-    { id: 1, role: "ai", text: "Hello 👋" },
+    { id: 1, role: "ai", text: "Hello 👋 Select an approved document and ask me something." },
   ]);
 
-  // LỊCH SỬ CHAT
   const [history, setHistory] = useState([]);
 
-  // AUTO SCROLL
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  const sendMessage = () => {
+  useEffect(() => {
+    async function loadApprovedDocuments() {
+      try {
+        const token = localStorage.getItem("accessToken");
+
+        const response = await fetch("http://localhost:5000/api/documents", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+          throw new Error(result.message || "Could not load documents.");
+        }
+
+        const approvedDocs = (result.data || []).filter(
+          (doc) => doc.status === "APPROVED"
+        );
+
+        setDocuments(approvedDocs);
+
+        if (approvedDocs.length > 0) {
+          setSelectedDocumentId(approvedDocs[0].id);
+        }
+      } catch (error) {
+        console.error("Could not load approved documents:", error);
+      }
+    }
+
+    if (open) {
+      loadApprovedDocuments();
+    }
+  }, [open]);
+
+  const sendMessage = async () => {
     if ((input.trim() === "" && !file) || loading) return;
+
+    if (!selectedDocumentId) {
+      const aiMessage = {
+        id: Date.now(),
+        role: "ai",
+        text: "Please upload and select an approved document first.",
+      };
+
+      setMessages((prev) => [...prev, aiMessage]);
+      return;
+    }
+
+    const currentInput = input.trim();
+
+    const selectedDocument = documents.find(
+      (doc) => doc.id === selectedDocumentId
+    );
 
     const userMessage = {
       id: Date.now(),
       role: "user",
-      text: input,
-      fileName: file ? file.name : null,
+      text: currentInput,
+      fileName: selectedDocument?.title || null,
     };
 
     setMessages((prev) => [...prev, userMessage]);
@@ -47,24 +101,55 @@ function ChatBot() {
 
     setInput("");
     setFile(null);
-
-    // fake AI typing
     setLoading(true);
 
-    setTimeout(() => {
+    try {
+      const token = localStorage.getItem("accessToken");
+
+      const response = await fetch("http://localhost:5000/api/ai/chat", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          documentId: selectedDocumentId,
+          question: currentInput,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.message || "AI request failed.");
+      }
+
       const aiMessage = {
         id: Date.now() + 1,
         role: "ai",
-        text: "I received: " + input,
+        text: result.data.answer,
       };
 
       setMessages((prev) => [...prev, aiMessage]);
+      setHistory((prev) => [...prev, aiMessage]);
+    } catch (error) {
+      const aiMessage = {
+        id: Date.now() + 1,
+        role: "ai",
+        text: error.message || "Sorry, I could not answer using this document.",
+      };
+
+      setMessages((prev) => [...prev, aiMessage]);
+      setHistory((prev) => [...prev, aiMessage]);
+    } finally {
       setLoading(false);
-    }, 800);
+    }
   };
 
   const resetChat = () => {
-    setMessages([{ id: 1, role: "ai", text: "Hello 👋" }]);
+    setMessages([
+      { id: 1, role: "ai", text: "Hello 👋 Select an approved document and ask me something." },
+    ]);
   };
 
   const handleFileChange = (e) => {
@@ -73,7 +158,6 @@ function ChatBot() {
 
   return (
     <div>
-      {/* Bubble */}
       <div id="bubble">
         <button onClick={() => setOpen(!open)}>
           <IoChatbubbleEllipses />
@@ -82,7 +166,6 @@ function ChatBot() {
 
       {open && (
         <div className="chat-box">
-          {/* HEADER */}
           <div className="chat-header">
             <img src={aiChatbotIcon} alt="AI Chatbot" />
 
@@ -101,7 +184,30 @@ function ChatBot() {
             </div>
           </div>
 
-          {/* HISTORY */}
+          <div style={{ padding: "8px" }}>
+            <select
+              value={selectedDocumentId}
+              onChange={(e) => setSelectedDocumentId(e.target.value)}
+              style={{
+                width: "100%",
+                padding: "8px",
+                borderRadius: "8px",
+                border: "1px solid #ddd",
+              }}
+              disabled={loading}
+            >
+              {documents.length === 0 && (
+                <option value="">No approved documents available</option>
+              )}
+
+              {documents.map((doc) => (
+                <option key={doc.id} value={doc.id}>
+                  {doc.title}
+                </option>
+              ))}
+            </select>
+          </div>
+
           {showHistory && (
             <div className="chat-history">
               <h4>Chat History</h4>
@@ -113,12 +219,13 @@ function ChatBot() {
             </div>
           )}
 
-          {/* CHAT BODY */}
           <div className="chat-body">
             {messages.map((m) => (
               <div
                 key={m.id}
-                className={`msg-row ${m.role === "user" ? "user-row" : "ai-row"}`}
+                className={`msg-row ${
+                  m.role === "user" ? "user-row" : "ai-row"
+                }`}
               >
                 <div className="avatar">
                   {m.role === "user" ? <FaUser /> : <RiRobot2Fill />}
@@ -139,7 +246,6 @@ function ChatBot() {
               </div>
             ))}
 
-            {/* typing indicator */}
             {loading && (
               <div id="load-msg">
                 <b>StudyHub Assistant</b> is thinking...
@@ -149,7 +255,6 @@ function ChatBot() {
             <div ref={bottomRef}></div>
           </div>
 
-          {/* INPUT */}
           <div className="chat-input">
             <label className="upload-btn">
               <FaPaperclip />
@@ -159,7 +264,7 @@ function ChatBot() {
             <textarea
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="Ask something..."
+              placeholder="Ask something about the selected document..."
               disabled={loading}
               onKeyDown={(e) => {
                 if (e.key === "Enter" && !e.shiftKey) {

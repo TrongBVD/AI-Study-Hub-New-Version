@@ -17,6 +17,7 @@ import CreateLibraryPage from "./components/pages/CreateLibraryPage/CreateLibrar
 import LibraryPage from "./components/pages/LibraryPage/LibraryPage.jsx";
 import PersonalProfilePage from "./components/pages/PersonalProfilePage/PersonalProfilePage.jsx";
 import ChatBot from "./components/pages/AIchatbot/ChatBot.jsx";
+import Flashcards from "./components/pages/Flashcards/Flashcards.jsx";
 import CreateWorkSpacePage from "./components/pages/CreateWorkSpacePage/CreateWorkSpacePage.jsx";
 
 function ProtectedRoute({ children }) {
@@ -65,6 +66,7 @@ function App() {
 
           <Route path="profile" element={<PersonalProfilePage />} />
           <Route path="ai-chat" element={<ChatBot />} />
+          <Route path="flashcards" element={<Flashcards />} />
         </Route>
 
         <Route path="*" element={<Navigate to="/login" replace />} />
