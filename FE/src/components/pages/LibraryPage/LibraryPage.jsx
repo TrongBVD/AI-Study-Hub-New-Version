@@ -1,5 +1,12 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
+
+import {
+  getMyDocuments,
+  uploadDocuments,
+  downloadDocument,
+} from "../../../utils/documentApi";
+
 import "./LibraryPage.css";
 import "../../../assets/icons/themify-icons-font/themify-icons/themify-icons.css";
 
@@ -8,11 +15,11 @@ function LibraryPage() {
 
   function getInitialLibraryData() {
     const savedLibraries = JSON.parse(
-      localStorage.getItem("aiStudyHubLibraries") || "[]"
+      localStorage.getItem("aiStudyHubLibraries") || "[]",
     );
 
     const matchedLibrary = savedLibraries.find(
-      (library) => library.id === libraryId
+      (library) => library.id === libraryId,
     );
 
     return (
@@ -33,26 +40,36 @@ function LibraryPage() {
     return value === "private" ? "Private" : "Public";
   }
 
-  const folderIdRef = useRef(1);  
+  const folderIdRef = useRef(1);
+
   const [libraryData, setLibraryData] = useState(getInitialLibraryData);
   const [activeTab, setActiveTab] = useState("documents");
   const [documentSearch, setDocumentSearch] = useState("");
   const [currentFolder, setCurrentFolder] = useState(null);
+
   const [memberSearch, setMemberSearch] = useState("");
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
   const [inviteQuery, setInviteQuery] = useState("");
   const [inviteRole, setInviteRole] = useState("Viewer");
   const [inviteStatus, setInviteStatus] = useState("idle");
-  const [libraryName, setLibraryName] = useState(() => getInitialLibraryData().name);
-  const [libraryVisibility, setLibraryVisibility] = useState(
-    () => getInitialLibraryData().visibility || "public"
+
+  const [libraryName, setLibraryName] = useState(
+    () => getInitialLibraryData().name,
   );
+  const [libraryVisibility, setLibraryVisibility] = useState(
+    () => getInitialLibraryData().visibility || "public",
+  );
+
   const [pendingFiles, setPendingFiles] = useState([]);
   const [pendingFolderId, setPendingFolderId] = useState(null);
   const [isTagModalOpen, setIsTagModalOpen] = useState(false);
   const [hashtags, setHashtags] = useState(["", "", ""]);
 
-  const [members, setMembers] = useState([
+  const [libraryItems, setLibraryItems] = useState([]);
+  const [isLoadingDocuments, setIsLoadingDocuments] = useState(false);
+  const [isUploadingDocuments, setIsUploadingDocuments] = useState(false);
+
+  const [members] = useState([
     {
       name: "TrongBVD",
       email: "trongbvd@university.edu",
@@ -101,8 +118,6 @@ function LibraryPage() {
       invitedBy: "TrongBVD",
     },
   ]);
-  const [libraryItems, setLibraryItems] = useState([]);
-
 
   const collaborators = [
     {
@@ -125,6 +140,11 @@ function LibraryPage() {
   const authorName =
     localStorage.getItem("aiStudyHubProfileName") || "dangkhoabi456";
 
+  useEffect(() => {
+    loadBackendDocuments();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   function countUploadedFiles(items) {
     return items.filter((item) => item.type !== "folder").length;
   }
@@ -139,11 +159,11 @@ function LibraryPage() {
     };
 
     const savedLibraries = JSON.parse(
-      localStorage.getItem("aiStudyHubLibraries") || "[]"
+      localStorage.getItem("aiStudyHubLibraries") || "[]",
     );
 
     const hasCurrentLibrary = savedLibraries.some(
-      (library) => library.id === updatedLibrary.id
+      (library) => library.id === updatedLibrary.id,
     );
 
     const updatedLibraries = hasCurrentLibrary
@@ -154,30 +174,102 @@ function LibraryPage() {
                 documents: nextDocumentCount,
                 updatedAt: "Updated just now",
               }
-            : library
+            : library,
         )
       : [updatedLibrary, ...savedLibraries];
 
     localStorage.setItem(
       "aiStudyHubLibraries",
-      JSON.stringify(updatedLibraries)
+      JSON.stringify(updatedLibraries),
     );
 
     setLibraryData(updatedLibrary);
   }
 
-function handleUploadFile(e) {
-  const files = Array.from(e.target.files);
+  function getFolderKey(folder) {
+    return folder.id || folder.name;
+  }
 
-  if (files.length === 0) return;
+  function getFileIcon(fileName) {
+    const name = String(fileName || "").toLowerCase();
 
-  setPendingFiles(files);
-  setPendingFolderId(currentFolder ? getFolderKey(currentFolder) : null);
-  setHashtags(["", "", ""]);
-  setIsTagModalOpen(true);
+    if (name.endsWith(".pdf")) return "ti-file";
+    if (name.endsWith(".doc") || name.endsWith(".docx")) return "ti-write";
+    if (name.endsWith(".xls") || name.endsWith(".xlsx")) {
+      return "ti-layout-grid3";
+    }
 
-  e.target.value = "";
-}
+    return "ti-file";
+  }
+
+  function formatFileSize(size) {
+    const safeSize = Number(size) || 0;
+
+    if (safeSize < 1024 * 1024) {
+      return `${(safeSize / 1024).toFixed(0)} KB`;
+    }
+
+    return `${(safeSize / 1024 / 1024).toFixed(1)} MB`;
+  }
+
+  function mapBackendDocumentToLibraryItem(document) {
+    return {
+      id: document.id,
+      type: "file",
+      name: document.title || "Untitled document",
+      note: `${formatFileSize(document.file_size_bytes || 0)} · Uploaded`,
+      size: formatFileSize(document.file_size_bytes || 0),
+      uploadedTime: document.created_at
+        ? new Date(document.created_at).toLocaleString()
+        : "Recently",
+      uploadedBy: authorName,
+      icon: getFileIcon(document.title || ""),
+      folderId: null,
+      hashtags: [],
+      isBackendFile: true,
+    };
+  }
+
+  async function loadBackendDocuments() {
+    try {
+      setIsLoadingDocuments(true);
+
+      const backendDocuments = await getMyDocuments();
+
+      const backendItems = (backendDocuments || []).map(
+        mapBackendDocumentToLibraryItem,
+      );
+
+      setLibraryItems((currentItems) => {
+        const localFolders = currentItems.filter(
+          (item) => item.type === "folder",
+        );
+        const nextItems = [...localFolders, ...backendItems];
+
+        syncLibraryDocumentCount(nextItems);
+
+        return nextItems;
+      });
+    } catch (error) {
+      console.error("Cannot load documents:", error);
+      alert("Cannot load documents. Please login again.");
+    } finally {
+      setIsLoadingDocuments(false);
+    }
+  }
+
+  function handleUploadFile(e) {
+    const files = Array.from(e.target.files || []);
+
+    if (files.length === 0) return;
+
+    setPendingFiles(files);
+    setPendingFolderId(currentFolder ? getFolderKey(currentFolder) : null);
+    setHashtags(["", "", ""]);
+    setIsTagModalOpen(true);
+
+    e.target.value = "";
+  }
 
   function handleHashtagChange(index, value) {
     const updatedHashtags = [...hashtags];
@@ -192,7 +284,7 @@ function handleUploadFile(e) {
     setIsTagModalOpen(false);
   }
 
-  function handleConfirmTaggedUpload() {
+  async function handleConfirmTaggedUpload() {
     const validHashtags = hashtags
       .map((tag) => tag.trim())
       .filter((tag) => tag !== "")
@@ -203,30 +295,37 @@ function handleUploadFile(e) {
       return;
     }
 
-    const uploadedFiles = pendingFiles.map((file) => {
-      const fileUrl = URL.createObjectURL(file);
+    if (pendingFiles.length === 0) {
+      alert("Please choose at least one file.");
+      return;
+    }
 
-      return {
-        type: "file",
-        name: file.name,
-        note: `${(file.size / 1024).toFixed(1)} KB · Added just now`,
-        size: formatFileSize(file.size),
-        uploadedTime: "Just now",
-        uploadedBy: authorName,
-        icon: getFileIcon(file.name),
-        downloadUrl: fileUrl,
+    try {
+      setIsUploadingDocuments(true);
+
+      const uploadedDocuments = await uploadDocuments(pendingFiles);
+
+      const uploadedItems = (uploadedDocuments || []).map((document) => ({
+        ...mapBackendDocumentToLibraryItem(document),
         folderId: pendingFolderId,
         hashtags: validHashtags,
-      };
-    });
+      }));
 
-    setLibraryItems((currentItems) => {
-      const nextItems = [...uploadedFiles, ...currentItems];
-      syncLibraryDocumentCount(nextItems);
-      return nextItems;
-    });
+      setLibraryItems((currentItems) => {
+        const nextItems = [...uploadedItems, ...currentItems];
+        syncLibraryDocumentCount(nextItems);
+        return nextItems;
+      });
 
-    handleCancelTaggedUpload();
+      handleCancelTaggedUpload();
+
+      alert("Upload successful.");
+    } catch (error) {
+      console.error("Upload failed:", error);
+      alert("Upload failed. Please check backend and Supabase.");
+    } finally {
+      setIsUploadingDocuments(false);
+    }
   }
 
   function handleCreateFolder() {
@@ -234,21 +333,16 @@ function handleUploadFile(e) {
 
     if (!folderName || folderName.trim() === "") return;
 
-const newFolder = {
-  id: `folder-${folderIdRef.current++}`,
-  type: "folder",
-  name: folderName.trim(),
-  note: "0 files · Created just now",
-  icon: "ti-folder",
-  folderId: currentFolder ? getFolderKey(currentFolder) : null,
-};
+    const newFolder = {
+      id: `folder-${folderIdRef.current++}`,
+      type: "folder",
+      name: folderName.trim(),
+      note: "0 files · Created just now",
+      icon: "ti-folder",
+      folderId: currentFolder ? getFolderKey(currentFolder) : null,
+    };
 
     setLibraryItems((currentItems) => [newFolder, ...currentItems]);
-  }
-
-
-  function getFolderKey(folder) {
-    return folder.id || folder.name;
   }
 
   function handleOpenFolder(folder) {
@@ -261,36 +355,47 @@ const newFolder = {
     setDocumentSearch("");
   }
 
-  function getFileIcon(fileName) {
-    const name = fileName.toLowerCase();
-
-    if (name.endsWith(".pdf")) return "ti-file";
-    if (name.endsWith(".doc") || name.endsWith(".docx")) return "ti-write";
-    if (name.endsWith(".xls") || name.endsWith(".xlsx")) {
-      return "ti-layout-grid3";
-    }
-
-    return "ti-file";
-  }
-
-  function formatFileSize(size) {
-    if (size < 1024 * 1024) {
-      return `${(size / 1024).toFixed(0)} KB`;
-    }
-
-    return `${(size / 1024 / 1024).toFixed(1)} MB`;
-  }
-
   function handleDeleteDocument(documentName) {
     setLibraryItems((currentItems) => {
-      const nextItems = currentItems.filter((item) => item.name !== documentName);
+      const nextItems = currentItems.filter(
+        (item) => item.name !== documentName,
+      );
       syncLibraryDocumentCount(nextItems);
       return nextItems;
     });
+
+    alert(
+      "This only removes the file from the frontend list. Backend delete is not implemented yet.",
+    );
+  }
+
+  async function handleDownloadDocument(fileItem) {
+    try {
+      if (!fileItem.id || !fileItem.isBackendFile) {
+        alert(
+          "This file is local sample data, so it cannot be downloaded from backend yet.",
+        );
+        return;
+      }
+
+      const data = await downloadDocument(fileItem.id);
+
+      if (!data.downloadUrl) {
+        alert("Download URL not found.");
+        return;
+      }
+
+      window.open(data.downloadUrl, "_blank");
+    } catch (error) {
+      console.error("Download failed:", error);
+      alert("Download failed.");
+    }
   }
 
   function handleSaveSettings(e) {
-    e.preventDefault();
+    if (e && e.preventDefault) {
+      e.preventDefault();
+    }
 
     const trimmedLibraryName = libraryName.trim();
 
@@ -308,22 +413,22 @@ const newFolder = {
     };
 
     const savedLibraries = JSON.parse(
-      localStorage.getItem("aiStudyHubLibraries") || "[]"
+      localStorage.getItem("aiStudyHubLibraries") || "[]",
     );
 
     const hasCurrentLibrary = savedLibraries.some(
-      (library) => library.id === updatedLibrary.id
+      (library) => library.id === updatedLibrary.id,
     );
 
     const updatedLibraries = hasCurrentLibrary
       ? savedLibraries.map((library) =>
-          library.id === updatedLibrary.id ? updatedLibrary : library
+          library.id === updatedLibrary.id ? updatedLibrary : library,
         )
       : [updatedLibrary, ...savedLibraries];
 
     localStorage.setItem(
       "aiStudyHubLibraries",
-      JSON.stringify(updatedLibraries)
+      JSON.stringify(updatedLibraries),
     );
 
     setLibraryData(updatedLibrary);
@@ -332,7 +437,7 @@ const newFolder = {
 
   function handleDeleteLibrary() {
     const confirmed = window.confirm(
-      "Are you sure you want to delete this library? This action cannot be undone."
+      "Are you sure you want to delete this library? This action cannot be undone.",
     );
 
     if (!confirmed) return;
@@ -345,7 +450,7 @@ const newFolder = {
 
     const folderKey = getFolderKey(folder);
     const confirmDelete = window.confirm(
-      `Delete folder "${folder.name}" and everything inside it?`
+      `Delete folder "${folder.name}" and everything inside it?`,
     );
 
     if (!confirmDelete) return;
@@ -376,7 +481,10 @@ const newFolder = {
         const itemKey = item.type === "folder" ? getFolderKey(item) : null;
         const itemParentId = item.folderId ?? null;
 
-        return !folderIdsToDelete.has(itemKey) && !folderIdsToDelete.has(itemParentId);
+        return (
+          !folderIdsToDelete.has(itemKey) &&
+          !folderIdsToDelete.has(itemParentId)
+        );
       });
 
       syncLibraryDocumentCount(nextItems);
@@ -466,7 +574,7 @@ const newFolder = {
   const folderItems = visibleItems.filter((item) => item.type === "folder");
 
   const filteredDocuments = documentItems.filter((item) =>
-    item.name.toLowerCase().includes(documentSearch.toLowerCase())
+    item.name.toLowerCase().includes(documentSearch.toLowerCase()),
   );
 
   const uploadedFileCount =
@@ -495,7 +603,7 @@ const newFolder = {
           </div>
 
           <div className="library_hero_actions">
-            <button className="star_btn">
+            <button className="star_btn" type="button">
               <i className="ti-star"></i>
               Star
             </button>
@@ -510,6 +618,7 @@ const newFolder = {
 
         <nav className="library_tabs">
           <button
+            type="button"
             className={activeTab === "documents" ? "active" : ""}
             onClick={() => setActiveTab("documents")}
           >
@@ -517,6 +626,7 @@ const newFolder = {
           </button>
 
           <button
+            type="button"
             className={activeTab === "messages" ? "active" : ""}
             onClick={() => setActiveTab("messages")}
           >
@@ -524,6 +634,7 @@ const newFolder = {
           </button>
 
           <button
+            type="button"
             className={activeTab === "members" ? "active" : ""}
             onClick={() => setActiveTab("members")}
           >
@@ -531,6 +642,7 @@ const newFolder = {
           </button>
 
           <button
+            type="button"
             className={activeTab === "settings" ? "active" : ""}
             onClick={() => setActiveTab("settings")}
           >
@@ -540,55 +652,6 @@ const newFolder = {
 
         <section className="library_body">
           <section className="library_main">
-            {activeTab === "library" && (
-              <>
-                <div className="library_tools">
-                  <select>
-                    <option>All subjects</option>
-                    <option>Software Engineering</option>
-                    <option>Business Analysis</option>
-                    <option>React</option>
-                  </select>
-
-                  <div className="library_search">
-                    <i className="ti-search"></i>
-                    <input type="text" placeholder="Search file..." />
-                  </div>
-
-                  <div className="library_tool_actions">
-                    <button className="light_btn">
-                      <i className="ti-plus"></i>
-                      New folder
-                    </button>
-
-                    <label className="upload_btn small">
-                      <i className="ti-upload"></i>
-                      Upload File
-                      <input type="file" multiple onChange={handleUploadFile} />
-                    </label>
-                  </div>
-                </div>
-
-                <div className="activity_banner">
-                  <div className="activity_left">
-                    <div className="activity_avatar">TB</div>
-                    <strong>TrongBVD</strong>
-                    <span>updated study materials</span>
-                  </div>
-
-                  <span className="total_files">
-                    Total files: {libraryItems.length}
-                  </span>
-                </div>
-
-                <div className="library_card_grid">
-                  {libraryItems.map((item, index) => (
-                    <LibraryCard item={item} key={`${item.name}-${index}`} />
-                  ))}
-                </div>
-              </>
-            )}
-
             {activeTab === "documents" && (
               <section className="documents_tab_panel">
                 <div className="documents_tab_toolbar">
@@ -604,6 +667,7 @@ const newFolder = {
 
                   <div className="documents_tab_actions">
                     <button
+                      type="button"
                       className="documents_new_folder_btn"
                       onClick={handleCreateFolder}
                     >
@@ -621,9 +685,11 @@ const newFolder = {
 
                 {currentFolder && (
                   <div className="documents_breadcrumb">
-                    <button onClick={handleBackToLibrary}>All subjects</button>
+                    <button type="button" onClick={handleBackToLibrary}>
+                      All subjects
+                    </button>
                     <i className="ti-angle-right"></i>
-                    <button onClick={handleBackToLibrary}>
+                    <button type="button" onClick={handleBackToLibrary}>
                       Software Engineering
                     </button>
                     <i className="ti-angle-right"></i>
@@ -661,14 +727,25 @@ const newFolder = {
                   </section>
                 )}
 
-                {visibleItems.length === 0 ? (
+                {isLoadingDocuments ? (
+                  <div className="empty_state_card">
+                    <div className="empty_state_icon">
+                      <i className="ti-reload"></i>
+                    </div>
+
+                    <h3>Loading documents...</h3>
+                    <p>Please wait while we load your files.</p>
+                  </div>
+                ) : visibleItems.length === 0 ? (
                   <div className="empty_state_card">
                     <div className="empty_state_icon">
                       <i className="ti-folder"></i>
                     </div>
 
                     <h3>
-                      {currentFolder ? "This folder is empty" : "Your library is empty"}
+                      {currentFolder
+                        ? "This folder is empty"
+                        : "Your library is empty"}
                     </h3>
                     <p>Be the first one to add it.</p>
 
@@ -707,7 +784,10 @@ const newFolder = {
                         {filteredDocuments.map((document) => (
                           <div
                             className="documents_table_row"
-                            key={`${document.name}-${document.uploadedTime || ""}`}
+                            key={
+                              document.id ||
+                              `${document.name}-${document.uploadedTime || ""}`
+                            }
                           >
                             <div className="document_file_name">
                               <i className={getFileIcon(document.name)}></i>
@@ -715,18 +795,20 @@ const newFolder = {
                               <div className="document_name_with_tags">
                                 <span>{document.name}</span>
 
-                                {document.hashtags && (
-                                  <div className="document_hashtags">
-                                    {document.hashtags.map((tag) => (
-                                      <small key={tag}>{tag}</small>
-                                    ))}
-                                  </div>
-                                )}
+                                {document.hashtags &&
+                                  document.hashtags.length > 0 && (
+                                    <div className="document_hashtags">
+                                      {document.hashtags.map((tag) => (
+                                        <small key={tag}>{tag}</small>
+                                      ))}
+                                    </div>
+                                  )}
                               </div>
                             </div>
 
                             <div className="document_size">
-                              {document.size || document.note.split("·")[0].trim()}
+                              {document.size ||
+                                document.note.split("·")[0].trim()}
                             </div>
 
                             <div className="document_uploaded">
@@ -735,11 +817,14 @@ const newFolder = {
                                   document.note.split("·")[1]?.trim() ||
                                   "Recently"}
                               </strong>
-                              <span>by {document.uploadedBy || "dangkhoabi456"}</span>
+                              <span>
+                                by {document.uploadedBy || "dangkhoabi456"}
+                              </span>
                             </div>
 
                             <div className="document_actions">
                               <button
+                                type="button"
                                 title="Download"
                                 onClick={() => handleDownloadDocument(document)}
                               >
@@ -747,9 +832,12 @@ const newFolder = {
                               </button>
 
                               <button
+                                type="button"
                                 className="delete_document_btn"
                                 title="Delete"
-                                onClick={() => handleDeleteDocument(document.name)}
+                                onClick={() =>
+                                  handleDeleteDocument(document.name)
+                                }
                               >
                                 <i className="ti-trash"></i>
                               </button>
@@ -762,7 +850,6 @@ const newFolder = {
                 )}
               </section>
             )}
-
 
             {activeTab === "messages" && (
               <section className="member_chat_tab">
@@ -786,9 +873,7 @@ const newFolder = {
 
                     <span>Academic Admin</span>
 
-                    <div className="member_chat_admin_avatar">
-                      DK
-                    </div>
+                    <div className="member_chat_admin_avatar">DK</div>
                   </div>
                 </header>
 
@@ -807,8 +892,8 @@ const newFolder = {
                       <h3>Sarah Jenkins</h3>
 
                       <div className="member_chat_bubble member_chat_received">
-                        Does anyone have the notes for yesterday's lecture on
-                        architectural patterns? I missed the last 20 minutes.
+                        Does anyone have the notes for yesterday&apos;s lecture
+                        on architectural patterns? I missed the last 20 minutes.
                       </div>
 
                       <span className="member_chat_time">10:42 AM</span>
@@ -892,7 +977,6 @@ const newFolder = {
                 </footer>
               </section>
             )}
-
 
             {activeTab === "members" && (
               <section className="members_page">
@@ -988,7 +1072,7 @@ const newFolder = {
                             </span>
 
                             <div className="member_row_actions">
-                              <button title="Member settings">
+                              <button type="button" title="Member settings">
                                 <i className="ti-settings"></i>
                               </button>
                             </div>
@@ -1019,7 +1103,8 @@ const newFolder = {
 
                     <p className="members_note">
                       Note: Only members who have accepted the invitation or are
-                      explicitly listed as pending appear in this workspace list.
+                      explicitly listed as pending appear in this workspace
+                      list.
                     </p>
 
                     <section className="pending_invitation_card">
@@ -1045,7 +1130,7 @@ const newFolder = {
                               </p>
                             </div>
 
-                            <button>Resend</button>
+                            <button type="button">Resend</button>
                           </div>
                         ))}
                       </div>
@@ -1060,12 +1145,16 @@ const newFolder = {
                 <div className="settings_header">
                   <h2>Library Settings</h2>
                   <p>
-                    Manage your library's core information and administrative controls to keep your resources organized
-                    and secure.
+                    Manage your library&apos;s core information and
+                    administrative controls to keep your resources organized and
+                    secure.
                   </p>
                 </div>
 
-                <form className="settings_general_card" onSubmit={handleSaveSettings}>
+                <form
+                  className="settings_general_card"
+                  onSubmit={handleSaveSettings}
+                >
                   <div className="settings_card_title">
                     <div className="settings_card_icon">
                       <i className="ti-write"></i>
@@ -1165,7 +1254,9 @@ const newFolder = {
                   <div className="danger_zone_action">
                     <div>
                       <strong>Delete Library</strong>
-                      <p>Permanently remove this library and all its documents.</p>
+                      <p>
+                        Permanently remove this library and all its documents.
+                      </p>
                     </div>
 
                     <button
@@ -1180,12 +1271,15 @@ const newFolder = {
               </section>
             )}
 
-            {activeTab !== "library" && activeTab !== "documents" && activeTab !== "messages" && activeTab !== "members" && activeTab !== "settings" && (
-              <div className="empty_tab">
-                <h2>{activeTab}</h2>
-                <p>This section will be developed later.</p>
-              </div>
-            )}
+            {activeTab !== "documents" &&
+              activeTab !== "messages" &&
+              activeTab !== "members" &&
+              activeTab !== "settings" && (
+                <div className="empty_tab">
+                  <h2>{activeTab}</h2>
+                  <p>This section will be developed later.</p>
+                </div>
+              )}
           </section>
 
           <aside className="library_sidebar">
@@ -1245,7 +1339,8 @@ const newFolder = {
                     <p>Yesterday</p>
                   </div>
                 </div>
-              </>            ) : (
+              </>
+            ) : (
               <>
                 <div className="side_card">
                   <h3>About this library</h3>
@@ -1324,7 +1419,9 @@ const newFolder = {
 
                       <div className="info_row">
                         <span>Visibility</span>
-                        <strong>{formatVisibility(libraryData.visibility)}</strong>
+                        <strong>
+                          {formatVisibility(libraryData.visibility)}
+                        </strong>
                       </div>
                     </>
                   )}
@@ -1336,7 +1433,7 @@ const newFolder = {
                     Use AI to generate a curriculum overview from these files.
                   </p>
 
-                  <button>Start Analysis</button>
+                  <button type="button">Start Analysis</button>
 
                   <div className="flash_btn">
                     <i className="ti-bolt"></i>
@@ -1365,52 +1462,42 @@ const newFolder = {
               </button>
             </div>
 
-<div className="hashtag_modal_body">
-  <p className="hashtag_modal_desc">
-    Please provide 3 hashtags to help categorize your file for better AI search
-    results.
-  </p>
+            <div className="hashtag_modal_body">
+              <p className="hashtag_modal_desc">
+                Please provide 3 hashtags to help categorize your file for
+                better AI search results.
+              </p>
 
-  <div className="hashtag_input_list">
-    {hashtags.map((tag, index) => (
-      <input
-        key={index}
-        type="text"
-        value={tag}
-        onChange={(e) => handleHashtagChange(index, e.target.value)}
-        placeholder={`# tag${index + 1}`}
-      />
-    ))}
-  </div>
-
-  {pendingFiles.length > 0 && (
-    <div className="pending_file_preview">
-      <strong>Selected file</strong>
-      <span>
-        {pendingFiles.length === 1
-          ? pendingFiles[0].name
-          : `${pendingFiles.length} files selected`}
-      </span>
-    </div>
-  )}
-</div>
-
-            {pendingFiles.length > 0 && (
-              <div className="pending_upload_preview">
-                <strong>Selected file</strong>
-                <span>
-                  {pendingFiles.length === 1
-                    ? pendingFiles[0].name
-                    : `${pendingFiles.length} files selected`}
-                </span>
+              <div className="hashtag_input_list">
+                {hashtags.map((tag, index) => (
+                  <input
+                    key={index}
+                    type="text"
+                    value={tag}
+                    onChange={(e) => handleHashtagChange(index, e.target.value)}
+                    placeholder={`# tag${index + 1}`}
+                  />
+                ))}
               </div>
-            )}
+
+              {pendingFiles.length > 0 && (
+                <div className="pending_file_preview">
+                  <strong>Selected file</strong>
+                  <span>
+                    {pendingFiles.length === 1
+                      ? pendingFiles[0].name
+                      : `${pendingFiles.length} files selected`}
+                  </span>
+                </div>
+              )}
+            </div>
 
             <div className="hashtag_modal_actions">
               <button
                 type="button"
                 className="hashtag_cancel_btn"
                 onClick={handleCancelTaggedUpload}
+                disabled={isUploadingDocuments}
               >
                 Cancel
               </button>
@@ -1419,8 +1506,9 @@ const newFolder = {
                 type="button"
                 className="hashtag_save_btn"
                 onClick={handleConfirmTaggedUpload}
+                disabled={isUploadingDocuments}
               >
-                Save & Upload
+                {isUploadingDocuments ? "Uploading..." : "Save & Upload"}
               </button>
             </div>
           </div>
@@ -1493,8 +1581,9 @@ const newFolder = {
 
                 <h3>No user found</h3>
                 <p>
-                  We could not find any student or researcher matching
-                  "{inviteQuery}". Check the spelling or try a different name.
+                  We could not find any student or researcher matching &quot;
+                  {inviteQuery}&quot;. Check the spelling or try a different
+                  name.
                 </p>
 
                 <div className="invite_no_result_actions">
@@ -1598,18 +1687,4 @@ function LibraryCard({ item }) {
   );
 }
 
-function handleDownloadDocument(fileItem) {
-  if (!fileItem.downloadUrl) {
-    alert("This file is sample data, so it cannot be downloaded yet.");
-    return;
-  }
-
-  const downloadLink = window.document.createElement("a");
-  downloadLink.href = fileItem.downloadUrl;
-  downloadLink.download = fileItem.name;
-
-  window.document.body.appendChild(downloadLink);
-  downloadLink.click();
-  window.document.body.removeChild(downloadLink);
-}
 export default LibraryPage;

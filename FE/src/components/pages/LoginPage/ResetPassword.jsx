@@ -50,7 +50,7 @@ function ResetPassword() {
     try {
       setLoading(true);
 
-      await axios.post("http://localhost:5000/api/auth/reset-password", {
+      await axios.post("http://ai-student-hub-xtw6.onrender.com/api/auth/reset-password", {
         email,
         otp: formData.otp,
         newPassword: formData.newPassword,

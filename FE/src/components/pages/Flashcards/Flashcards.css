@@ -1,0 +1,132 @@
+.flashcards-page {
+  padding: 32px;
+  min-height: 100vh;
+  background: #f5f7fb;
+}
+
+.flashcards-header {
+  margin-bottom: 24px;
+}
+
+.flashcards-header h1 {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.flashcards-header p {
+  margin-top: 8px;
+  color: #6b7280;
+}
+
+.flashcards-card {
+  background: #ffffff;
+  border-radius: 18px;
+  padding: 24px;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+}
+
+.flashcards-toolbar {
+  display: flex;
+  align-items: end;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+
+.flashcards-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 320px;
+  flex: 1;
+}
+
+.flashcards-field label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #374151;
+}
+
+.flashcards-field select {
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid #d1d5db;
+  background: white;
+  font-size: 14px;
+  outline: none;
+}
+
+.flashcards-field select:focus {
+  border-color: #6366f1;
+}
+
+.flashcards-primary-btn {
+  border: none;
+  border-radius: 12px;
+  padding: 12px 18px;
+  background: #4f46e5;
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.flashcards-primary-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.flashcards-message {
+  margin-bottom: 18px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: #eef2ff;
+  color: #3730a3;
+  font-size: 14px;
+}
+
+.flashcards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 16px;
+}
+
+.flashcard-item {
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  padding: 18px;
+  background: #ffffff;
+}
+
+.flashcard-index {
+  font-size: 13px;
+  font-weight: 700;
+  color: #4f46e5;
+  margin-bottom: 12px;
+}
+
+.flashcard-section {
+  margin-bottom: 12px;
+}
+
+.flashcard-section span {
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+  color: #6b7280;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+
+.flashcard-section p {
+  margin: 0;
+  color: #111827;
+  line-height: 1.5;
+}
+
+.flashcards-empty {
+  padding: 32px;
+  text-align: center;
+  color: #6b7280;
+}
