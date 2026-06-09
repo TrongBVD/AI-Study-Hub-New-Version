@@ -1,82 +1,108 @@
 import { useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
+import "./CreateWorkSpacePage.css";
 
-function CreateWorkSpacePage() {
+function CreateWorkSpace() {
   const navigate = useNavigate();
-  const location = useLocation();
 
-  const returnPath = location.state?.from || "/dashboard/home";
 
   const [workspaceName, setWorkspaceName] = useState("");
   const [description, setDescription] = useState("");
-  const [visibility, setVisibility] = useState("private");
 
-  function handleReturn() {
-    navigate(returnPath);
+function handleReturn() {
+  if (window.history.length > 1) {
+    navigate(-1);
+    return;
   }
 
-  function handleCreateWorkspace(e) {
+  navigate("/dashboard/home");
+}
+
+  function handleCreateWorkSpace(e) {
     e.preventDefault();
 
     if (workspaceName.trim() === "") {
-      alert("Please enter workspace name.");
+      alert("Please enter workspace name");
       return;
     }
 
-    const newWorkspace = {
+    const newWorkSpace = {
       id: `workspace-${Date.now()}`,
-      owner: localStorage.getItem("aiStudyHubProfileName") || "dangkhoabi456",
+      owner: "dangkhoabi456",
       name: workspaceName.trim(),
       description:
         description.trim() ||
-        "A shared workspace for study collaboration and document organization.",
-      visibility,
-      members: 1,
-      libraries: 0,
+        "This workspace helps you organize private projects, manage documents, and collaborate with selected members.",
+      visibility: "private",
+      documents: 0,
       updatedAt: "Updated just now",
-      createdAt: new Date().toISOString(),
       icon: "ti-briefcase",
+      highlight: false,
+      createdAt: new Date().toISOString(),
     };
 
-    const savedWorkspaces = JSON.parse(
+    const savedWorkSpaces = JSON.parse(
       localStorage.getItem("aiStudyHubWorkspaces") || "[]"
     );
 
     localStorage.setItem(
       "aiStudyHubWorkspaces",
-      JSON.stringify([newWorkspace, ...savedWorkspaces])
+      JSON.stringify([newWorkSpace, ...savedWorkSpaces])
     );
 
-    alert("Workspace created successfully!");
-
-    navigate("/dashboard/home");
+    navigate(`/dashboard/workspaces/${newWorkSpace.id}`, {
+      state: {
+        workspace: newWorkSpace,
+        from: "/dashboard/create-workspace",
+      },
+    });
   }
 
   return (
-    <main className="create_library_page">
-      <section className="create_library_container">
-        <div className="create_library_header">
+    <main className="create_workspace_page">
+      <section className="create_workspace_container">
+        <div className="create_workspace_header">
           <h1>Create a new workspace</h1>
           <p>
-            A workspace is used for group collaboration, shared libraries, and
-            team study activities.
+            A workspace contains your private projects, files, notes, and shared
+            working materials.
           </p>
         </div>
 
-        <form className="create_library_form" onSubmit={handleCreateWorkspace}>
+        <form className="create_workspace_form" onSubmit={handleCreateWorkSpace}>
           <div className="form_section">
             <h2>General information</h2>
 
-            <div className="form_group">
-              <label>Workspace name *</label>
+            <div className="workspace_name_row">
+              <div className="form_group owner_group">
+                <label>Owner *</label>
 
-              <input
-                type="text"
-                value={workspaceName}
-                onChange={(e) => setWorkspaceName(e.target.value)}
-                placeholder="Enter workspace name"
-              />
+                <button type="button" className="owner_btn">
+                  <span className="owner_avatar"></span>
+                  <span>dangkhoabi456</span>
+                  <span>▾</span>
+                </button>
+
+                <p className="workspace_hint">
+                  The person who created this private workspace.
+                </p>
+              </div>
+
+              <div className="form_group workspace_name_group">
+                <label>Workspace name *</label>
+
+                <input
+                  type="text"
+                  value={workspaceName}
+                  onChange={(e) => setWorkspaceName(e.target.value)}
+                  placeholder="Enter workspace name"
+                />
+              </div>
             </div>
+
+            <p className="workspace_hint">
+              Great workspace names are short, clear, and easy to recognize.
+            </p>
 
             <div className="form_group">
               <label>Description</label>
@@ -94,60 +120,30 @@ function CreateWorkSpacePage() {
             </div>
           </div>
 
-          <div className="form_section">
-            <h2>Privacy & Visibility</h2>
+          <div className="workspace_privacy_notice">
+            <div className="workspace_privacy_icon">
+              <i className="ti-lock"></i>
+            </div>
 
-            <div className="visibility_options">
-              <label
-                className={`visibility_card ${
-                  visibility === "public" ? "selected" : ""
-                }`}
-              >
-                <input
-                  type="radio"
-                  name="workspaceVisibility"
-                  value="public"
-                  checked={visibility === "public"}
-                  onChange={(e) => setVisibility(e.target.value)}
-                />
-
-                <div>
-                  <h3>Public</h3>
-                  <p>Visible to other users in the university hub.</p>
-                </div>
-              </label>
-
-              <label
-                className={`visibility_card ${
-                  visibility === "private" ? "selected" : ""
-                }`}
-              >
-                <input
-                  type="radio"
-                  name="workspaceVisibility"
-                  value="private"
-                  checked={visibility === "private"}
-                  onChange={(e) => setVisibility(e.target.value)}
-                />
-
-                <div>
-                  <h3>Private</h3>
-                  <p>Only invited members can access this workspace.</p>
-                </div>
-              </label>
+            <div>
+              <h3>Workspace is private by default</h3>
+              <p>
+                Only you and invited members can access this workspace. Public
+                visibility is not available for workspaces.
+              </p>
             </div>
           </div>
 
-          <div className="create_library_actions">
+          <div className="create_workspace_actions">
             <button
               type="button"
-              className="return_library_btn"
+              className="return_workspace_btn"
               onClick={handleReturn}
             >
               Return
             </button>
 
-            <button type="submit" className="create_library_btn">
+            <button type="submit" className="create_workspace_btn">
               Create workspace
             </button>
           </div>
