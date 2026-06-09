@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import FormInput from "../../common/FormInput/FormInput.jsx";
-import axios from "axios";
+import api from "../../../utils/api.js";
 import { useNavigate, useLocation, Navigate } from "react-router-dom";
 import "./Register.css";
 
@@ -21,7 +21,7 @@ function OTPVerification() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const res = await axios.post("http://localhost:5000/api/auth/verify-otp", { email, otp });
+      const res = await api.post("/auth/verify-otp", { email, otp });
       if (res.data.data.requiresSetup) {
         // Tiếp tục truyền email sang trang hoàn tất hồ sơ
         navigate('/complete-profile',{
