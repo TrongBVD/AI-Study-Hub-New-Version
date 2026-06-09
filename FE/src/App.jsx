@@ -15,6 +15,8 @@ import HomePage from "./components/pages/HomePage/HomePage.jsx";
 import MyLibraryPage from "./components/pages/MyLibraryPage/MyLibraryPage.jsx";
 import CreateLibraryPage from "./components/pages/CreateLibraryPage/CreateLibraryPage.jsx";
 import LibraryPage from "./components/pages/LibraryPage/LibraryPage.jsx";
+import MyWorkSpace from "./components/pages/MyWorkSpace/MyWorkSpace.jsx";
+import WorkSpacePage from "./components/pages/WorkSpacePage/WorkSpacePage.jsx";
 import PersonalProfilePage from "./components/pages/PersonalProfilePage/PersonalProfilePage.jsx";
 import ChatBot from "./components/pages/AIchatbot/ChatBot.jsx";
 import Flashcards from "./components/pages/Flashcards/Flashcards.jsx";
@@ -61,11 +63,12 @@ function App() {
           <Route path="home" element={<HomePage />} />
 
           <Route path="libraries" element={<MyLibraryPage />} />
-          <Route path="libraries/create" element={<CreateLibraryPage />} />
           <Route path="create-library" element={<CreateLibraryPage />} />
           <Route path="libraries/:libraryId" element={<LibraryPage />} />
 
           <Route path="create-workspace" element={<CreateWorkSpacePage />} />
+          <Route path="workspaces" element={<MyWorkSpace />} />
+          <Route path="workspaces/:workspaceId" element={<WorkSpacePage />} />
 
           <Route path="profile" element={<PersonalProfilePage />} />
           <Route path="ai-chat" element={<ChatBot />} />
