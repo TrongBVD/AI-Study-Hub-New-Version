@@ -36,6 +36,8 @@ function App() {
       <Routes>
         <Route path="/" element={<Navigate to="/login" replace />} />
 
+        <Route path="/dashboard" element={<Dashboard />}>
+          <Route index element={<Navigate to="/dashboard/home" replace />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
