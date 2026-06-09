@@ -22,7 +22,6 @@ body {
   background: #3B2A1A;
   border-right: 1px solid #e2d3bc;
   padding: 18px 14px;
-  flex-shrink: 0;
   box-shadow: 8px 0 30px rgba(59, 38, 24, 0.12);
 
   position: fixed;
@@ -30,6 +29,9 @@ body {
   left: -320px;
   z-index: 1000;
   transition: 0.25s ease;
+
+  display: flex;
+  flex-direction: column;
 }
 .sidebar.sidebar_open {
   left: 0;
@@ -111,58 +113,6 @@ body {
 
 /* Library shortcuts in sidebar */
 
-.top_library_header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.top_library_header p {
-  font-size: 14px;
-  font-weight: 700;
-  color: #b4531a;
-}
-
-.top_library_header button {
-  background: transparent;
-  border: none;
-  color: #9a826b;
-  cursor: pointer;
-}
-
-.library_shortcut_list {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.library_shortcut_item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  color: #efcbb0;
-  text-decoration: none;
-  font-size: 14px;
-  line-height: 1.4;
-  min-width: 0;
-}
-
-.library_shortcut_item i {
-  color: #d9a066;
-  font-size: 15px;
-  flex-shrink: 0;
-}
-
-.library_shortcut_item span {
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-}
-
-.library_shortcut_item:hover {
-  color: #b4531a;
-}
-
 .avatar,
 .profile_avatar {
   width: 22px;
@@ -183,7 +133,8 @@ body {
   height: 74px;
   border-bottom: 1px solid #e2d3bc;
   background: rgb(78 64 46 / 91%);
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr minmax(320px, 520px) 1fr;
   align-items: center;
   gap: 20px;
   padding: 0 28px;
@@ -233,8 +184,9 @@ body {
 /* Search */
 
 .search_box {
-  flex: 1;
-  max-width: 420px;
+  width: 100%;
+  max-width: 520px;
+  justify-self: center;
 }
 
 .search_box input {
@@ -259,7 +211,7 @@ body {
 /* Actions */
 
 .nav_actions {
-  margin-left: auto;
+  justify-self: end;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -495,4 +447,199 @@ body {
   height: 28px;
   border-bottom: 2px solid #b4531a;
   opacity: 0.85;
+}
+
+.logout_btn {
+  width: 80%;
+  min-height: 44px;
+  margin: auto auto 18px;
+
+  border: none;
+  border-radius: 12px;
+  background: #ead7bd;
+  color: #3b2a1a;
+  font-size: 15px;
+  font-weight: 800;
+  cursor: pointer;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.logout_btn:hover {
+  background: #b4531a;
+  color: #ffffff;
+}
+
+.logout_btn i {
+  font-size: 16px;
+}
+
+/* Create dropdown on navbar */
+
+.create_dropdown {
+  position: relative;
+}
+
+.create_dropdown_btn {
+  width: 34px;
+  height: 34px;
+  background: #fffaf0;
+  border: 1px solid #e2d3bc;
+  color: #2f2015;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.create_dropdown_menu {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  width: 210px;
+  background: #fffaf0;
+  border: 1px solid #e2d3bc;
+  border-radius: 12px;
+  box-shadow: 0 18px 38px rgba(47, 32, 21, 0.18);
+  padding: 8px;
+  z-index: 1500;
+
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(8px);
+  transition: 0.18s ease;
+}
+
+.create_dropdown:hover .create_dropdown_menu {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+.create_dropdown_menu a {
+  min-height: 42px;
+  border-radius: 8px;
+  padding: 0 12px;
+  text-decoration: none;
+  color: #2f2015;
+  font-size: 14px;
+  font-weight: 800;
+
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.create_dropdown_menu a:hover {
+  background: #ead7bd;
+  color: #3b2618;
+}
+
+.create_dropdown_menu i {
+  color: #b4531a;
+  font-size: 16px;
+}
+
+/* Global library/workspace search */
+
+.search_box {
+  position: relative;
+}
+
+.global_search_panel {
+  position: absolute;
+  top: calc(100% + 10px);
+  left: 0;
+  right: 0;
+  z-index: 1600;
+
+  background: #fffaf0;
+  border: 1px solid #e2d3bc;
+  border-radius: 14px;
+  padding: 8px;
+  box-shadow: 0 18px 38px rgba(47, 32, 21, 0.18);
+}
+
+.global_search_item {
+  width: 100%;
+  min-height: 66px;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  color: #2f2015;
+  padding: 10px;
+
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+
+  text-align: left;
+  cursor: pointer;
+}
+
+.global_search_item:hover {
+  background: #ead7bd;
+}
+
+.global_search_icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
+  background: #3b2a1a;
+  color: #efcbb0;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.global_search_item strong {
+  display: block;
+  color: #2f2015;
+  font-size: 14px;
+  font-weight: 900;
+
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.global_search_item p {
+  margin: 5px 0 0;
+  color: #735f4c;
+  font-size: 12px;
+
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.global_search_item span {
+  border: 1px solid #d8c8ad;
+  border-radius: 999px;
+  color: #735f4c;
+  padding: 4px 8px;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: capitalize;
+}
+
+.global_search_empty {
+  min-height: 84px;
+  border-radius: 10px;
+  color: #735f4c;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.global_search_empty p {
+  margin: 0;
+  font-size: 14px;
 }
