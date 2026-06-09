@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import FormInput from "../../common/FormInput/FormInput.jsx";
-import axios from "axios";
+import api from "../../../utils/api.js";
 import { useNavigate, useLocation, Navigate } from "react-router-dom";
 import "./Register.css";
 
@@ -27,7 +27,7 @@ function CompleteProfile() {
     const delayDebounceFn = setTimeout(async () => {
       if (formData.username.trim() !== "") {
         try {
-          const res = await axios.get(`http://localhost:5000/api/auth/check-username?username=${encodeURIComponent(formData.username)}`);
+          const res = await api.get(`/auth/check-username?username=${encodeURIComponent(formData.username)}`);
           if (res.data.exists) {
             setUsernameStatus("❌ Username này đã tồn tại.");
           } else {
@@ -53,7 +53,7 @@ function CompleteProfile() {
     if (!formData.password) return setErrorMsg("Mật khẩu là bắt buộc!");
 
     try {
-      const response = await axios.post("http://localhost:5000/api/auth/complete-setup", {
+      const response = await api.post("/auth/complete-setup", {
         email: email,
         username: formData.username,
         password: formData.password,

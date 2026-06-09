@@ -153,4 +153,4 @@ function handleReturn() {
   );
 }
 
-export default CreateWorkSpace;
+export default CreateWorkSpacePage;

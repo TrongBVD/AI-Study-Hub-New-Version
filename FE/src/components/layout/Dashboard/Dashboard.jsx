@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { Outlet } from "react-router-dom";
-import Sidebar from "./Sidebar";
-import Navbar from "./Navbar";
+import Sidebar from "./Sidebar.jsx";
+import Navbar from "./Navbar.jsx";
+
 import "./Dashboard.css";
 
 function DashboardLayout() {
@@ -31,5 +32,5 @@ function DashboardLayout() {
     </div>
   );
 }
+export default Dashboard;
 
-export default DashboardLayout;

@@ -108,6 +108,14 @@ body {
   margin: 20px 0;
 }
 
+.sidebar_link_disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.sidebar_link_disabled:hover {
+  background: transparent;
+}
 
 
 
