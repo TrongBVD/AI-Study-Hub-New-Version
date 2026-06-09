@@ -1,0 +1,139 @@
+.inform_popup_overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2800;
+  background: rgba(47, 32, 21, 0.55);
+  backdrop-filter: blur(6px);
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.inform_popup {
+  width: 100%;
+  max-width: 540px;
+  background: #fffaf0;
+  border: 1px solid #e2d3bc;
+  border-radius: 22px;
+  padding: 30px;
+  box-shadow: 0 26px 80px rgba(47, 32, 21, 0.28);
+}
+
+.inform_popup_header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 24px;
+}
+
+.inform_popup_header h2 {
+  margin: 0;
+  color: #2f2015;
+  font-size: 22px;
+  font-weight: 800;
+}
+
+.inform_popup_header p {
+  margin: 16px 0 0;
+  color: #3b2618;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.inform_popup_close_btn {
+  border: none;
+  background: transparent;
+  color: #3b2618;
+  font-size: 30px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.inform_popup_value_box {
+  height: 56px;
+  border: 1px solid #e2d3bc;
+  border-radius: 12px;
+  background: #fffaf0;
+  padding: 0 14px;
+
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.inform_popup_value_box input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: #2f2015;
+  font-size: 15px;
+  font-family: inherit;
+}
+
+.inform_popup_value_box button {
+  width: 38px;
+  height: 38px;
+  border: none;
+  border-left: 1px solid #e2d3bc;
+  background: transparent;
+  color: #b4531a;
+  cursor: pointer;
+  font-size: 20px;
+}
+
+.inform_popup_message {
+  margin: 12px 0 0;
+  color: #2f2015;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.inform_popup_actions {
+  margin-top: 26px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.inform_popup_actions button {
+  min-height: 46px;
+  border-radius: 12px;
+  cursor: pointer;
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.inform_popup_actions button:first-child {
+  border: none;
+  background: #b4531a;
+  color: #ffffff;
+}
+
+.inform_popup_actions button:first-child:hover {
+  background: #923f12;
+}
+
+.inform_popup_actions button:last-child {
+  border: 1px solid #b8a48b;
+  background: #fffaf0;
+  color: #3b2618;
+}
+
+.inform_popup_actions button:last-child:hover {
+  background: #ead7bd;
+}
+
+@media (max-width: 560px) {
+  .inform_popup {
+    padding: 24px;
+  }
+
+  .inform_popup_actions {
+    grid-template-columns: 1fr;
+  }
+}
