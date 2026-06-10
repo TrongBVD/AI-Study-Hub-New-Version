@@ -2,9 +2,10 @@ import { useState } from "react";
 import { Outlet } from "react-router-dom";
 import Sidebar from "./Sidebar.jsx";
 import Navbar from "./Navbar.jsx";
+
 import "./Dashboard.css";
 
-function Dashboard() {
+function DashboardLayout() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   return (
@@ -31,5 +32,5 @@ function Dashboard() {
     </div>
   );
 }
-
 export default Dashboard;
+
