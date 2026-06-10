@@ -32,15 +32,20 @@ function ProtectedRoute({ children }) {
   return children;
 }
 
+// ================= ADMIN IMPORTS - TẠM THỜI COMMENT =================
+// import AdminDashboardPage from "./components/pages/Admin/AdminDashboardPage/AdminDashboardPage.jsx";
+// import UserManagementPage from "./components/pages/Admin/UserManagementPage/UserManagementPage.jsx";
+// import StorageManagementPage from "./components/pages/Admin/StorageManagementPage/StorageManagementPage.jsx";
+// import AIContentModerationPage from "./components/pages/Admin/AiContentModerationPage/AIContentModerationPage.jsx";
 
 function App() {
   return (
     <BrowserRouter>
       <Routes>
+        {/* DEFAULT */}
         <Route path="/" element={<Navigate to="/login" replace />} />
 
-        <Route path="/dashboard" element={<Dashboard />}>
-          <Route index element={<Navigate to="/dashboard/home" replace />} />
+        {/* AUTH ROUTES */}
         <Route path="/login" element={<LoginPage />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
@@ -51,6 +56,7 @@ function App() {
         <Route path="/verify-otp" element={<OTPVerification />} />
         <Route path="/otp-verification" element={<OTPVerification />} />
 
+        {/* USER ROUTES */}
         <Route
           path="/dashboard"
           element={
@@ -60,6 +66,7 @@ function App() {
           }
         >
           <Route index element={<Navigate to="/dashboard/home" replace />} />
+
           <Route path="home" element={<HomePage />} />
 
           <Route path="libraries" element={<MyLibraryPage />} />
@@ -75,6 +82,47 @@ function App() {
           <Route path="flashcards" element={<Flashcards />} />
         </Route>
 
+        {/* ================= ADMIN ROUTES - TẠM THỜI COMMENT ================= */}
+
+        {/*
+        <Route
+          path="/admin/dashboard"
+          element={
+            <ProtectedRoute>
+              <AdminDashboardPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/admin/users"
+          element={
+            <ProtectedRoute>
+              <UserManagementPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/admin/storage"
+          element={
+            <ProtectedRoute>
+              <StorageManagementPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/admin/moderation"
+          element={
+            <ProtectedRoute>
+              <AIContentModerationPage />
+            </ProtectedRoute>
+          }
+        />
+        */}
+
+        {/* NOT FOUND */}
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
     </BrowserRouter>
