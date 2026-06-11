@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 
+// ================= AUTH IMPORTS =================
 import LoginPage from "./components/pages/LoginPage/LoginPage.jsx";
 import ForgotPassword from "./components/pages/LoginPage/ForgotPassword.jsx";
 import ResetPassword from "./components/pages/LoginPage/ResetPassword.jsx";
@@ -11,6 +12,8 @@ import OTPVerification from "./components/pages/RegisterPage/OTPVerification.jsx
 
 import Dashboard from "./components/layout/Dashboard/Dashboard.jsx";
 
+import AIChatPage from "./components/pages/AiChatPage/AiChatPage.jsx";
+import CloudUploadPage from "./components/pages/CloudUploadPage/CloudUploadPage.jsx";
 import HomePage from "./components/pages/HomePage/HomePage.jsx";
 import MyLibraryPage from "./components/pages/MyLibraryPage/MyLibraryPage.jsx";
 import CreateLibraryPage from "./components/pages/CreateLibraryPage/CreateLibraryPage.jsx";
@@ -18,10 +21,13 @@ import LibraryPage from "./components/pages/LibraryPage/LibraryPage.jsx";
 import MyWorkSpace from "./components/pages/MyWorkSpace/MyWorkSpace.jsx";
 import WorkSpacePage from "./components/pages/WorkSpacePage/WorkSpacePage.jsx";
 import PersonalProfilePage from "./components/pages/PersonalProfilePage/PersonalProfilePage.jsx";
-import ChatBot from "./components/pages/AIchatbot/ChatBot.jsx";
 import Flashcards from "./components/pages/Flashcards/Flashcards.jsx";
 import CreateWorkSpacePage from "./components/pages/CreateWorkSpacePage/CreateWorkSpacePage.jsx";
 
+// Nếu không dùng ChatBot nữa thì comment lại để tránh dư import
+// import ChatBot from "./components/pages/AIchatbot/ChatBot.jsx";
+
+// ================= PROTECTED ROUTE =================
 function ProtectedRoute({ children }) {
   const token = localStorage.getItem("accessToken");
 
@@ -42,7 +48,7 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* DEFAULT */}
+        {/* DEFAULT: vào web sẽ về login */}
         <Route path="/" element={<Navigate to="/login" replace />} />
 
         {/* AUTH ROUTES */}
@@ -56,7 +62,7 @@ function App() {
         <Route path="/verify-otp" element={<OTPVerification />} />
         <Route path="/otp-verification" element={<OTPVerification />} />
 
-        {/* USER ROUTES */}
+        {/* USER ROUTES - CẦN ĐĂNG NHẬP */}
         <Route
           path="/dashboard"
           element={
@@ -78,7 +84,10 @@ function App() {
           <Route path="workspaces/:workspaceId" element={<WorkSpacePage />} />
 
           <Route path="profile" element={<PersonalProfilePage />} />
-          <Route path="ai-chat" element={<ChatBot />} />
+
+          <Route path="ai-chat" element={<AIChatPage />} />
+          <Route path="cloud-upload" element={<CloudUploadPage />} />
+
           <Route path="flashcards" element={<Flashcards />} />
         </Route>
 
