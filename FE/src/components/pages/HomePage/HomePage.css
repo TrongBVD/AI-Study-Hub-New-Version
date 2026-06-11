@@ -297,23 +297,6 @@
   flex-shrink: 0;
 }
 
-.document_info {
-  min-width: 0;
-}
-
-.document_info h3 {
-  margin: 0 0 4px;
-  color: #2f2015;
-  font-size: 16px;
-  line-height: 1.35;
-  word-break: break-word;
-}
-
-.document_info p {
-  margin: 0 0 12px;
-  color: #735f4c;
-  font-size: 14px;
-}
 
 .document_actions {
   display: flex;
@@ -451,4 +434,21 @@
 
 .document_actions .home_open_btn {
   width: fit-content;
+}
+
+.workspace_recent_info {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.workspace_recent_info h3 {
+  margin: 0;
+  flex: 1;
+}
+
+.workspace_recent_info .home_open_btn {
+  flex-shrink: 0;
 }
