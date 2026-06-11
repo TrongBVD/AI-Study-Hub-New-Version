@@ -150,19 +150,16 @@ function HomePage() {
             <i className={workspace.icon || "ti-briefcase"}></i>
           </div>
 
-          <div className="document_info">
-            <h3>{workspace.name}</h3>
-            <p>{workspace.description || "Workspace"}</p>
+<div className="workspace_recent_info">
+  <h3>{workspace.name}</h3>
 
-            <div className="document_actions">
-              <Link
-                to={`/dashboard/workspaces/${workspace.id}`}
-                className="home_open_btn"
-              >
-                Open
-              </Link>
-            </div>
-          </div>
+  <Link
+    to={`/dashboard/workspaces/${workspace.id}`}
+    className="home_open_btn"
+  >
+    Open
+  </Link>
+</div>
         </article>
       ))
     )}
