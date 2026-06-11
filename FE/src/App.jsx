@@ -58,7 +58,10 @@ function App() {
 
         <Route path="/register" element={<RegisterGoogle />} />
         <Route path="/complete-profile" element={<CompleteProfile />} />
-        <Route path="/enter-username-password" element={<EnterUserNamePass />} />
+        <Route
+          path="/enter-username-password"
+          element={<EnterUserNamePass />}
+        />
         <Route path="/verify-otp" element={<OTPVerification />} />
         <Route path="/otp-verification" element={<OTPVerification />} />
 
