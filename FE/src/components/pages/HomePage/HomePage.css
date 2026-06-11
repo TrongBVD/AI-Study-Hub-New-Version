@@ -400,3 +400,55 @@
     width: 100%;
   }
 }
+/* Home links and open buttons */
+
+.section_title_row a,
+.view_all_link {
+  min-height: 34px;
+  border-radius: 999px;
+  padding: 0 14px;
+  background: #fffaf0;
+  border: 1px solid #e2d3bc;
+  color: #b4531a;
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 800;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.section_title_row a:hover,
+.view_all_link:hover {
+  background: #b4531a;
+  color: #ffffff;
+  border-color: #b4531a;
+}
+
+.library_card_footer a,
+.home_open_btn {
+  min-height: 38px;
+  border: none;
+  border-radius: 9px;
+  background: #3b2a1a;
+  color: #ffffff;
+  padding: 0 16px;
+  font-size: 14px;
+  font-weight: 800;
+  text-decoration: none;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.library_card_footer a:hover,
+.home_open_btn:hover {
+  background: #b4531a;
+  color: #ffffff;
+}
+
+.document_actions .home_open_btn {
+  width: fit-content;
+}

@@ -33,24 +33,7 @@ function HomePage() {
 
   const recentLibraries = libraries.slice(0, 2);
 
-  const recentDocuments = [
-    {
-      name: "Software Architecture.pdf",
-      time: "Today, 10:45 AM",
-      icon: "ti-file",
-    },
-    {
-      name: "React Hooks Guide.docx",
-      time: "Yesterday, 4:20 PM",
-      icon: "ti-write",
-    },
-    {
-      name: "Business Analysis Report.xlsx",
-      time: "Mar 12, 2024",
-      icon: "ti-layout-grid3",
-    },
-  ];
-
+  const recentWorkspaces = workspaces.slice(0, 3);
   return (
     <main className="home_page">
       <section className="home_workspace">
@@ -112,7 +95,7 @@ function HomePage() {
               <h2>Recent libraries</h2>
 
               <Link to="/dashboard/libraries">
-                View all libraries →
+                View all libraries
               </Link>
             </div>
 
@@ -147,28 +130,44 @@ function HomePage() {
           </section>
 
           <aside className="recent_documents_section">
-            <h2>Recent Documents</h2>
+  <div className="section_title_row">
+    <h2>Recent workspaces</h2>
 
-            <div className="recent_document_list">
-              {recentDocuments.map((document) => (
-                <article className="recent_document_card" key={document.name}>
-                  <div className="document_icon">
-                    <i className={document.icon}></i>
-                  </div>
+    <Link to="/dashboard/workspaces" className="view_all_link">
+      View all workspaces
+    </Link>
+  </div>
 
-                  <div className="document_info">
-                    <h3>{document.name}</h3>
-                    <p>{document.time}</p>
+  <div className="recent_document_list">
+    {recentWorkspaces.length === 0 ? (
+      <div className="empty_recent_box">
+        <p>No recent workspaces yet.</p>
+      </div>
+    ) : (
+      recentWorkspaces.map((workspace) => (
+        <article className="recent_document_card" key={workspace.id}>
+          <div className="document_icon">
+            <i className={workspace.icon || "ti-briefcase"}></i>
+          </div>
 
-                    <div className="document_actions">
-                      <button>Ask AI</button>
-                      <button>Summarize</button>
-                    </div>
-                  </div>
-                </article>
-              ))}
+          <div className="document_info">
+            <h3>{workspace.name}</h3>
+            <p>{workspace.description || "Workspace"}</p>
+
+            <div className="document_actions">
+              <Link
+                to={`/dashboard/workspaces/${workspace.id}`}
+                className="home_open_btn"
+              >
+                Open workspace
+              </Link>
             </div>
-          </aside>
+          </div>
+        </article>
+      ))
+    )}
+  </div>
+</aside>
         </section>
       </section>
     </main>
