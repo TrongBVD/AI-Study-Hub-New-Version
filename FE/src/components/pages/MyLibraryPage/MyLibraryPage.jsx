@@ -30,17 +30,16 @@ function MyLibraryPage() {
             </p>
           </div>
 
-          <div className="library_header_actions">
-            <button>
-              <i className="ti-filter"></i>
-              Filter
-            </button>
-
-            <button>
-              <i className="ti-align-left"></i>
-              Sort By
-            </button>
-          </div>
+<div className="library_header_actions">
+  <Link
+    to="/dashboard/create-library"
+    state={{ from: "/dashboard/libraries" }}
+    className="create_library_btn"
+  >
+    <i className="ti-folder"></i>
+    Create library
+  </Link>
+</div>
         </div>
 
         {libraries.length === 0 ? (

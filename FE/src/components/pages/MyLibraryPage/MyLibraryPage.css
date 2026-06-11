@@ -55,6 +55,26 @@
   align-items: center;
   gap: 10px;
 }
+.create_library_btn {
+  height: 42px;
+  padding: 0 18px;
+  border: 1px solid #3b2a1a;
+  border-radius: 12px;
+  background: #3b2a1a;
+  color: #ffffff;
+  font-weight: 800;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+}
+
+.create_library_btn:hover {
+  background: #b4531a;
+  border-color: #b4531a;
+  transform: translateY(-1px);
+}
 
 .library_header_actions button:hover {
   background: #ead7bd;
