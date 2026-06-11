@@ -4,6 +4,8 @@ import "./WorkSpacePage.css";
 import "../../../assets/icons/themify-icons-font/themify-icons/themify-icons.css";
 
 function WorkSpacePage() {
+  const WORKSPACE_NAME_MAX_LENGTH = 30;
+  
   const { workspaceId } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
@@ -17,6 +19,22 @@ function WorkSpacePage() {
   const [inviteQuery, setInviteQuery] = useState("");
   const [inviteRole, setInviteRole] = useState("Viewer");
   const [inviteStatus, setInviteStatus] = useState("idle");
+function handleWorkspaceNameChange(e) {
+  const nextValue = e.target.value;
+
+  if (nextValue.length > WORKSPACE_NAME_MAX_LENGTH) return;
+
+  setWorkspaceNameInput(nextValue);
+
+  if (nextValue.length === WORKSPACE_NAME_MAX_LENGTH) {
+    setWorkspaceSettingMessage(
+      `Workspace name has reached the limit of ${WORKSPACE_NAME_MAX_LENGTH} characters.`
+    );
+    return;
+  }
+
+  setWorkspaceSettingMessage("");
+}
   const [pendingInvitations, setPendingInvitations] = useState([
     {
       email: "alex.proctor@edu.com",
@@ -45,37 +63,37 @@ function WorkSpacePage() {
     location.state?.workspace ||
     savedWorkSpaces.find((item) => item.id === workspaceId);
 
-    useEffect(() => {
-  if (!workspace?.id) return;
+  useEffect(() => {
+    if (!workspace?.id) return;
 
-  const currentRecentWorkspaces = JSON.parse(
-    localStorage.getItem("aiStudyHubRecentWorkspaces") || "[]"
-  );
+    const currentRecentWorkspaces = JSON.parse(
+      localStorage.getItem("aiStudyHubRecentWorkspaces") || "[]"
+    );
 
-  const recentWorkspace = {
-    id: workspace.id,
-    name: workspace.name || "Untitled Workspace",
-    documents: Number(workspace.documents) || 0,
-    icon: workspace.icon || "ti-layout-grid2",
-    visitedAt: Date.now(),
-  };
+    const recentWorkspace = {
+      id: workspace.id,
+      name: workspace.name || "Untitled Workspace",
+      documents: Number(workspace.documents) || 0,
+      icon: workspace.icon || "ti-layout-grid2",
+      visitedAt: Date.now(),
+    };
 
-  const nextRecentWorkspaces = [
-    recentWorkspace,
-    ...currentRecentWorkspaces.filter((item) => item.id !== workspace.id),
-  ].slice(0, 3);
+    const nextRecentWorkspaces = [
+      recentWorkspace,
+      ...currentRecentWorkspaces.filter((item) => item.id !== workspace.id),
+    ].slice(0, 3);
 
-  localStorage.setItem(
-    "aiStudyHubRecentWorkspaces",
-    JSON.stringify(nextRecentWorkspaces)
-  );
-}, [
-  workspace?.id,
-  workspace?.name,
-  workspace?.description,
-  workspace?.icon,
-  workspace?.documents,
-]);
+    localStorage.setItem(
+      "aiStudyHubRecentWorkspaces",
+      JSON.stringify(nextRecentWorkspaces)
+    );
+  }, [
+    workspace?.id,
+    workspace?.name,
+    workspace?.description,
+    workspace?.icon,
+    workspace?.documents,
+  ]);
 
   const [workspaceNameInput, setWorkspaceNameInput] = useState(
     workspace?.name || ""
@@ -316,11 +334,11 @@ function WorkSpacePage() {
     const nextIssues = issues.map((issue) =>
       issue.id === selectedIssue.id
         ? {
-            ...issue,
-            content: issueContent,
-            files: [...(issue.files || []), ...issueFiles],
-            updatedAt: "Updated just now",
-          }
+          ...issue,
+          content: issueContent,
+          files: [...(issue.files || []), ...issueFiles],
+          updatedAt: "Updated just now",
+        }
         : issue
     );
 
@@ -423,11 +441,11 @@ function WorkSpacePage() {
       isOwn: true,
       file: messageAttachment
         ? {
-            name: messageAttachment.name,
-            sizeLabel: messageAttachment.sizeLabel,
-            isImage: messageAttachment.isImage,
-            previewUrl: messageAttachment.previewUrl,
-          }
+          name: messageAttachment.name,
+          sizeLabel: messageAttachment.sizeLabel,
+          isImage: messageAttachment.isImage,
+          previewUrl: messageAttachment.previewUrl,
+        }
         : null,
     };
 
@@ -443,29 +461,36 @@ function WorkSpacePage() {
     handleSendMessage();
   }
 
-  function handleRenameWorkspace(e) {
-    e.preventDefault();
+function handleRenameWorkspace(e) {
+  e.preventDefault();
 
-    const trimmedName = workspaceNameInput.trim();
+  const rawName = workspaceNameInput;
+  const trimmedName = rawName.trim();
 
-    if (trimmedName === "") {
-      setWorkspaceSettingMessage("Workspace name cannot be empty.");
-      return;
-    }
-
-    const updatedWorkspaces = savedWorkSpaces.map((item) =>
-      item.id === workspaceId ? { ...item, name: trimmedName } : item
-    );
-
-    localStorage.setItem(
-      "aiStudyHubWorkspaces",
-      JSON.stringify(updatedWorkspaces)
-    );
-
-
-    setWorkspaceNameInput(trimmedName);
-    setWorkspaceSettingMessage("Workspace name updated successfully.");
+  if (trimmedName === "") {
+    setWorkspaceSettingMessage("Workspace name cannot be empty.");
+    return;
   }
+
+  if (rawName.length > WORKSPACE_NAME_MAX_LENGTH) {
+    setWorkspaceSettingMessage(
+      `Workspace name cannot exceed ${WORKSPACE_NAME_MAX_LENGTH} characters.`
+    );
+    return;
+  }
+
+  const updatedWorkspaces = savedWorkSpaces.map((item) =>
+    item.id === workspaceId ? { ...item, name: trimmedName } : item
+  );
+
+  localStorage.setItem(
+    "aiStudyHubWorkspaces",
+    JSON.stringify(updatedWorkspaces)
+  );
+
+  setWorkspaceNameInput(trimmedName);
+  setWorkspaceSettingMessage("Workspace name updated successfully.");
+}
 
   function handleDeleteWorkspace() {
     const isConfirmed = window.confirm(
@@ -555,9 +580,8 @@ function WorkSpacePage() {
 
                 {message.text && (
                   <div
-                    className={`workspace_message_bubble ${
-                      message.isOwn ? "sent" : "received"
-                    }`}
+                    className={`workspace_message_bubble ${message.isOwn ? "sent" : "received"
+                      }`}
                   >
                     {message.text}
                   </div>
@@ -565,9 +589,8 @@ function WorkSpacePage() {
 
                 {message.file && message.file.isImage && (
                   <div
-                    className={`workspace_message_bubble image ${
-                      message.isOwn ? "sent" : "received"
-                    }`}
+                    className={`workspace_message_bubble image ${message.isOwn ? "sent" : "received"
+                      }`}
                   >
                     <img src={message.file.previewUrl} alt={message.file.name} />
                   </div>
@@ -587,9 +610,8 @@ function WorkSpacePage() {
                 )}
 
                 <span
-                  className={`workspace_message_time ${
-                    message.isOwn ? "own" : ""
-                  }`}
+                  className={`workspace_message_time ${message.isOwn ? "own" : ""
+                    }`}
                 >
                   {message.time}
                 </span>
@@ -745,9 +767,8 @@ function WorkSpacePage() {
                 </div>
 
                 <span
-                  className={`workspace_member_status ${
-                    member.role === "Manager" ? "manager" : "member"
-                  }`}
+                  className={`workspace_member_status ${member.role === "Manager" ? "manager" : "member"
+                    }`}
                 >
                   {member.role}
                 </span>
@@ -979,52 +1000,52 @@ function WorkSpacePage() {
           </section>
         ) : null}
 
-{showIssueForm && (
-  <div className="research_issue_popup_overlay">
-    <form
-      className="research_create_card research_issue_popup_card"
-      onSubmit={handleCreateIssue}
-    >
-      <button
-        type="button"
-        className="research_issue_popup_close"
-        onClick={() => setShowIssueForm(false)}
-        aria-label="Close create issue popup"
-      >
-        ×
-      </button>
+        {showIssueForm && (
+          <div className="research_issue_popup_overlay">
+            <form
+              className="research_create_card research_issue_popup_card"
+              onSubmit={handleCreateIssue}
+            >
+              <button
+                type="button"
+                className="research_issue_popup_close"
+                onClick={() => setShowIssueForm(false)}
+                aria-label="Close create issue popup"
+              >
+                ×
+              </button>
 
-      <div className="research_create_header">
-        <div className="research_creator_avatar">
-          {profileName.slice(0, 2).toUpperCase()}
-        </div>
+              <div className="research_create_header">
+                <div className="research_creator_avatar">
+                  {profileName.slice(0, 2).toUpperCase()}
+                </div>
 
-        <div>
-          <h3>Create new issue</h3>
-          <p>Creator: {profileName}</p>
-        </div>
-      </div>
+                <div>
+                  <h3>Create new issue</h3>
+                  <p>Creator: {profileName}</p>
+                </div>
+              </div>
 
-      <div className="research_form_group">
-        <label>Issue name</label>
-        <input
-          value={issueTitle}
-          onChange={(e) => setIssueTitle(e.target.value)}
-          placeholder="Enter issue name"
-          autoFocus
-        />
-      </div>
+              <div className="research_form_group">
+                <label>Issue name</label>
+                <input
+                  value={issueTitle}
+                  onChange={(e) => setIssueTitle(e.target.value)}
+                  placeholder="Enter issue name"
+                  autoFocus
+                />
+              </div>
 
-      <div className="research_create_actions">
-        <button type="button" onClick={() => setShowIssueForm(false)}>
-          Cancel
-        </button>
+              <div className="research_create_actions">
+                <button type="button" onClick={() => setShowIssueForm(false)}>
+                  Cancel
+                </button>
 
-        <button type="submit">Create issue</button>
-      </div>
-    </form>
-  </div>
-)}
+                <button type="submit">Create issue</button>
+              </div>
+            </form>
+          </div>
+        )}
 
         {issues.length > 0 && (
           <section className="research_issue_grid">
@@ -1063,6 +1084,17 @@ function WorkSpacePage() {
             ))}
           </section>
         )}
+        <section className="workspace_research_about">
+          <div className="workspace_research_about_header">
+            <i className="ti-bookmark-alt"></i>
+            <h3>About this workspace</h3>
+          </div>
+
+          <p>
+            {workspace?.description ||
+              "This workspace is used to organize research topics, study materials, and collaborative academic work."}
+          </p>
+        </section>
       </section>
     );
   }
@@ -1088,9 +1120,8 @@ function WorkSpacePage() {
             {studySets.map((studySet) => (
               <button
                 type="button"
-                className={`workspace_study_set_card ${
-                  selectedStudySetId === studySet.id ? "active" : ""
-                }`}
+                className={`workspace_study_set_card ${selectedStudySetId === studySet.id ? "active" : ""
+                  }`}
                 key={studySet.id}
                 onClick={() => handleSelectStudySet(studySet.id)}
               >
@@ -1130,11 +1161,10 @@ function WorkSpacePage() {
               <div>
                 <span
                   style={{
-                    width: `${
-                      ((currentStudyCardIndex + 1) /
+                    width: `${((currentStudyCardIndex + 1) /
                         selectedStudySet.cards.length) *
                       100
-                    }%`,
+                      }%`,
                   }}
                 ></span>
               </div>
@@ -1149,9 +1179,8 @@ function WorkSpacePage() {
           <section className="workspace_study_stage">
             <button
               type="button"
-              className={`workspace_flashcard ${
-                isStudyCardFlipped ? "flipped" : ""
-              }`}
+              className={`workspace_flashcard ${isStudyCardFlipped ? "flipped" : ""
+                }`}
               onClick={() => setIsStudyCardFlipped(!isStudyCardFlipped)}
             >
               <span>{isStudyCardFlipped ? "Answer" : "Question"}</span>
@@ -1255,16 +1284,22 @@ function WorkSpacePage() {
 
           <form className="workspace_settings_form" onSubmit={handleRenameWorkspace}>
             <label>Workspace name</label>
-            <input
-              type="text"
-              value={workspaceNameInput}
-              onChange={(e) => {
-                setWorkspaceNameInput(e.target.value);
-                setWorkspaceSettingMessage("");
-              }}
-              placeholder="Enter workspace name"
-            />
+<input
+  type="text"
+  value={workspaceNameInput}
+  onChange={handleWorkspaceNameChange}
+  placeholder="Enter workspace name"
+/>
 
+<small
+  className={
+    workspaceNameInput.length > WORKSPACE_NAME_MAX_LENGTH
+      ? "settings_warning_text"
+      : ""
+  }
+>
+  {workspaceNameInput.length}/{WORKSPACE_NAME_MAX_LENGTH} characters
+</small>
             <button type="submit">Save changes</button>
           </form>
 
