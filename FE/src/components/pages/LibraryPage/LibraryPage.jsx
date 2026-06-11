@@ -192,6 +192,27 @@ useEffect(() => {
 
     if (files.length === 0) return;
 
+    const MAX_SIZE = 50 * 1024 * 1024; // 50MB
+
+    const validFiles = [];
+    const tooLargeFiles = [];
+
+    files.forEach((file) => {
+      if (file.size > MAX_SIZE) {
+        tooLargeFiles.push(file.name);
+      } else {
+        validFiles.push(file);
+      }
+    });
+
+    if (tooLargeFiles.length > 0) {
+      alert(`These files exceed 50MB limit:\n- ${tooLargeFiles.join("\n- ")}`);
+    }
+
+    if (validFiles.length === 0) {
+      e.target.value = "";
+      return;
+    }
     setPendingFiles(files);
     setPendingFolderId(currentFolder ? getFolderKey(currentFolder) : null);
     setHashtags(["", "", ""]);
