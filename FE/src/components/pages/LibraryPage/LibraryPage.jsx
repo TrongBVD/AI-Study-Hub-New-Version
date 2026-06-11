@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 
 import {
   getMyDocuments,
@@ -11,10 +11,12 @@ import "./LibraryPage.css";
 import "../../../assets/icons/themify-icons-font/themify-icons/themify-icons.css";
 
 function LibraryPage() {
-  const LIBRARY_NAME_MAX_LENGTH = 30;
+  const LIBRARY_NAME_MAX_LENGTH = 20;
 
   const [libraryNameMessage, setLibraryNameMessage] = useState("");
   const { libraryId } = useParams();
+  const navigate = useNavigate();
+
   function handleToggleShareOnProfile() {
     if (libraryVisibility === "private") {
       setLibraryNameMessage(
@@ -422,15 +424,41 @@ function LibraryPage() {
     setLibraryName(trimmedLibraryName);
     setLibraryNameMessage("Library settings saved successfully.");
   }
-  function handleDeleteLibrary() {
-    const confirmed = window.confirm(
-      "Are you sure you want to delete this library? This action cannot be undone.",
-    );
+function handleDeleteLibrary() {
+  const confirmed = window.confirm(
+    "Are you sure you want to delete this library? This action cannot be undone."
+  );
 
-    if (!confirmed) return;
+  if (!confirmed) return;
 
-    alert("Delete library will be connected to backend later.");
-  }
+  const savedLibraries = JSON.parse(
+    localStorage.getItem("aiStudyHubLibraries") || "[]"
+  );
+
+  const updatedLibraries = savedLibraries.filter(
+    (library) => library.id !== libraryId
+  );
+
+  localStorage.setItem(
+    "aiStudyHubLibraries",
+    JSON.stringify(updatedLibraries)
+  );
+
+  const recentLibraries = JSON.parse(
+    localStorage.getItem("aiStudyHubRecentLibraries") || "[]"
+  );
+
+  const updatedRecentLibraries = recentLibraries.filter(
+    (library) => library.id !== libraryId
+  );
+
+  localStorage.setItem(
+    "aiStudyHubRecentLibraries",
+    JSON.stringify(updatedRecentLibraries)
+  );
+
+  navigate("/dashboard/libraries", { replace: true });
+}
 
   function handleDeleteFolder(folder, event) {
     event.stopPropagation();
