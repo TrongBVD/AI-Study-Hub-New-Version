@@ -250,3 +250,8 @@
     grid-template-columns: 1fr;
   }
 }
+
+.character_count.error {
+  color: #b91c1c;
+  font-weight: 800;
+}

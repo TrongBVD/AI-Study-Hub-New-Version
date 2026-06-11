@@ -4,7 +4,8 @@ import "./CreateWorkSpacePage.css";
 
 function CreateWorkSpacePage() {
   const navigate = useNavigate();
-
+const TITLE_LIMIT = 50;
+const DESCRIPTION_LIMIT = 350;
 
   const [workspaceName, setWorkspaceName] = useState("");
   const [description, setDescription] = useState("");
@@ -18,45 +19,58 @@ function handleReturn() {
   navigate("/dashboard/home");
 }
 
-  function handleCreateWorkSpace(e) {
-    e.preventDefault();
+function handleCreateWorkSpace(e) {
+  e.preventDefault();
 
-    if (workspaceName.trim() === "") {
-      alert("Please enter workspace name");
-      return;
-    }
+  const trimmedWorkspaceName = workspaceName.trim();
+  const trimmedDescription = description.trim();
 
-    const newWorkSpace = {
-      id: `workspace-${Date.now()}`,
-      owner: "dangkhoabi456",
-      name: workspaceName.trim(),
-      description:
-        description.trim() ||
-        "This workspace helps you organize private projects, manage documents, and collaborate with selected members.",
-      visibility: "private",
-      documents: 0,
-      updatedAt: "Updated just now",
-      icon: "ti-briefcase",
-      highlight: false,
-      createdAt: new Date().toISOString(),
-    };
-
-    const savedWorkSpaces = JSON.parse(
-      localStorage.getItem("aiStudyHubWorkspaces") || "[]"
-    );
-
-    localStorage.setItem(
-      "aiStudyHubWorkspaces",
-      JSON.stringify([newWorkSpace, ...savedWorkSpaces])
-    );
-
-    navigate(`/dashboard/workspaces/${newWorkSpace.id}`, {
-      state: {
-        workspace: newWorkSpace,
-        from: "/dashboard/create-workspace",
-      },
-    });
+  if (trimmedWorkspaceName === "") {
+    alert("Please enter workspace name");
+    return;
   }
+
+  if (trimmedWorkspaceName.length > TITLE_LIMIT) {
+    alert(`Workspace name cannot exceed ${TITLE_LIMIT} characters.`);
+    return;
+  }
+
+  if (trimmedDescription.length > DESCRIPTION_LIMIT) {
+    alert(`Workspace description cannot exceed ${DESCRIPTION_LIMIT} characters.`);
+    return;
+  }
+
+  const newWorkSpace = {
+    id: `workspace-${Date.now()}`,
+    owner: "dangkhoabi456",
+    name: trimmedWorkspaceName,
+    description:
+      trimmedDescription ||
+      "This workspace helps you organize private projects, manage documents, and collaborate with selected members.",
+    visibility: "private",
+    documents: 0,
+    updatedAt: "Updated just now",
+    icon: "ti-briefcase",
+    highlight: false,
+    createdAt: new Date().toISOString(),
+  };
+
+  const savedWorkSpaces = JSON.parse(
+    localStorage.getItem("aiStudyHubWorkspaces") || "[]"
+  );
+
+  localStorage.setItem(
+    "aiStudyHubWorkspaces",
+    JSON.stringify([newWorkSpace, ...savedWorkSpaces])
+  );
+
+  navigate(`/dashboard/workspaces/${newWorkSpace.id}`, {
+    state: {
+      workspace: newWorkSpace,
+      from: "/dashboard/create-workspace",
+    },
+  });
+}
 
   return (
     <main className="create_workspace_page">
@@ -91,12 +105,16 @@ function handleReturn() {
               <div className="form_group workspace_name_group">
                 <label>Workspace name *</label>
 
-                <input
-                  type="text"
-                  value={workspaceName}
-                  onChange={(e) => setWorkspaceName(e.target.value)}
-                  placeholder="Enter workspace name"
-                />
+<input
+  type="text"
+  value={workspaceName}
+  onChange={(e) => setWorkspaceName(e.target.value)}
+  placeholder="Enter workspace name"
+/>
+
+<p className={workspaceName.length > TITLE_LIMIT ? "character_count error" : "character_count"}>
+  {workspaceName.length} / {TITLE_LIMIT} characters
+</p>
               </div>
             </div>
 
@@ -114,9 +132,9 @@ function handleReturn() {
                 placeholder="Write a short description"
               />
 
-              <p className="character_count">
-                {description.length} / 350 characters
-              </p>
+<p className={description.length > DESCRIPTION_LIMIT ? "character_count error" : "character_count"}>
+  {description.length} / {DESCRIPTION_LIMIT} characters
+</p>
             </div>
           </div>
 
