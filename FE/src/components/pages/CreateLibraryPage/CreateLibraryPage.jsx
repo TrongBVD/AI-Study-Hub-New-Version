@@ -5,7 +5,7 @@ import "./CreateLibraryPage.css";
 function CreateLibraryPage() {
   const navigate = useNavigate();
   const location = useLocation();
-  const TITLE_LIMIT = 50;
+  const TITLE_LIMIT = 20;
 const DESCRIPTION_LIMIT = 350;
 
   const returnPath = location.state?.from || "/dashboard/home";
@@ -107,6 +107,7 @@ function handleCreateLibrary(e) {
 <input
   type="text"
   value={libraryName}
+  maxLength={TITLE_LIMIT}
   onChange={(e) => setLibraryName(e.target.value)}
   placeholder="Enter library name"
 />
@@ -124,12 +125,13 @@ function handleCreateLibrary(e) {
             <div className="form_group">
               <label>Description</label>
 
-              <input
-                type="text"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="Write a short description"
-              />
+<input
+  type="text"
+  value={description}
+  maxLength={DESCRIPTION_LIMIT}
+  onChange={(e) => setDescription(e.target.value)}
+  placeholder="Write a short description"
+/>
 
 <p className={description.length > DESCRIPTION_LIMIT ? "character_count error" : "character_count"}>
   {description.length} / {DESCRIPTION_LIMIT} characters

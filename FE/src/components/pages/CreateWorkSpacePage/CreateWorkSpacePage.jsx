@@ -4,7 +4,7 @@ import "./CreateWorkSpacePage.css";
 
 function CreateWorkSpacePage() {
   const navigate = useNavigate();
-const TITLE_LIMIT = 50;
+const TITLE_LIMIT = 20;
 const DESCRIPTION_LIMIT = 350;
 
   const [workspaceName, setWorkspaceName] = useState("");
@@ -108,6 +108,7 @@ function handleCreateWorkSpace(e) {
 <input
   type="text"
   value={workspaceName}
+  maxLength={TITLE_LIMIT}
   onChange={(e) => setWorkspaceName(e.target.value)}
   placeholder="Enter workspace name"
 />
@@ -125,12 +126,13 @@ function handleCreateWorkSpace(e) {
             <div className="form_group">
               <label>Description</label>
 
-              <input
-                type="text"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="Write a short description"
-              />
+<input
+  type="text"
+  value={description}
+  maxLength={DESCRIPTION_LIMIT}
+  onChange={(e) => setDescription(e.target.value)}
+  placeholder="Write a short description"
+/>
 
 <p className={description.length > DESCRIPTION_LIMIT ? "character_count error" : "character_count"}>
   {description.length} / {DESCRIPTION_LIMIT} characters
