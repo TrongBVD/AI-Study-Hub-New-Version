@@ -1,48 +1,23 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import "./PersonalProfilePage.css";
 import defaultAvatar from "../../../assets/imgs/default_avatar.png";
 
 function PersonalProfile() {
-  const [userName, setUserName] = useState("dangkhoabi456");
+  const navigate = useNavigate();
+
+  const [userName, setUserName] = useState(() => {
+    return localStorage.getItem("aiStudyHubProfileName") || "dangkhoabi456";
+  });
+
   const dateOfBirth = new Date("2003-11-19");
   const [isEditingName, setIsEditingName] = useState(false);
   const [newName, setNewName] = useState(userName);
   const [avatar, setAvatar] = useState(defaultAvatar);
 
-  const libraries = [
-    {
-      name: "JavaScript-notes",
-      visibility: "Public",
-      language: "HTML",
-    },
-    {
-      name: "React-practice",
-      visibility: "Public",
-      language: "JavaScript",
-    },
-    {
-      name: "Software-engineering",
-      visibility: "Public",
-      description:
-        "Learning materials about requirements, design, testing, and software process models.",
-      language: "C++",
-    },
-    {
-      name: "Business-analysis",
-      visibility: "Public",
-      language: "HTML",
-    },
-    {
-      name: "AI-study-documents",
-      visibility: "Public",
-      language: "Python",
-    },
-    {
-      name: "Final-exam-review",
-      visibility: "Public",
-      language: "HTML",
-    },
-  ];
+  const libraries = JSON.parse(
+    localStorage.getItem("aiStudyHubLibraries") || "[]"
+  ).filter((library) => library.shareOnProfile === true);
 
   function handleChangeAvatar(e) {
     const file = e.target.files[0];
@@ -54,9 +29,12 @@ function PersonalProfile() {
   }
 
   function handleSaveName() {
-    if (newName.trim() === "") return;
+    const trimmedName = newName.trim();
 
-    setUserName(newName);
+    if (trimmedName === "") return;
+
+    setUserName(trimmedName);
+    localStorage.setItem("aiStudyHubProfileName", trimmedName);
     setIsEditingName(false);
   }
 
@@ -86,8 +64,13 @@ function PersonalProfile() {
               />
 
               <div className="edit_name_actions">
-                <button onClick={handleSaveName}>Save</button>
-                <button onClick={handleCancelEdit}>Cancel</button>
+                <button type="button" onClick={handleSaveName}>
+                  Save
+                </button>
+
+                <button type="button" onClick={handleCancelEdit}>
+                  Cancel
+                </button>
               </div>
             </div>
           ) : (
@@ -97,6 +80,7 @@ function PersonalProfile() {
               <h2>{dateOfBirth.toDateString()}</h2>
 
               <button
+                type="button"
                 className="edit_name_btn"
                 onClick={() => setIsEditingName(true)}
                 title="Edit name"
@@ -111,37 +95,45 @@ function PersonalProfile() {
       <section className="profile_content">
         <div className="libraries_section">
           <div className="libraries_header">
-            <h3>Popular libraries</h3>
-            <button>Customize your pins</button>
+            <h3>Shared libraries</h3>
           </div>
 
-          <div className="library_grid">
-            {libraries.map((library) => (
-              <LibraryCard key={library.name} library={library} />
-            ))}
-          </div>
+          {libraries.length === 0 ? (
+            <div className="profile_empty_library">
+              <h3>No library upload</h3>
+            </div>
+          ) : (
+            <div className="library_grid">
+              {libraries.map((library) => (
+                <LibraryCard
+                  key={library.id || library.name}
+                  library={library}
+                  onView={() => navigate(`/dashboard/libraries/${library.id}`)}
+                />
+              ))}
+            </div>
+          )}
         </div>
       </section>
     </main>
   );
 }
 
-function LibraryCard({ library }) {
+function LibraryCard({ library, onView }) {
   return (
     <div className="library_profile_card">
-      <div className="library_card_header">
+      <div className="library_card_title">
         <h4>{library.name}</h4>
-        <span>{library.visibility}</span>
+        <span>{library.visibility === "private" ? "Private" : "Public"}</span>
       </div>
 
       {library.description && (
         <p className="library_description">{library.description}</p>
       )}
 
-      <div className="library_language">
-        <span className="language_color"></span>
-        <span>{library.language}</span>
-      </div>
+      <button type="button" className="library_view_btn" onClick={onView}>
+        View
+      </button>
     </div>
   );
 }
