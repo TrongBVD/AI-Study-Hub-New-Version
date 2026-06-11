@@ -200,6 +200,7 @@
   justify-content: flex-start;
 }
 #load-msg {
+  color: #000;
   font-family: Tahoma, sans-serif;
   font-size: 13px;
 }

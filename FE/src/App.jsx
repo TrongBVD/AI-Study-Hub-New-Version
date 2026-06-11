@@ -32,22 +32,24 @@ function ProtectedRoute({ children }) {
   return children;
 }
 
-
 function App() {
   return (
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<Navigate to="/login" replace />} />
 
-        <Route path="/dashboard" element={<Dashboard />}>
-          <Route index element={<Navigate to="/dashboard/home" replace />} />
+        <Route path="/dashboard" element={<Dashboard />} />
+        <Route index element={<Navigate to="/dashboard/home" replace />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
 
         <Route path="/register" element={<RegisterGoogle />} />
         <Route path="/complete-profile" element={<CompleteProfile />} />
-        <Route path="/enter-username-password" element={<EnterUserNamePass />} />
+        <Route
+          path="/enter-username-password"
+          element={<EnterUserNamePass />}
+        />
         <Route path="/verify-otp" element={<OTPVerification />} />
         <Route path="/otp-verification" element={<OTPVerification />} />
 

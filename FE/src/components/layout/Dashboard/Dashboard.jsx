@@ -5,7 +5,7 @@ import Navbar from "./Navbar.jsx";
 
 import "./Dashboard.css";
 
-function DashboardLayout() {
+function Dashboard() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   return (
@@ -17,10 +17,7 @@ function DashboardLayout() {
         />
       )}
 
-      <Sidebar
-        isOpen={isSidebarOpen}
-        onClose={() => setIsSidebarOpen(false)}
-      />
+      <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
 
       <div className="main_area">
         <Navbar onOpenSidebar={() => setIsSidebarOpen(true)} />
@@ -33,4 +30,3 @@ function DashboardLayout() {
   );
 }
 export default Dashboard;
-

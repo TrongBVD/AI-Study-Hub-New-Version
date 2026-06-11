@@ -2,21 +2,20 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "./CreateWorkSpacePage.css";
 
-function CreateWorkSpace() {
+function CreateWorkSpacePage() {
   const navigate = useNavigate();
-
 
   const [workspaceName, setWorkspaceName] = useState("");
   const [description, setDescription] = useState("");
 
-function handleReturn() {
-  if (window.history.length > 1) {
-    navigate(-1);
-    return;
-  }
+  function handleReturn() {
+    if (window.history.length > 1) {
+      navigate(-1);
+      return;
+    }
 
-  navigate("/dashboard/home");
-}
+    navigate("/dashboard/home");
+  }
 
   function handleCreateWorkSpace(e) {
     e.preventDefault();
@@ -42,12 +41,12 @@ function handleReturn() {
     };
 
     const savedWorkSpaces = JSON.parse(
-      localStorage.getItem("aiStudyHubWorkspaces") || "[]"
+      localStorage.getItem("aiStudyHubWorkspaces") || "[]",
     );
 
     localStorage.setItem(
       "aiStudyHubWorkspaces",
-      JSON.stringify([newWorkSpace, ...savedWorkSpaces])
+      JSON.stringify([newWorkSpace, ...savedWorkSpaces]),
     );
 
     navigate(`/dashboard/workspaces/${newWorkSpace.id}`, {
@@ -69,7 +68,10 @@ function handleReturn() {
           </p>
         </div>
 
-        <form className="create_workspace_form" onSubmit={handleCreateWorkSpace}>
+        <form
+          className="create_workspace_form"
+          onSubmit={handleCreateWorkSpace}
+        >
           <div className="form_section">
             <h2>General information</h2>
 
