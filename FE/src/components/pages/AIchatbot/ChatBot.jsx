@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import "./ChatBot.css";
-import aiChatbotIcon from "../../../assets/imgs/AIchatbot.png";
+import aiChatbotIcon from "../../../assets/imgs/iconchatbot.svg";
 
 import { IoIosSend } from "react-icons/io";
 import { RiResetRightLine } from "react-icons/ri";

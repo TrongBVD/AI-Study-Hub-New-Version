@@ -52,6 +52,7 @@ function App() {
         <Route path="/" element={<Navigate to="/login" replace />} />
 
         {/* AUTH ROUTES */}
+
         <Route path="/login" element={<LoginPage />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
