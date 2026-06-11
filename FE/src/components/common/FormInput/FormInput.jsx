@@ -30,7 +30,7 @@ function FormInput({
         className={`form_input ${className} ${isPasswordType ? 'form_input_password' : ''}`}
         type={inputType}
         name={name}
-        placeholder={placeholder || " "}
+        placeholder={placeholder || label || ""}
         value={value}
         onChange={onChange}
         required={required}
