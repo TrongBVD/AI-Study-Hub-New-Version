@@ -8,7 +8,7 @@ function Sidebar({ isOpen, onClose }) {
     { icon: "ti-folder", label: "My libraries", path: "/dashboard/libraries" },
     { icon: "ti-layout-grid2", label: "My workspaces", path: "/dashboard/workspaces" },
     { icon: "ti-comments", label: "AI Chat", path: "/dashboard/ai-chat"},
-    { icon: "ti-cloud-up", label: "Cloud upload", path: "/dashboard/uploads" },
+    { icon: "ti-cloud-up", label: "Cloud upload", path: "/dashboard/cloud-upload" },
     { icon: "ti-settings", label: "Settings", path: "/dashboard/settings" },
   ];
 
