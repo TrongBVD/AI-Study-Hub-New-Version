@@ -266,7 +266,7 @@ body {
   min-width: 0;
 }
 
-.library_card_header {
+.library_card_title {
   border-radius: 6px;
   display: flex;
   justify-content: space-between;
@@ -275,16 +275,16 @@ body {
   min-width: 0;
 }
 
-.library_card_header h4 {
+.library_card_title h4 {
   margin: 0;
-  color: #58a6ff;
+  color: #ffff;
   font-size: 16px;
   line-height: 1.35;
   word-break: break-word;
   overflow-wrap: anywhere;
 }
 
-.library_card_header span {
+.library_card_title span {
   flex-shrink: 0;
   border: 1px solid #8b949e;
   color: #c9d1d9;
@@ -343,4 +343,37 @@ body {
   .profile_tabs button {
     white-space: nowrap;
   }
+}
+
+.library_view_btn {
+  width: fit-content;
+  min-width: 92px;
+  min-height: 36px;
+  border: none;
+  border-radius: 8px;
+  background: #b4531a;
+  color: #ffffff;
+  padding: 0 18px;
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+  margin-top: 14px;
+  align-self: flex-start;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  transition: 0.2s ease;
+}
+
+.library_view_btn:hover {
+  background: #923f12;
+  transform: translateY(-1px);
+  box-shadow: 0 8px 18px rgba(59, 38, 24, 0.22);
+}
+
+.library_view_btn:active {
+  transform: translateY(0);
+  box-shadow: none;
 }

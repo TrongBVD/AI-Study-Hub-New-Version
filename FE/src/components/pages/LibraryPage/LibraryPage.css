@@ -2568,3 +2568,72 @@
     grid-template-columns: 1fr;
   }
 }
+/* Library profile visibility toggle */
+
+.settings_profile_visibility {
+  border-top: 1px solid #e2d3bc;
+  padding-top: 22px;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.settings_profile_visibility label {
+  display: block;
+  color: #3b2618;
+  font-size: 14px;
+  font-weight: 900;
+  margin-bottom: 6px;
+}
+
+.settings_profile_visibility p {
+  margin: 0 0 4px;
+  color: #3b2618;
+  font-size: 14px;
+}
+
+.settings_profile_visibility small {
+  color: #735f4c;
+  font-size: 12px;
+  font-style: italic;
+}
+
+.settings_toggle_btn {
+  width: 52px;
+  height: 30px;
+  border: none;
+  border-radius: 999px;
+  background: #d8c8ad;
+  padding: 3px;
+  cursor: pointer;
+  flex-shrink: 0;
+
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+
+  transition: 0.2s ease;
+}
+
+.settings_toggle_btn span {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 2px 6px rgba(47, 32, 21, 0.22);
+  transition: 0.2s ease;
+}
+
+.settings_toggle_btn.active {
+  background: #b4531a;
+  justify-content: flex-end;
+}
+
+@media (max-width: 620px) {
+  .settings_profile_visibility {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
