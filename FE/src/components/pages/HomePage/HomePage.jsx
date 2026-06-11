@@ -159,7 +159,7 @@ function HomePage() {
                 to={`/dashboard/workspaces/${workspace.id}`}
                 className="home_open_btn"
               >
-                Open workspace
+                Open
               </Link>
             </div>
           </div>
