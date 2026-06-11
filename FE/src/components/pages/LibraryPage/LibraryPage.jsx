@@ -11,13 +11,41 @@ import "./LibraryPage.css";
 import "../../../assets/icons/themify-icons-font/themify-icons/themify-icons.css";
 
 function LibraryPage() {
-  const { libraryId } = useParams();
+  const LIBRARY_NAME_MAX_LENGTH = 30;
 
+  const [libraryNameMessage, setLibraryNameMessage] = useState("");
+  const { libraryId } = useParams();
+  function handleToggleShareOnProfile() {
+    if (libraryVisibility === "private") {
+      setLibraryNameMessage(
+        "Cannot upload to your personal profile when the library is private."
+      );
+      return;
+    }
+
+    setLibraryNameMessage("");
+    setShareOnProfile((currentValue) => !currentValue);
+  }
+  function handleLibraryNameChange(e) {
+    const nextValue = e.target.value;
+
+    if (nextValue.length > LIBRARY_NAME_MAX_LENGTH) return;
+
+    setLibraryName(nextValue);
+
+    if (nextValue.length === LIBRARY_NAME_MAX_LENGTH) {
+      setLibraryNameMessage(
+        `Library name has reached the limit of ${LIBRARY_NAME_MAX_LENGTH} characters.`
+      );
+      return;
+    }
+
+    setLibraryNameMessage("");
+  }
   function getInitialLibraryData() {
     const savedLibraries = JSON.parse(
       localStorage.getItem("aiStudyHubLibraries") || "[]",
     );
-
     const matchedLibrary = savedLibraries.find(
       (library) => library.id === libraryId,
     );
@@ -41,8 +69,8 @@ function LibraryPage() {
   }
 
   const folderIdRef = useRef(1);
-const authorName =
-  localStorage.getItem("aiStudyHubProfileName") || "dangkhoabi456";
+  const authorName =
+    localStorage.getItem("aiStudyHubProfileName") || "dangkhoabi456";
   const [libraryData, setLibraryData] = useState(getInitialLibraryData);
   const [activeTab, setActiveTab] = useState("documents");
   const [documentSearch, setDocumentSearch] = useState("");
@@ -74,39 +102,39 @@ const authorName =
     return items.filter((item) => item.type !== "folder").length;
   }
 
-function syncLibraryDocumentCount(nextItems) {
-  const nextDocumentCount = countUploadedFiles(nextItems);
+  function syncLibraryDocumentCount(nextItems) {
+    const nextDocumentCount = countUploadedFiles(nextItems);
 
-const updatedLibrary = {
-  ...libraryData,
-  name: libraryName.trim() || libraryData.name,
-  visibility: libraryVisibility,
-  shareOnProfile: shareOnProfile,
-  documents: nextDocumentCount,
-  updatedAt: "Updated just now",
-};
+    const updatedLibrary = {
+      ...libraryData,
+      name: libraryName.trim() || libraryData.name,
+      visibility: libraryVisibility,
+      shareOnProfile: shareOnProfile,
+      documents: nextDocumentCount,
+      updatedAt: "Updated just now",
+    };
 
-  const savedLibraries = JSON.parse(
-    localStorage.getItem("aiStudyHubLibraries") || "[]"
-  );
+    const savedLibraries = JSON.parse(
+      localStorage.getItem("aiStudyHubLibraries") || "[]"
+    );
 
-  const hasCurrentLibrary = savedLibraries.some(
-    (library) => library.id === updatedLibrary.id
-  );
+    const hasCurrentLibrary = savedLibraries.some(
+      (library) => library.id === updatedLibrary.id
+    );
 
-  const updatedLibraries = hasCurrentLibrary
-    ? savedLibraries.map((library) =>
+    const updatedLibraries = hasCurrentLibrary
+      ? savedLibraries.map((library) =>
         library.id === updatedLibrary.id ? updatedLibrary : library
       )
-    : [updatedLibrary, ...savedLibraries];
+      : [updatedLibrary, ...savedLibraries];
 
-  localStorage.setItem(
-    "aiStudyHubLibraries",
-    JSON.stringify(updatedLibraries)
-  );
+    localStorage.setItem(
+      "aiStudyHubLibraries",
+      JSON.stringify(updatedLibraries)
+    );
 
-  setLibraryData(updatedLibrary);
-}
+    setLibraryData(updatedLibrary);
+  }
 
   function getFolderKey(folder) {
     return folder.id || folder.name;
@@ -179,14 +207,14 @@ const updatedLibrary = {
       setIsLoadingDocuments(false);
     }
   }
-useEffect(() => {
-  async function fetchDocuments() {
-    await loadBackendDocuments();
-  }
+  useEffect(() => {
+    async function fetchDocuments() {
+      await loadBackendDocuments();
+    }
 
-  fetchDocuments();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-}, []);
+    fetchDocuments();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   function handleUploadFile(e) {
     const files = Array.from(e.target.files || []);
 
@@ -347,10 +375,18 @@ useEffect(() => {
       e.preventDefault();
     }
 
-    const trimmedLibraryName = libraryName.trim();
+    const rawLibraryName = libraryName;
+    const trimmedLibraryName = rawLibraryName.trim();
 
     if (trimmedLibraryName === "") {
-      alert("Please enter library name.");
+      setLibraryNameMessage("Please enter library name.");
+      return;
+    }
+
+    if (rawLibraryName.length > LIBRARY_NAME_MAX_LENGTH) {
+      setLibraryNameMessage(
+        `Library name cannot exceed ${LIBRARY_NAME_MAX_LENGTH} characters.`
+      );
       return;
     }
 
@@ -358,33 +394,34 @@ useEffect(() => {
       ...libraryData,
       name: trimmedLibraryName,
       visibility: libraryVisibility,
+      shareOnProfile: shareOnProfile,
       documents: countUploadedFiles(libraryItems),
       updatedAt: "Updated just now",
     };
 
     const savedLibraries = JSON.parse(
-      localStorage.getItem("aiStudyHubLibraries") || "[]",
+      localStorage.getItem("aiStudyHubLibraries") || "[]"
     );
 
     const hasCurrentLibrary = savedLibraries.some(
-      (library) => library.id === updatedLibrary.id,
+      (library) => library.id === updatedLibrary.id
     );
 
     const updatedLibraries = hasCurrentLibrary
       ? savedLibraries.map((library) =>
-        library.id === updatedLibrary.id ? updatedLibrary : library,
+        library.id === updatedLibrary.id ? updatedLibrary : library
       )
       : [updatedLibrary, ...savedLibraries];
 
     localStorage.setItem(
       "aiStudyHubLibraries",
-      JSON.stringify(updatedLibraries),
+      JSON.stringify(updatedLibraries)
     );
 
     setLibraryData(updatedLibrary);
-    alert("Library settings saved successfully!");
+    setLibraryName(trimmedLibraryName);
+    setLibraryNameMessage("Library settings saved successfully.");
   }
-
   function handleDeleteLibrary() {
     const confirmed = window.confirm(
       "Are you sure you want to delete this library? This action cannot be undone.",
@@ -481,11 +518,6 @@ useEffect(() => {
                 <h1>{libraryData.name}</h1>
                 <span>{formatVisibility(libraryData.visibility)}</span>
               </div>
-
-              <p>
-                {libraryData.description ||
-                  "A learning library for storing study materials, organizing subjects, and using AI to review documents."}
-              </p>
             </div>
           </div>
 
@@ -752,8 +784,22 @@ useEffect(() => {
                       id="libraryName"
                       type="text"
                       value={libraryName}
-                      onChange={(e) => setLibraryName(e.target.value)}
+                      onChange={handleLibraryNameChange}
                     />
+
+                    <small
+                      className={
+                        libraryName.length > LIBRARY_NAME_MAX_LENGTH
+                          ? "settings_warning_text"
+                          : ""
+                      }
+                    >
+                      {libraryName.length}/{LIBRARY_NAME_MAX_LENGTH} characters
+                    </small>
+
+                    {libraryNameMessage && (
+                      <small className="settings_warning_text">{libraryNameMessage}</small>
+                    )}
                     <small>
                       This name will be visible to all members and shown in
                       search results if public.
@@ -773,7 +819,10 @@ useEffect(() => {
                           name="libraryVisibility"
                           value="public"
                           checked={libraryVisibility === "public"}
-                          onChange={(e) => setLibraryVisibility(e.target.value)}
+                          onChange={(e) => {
+                            setLibraryVisibility(e.target.value);
+                            setLibraryNameMessage("");
+                          }}
                         />
 
                         <div>
@@ -794,7 +843,11 @@ useEffect(() => {
                           name="libraryVisibility"
                           value="private"
                           checked={libraryVisibility === "private"}
-                          onChange={(e) => setLibraryVisibility(e.target.value)}
+                          onChange={(e) => {
+                            setLibraryVisibility(e.target.value);
+                            setShareOnProfile(false);
+                            setLibraryNameMessage("");
+                          }}
                         />
 
                         <div>
@@ -819,7 +872,7 @@ useEffect(() => {
                     <button
                       type="button"
                       className={`settings_toggle_btn ${shareOnProfile ? "active" : ""}`}
-                      onClick={() => setShareOnProfile((currentValue) => !currentValue)}
+                      onClick={handleToggleShareOnProfile}
                       aria-label="Toggle library visibility on profile"
                     >
                       <span></span>
@@ -866,68 +919,66 @@ useEffect(() => {
                 </section>
               </section>
             )}
-
-            {activeTab !== "documents" && activeTab !== "settings" && (
-              <div className="empty_tab">
-                <h2>{activeTab}</h2>
-                <p>This section will be developed later.</p>
+            <section className="library_about_center">
+              <div className="library_about_header">
+                <i className="ti-book"></i>
+                <h3>About this library</h3>
               </div>
-            )}
+
+              <p>
+                {libraryData.description ||
+                  "This library helps students manage learning resources, upload documents, and use AI to summarize or ask questions from files."}
+              </p>
+            </section>
           </section>
 
           <aside className="library_sidebar">
-  <div className="side_card">
-    <h3>About this library</h3>
-    <p>
-      {libraryData.description ||
-        "This library helps students manage learning resources, upload documents, and use AI to summarize or ask questions from files."}
-    </p>
-  </div>
 
-  <div className="side_card">
-    <div className="side_title">
-      <h3>Author</h3>
-    </div>
 
-    <div className="collaborator_list">
-      <div className="collaborator_item">
-        <div className="collaborator_icon">
-          <i className="ti-user"></i>
-        </div>
+            <div className="side_card">
+              <div className="side_title">
+                <h3>Author</h3>
+              </div>
 
-        <div>
-          <strong>{authorName}</strong>
-          <p>Owner</p>
-        </div>
-      </div>
-    </div>
-  </div>
+              <div className="collaborator_list">
+                <div className="collaborator_item">
+                  <div className="collaborator_icon">
+                    <i className="ti-user"></i>
+                  </div>
 
-  <div className="side_card">
-    <h3>Library info</h3>
+                  <div>
+                    <strong>{authorName}</strong>
+                    <p>Owner</p>
+                  </div>
+                </div>
+              </div>
+            </div>
 
-    <div className="info_row">
-      <span>Files uploaded</span>
-      <strong>{uploadedFileCount}</strong>
-    </div>
+            <div className="side_card">
+              <h3>Library info</h3>
 
-    <div className="info_row">
-      <span>Profile visibility</span>
-      <strong>{shareOnProfile ? "Shown" : "Hidden"}</strong>
-    </div>
-  </div>
+              <div className="info_row">
+                <span>Files uploaded</span>
+                <strong>{uploadedFileCount}</strong>
+              </div>
 
-  <div className="summarize_card">
-    <h3>Summarize Library</h3>
-    <p>Use AI to generate a curriculum overview from these files.</p>
+              <div className="info_row">
+                <span>Profile visibility</span>
+                <strong>{shareOnProfile ? "Shown" : "Hidden"}</strong>
+              </div>
+            </div>
 
-    <button type="button">Start Analysis</button>
+            <div className="summarize_card">
+              <h3>Summarize Library</h3>
+              <p>Use AI to generate a curriculum overview from these files.</p>
 
-    <div className="flash_btn">
-      <i className="ti-bolt"></i>
-    </div>
-  </div>
-</aside>
+              <button type="button">Start Analysis</button>
+
+              <div className="flash_btn">
+                <i className="ti-bolt"></i>
+              </div>
+            </div>
+          </aside>
         </section>
       </section>
 

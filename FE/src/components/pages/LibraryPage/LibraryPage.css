@@ -2637,3 +2637,62 @@
     flex-direction: column;
   }
 }
+.library_about_center {
+  margin-top: 28px;
+  background: #fffaf0;
+  border: 1px solid #e2d3bc;
+  border-radius: 18px;
+  padding: 26px 28px;
+  box-shadow: 0 12px 28px rgba(59, 38, 24, 0.06);
+}
+
+.library_about_header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.library_about_header i {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: #ead7bd;
+  color: #b4531a;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  font-size: 18px;
+}
+
+.library_about_header h3 {
+  margin: 0;
+  color: #2f2015;
+  font-size: 22px;
+  font-weight: 900;
+}
+
+.library_about_center p {
+  margin: 0;
+  color: #735f4c;
+  font-size: 15px;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+.library_hero p,
+.side_card p,
+.library_about_center p {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.settings_warning_text {
+  display: block;
+  margin-top: 8px;
+  color: #b4531a;
+  font-size: 12px;
+  font-weight: 800;
+}
