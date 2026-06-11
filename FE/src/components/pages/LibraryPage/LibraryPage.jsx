@@ -41,17 +41,13 @@ function LibraryPage() {
   }
 
   const folderIdRef = useRef(1);
-
+const authorName =
+  localStorage.getItem("aiStudyHubProfileName") || "dangkhoabi456";
   const [libraryData, setLibraryData] = useState(getInitialLibraryData);
   const [activeTab, setActiveTab] = useState("documents");
   const [documentSearch, setDocumentSearch] = useState("");
   const [currentFolder, setCurrentFolder] = useState(null);
 
-  const [memberSearch, setMemberSearch] = useState("");
-  const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
-  const [inviteQuery, setInviteQuery] = useState("");
-  const [inviteRole, setInviteRole] = useState("Viewer");
-  const [inviteStatus, setInviteStatus] = useState("idle");
 
   const [libraryName, setLibraryName] = useState(
     () => getInitialLibraryData().name,
@@ -69,122 +65,48 @@ function LibraryPage() {
   const [isLoadingDocuments, setIsLoadingDocuments] = useState(false);
   const [isUploadingDocuments, setIsUploadingDocuments] = useState(false);
 
-  const [members] = useState([
-    {
-      name: "TrongBVD",
-      email: "trongbvd@university.edu",
-      role: "Manager",
-      joinDate: "Oct 12, 2023",
-      avatar: "TB",
-      status: "active",
-    },
-    {
-      name: "dangkhoabi456",
-      email: "d.khoa@academic.org",
-      role: "Member",
-      joinDate: "Jan 05, 2024",
-      avatar: "DK",
-      status: "active",
-    },
-    {
-      name: "aikirokito",
-      email: "kito.ai@study.net",
-      role: "Member",
-      joinDate: "Mar 22, 2024",
-      avatar: "AI",
-      status: "active",
-    },
-    {
-      name: "Sarah Jenkins",
-      email: "s.jenkins@university.edu",
-      role: "Member",
-      joinDate: "Jun 10, 2024",
-      avatar: "SJ",
-      status: "active",
-    },
-  ]);
+  const [shareOnProfile, setShareOnProfile] = useState(
+    () => getInitialLibraryData().shareOnProfile ?? false
+  );
 
-  const [pendingInvitations, setPendingInvitations] = useState([
-    {
-      email: "alex.proctor@edu.com",
-      invitedAs: "Member",
-      time: "2 hours ago",
-      invitedBy: "TrongBVD",
-    },
-    {
-      email: "m.chen@research.io",
-      invitedAs: "Editor",
-      time: "yesterday",
-      invitedBy: "TrongBVD",
-    },
-  ]);
-
-  const collaborators = [
-    {
-      name: "dangkhoabi456",
-      role: "Admin",
-      icon: "ti-user",
-    },
-    {
-      name: "TrongBVD",
-      role: "Editor",
-      icon: "ti-package",
-    },
-    {
-      name: "aikirokito",
-      role: "Viewer",
-      icon: "ti-wheelchair",
-    },
-  ];
-
-  const authorName =
-    localStorage.getItem("aiStudyHubProfileName") || "dangkhoabi456";
-
-  useEffect(() => {
-    loadBackendDocuments();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   function countUploadedFiles(items) {
     return items.filter((item) => item.type !== "folder").length;
   }
 
-  function syncLibraryDocumentCount(nextItems) {
-    const nextDocumentCount = countUploadedFiles(nextItems);
+function syncLibraryDocumentCount(nextItems) {
+  const nextDocumentCount = countUploadedFiles(nextItems);
 
-    const updatedLibrary = {
-      ...libraryData,
-      documents: nextDocumentCount,
-      updatedAt: "Updated just now",
-    };
+const updatedLibrary = {
+  ...libraryData,
+  name: libraryName.trim() || libraryData.name,
+  visibility: libraryVisibility,
+  shareOnProfile: shareOnProfile,
+  documents: nextDocumentCount,
+  updatedAt: "Updated just now",
+};
 
-    const savedLibraries = JSON.parse(
-      localStorage.getItem("aiStudyHubLibraries") || "[]",
-    );
+  const savedLibraries = JSON.parse(
+    localStorage.getItem("aiStudyHubLibraries") || "[]"
+  );
 
-    const hasCurrentLibrary = savedLibraries.some(
-      (library) => library.id === updatedLibrary.id,
-    );
+  const hasCurrentLibrary = savedLibraries.some(
+    (library) => library.id === updatedLibrary.id
+  );
 
-    const updatedLibraries = hasCurrentLibrary
-      ? savedLibraries.map((library) =>
-          library.id === updatedLibrary.id
-            ? {
-                ...library,
-                documents: nextDocumentCount,
-                updatedAt: "Updated just now",
-              }
-            : library,
-        )
-      : [updatedLibrary, ...savedLibraries];
+  const updatedLibraries = hasCurrentLibrary
+    ? savedLibraries.map((library) =>
+        library.id === updatedLibrary.id ? updatedLibrary : library
+      )
+    : [updatedLibrary, ...savedLibraries];
 
-    localStorage.setItem(
-      "aiStudyHubLibraries",
-      JSON.stringify(updatedLibraries),
-    );
+  localStorage.setItem(
+    "aiStudyHubLibraries",
+    JSON.stringify(updatedLibraries)
+  );
 
-    setLibraryData(updatedLibrary);
-  }
+  setLibraryData(updatedLibrary);
+}
 
   function getFolderKey(folder) {
     return folder.id || folder.name;
@@ -257,7 +179,14 @@ function LibraryPage() {
       setIsLoadingDocuments(false);
     }
   }
+useEffect(() => {
+  async function fetchDocuments() {
+    await loadBackendDocuments();
+  }
 
+  fetchDocuments();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, []);
   function handleUploadFile(e) {
     const files = Array.from(e.target.files || []);
 
@@ -422,8 +351,8 @@ function LibraryPage() {
 
     const updatedLibraries = hasCurrentLibrary
       ? savedLibraries.map((library) =>
-          library.id === updatedLibrary.id ? updatedLibrary : library,
-        )
+        library.id === updatedLibrary.id ? updatedLibrary : library,
+      )
       : [updatedLibrary, ...savedLibraries];
 
     localStorage.setItem(
@@ -496,69 +425,6 @@ function LibraryPage() {
     }
   }
 
-  function handleInviteMember() {
-    setInviteQuery("");
-    setInviteRole("Viewer");
-    setInviteStatus("idle");
-    setIsInviteModalOpen(true);
-  }
-
-  function handleCloseInviteModal() {
-    setIsInviteModalOpen(false);
-    setInviteQuery("");
-    setInviteRole("Viewer");
-    setInviteStatus("idle");
-  }
-
-  function handleSearchInviteMember() {
-    if (inviteQuery.trim() === "") return;
-
-    const normalizedQuery = inviteQuery.trim().toLowerCase();
-
-    if (
-      normalizedQuery.includes("unknown") ||
-      normalizedQuery.includes("notfound") ||
-      normalizedQuery.includes("khong")
-    ) {
-      setInviteStatus("not-found");
-      return;
-    }
-
-    setInviteStatus("found");
-  }
-
-  function handleSendInvite() {
-    const email =
-      inviteStatus === "found"
-        ? "v.a.nguyen@university.edu"
-        : inviteQuery.trim();
-
-    if (!email) return;
-
-    const newInvitation = {
-      email,
-      invitedAs: inviteRole,
-      time: "just now",
-      invitedBy: "dangkhoabi456",
-    };
-
-    setPendingInvitations((currentInvitations) => [
-      newInvitation,
-      ...currentInvitations,
-    ]);
-
-    handleCloseInviteModal();
-  }
-
-  const filteredMembers = members.filter((member) => {
-    const keyword = memberSearch.toLowerCase();
-
-    return (
-      member.name.toLowerCase().includes(keyword) ||
-      member.email.toLowerCase().includes(keyword) ||
-      member.role.toLowerCase().includes(keyword)
-    );
-  });
 
   const visibleItems = libraryItems.filter((item) => {
     const itemFolderId = item.folderId ?? null;
@@ -624,23 +490,6 @@ function LibraryPage() {
           >
             Documents
           </button>
-
-          <button
-            type="button"
-            className={activeTab === "messages" ? "active" : ""}
-            onClick={() => setActiveTab("messages")}
-          >
-            Messages
-          </button>
-
-          <button
-            type="button"
-            className={activeTab === "members" ? "active" : ""}
-            onClick={() => setActiveTab("members")}
-          >
-            Members
-          </button>
-
           <button
             type="button"
             className={activeTab === "settings" ? "active" : ""}
@@ -850,296 +699,6 @@ function LibraryPage() {
                 )}
               </section>
             )}
-
-            {activeTab === "messages" && (
-              <section className="member_chat_tab">
-                <header className="member_chat_header">
-                  <div>
-                    <h2>Software Engineering 2024 Group</h2>
-                    <p>
-                      <span className="member_chat_online_dot"></span>
-                      14 members online
-                    </p>
-                  </div>
-
-                  <div className="member_chat_header_actions">
-                    <button type="button" title="Members">
-                      <i className="ti-user"></i>
-                    </button>
-
-                    <button type="button" title="Group information">
-                      <i className="ti-info-alt"></i>
-                    </button>
-
-                    <span>Academic Admin</span>
-
-                    <div className="member_chat_admin_avatar">DK</div>
-                  </div>
-                </header>
-
-                <div className="member_chat_date">May 16, 2026</div>
-
-                <section className="member_chat_messages">
-                  <article className="member_chat_message_row">
-                    <div className="member_chat_avatar">
-                      <img
-                        src="https://i.pravatar.cc/80?img=12"
-                        alt="Sarah Jenkins"
-                      />
-                    </div>
-
-                    <div className="member_chat_content">
-                      <h3>Sarah Jenkins</h3>
-
-                      <div className="member_chat_bubble member_chat_received">
-                        Does anyone have the notes for yesterday&apos;s lecture
-                        on architectural patterns? I missed the last 20 minutes.
-                      </div>
-
-                      <span className="member_chat_time">10:42 AM</span>
-                    </div>
-                  </article>
-
-                  <article className="member_chat_message_row member_chat_own">
-                    <div className="member_chat_content">
-                      <div className="member_chat_bubble member_chat_sent">
-                        I have them here! I just finished digitizing the
-                        sketches of the microservices diagram we discussed.
-                      </div>
-
-                      <div className="member_chat_file_card">
-                        <div className="member_chat_file_icon">
-                          <i className="ti-file"></i>
-                        </div>
-
-                        <div>
-                          <strong>Software_Arch_Notes.pdf</strong>
-                          <p>2.4 MB</p>
-                        </div>
-                      </div>
-
-                      <span className="member_chat_time member_chat_time_right">
-                        10:45 AM · Read
-                      </span>
-                    </div>
-                  </article>
-
-                  <article className="member_chat_message_row">
-                    <div className="member_chat_avatar">
-                      <img
-                        src="https://i.pravatar.cc/80?img=33"
-                        alt="David Chen"
-                      />
-                    </div>
-
-                    <div className="member_chat_content">
-                      <h3>David Chen</h3>
-
-                      <div className="member_chat_bubble member_chat_received">
-                        Found this great reference in the university archives
-                        for our project proposal.
-                      </div>
-
-                      <div className="member_chat_image_preview">
-                        <img
-                          src="https://images.unsplash.com/photo-1521587760476-6c12a4b040da?auto=format&fit=crop&w=900&q=80"
-                          alt="University archive"
-                        />
-                      </div>
-
-                      <span className="member_chat_time">11:15 AM</span>
-                    </div>
-                  </article>
-                </section>
-
-                <footer className="member_chat_input_area">
-                  <textarea placeholder="Type your message here..." />
-
-                  <div className="member_chat_input_actions">
-                    <div>
-                      <button type="button" title="Attach file">
-                        <i className="ti-clip"></i>
-                      </button>
-
-                      <button type="button" title="Emoji">
-                        <i className="ti-face-smile"></i>
-                      </button>
-                    </div>
-
-                    <button
-                      type="button"
-                      className="member_chat_send_btn"
-                      title="Send message"
-                    >
-                      <i className="ti-control-play"></i>
-                    </button>
-                  </div>
-                </footer>
-              </section>
-            )}
-
-            {activeTab === "members" && (
-              <section className="members_page">
-                <div className="members_header">
-                  <div>
-                    <h2>Workspace Members</h2>
-                    <p>
-                      Manage access and roles for this academic resource center.
-                    </p>
-                  </div>
-
-                  <div className="members_header_actions">
-                    <div className="members_search">
-                      <i className="ti-search"></i>
-                      <input
-                        type="text"
-                        placeholder="Search members..."
-                        value={memberSearch}
-                        onChange={(e) => setMemberSearch(e.target.value)}
-                      />
-                    </div>
-
-                    <button
-                      type="button"
-                      className="add_member_btn"
-                      onClick={handleInviteMember}
-                    >
-                      <i className="ti-user"></i>
-                      Add Member
-                    </button>
-                  </div>
-                </div>
-
-                {members.length === 0 ? (
-                  <div className="empty_state_card">
-                    <div className="empty_state_icon">
-                      <i className="ti-user"></i>
-                    </div>
-
-                    <h3>You have no companion here</h3>
-                    <p>Invite someone to have fun together.</p>
-
-                    <button
-                      type="button"
-                      className="empty_state_action"
-                      onClick={handleInviteMember}
-                    >
-                      <i className="ti-plus"></i>
-                      Invite member
-                    </button>
-                  </div>
-                ) : (
-                  <>
-                    <section className="members_table_card">
-                      <div className="members_table_header">
-                        <span>Member</span>
-                        <span>Role</span>
-                        <span>Join date</span>
-                        <span>Actions</span>
-                      </div>
-
-                      <div className="members_table_body">
-                        {filteredMembers.map((member, index) => (
-                          <div className="members_table_row" key={member.email}>
-                            <div className="member_identity">
-                              <div
-                                className={`member_photo member_photo_${index}`}
-                              >
-                                {member.avatar}
-                                {member.status === "active" && (
-                                  <span className="member_online_dot"></span>
-                                )}
-                              </div>
-
-                              <div>
-                                <strong>{member.name}</strong>
-                                <p>{member.email}</p>
-                              </div>
-                            </div>
-
-                            <div>
-                              <span
-                                className={`member_role_badge ${
-                                  member.role === "Manager" ? "manager" : ""
-                                }`}
-                              >
-                                {member.role}
-                              </span>
-                            </div>
-
-                            <span className="member_join_date">
-                              {member.joinDate}
-                            </span>
-
-                            <div className="member_row_actions">
-                              <button type="button" title="Member settings">
-                                <i className="ti-settings"></i>
-                              </button>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </section>
-
-                    {filteredMembers.length === 0 && (
-                      <div className="empty_state_card compact">
-                        <div className="empty_state_icon">
-                          <i className="ti-search"></i>
-                        </div>
-
-                        <h3>No members found</h3>
-                        <p>Try another keyword or invite a new member.</p>
-
-                        <button
-                          type="button"
-                          className="empty_state_action"
-                          onClick={handleInviteMember}
-                        >
-                          <i className="ti-plus"></i>
-                          Invite member
-                        </button>
-                      </div>
-                    )}
-
-                    <p className="members_note">
-                      Note: Only members who have accepted the invitation or are
-                      explicitly listed as pending appear in this workspace
-                      list.
-                    </p>
-
-                    <section className="pending_invitation_card">
-                      <div className="pending_invitation_header">
-                        <h3>Pending Invitations</h3>
-                        <span>{pendingInvitations.length} Pending</span>
-                      </div>
-
-                      <div className="pending_invitation_list">
-                        {pendingInvitations.map((invite) => (
-                          <div
-                            className="pending_invitation_item"
-                            key={`${invite.email}-${invite.time}`}
-                          >
-                            <div className="pending_mail_icon">
-                              <i className="ti-email"></i>
-                            </div>
-
-                            <div className="pending_invitation_info">
-                              <strong>{invite.email}</strong>
-                              <p>
-                                Invited {invite.time} by {invite.invitedBy}
-                              </p>
-                            </div>
-
-                            <button type="button">Resend</button>
-                          </div>
-                        ))}
-                      </div>
-                    </section>
-                  </>
-                )}
-              </section>
-            )}
-
             {activeTab === "settings" && (
               <section className="settings_tab_panel">
                 <div className="settings_header">
@@ -1185,9 +744,8 @@ function LibraryPage() {
 
                     <div className="settings_visibility_options">
                       <label
-                        className={`settings_visibility_card ${
-                          libraryVisibility === "public" ? "selected" : ""
-                        }`}
+                        className={`settings_visibility_card ${libraryVisibility === "public" ? "selected" : ""
+                          }`}
                       >
                         <input
                           type="radio"
@@ -1207,9 +765,8 @@ function LibraryPage() {
                       </label>
 
                       <label
-                        className={`settings_visibility_card ${
-                          libraryVisibility === "private" ? "selected" : ""
-                        }`}
+                        className={`settings_visibility_card ${libraryVisibility === "private" ? "selected" : ""
+                          }`}
                       >
                         <input
                           type="radio"
@@ -1228,6 +785,24 @@ function LibraryPage() {
                         </div>
                       </label>
                     </div>
+                  </div>
+                  <div className="settings_profile_visibility">
+                    <div>
+                      <label>Visibility</label>
+                      <p>Show this library on your personal profile.</p>
+                      <small>
+                        When enabled, this library will appear in your profile library list.
+                      </small>
+                    </div>
+
+                    <button
+                      type="button"
+                      className={`settings_toggle_btn ${shareOnProfile ? "active" : ""}`}
+                      onClick={() => setShareOnProfile((currentValue) => !currentValue)}
+                      aria-label="Toggle library visibility on profile"
+                    >
+                      <span></span>
+                    </button>
                   </div>
                 </form>
 
@@ -1271,177 +846,67 @@ function LibraryPage() {
               </section>
             )}
 
-            {activeTab !== "documents" &&
-              activeTab !== "messages" &&
-              activeTab !== "members" &&
-              activeTab !== "settings" && (
-                <div className="empty_tab">
-                  <h2>{activeTab}</h2>
-                  <p>This section will be developed later.</p>
-                </div>
-              )}
+            {activeTab !== "documents" && activeTab !== "settings" && (
+              <div className="empty_tab">
+                <h2>{activeTab}</h2>
+                <p>This section will be developed later.</p>
+              </div>
+            )}
           </section>
 
           <aside className="library_sidebar">
-            {activeTab === "members" ? (
-              <>
-                <div className="side_card member_role_card">
-                  <h3>About Roles</h3>
+  <div className="side_card">
+    <h3>About this library</h3>
+    <p>
+      {libraryData.description ||
+        "This library helps students manage learning resources, upload documents, and use AI to summarize or ask questions from files."}
+    </p>
+  </div>
 
-                  <div className="role_description_item">
-                    <strong>Managers</strong>
-                    <p>
-                      Can edit library settings, upload documents, and manage
-                      members.
-                    </p>
-                  </div>
+  <div className="side_card">
+    <div className="side_title">
+      <h3>Author</h3>
+    </div>
 
-                  <div className="role_description_item">
-                    <strong>Members</strong>
-                    <p>
-                      Can view documents, participate in AI chats, and
-                      contribute to folders.
-                    </p>
-                  </div>
-                </div>
+    <div className="collaborator_list">
+      <div className="collaborator_item">
+        <div className="collaborator_icon">
+          <i className="ti-user"></i>
+        </div>
 
-                <div className="side_card member_activity_card">
-                  <div className="side_title">
-                    <h3>Activity</h3>
-                    <i className="ti-stats-up"></i>
-                  </div>
+        <div>
+          <strong>{authorName}</strong>
+          <p>Owner</p>
+        </div>
+      </div>
+    </div>
+  </div>
 
-                  <div className="member_activity_stats">
-                    <div>
-                      <strong>42</strong>
-                      <span>Posts</span>
-                    </div>
+  <div className="side_card">
+    <h3>Library info</h3>
 
-                    <div>
-                      <strong>12</strong>
-                      <span>Tasks</span>
-                    </div>
-                  </div>
-                </div>
+    <div className="info_row">
+      <span>Files uploaded</span>
+      <strong>{uploadedFileCount}</strong>
+    </div>
 
-                <div className="side_card latest_activity_card">
-                  <h3>Latest Activity</h3>
+    <div className="info_row">
+      <span>Profile visibility</span>
+      <strong>{shareOnProfile ? "Shown" : "Hidden"}</strong>
+    </div>
+  </div>
 
-                  <div className="latest_activity_item highlight">
-                    <strong>TrongBVD</strong>
-                    <span>updated the React Hooks guide.</span>
-                    <p>5 hours ago</p>
-                  </div>
+  <div className="summarize_card">
+    <h3>Summarize Library</h3>
+    <p>Use AI to generate a curriculum overview from these files.</p>
 
-                  <div className="latest_activity_item">
-                    <strong>dangkhoabi456</strong>
-                    <span>joined the hub.</span>
-                    <p>Yesterday</p>
-                  </div>
-                </div>
-              </>
-            ) : (
-              <>
-                <div className="side_card">
-                  <h3>About this library</h3>
-                  <p>
-                    {libraryData.description ||
-                      "This library helps students manage learning resources, upload documents, and use AI to summarize or ask questions from files."}
-                  </p>
-                </div>
+    <button type="button">Start Analysis</button>
 
-                {activeTab === "documents" || activeTab === "settings" ? (
-                  <div className="side_card">
-                    <div className="side_title">
-                      <h3>Author</h3>
-                    </div>
-
-                    <div className="collaborator_list">
-                      <div className="collaborator_item">
-                        <div className="collaborator_icon">
-                          <i className="ti-user"></i>
-                        </div>
-
-                        <div>
-                          <strong>{authorName}</strong>
-                          <p>Owner</p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="side_card">
-                    <div className="side_title">
-                      <h3>Collaborators</h3>
-                      <span>{collaborators.length}</span>
-                    </div>
-
-                    <div className="collaborator_list">
-                      {collaborators.map((member) => (
-                        <div className="collaborator_item" key={member.name}>
-                          <div className="collaborator_icon">
-                            <i className={member.icon}></i>
-                          </div>
-
-                          <div>
-                            <strong>{member.name}</strong>
-                            <p>{member.role}</p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                <div className="side_card">
-                  <h3>Library info</h3>
-
-                  {activeTab === "documents" || activeTab === "settings" ? (
-                    <div className="info_row">
-                      <span>Files uploaded</span>
-                      <strong>{uploadedFileCount}</strong>
-                    </div>
-                  ) : (
-                    <>
-                      <div className="info_row">
-                        <span>Main subject</span>
-                        <strong>{libraryData.name}</strong>
-                      </div>
-
-                      <div className="info_row">
-                        <span>Storage used</span>
-                        <strong>1.2 GB / 5 GB</strong>
-                      </div>
-
-                      <div className="storage_bar">
-                        <div></div>
-                      </div>
-
-                      <div className="info_row">
-                        <span>Visibility</span>
-                        <strong>
-                          {formatVisibility(libraryData.visibility)}
-                        </strong>
-                      </div>
-                    </>
-                  )}
-                </div>
-
-                <div className="summarize_card">
-                  <h3>Summarize Library</h3>
-                  <p>
-                    Use AI to generate a curriculum overview from these files.
-                  </p>
-
-                  <button type="button">Start Analysis</button>
-
-                  <div className="flash_btn">
-                    <i className="ti-bolt"></i>
-                  </div>
-                </div>
-              </>
-            )}
-          </aside>
+    <div className="flash_btn">
+      <i className="ti-bolt"></i>
+    </div>
+  </div>
+</aside>
         </section>
       </section>
 
@@ -1515,176 +980,9 @@ function LibraryPage() {
         </div>
       )}
 
-      {isInviteModalOpen && (
-        <div className="invite_modal_overlay">
-          <div className="invite_modal">
-            <div className="invite_modal_header">
-              <div className="invite_header_icon">
-                <i className="ti-user"></i>
-              </div>
-
-              <div>
-                <h2>Invite Members</h2>
-                <p>Add collaborators to your academic collection.</p>
-              </div>
-
-              <button type="button" onClick={handleCloseInviteModal}>
-                ×
-              </button>
-            </div>
-
-            <div className="invite_field">
-              <label>Username or Email</label>
-
-              <div className="invite_search_box">
-                <i className="ti-search"></i>
-                <input
-                  type="text"
-                  value={inviteQuery}
-                  placeholder="unknown_scholar_2024"
-                  onChange={(e) => {
-                    setInviteQuery(e.target.value);
-                    setInviteStatus("idle");
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      handleSearchInviteMember();
-                    }
-                  }}
-                />
-              </div>
-            </div>
-
-            {inviteStatus === "found" && (
-              <div className="invite_result_card">
-                <div className="invite_candidate">
-                  <div className="invite_candidate_avatar">NA</div>
-
-                  <div>
-                    <h3>Nguyễn Văn A</h3>
-                    <p>@nva_academic · Research Lead</p>
-                  </div>
-                </div>
-
-                <button type="button" onClick={handleSendInvite}>
-                  <i className="ti-location-arrow"></i>
-                  Invite
-                </button>
-              </div>
-            )}
-
-            {inviteStatus === "not-found" && (
-              <div className="invite_no_result">
-                <div className="invite_no_result_image">
-                  <i className="ti-search"></i>
-                </div>
-
-                <h3>No user found</h3>
-                <p>
-                  We could not find any student or researcher matching &quot;
-                  {inviteQuery}&quot;. Check the spelling or try a different
-                  name.
-                </p>
-
-                <div className="invite_no_result_actions">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setInviteQuery("");
-                      setInviteStatus("idle");
-                    }}
-                  >
-                    Try Again
-                  </button>
-
-                  <button type="button" onClick={handleSendInvite}>
-                    Invite via Link
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {inviteStatus !== "not-found" && (
-              <div className="invite_permission_area">
-                <p>
-                  <i className="ti-shield"></i>
-                  Select default permissions
-                </p>
-
-                <div className="invite_permission_buttons">
-                  <button
-                    type="button"
-                    className={inviteRole === "Viewer" ? "active" : ""}
-                    onClick={() => setInviteRole("Viewer")}
-                  >
-                    <i className="ti-eye"></i>
-                    Viewer
-                  </button>
-
-                  <button
-                    type="button"
-                    className={inviteRole === "Editor" ? "active" : ""}
-                    onClick={() => setInviteRole("Editor")}
-                  >
-                    <i className="ti-pencil"></i>
-                    Editor
-                  </button>
-                </div>
-              </div>
-            )}
-
-            <div className="invite_modal_footer">
-              <span>
-                <i className="ti-info-alt"></i>
-                Invites expire in 7 days.
-              </span>
-
-              <div>
-                <button type="button" onClick={handleCloseInviteModal}>
-                  Cancel
-                </button>
-
-                <button
-                  type="button"
-                  className="send_invite_btn"
-                  onClick={
-                    inviteStatus === "idle"
-                      ? handleSearchInviteMember
-                      : handleSendInvite
-                  }
-                  disabled={inviteQuery.trim() === ""}
-                >
-                  {inviteStatus === "idle" ? "Search" : "Done"}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </main>
   );
 }
 
-function LibraryCard({ item }) {
-  return (
-    <article className={`library_file_card ${item.type}`}>
-      {item.image ? (
-        <div
-          className="file_preview"
-          style={{ backgroundImage: `url(${item.image})` }}
-        />
-      ) : (
-        <div className="file_icon">
-          <i className={item.icon}></i>
-        </div>
-      )}
-
-      <div className="file_info">
-        <h3>{item.name}</h3>
-        <p>{item.note}</p>
-      </div>
-    </article>
-  );
-}
 
 export default LibraryPage;
