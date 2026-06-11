@@ -5,6 +5,8 @@ import "./CreateLibraryPage.css";
 function CreateLibraryPage() {
   const navigate = useNavigate();
   const location = useLocation();
+  const TITLE_LIMIT = 50;
+const DESCRIPTION_LIMIT = 350;
 
   const returnPath = location.state?.from || "/dashboard/home";
 
@@ -16,45 +18,58 @@ function CreateLibraryPage() {
     navigate(returnPath);
   }
 
-  function handleCreateLibrary(e) {
-    e.preventDefault();
+function handleCreateLibrary(e) {
+  e.preventDefault();
 
-    if (libraryName.trim() === "") {
-      alert("Please enter library name");
-      return;
-    }
+  const trimmedLibraryName = libraryName.trim();
+  const trimmedDescription = description.trim();
 
-    const newLibrary = {
-      id: `library-${Date.now()}`,
-      owner: "dangkhoabi456",
-      name: libraryName.trim(),
-      description:
-        description.trim() ||
-        "This library helps students manage learning resources, upload documents, and use AI to summarize or ask questions from files.",
-      visibility,
-      documents: 0,
-      updatedAt: "Updated just now",
-      icon: "ti-archive",
-      highlight: false,
-      createdAt: new Date().toISOString(),
-    };
-
-    const savedLibraries = JSON.parse(
-      localStorage.getItem("aiStudyHubLibraries") || "[]"
-    );
-
-    localStorage.setItem(
-      "aiStudyHubLibraries",
-      JSON.stringify([newLibrary, ...savedLibraries])
-    );
-
-    navigate(`/dashboard/libraries/${newLibrary.id}`, {
-      state: {
-        library: newLibrary,
-        from: "/dashboard/create-library",
-      },
-    });
+  if (trimmedLibraryName === "") {
+    alert("Please enter library name");
+    return;
   }
+
+  if (trimmedLibraryName.length > TITLE_LIMIT) {
+    alert(`Library name cannot exceed ${TITLE_LIMIT} characters.`);
+    return;
+  }
+
+  if (trimmedDescription.length > DESCRIPTION_LIMIT) {
+    alert(`Library description cannot exceed ${DESCRIPTION_LIMIT} characters.`);
+    return;
+  }
+
+  const newLibrary = {
+    id: `library-${Date.now()}`,
+    owner: "dangkhoabi456",
+    name: trimmedLibraryName,
+    description:
+      trimmedDescription ||
+      "This library helps students manage learning resources, upload documents, and use AI to summarize or ask questions from files.",
+    visibility,
+    documents: 0,
+    updatedAt: "Updated just now",
+    icon: "ti-archive",
+    highlight: false,
+    createdAt: new Date().toISOString(),
+  };
+
+  const savedLibraries = JSON.parse(
+    localStorage.getItem("aiStudyHubLibraries") || "[]"
+  );
+
+  localStorage.setItem(
+    "aiStudyHubLibraries",
+    JSON.stringify([newLibrary, ...savedLibraries])
+  );
+
+  navigate(`/dashboard/libraries/${newLibrary.id}`, {
+    state: {
+      library: newLibrary,
+      from: "/dashboard/create-library",
+    },
+  });
+}
 
   return (
     <main className="create_library_page">
@@ -89,12 +104,16 @@ function CreateLibraryPage() {
               <div className="form_group library_name_group">
                 <label>Library name *</label>
 
-                <input
-                  type="text"
-                  value={libraryName}
-                  onChange={(e) => setLibraryName(e.target.value)}
-                  placeholder="Enter library name"
-                />
+<input
+  type="text"
+  value={libraryName}
+  onChange={(e) => setLibraryName(e.target.value)}
+  placeholder="Enter library name"
+/>
+
+<p className={libraryName.length > TITLE_LIMIT ? "character_count error" : "character_count"}>
+  {libraryName.length} / {TITLE_LIMIT} characters
+</p>
               </div>
             </div>
 
@@ -112,10 +131,9 @@ function CreateLibraryPage() {
                 placeholder="Write a short description"
               />
 
-              <p className="character_count">
-                {description.length} / 350 characters
-              </p>
-            </div>
+<p className={description.length > DESCRIPTION_LIMIT ? "character_count error" : "character_count"}>
+  {description.length} / {DESCRIPTION_LIMIT} characters
+</p>            </div>
           </div>
 
           <div className="form_section">
