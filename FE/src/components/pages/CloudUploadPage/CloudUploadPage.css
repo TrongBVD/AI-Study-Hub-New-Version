@@ -1,0 +1,615 @@
+* {
+  box-sizing: border-box;
+}
+
+.cloud_upload_page {
+  min-height: 100vh;
+  background: #f7f1df;
+  color: #2f2015;
+  padding: 34px 28px 70px;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+.cloud_management_shell {
+  width: 100%;
+  max-width: 1180px;
+  margin: 0 auto;
+}
+
+.cloud_management_header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 24px;
+  margin-bottom: 20px;
+}
+
+.cloud_management_header h1 {
+  margin: 0 0 6px;
+  color: #2f2015;
+  font-size: 30px;
+  font-weight: 900;
+  letter-spacing: -0.4px;
+}
+
+.cloud_management_header p {
+  margin: 0;
+  color: #5f4c3a;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.sync_provider_btn {
+  min-height: 38px;
+  border: 1px solid #d8c8ad;
+  border-radius: 10px;
+  background: #eee5cf;
+  color: #3b2618;
+  padding: 0 16px;
+  cursor: pointer;
+  font-weight: 800;
+
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.sync_provider_btn:hover {
+  background: #ead7bd;
+}
+
+.cloud_management_grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 20px;
+  align-items: start;
+}
+
+.cloud_main_column,
+.cloud_side_column {
+  min-width: 0;
+}
+
+.cloud_main_column,
+.cloud_side_column {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+/* Cloud import */
+
+.cloud_import_card,
+.integrated_documents_card,
+.download_center_card,
+.cloud_status_card {
+  border: 1px solid #d8c8ad;
+  border-radius: 20px;
+  background: #eee5cf;
+  box-shadow: 0 12px 28px rgba(59, 38, 24, 0.06);
+}
+
+.cloud_import_card {
+  padding: 26px;
+}
+
+.cloud_card_title {
+  display: flex;
+  align-items: flex-start;
+  gap: 18px;
+  margin-bottom: 28px;
+}
+
+.cloud_title_icon,
+.side_title_icon {
+  width: 46px;
+  height: 46px;
+  border-radius: 12px;
+  background: #b4531a;
+  color: #fffaf0;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.cloud_card_title h2,
+.cloud_side_title h2 {
+  margin: 0;
+  color: #2f2015;
+  font-size: 18px;
+  font-weight: 900;
+}
+
+.cloud_card_title p {
+  margin: 16px 0 0;
+  color: #3b2618;
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.cloud_link_form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 170px;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.cloud_link_input {
+  min-height: 56px;
+  border: 1px solid #d8c8ad;
+  border-radius: 12px;
+  background: #fffaf0;
+  padding: 0 18px;
+
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.cloud_link_input i {
+  color: #6f5946;
+}
+
+.cloud_link_input input {
+  width: 100%;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: #2f2015;
+  font-size: 14px;
+  font-family: inherit;
+}
+
+.cloud_link_form > button {
+  border: none;
+  border-radius: 12px;
+  background: #c4510c;
+  color: #ffffff;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 900;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+}
+
+.cloud_link_form > button:hover {
+  background: #a43f05;
+}
+
+.cloud_import_features {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+  flex-wrap: wrap;
+}
+
+.cloud_import_features span {
+  color: #3b2618;
+  font-size: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.cloud_import_features i {
+  color: #8a5a2f;
+}
+
+/* Integrated documents */
+
+.integrated_documents_card {
+  padding: 24px;
+}
+
+.integrated_documents_header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 18px;
+  margin-bottom: 20px;
+}
+
+.integrated_documents_header > div:first-child {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.integrated_documents_header h2 {
+  margin: 0;
+  color: #2f2015;
+  font-size: 18px;
+  font-weight: 900;
+}
+
+.integrated_documents_header span {
+  min-height: 22px;
+  border-radius: 999px;
+  background: #fffaf0;
+  color: #3b2618;
+  padding: 0 10px;
+  font-size: 11px;
+  font-weight: 800;
+
+  display: inline-flex;
+  align-items: center;
+}
+
+.document_view_actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.document_view_actions button {
+  width: 34px;
+  height: 34px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: #3b2618;
+  cursor: pointer;
+}
+
+.document_view_actions button:hover,
+.document_view_actions button.active {
+  background: #e2d3bc;
+}
+
+.integrated_document_list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.integrated_document_item {
+  min-height: 74px;
+  border-radius: 12px;
+  background: #fffaf0;
+  border: 1px solid rgba(226, 211, 188, 0.8);
+  padding: 12px;
+
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) auto auto 34px;
+  align-items: center;
+  gap: 14px;
+}
+
+.integrated_document_item:hover {
+  border-color: #b4531a;
+  box-shadow: 0 10px 24px rgba(59, 38, 24, 0.08);
+}
+
+.integrated_document_icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 8px;
+  background: #ffffff;
+  border: 1px solid #e2d3bc;
+  color: #b4531a;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.integrated_document_info {
+  min-width: 0;
+}
+
+.integrated_document_info h3 {
+  margin: 0 0 5px;
+  color: #2f2015;
+  font-size: 14px;
+  font-weight: 900;
+
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.integrated_document_info p {
+  margin: 0;
+  color: #735f4c;
+  font-size: 12px;
+}
+
+.document_index_status {
+  color: #3b2618;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.document_download_btn {
+  min-height: 38px;
+  border: none;
+  border-radius: 8px;
+  background: #3b2a1a;
+  color: #ffffff;
+  padding: 0 16px;
+  cursor: pointer;
+  font-weight: 900;
+
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.document_download_btn:hover {
+  background: #b4531a;
+}
+
+.document_delete_btn {
+  width: 34px;
+  height: 34px;
+  border: none;
+  background: transparent;
+  color: #8c3b12;
+  cursor: pointer;
+  border-radius: 8px;
+}
+
+.document_delete_btn:hover {
+  background: #f4d3c5;
+}
+
+/* Side column */
+
+.download_center_card,
+.cloud_status_card {
+  padding: 24px;
+}
+
+.cloud_side_title {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid #d8c8ad;
+  margin-bottom: 22px;
+}
+
+.download_limit_block > div:first-child {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 10px;
+}
+
+.download_limit_block span {
+  color: #2f2015;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.download_limit_block strong {
+  color: #b4531a;
+  font-size: 11px;
+}
+
+.download_progress {
+  height: 6px;
+  border-radius: 999px;
+  background: #d8c8ad;
+  overflow: hidden;
+}
+
+.download_progress span {
+  width: 24%;
+  height: 100%;
+  display: block;
+  background: #b4531a;
+}
+
+.download_limit_block p {
+  margin: 12px 0 24px;
+  color: #735f4c;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.download_stats_grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  margin-bottom: 20px;
+}
+
+.download_stats_grid div {
+  min-height: 74px;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.download_stats_grid div + div {
+  border-left: 1px solid #d8c8ad;
+}
+
+.download_stats_grid strong {
+  display: block;
+  color: #2f2015;
+  font-size: 30px;
+  line-height: 1;
+}
+
+.download_stats_grid span {
+  margin-top: 6px;
+  color: #735f4c;
+  font-size: 11px;
+}
+
+.download_history_btn {
+  width: 100%;
+  min-height: 44px;
+  border: 1px solid #8d7358;
+  border-radius: 10px;
+  background: transparent;
+  color: #3b2618;
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.download_history_btn:hover {
+  background: #ead7bd;
+}
+
+/* Cloud status */
+
+.cloud_status_card h2 {
+  margin: 0 0 18px;
+  color: #2f2015;
+  font-size: 16px;
+  font-weight: 900;
+}
+
+.cloud_provider_list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.cloud_provider_item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.cloud_provider_item > div {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.provider_icon {
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  background: #d8c8ad;
+  color: #3b2618;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+}
+
+.cloud_provider_item strong {
+  color: #2f2015;
+  font-size: 13px;
+}
+
+.provider_status {
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.provider_status.linked {
+  color: #1f9d55;
+}
+
+.provider_status.linked::before {
+  content: "● ";
+}
+
+.provider_status.connect {
+  color: #b4531a;
+}
+
+/* Automated card */
+
+.automated_indexing_card {
+  min-height: 200px;
+  border-radius: 18px;
+  background: #3b2a1a;
+  color: #fffaf0;
+  padding: 28px;
+  box-shadow: 0 18px 34px rgba(59, 38, 24, 0.18);
+}
+
+.automated_indexing_card i {
+  color: #f4a261;
+  font-size: 24px;
+}
+
+.automated_indexing_card h2 {
+  margin: 18px 0 12px;
+  color: #fffaf0;
+  font-size: 18px;
+  font-weight: 900;
+}
+
+.automated_indexing_card p {
+  margin: 0;
+  color: #d8c8ad;
+  font-size: 13px;
+  line-height: 1.65;
+}
+
+/* Responsive */
+
+@media (max-width: 1050px) {
+  .cloud_management_grid {
+    grid-template-columns: 1fr;
+  }
+
+  .cloud_side_column {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .automated_indexing_card {
+    grid-column: span 2;
+  }
+}
+
+@media (max-width: 760px) {
+  .cloud_upload_page {
+    padding: 24px 16px 50px;
+  }
+
+  .cloud_management_header {
+    flex-direction: column;
+  }
+
+  .sync_provider_btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .cloud_link_form {
+    grid-template-columns: 1fr;
+  }
+
+  .cloud_link_form > button {
+    min-height: 48px;
+  }
+
+  .integrated_document_item {
+    grid-template-columns: 44px minmax(0, 1fr);
+  }
+
+  .document_index_status,
+  .document_download_btn,
+  .document_delete_btn {
+    grid-column: 2;
+    width: fit-content;
+  }
+
+  .cloud_side_column {
+    grid-template-columns: 1fr;
+  }
+
+  .automated_indexing_card {
+    grid-column: auto;
+  }
+}
