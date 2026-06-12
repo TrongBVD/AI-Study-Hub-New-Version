@@ -198,7 +198,7 @@
 }
 
 .recent_library_card {
-  min-height: 230px;
+  min-height: 285px;
   background: #f2e3c9;
   border: 1px solid #e2d3bc;
   border-radius: 18px;
@@ -281,8 +281,10 @@
   border-radius: 18px;
   padding: 18px;
   display: flex;
+  align-items: center;
   gap: 14px;
   box-shadow: 0 8px 20px rgba(59, 38, 24, 0.06);
+  width: 100%;
 }
 
 .document_icon {
@@ -335,9 +337,13 @@
     grid-template-columns: repeat(2, 1fr);
   }
 
-  .home_content_grid {
-    grid-template-columns: 1fr;
-  }
+.home_content_grid {
+  margin-top: 30px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 430px;
+  gap: 28px;
+  align-items: start;
+}
 
   .recent_library_grid {
     grid-template-columns: repeat(2, 1fr);
@@ -438,6 +444,7 @@
 
 .workspace_recent_info {
   width: 100%;
+  min-width: 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -447,6 +454,14 @@
 .workspace_recent_info h3 {
   margin: 0;
   flex: 1;
+  min-width: 0;
+  color: #2f2015;
+  font-size: 17px;
+  font-weight: 800;
+
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .workspace_recent_info .home_open_btn {

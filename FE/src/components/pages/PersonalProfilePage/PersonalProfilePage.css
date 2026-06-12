@@ -377,3 +377,25 @@ body {
   transform: translateY(0);
   box-shadow: none;
 }
+
+.profile_empty_library {
+  min-height: 220px;
+  width: 100%;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  color: #b4531a;
+  font-size: 22px;
+  font-weight: 800;
+  text-align: center;
+
+  background: rgba(242, 227, 201, 0.45);
+  border: 1px dashed #d9c6aa;
+  border-radius: 16px;
+}
+
+.libraries_section {
+  min-height: 360px;
+}
