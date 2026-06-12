@@ -134,7 +134,7 @@ async function processDocumentWithAI(file, documentId) {
     await supabase
       .from("documents")
       .update({
-        status: "PENDING",
+        status: "PENDING_RETRY",
         ai_reject_reason: {
           reason: "AI processing failed. Manual review may be needed.",
           error: error.message,
@@ -143,7 +143,7 @@ async function processDocumentWithAI(file, documentId) {
       .eq("id", documentId);
 
     return {
-      status: "PENDING",
+      status: "PENDING_RETRY",
       reason: "AI processing failed. Manual review may be needed.",
       error: error.message,
       chunkCount: 0,

@@ -18,7 +18,8 @@ const {
     normalizeEmail,
     generateOtp,
     getOtpExpiryDate,
-    signAccessToken
+    signAccessToken,
+    buildPublicUser,
 } = require('../utils/authHelpers');
 
 
@@ -140,7 +141,9 @@ exports.verifyAndLoginGoogle = async (googleToken) => {
                 email: cleanEmail,
                 username: buildTemporaryUsername(googleId),
                 full_name: name || null,
-                password_hash: GOOGLE_SSO_NO_PASSWORD
+                password_hash: GOOGLE_SSO_NO_PASSWORD,
+                role: "USER",
+                status: "ACTIVE",
             }])
             .select()
             .single();
@@ -200,11 +203,14 @@ exports.verifyAndLoginGoogle = async (googleToken) => {
     // --------------------------------------------------
     // 6.5. Nếu user đã hoàn tất setup thì cấp accessToken
     // --------------------------------------------------
+    if(user.status === "DISABLED") {
+        throw new Error("Tài khoản của bạn đã bị vô hiệu hóa. Vui lòng liên hệ quản trị viên.");
+    }
     const accessToken = signAccessToken(user);
 
     // Trả về thông tin login thành công
     return {
-        user,
+        user: buildPublicUser(user),
         accessToken,
         requiresSetup: false,
         requiresOTP: false

@@ -9,6 +9,7 @@ const authRoutes = require('./src/routes/authRoutes');
 const documentRoutes = require("./src/routes/documentRoutes");
 const app = express();
 const aiRoutes = require("./src/routes/aiRoutes");
+const adminRoutes = require("./src/routes/adminRoutes");
 
 // 1. Cấu hình Middleware CORS để cho phép Frontend (Vite - 5173) gọi API
 app.use(cors({
@@ -24,6 +25,8 @@ app.use(express.json());
 app.use('/api/auth', authRoutes);
 app.use("/api/documents", documentRoutes);
 app.use("/api/ai", aiRoutes);
+app.use("/api/admin", adminRoutes);
+
 // Route test để kiểm tra xem server có sống không
 app.get('/', (req, res) => {
     res.send('AI StudyHub Backend đang chạy!');

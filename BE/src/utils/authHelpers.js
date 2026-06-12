@@ -1,7 +1,6 @@
 const bcrypt = require("bcrypt");
 const crypto = require("crypto");
 const jwt = require("jsonwebtoken");
-const { normalize } = require("path");
 
 const GOOGLE_SSO_NO_PASSWORD = "GOOGLE_SSO_NO_PASSWORD";
 const OTP_EXPIRY_MINUTES = 10;
@@ -105,7 +104,8 @@ function buildPublicUser(user) {
 
   return{
     id: user.id,
-    email: user.username,
+    email: user.email,
+    username: user.username,
     full_name: user.full_name,
     role: user.role || "USER",
     status: user.status || "ACTIVE",

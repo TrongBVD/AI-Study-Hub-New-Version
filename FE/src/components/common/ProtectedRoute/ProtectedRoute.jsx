@@ -1,12 +1,26 @@
 import { Navigate, useLocation } from "react-router-dom";
-import { isLoggedIn } from "../../../utils/authToken";
+
+function getStoredUser() {
+  try {
+    const rawUser = localStorage.getItem("user");
+
+    if (!rawUser) {
+      return null;
+    }
+
+    return JSON.parse(rawUser);
+  } catch {
+    return null;
+  }
+}
 
 function ProtectedRoute({ children, allowedRoles }) {
   const location = useLocation();
+  const token = localStorage.getItem("accessToken");
+  const user = getStoredUser();
 
-  const user = JSON.parse(localStorage.getItem("user"));
-
-  if (!isLoggedIn()) {
+  // Not logged in
+  if (!token) {
     return (
       <Navigate
         to="/login"
@@ -16,8 +30,9 @@ function ProtectedRoute({ children, allowedRoles }) {
     );
   }
 
+  // Logged in, but does not have required role
   if (allowedRoles && !allowedRoles.includes(user?.role)) {
-    return <Navigate to="/home" replace />;
+    return <Navigate to="/dashboard/home" replace />;
   }
 
   return children;

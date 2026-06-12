@@ -1,6 +1,7 @@
 const jwt = require("jsonwebtoken");
+const supabase = require("../config/supabase");
 
-function authMiddleware(req, res, next) {
+async function authMiddleware(req, res, next) {
   try {
     const authHeader = req.headers.authorization;
 
@@ -29,10 +30,37 @@ function authMiddleware(req, res, next) {
       });
     }
 
+    const { data: user, error} = await supabase
+      .from("profiles")
+      .select("id, email, username, full_name, role, status")
+      .eq("id", userID)
+      .maybeSingle();
+    
+    if (error){
+      throw error;
+    }
+
+    if (!user) {
+      return res.status(401).json({
+        status: "error",
+        message: "User account no longer exists",
+      });
+    }
+
+    if (user.status === "DISABLED"){
+      return res.status(403).json({
+        status: "error",
+        message: "Your account has been disabled.",
+      });
+    }
+
     req.user = {
-      id: String(userID),
-      email: decoded.email,
-      role: decoded.role,
+      id: String(user.id),
+      email: user.email,
+      username: user.username,
+      full_name: user.full_name,
+      role: user.role || "USER",
+      status: user.status || "ACTIVE",
     };
 
     next();

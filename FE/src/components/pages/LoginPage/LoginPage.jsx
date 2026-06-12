@@ -48,6 +48,10 @@ function LoginPage() {
     const user = extractUserInfo(responseData);
 
     if (user) {
+      localStorage.setItem("user", JSON.stringify(user));
+    }
+
+    if (user) {
       const profileName =
         user.username ||
         user.display_name ||
@@ -60,7 +64,7 @@ function LoginPage() {
       localStorage.setItem("aiStudyHubProfileName", profileName);
     }
 
-    return true;
+    return user || {};
   }
 
   const handleSubmit = async (e) => {
@@ -81,11 +85,15 @@ function LoginPage() {
         password,
       });
 
-      const isSaved = saveLoginData(res.data);
+      const user = saveLoginData(res.data);
 
-      if (!isSaved) return;
+      if (!user) return;
 
-      navigate("/dashboard/home", { replace: true });
+      if (user.role === "SYSTEM_ADMIN") {
+        navigate("/admin/dashboard", { replace: true });
+      } else {
+        navigate("/dashboard/home", { replace: true });
+      }
     } catch (error) {
       console.error("Lỗi đăng nhập:", error);
 
@@ -116,11 +124,11 @@ function LoginPage() {
       if (responseData?.requiresOTP) {
         if (responseData?.isResume) {
           alert(
-            "Bạn có quá trình thiết lập tài khoản chưa hoàn tất. Hệ thống đang chuyển đến trang tiếp tục!"
+            "Bạn có quá trình thiết lập tài khoản chưa hoàn tất. Hệ thống đang chuyển đến trang tiếp tục!",
           );
         } else {
           alert(
-            "Email này chưa đăng ký tài khoản. Hệ thống tự động chuyển sang luồng đăng ký mới!"
+            "Email này chưa đăng ký tài khoản. Hệ thống tự động chuyển sang luồng đăng ký mới!",
           );
         }
 
@@ -133,11 +141,15 @@ function LoginPage() {
         return;
       }
 
-      const isSaved = saveLoginData(res.data);
+      const user = saveLoginData(res.data);
 
-      if (!isSaved) return;
+      if (!user) return;
 
-      navigate("/dashboard/home", { replace: true });
+      if (user.role === "SYSTEM_ADMIN") {
+        navigate("/admin/dashboard", { replace: true });
+      } else {
+        navigate("/dashboard/home", { replace: true });
+      }
     } catch (error) {
       console.error("Lỗi xác thực Google với Backend:", error);
 
