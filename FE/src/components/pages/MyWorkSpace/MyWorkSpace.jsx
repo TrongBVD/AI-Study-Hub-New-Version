@@ -68,7 +68,7 @@ function MyWorkSpace() {
   state={{ workspace, from: "/dashboard/workspaces" }}
   className="workspace_card"
   key={workspace.id}
-  onClick={() => saveRecentWorkspace(workspace)}
+
 >
                 <div className="workspace_icon">
                   <i className={workspace.icon || "ti-layout-grid2"}></i>
@@ -112,27 +112,5 @@ function MyWorkSpace() {
   );
 }
 
-function saveRecentWorkspace(workspace) {
-  const currentRecentWorkspaces = JSON.parse(
-    localStorage.getItem("aiStudyHubRecentWorkspaces") || "[]"
-  );
 
-  const recentWorkspace = {
-    id: workspace.id,
-    name: workspace.name || "Untitled Workspace",
-    documents: Number(workspace.documents) || 0,
-    icon: workspace.icon || "ti-layout-grid2",
-    visitedAt: Date.now(),
-  };
-
-  const nextRecentWorkspaces = [
-    recentWorkspace,
-    ...currentRecentWorkspaces.filter((item) => item.id !== workspace.id),
-  ].slice(0, 3);
-
-  localStorage.setItem(
-    "aiStudyHubRecentWorkspaces",
-    JSON.stringify(nextRecentWorkspaces)
-  );
-}
 export default MyWorkSpace;
