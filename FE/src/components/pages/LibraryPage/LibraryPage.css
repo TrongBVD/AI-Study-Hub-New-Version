@@ -2696,3 +2696,245 @@
   font-size: 12px;
   font-weight: 800;
 }
+
+.star_btn.active {
+  background: #3b2a1a;
+  color: #ffffff;
+  border-color: #3b2a1a;
+}
+
+.star_btn.active i {
+  color: #f5c542;
+}
+
+.star_count {
+  min-width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  background: #ead7bd;
+  color: #3b2a1a;
+  padding: 0 7px;
+  font-size: 12px;
+  font-weight: 900;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.capacity_card {
+  background: #f2e3c9;
+  border: 1px solid #e2d3bc;
+  border-radius: 18px;
+  padding: 22px;
+}
+
+.storage_card_header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 22px;
+}
+
+.storage_card_icon {
+  width: 54px;
+  height: 54px;
+  border-radius: 14px;
+  background: #3b2a1a;
+  color: #fffaf0;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  font-size: 22px;
+  flex-shrink: 0;
+}
+
+.storage_card_header h3 {
+  margin: 0 0 6px;
+  color: #2f2015;
+  font-size: 22px;
+  font-weight: 900;
+}
+
+.storage_card_header p {
+  margin: 0;
+  color: #735f4c;
+  font-size: 13px;
+}
+
+.storage_usage_line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 10px;
+}
+
+.storage_usage_line span {
+  color: #2f2015;
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.storage_usage_line strong {
+  color: #3b2618;
+  font-size: 14px;
+  font-weight: 900;
+}
+
+.capacity_bar {
+  height: 10px;
+  background: #fffaf0;
+  border-radius: 999px;
+  overflow: hidden;
+  margin: 10px 0 22px;
+  border: 1px solid #e2d3bc;
+}
+
+.capacity_bar div {
+  height: 100%;
+  background: #b4531a;
+  border-radius: 999px;
+  transition: width 0.25s ease;
+}
+
+.storage_stats {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  border-top: 1px solid #d9c6aa;
+  padding-top: 18px;
+}
+
+.storage_stats div {
+  text-align: center;
+}
+
+.storage_stats div:first-child {
+  border-right: 1px solid #d9c6aa;
+}
+
+.storage_stats strong {
+  display: block;
+  color: #3b2a1a;
+  font-size: 30px;
+  font-weight: 900;
+  line-height: 1;
+  margin-bottom: 6px;
+}
+
+.storage_stats span {
+  color: #735f4c;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.storage_limit_overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 3000;
+  background: rgba(47, 32, 21, 0.55);
+  backdrop-filter: blur(6px);
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 24px;
+}
+
+.storage_limit_modal {
+  width: 100%;
+  max-width: 420px;
+  background: #fffaf0;
+  border: 1px solid #e2d3bc;
+  border-radius: 22px;
+  padding: 30px;
+  text-align: center;
+  box-shadow: 0 24px 70px rgba(47, 32, 21, 0.28);
+}
+
+.storage_limit_icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 18px;
+  background: #f2e3c9;
+  color: #b4531a;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  margin: 0 auto 18px;
+  font-size: 26px;
+}
+
+.storage_limit_modal h2 {
+  margin: 0 0 12px;
+  color: #2f2015;
+  font-size: 24px;
+  font-weight: 900;
+}
+
+.storage_limit_modal p {
+  margin: 0;
+  color: #735f4c;
+  line-height: 1.6;
+}
+
+.storage_limit_info {
+  margin: 22px 0;
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: #f2e3c9;
+  border: 1px solid #e2d3bc;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.storage_limit_info span {
+  color: #735f4c;
+  font-weight: 800;
+}
+
+.storage_limit_info strong {
+  color: #2f2015;
+  font-weight: 900;
+}
+
+.storage_limit_modal button {
+  width: 100%;
+  min-height: 44px;
+  border: none;
+  border-radius: 12px;
+  background: #3b2a1a;
+  color: #ffffff;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.storage_limit_modal button:hover {
+  background: #2f2015;
+}
+
+.documents_breadcrumb {
+  flex-wrap: wrap;
+}
+
+.breadcrumb_item {
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.documents_breadcrumb button,
+.documents_breadcrumb strong {
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
