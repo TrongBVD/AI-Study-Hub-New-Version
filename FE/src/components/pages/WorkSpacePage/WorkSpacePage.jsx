@@ -158,6 +158,36 @@ function handleWorkspaceNameChange(e) {
   }, [issuesStorageKey]);
 
   const [issues, setIssues] = useState(initialIssues);
+const WORKSPACE_STORAGE_LIMIT_BYTES = 50 * 1024 * 1024;
+
+const workspaceStorageUsedBytes = issues.reduce((total, issue) => {
+  const issueFileSize = (issue.files || []).reduce(
+    (fileTotal, file) => fileTotal + (Number(file.size) || 0),
+    0
+  );
+
+  return total + issueFileSize;
+}, 0);
+
+const workspaceStorageRemainingBytes = Math.max(
+  WORKSPACE_STORAGE_LIMIT_BYTES - workspaceStorageUsedBytes,
+  0
+);
+
+const workspaceStoragePercent = Math.min(
+  (workspaceStorageUsedBytes / WORKSPACE_STORAGE_LIMIT_BYTES) * 100,
+  100
+);
+
+function formatWorkspaceStorageSize(bytes) {
+  if (!bytes) return "0 KB";
+
+  if (bytes < 1024 * 1024) {
+    return `${Math.ceil(bytes / 1024)} KB`;
+  }
+
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
 
   if (!workspace) {
     return (
@@ -256,10 +286,8 @@ function handleWorkspaceNameChange(e) {
   const selectedStudySet =
     studySets.find((studySet) => studySet.id === selectedStudySetId) ||
     studySets[0];
-
-  const currentStudyCard =
-    selectedStudySet.cards[currentStudyCardIndex] || selectedStudySet.cards[0];
-
+const currentStudyCard =
+  selectedStudySet.cards[currentStudyCardIndex] || selectedStudySet.cards[0];
   function formatMessageFileSize(size) {
     if (!size) return "0 KB";
 
@@ -309,22 +337,44 @@ function handleWorkspaceNameChange(e) {
     setShowIssueForm(false);
   }
 
-  function handleIssueFileChange(e) {
-    const selectedFiles = Array.from(e.target.files);
+function handleIssueFileChange(e) {
+  const selectedFiles = Array.from(e.target.files);
 
-    if (selectedFiles.length === 0 || !selectedIssue) return;
+  if (selectedFiles.length === 0 || !selectedIssue) return;
 
-    const newFiles = selectedFiles.map((file) => ({
-      id: `issue-file-${Date.now()}-${file.name}`,
-      name: file.name,
-      size: file.size,
-      type: file.type,
-      addedAt: "Added just now",
-    }));
+  const selectedFilesSize = selectedFiles.reduce(
+    (total, file) => total + file.size,
+    0
+  );
 
-    setIssueFiles((prevFiles) => [...prevFiles, ...newFiles]);
+  const pendingFilesSize = issueFiles.reduce(
+    (total, file) => total + (Number(file.size) || 0),
+    0
+  );
+
+  const nextStorageUsed =
+    workspaceStorageUsedBytes + pendingFilesSize + selectedFilesSize;
+
+  if (nextStorageUsed > WORKSPACE_STORAGE_LIMIT_BYTES) {
+    alert(
+      "This workspace has reached the 50MB storage limit. You cannot upload more files."
+    );
+
     e.target.value = "";
+    return;
   }
+
+  const newFiles = selectedFiles.map((file) => ({
+    id: `issue-file-${Date.now()}-${file.name}`,
+    name: file.name,
+    size: file.size,
+    type: file.type,
+    addedAt: "Added just now",
+  }));
+
+  setIssueFiles((prevFiles) => [...prevFiles, ...newFiles]);
+  e.target.value = "";
+}
 
   function handleSaveIssueNote(e) {
     e.preventDefault();
@@ -889,62 +939,71 @@ function handleRenameWorkspace(e) {
 
 
   function renderResearchTab() {
+    const totalTopicFiles = issues.reduce(
+      (total, issue) => total + (issue.files?.length || 0),
+      0
+    );
+
+    const topicTypes = ["Question", "Material", "Discussion", "Announcement"];
+
     if (selectedIssue) {
       const relatedFiles = [...(selectedIssue.files || []), ...issueFiles];
 
       return (
-        <section className="research_issue_detail">
-          <div className="research_breadcrumb">
+        <section className="discussion_topic_detail">
+          <div className="discussion_breadcrumb">
             <button type="button" onClick={() => setSelectedIssueId(null)}>
-              Research
+              Discussion
             </button>
             <i className="ti-angle-right"></i>
             <span>{selectedIssue.title}</span>
           </div>
 
-          <div className="research_issue_editor">
-            <header className="research_issue_editor_header">
+          <div className="discussion_topic_editor">
+            <header className="discussion_topic_editor_header">
               <div>
-                <span className="research_status_badge">{selectedIssue.status}</span>
+                <span className="discussion_status_badge">
+                  {selectedIssue.status === "Active" ? "Open" : selectedIssue.status}
+                </span>
                 <h2>{selectedIssue.title}</h2>
                 <p>
-                  Created by {selectedIssue.creator} · {selectedIssue.updatedAt}
+                  Started by {selectedIssue.creator} · {selectedIssue.updatedAt}
                 </p>
               </div>
 
               <button type="button" onClick={() => setSelectedIssueId(null)}>
-                Back to issues
+                Back to topics
               </button>
             </header>
 
-            <form className="research_note_form" onSubmit={handleSaveIssueNote}>
-              <label>Issue note</label>
+            <form className="discussion_reply_form" onSubmit={handleSaveIssueNote}>
+              <label>Topic note</label>
               <textarea
                 value={issueContent}
                 onChange={(e) => setIssueContent(e.target.value)}
-                placeholder="Write your research note, discussion point, or problem description."
+                placeholder="Write your question, explanation, study note, or group update here."
               />
 
-              <div className="research_attachment_area">
-                <label className="research_file_button">
+              <div className="discussion_attachment_area">
+                <label className="discussion_file_button">
                   <i className="ti-clip"></i>
-                  Attach related files
+                  Attach study files
                   <input type="file" multiple onChange={handleIssueFileChange} />
                 </label>
 
-                <button type="submit" className="research_save_btn">
-                  Save issue update
+                <button type="submit" className="discussion_save_btn">
+                  Save topic update
                 </button>
               </div>
             </form>
 
             {relatedFiles.length > 0 && (
-              <section className="research_related_files">
-                <h3>Related files</h3>
+              <section className="discussion_related_files">
+                <h3>Shared study files</h3>
 
-                <div className="research_file_list">
+                <div className="discussion_file_list">
                   {relatedFiles.map((file) => (
-                    <article className="research_file_item" key={file.id}>
+                    <article className="discussion_file_item" key={file.id}>
                       <i className="ti-file"></i>
 
                       <div>
@@ -964,136 +1023,240 @@ function handleRenameWorkspace(e) {
     }
 
     return (
-      <section className="research_tab_page">
-        <div className="research_intro_row">
+      <section className="discussion_tab_page">
+        <div className="discussion_intro_row">
           <div>
-            <span className="research_label">Active inquiry</span>
-            <h2>Research Initiatives</h2>
+            <span className="discussion_label">Student discussion</span>
+            <h2>Discussion Board</h2>
             <p>
-              Explore academic problems and collaborative investigations within
-              this workspace.
+              Ask questions, share learning materials, and discuss lessons with
+              members in this workspace.
             </p>
           </div>
 
           <button
             type="button"
-            className="new_research_topic_btn"
+            className="new_discussion_topic_btn"
             onClick={() => setShowIssueForm(true)}
           >
             <i className="ti-plus"></i>
-            New Research Topic
+            New Topic
           </button>
         </div>
 
+        <div className="discussion_filter_row">
+          <button type="button" className="active">All topics</button>
+          <button type="button">Questions</button>
+          <button type="button">Materials</button>
+          <button type="button">Announcements</button>
+          <button type="button">Solved</button>
+        </div>
+
         {issues.length === 0 && !showIssueForm ? (
-          <section className="research_empty_state">
-            <div className="research_empty_icon">
-              <i className="ti-search"></i>
+          <section className="discussion_empty_state">
+            <div className="discussion_empty_icon">
+              <i className="ti-comments"></i>
             </div>
 
-            <h3>No issue found</h3>
+            <h3>No discussion topic yet</h3>
             <p>
-              <button type="button" onClick={() => setShowIssueForm(true)}>
-                create new one
-              </button>
+              Start the first topic so members can ask questions, share notes,
+              and exchange study materials.
             </p>
+            <button type="button" onClick={() => setShowIssueForm(true)}>
+              Create first topic
+            </button>
           </section>
         ) : null}
 
         {showIssueForm && (
           <div className="research_issue_popup_overlay">
             <form
-              className="research_create_card research_issue_popup_card"
+              className="discussion_create_card research_issue_popup_card"
               onSubmit={handleCreateIssue}
             >
               <button
                 type="button"
                 className="research_issue_popup_close"
                 onClick={() => setShowIssueForm(false)}
-                aria-label="Close create issue popup"
+                aria-label="Close create topic popup"
               >
                 ×
               </button>
 
-              <div className="research_create_header">
-                <div className="research_creator_avatar">
+              <div className="discussion_create_header">
+                <div className="discussion_creator_avatar">
                   {profileName.slice(0, 2).toUpperCase()}
                 </div>
 
                 <div>
-                  <h3>Create new issue</h3>
-                  <p>Creator: {profileName}</p>
+                  <h3>Create new topic</h3>
+                  <p>Started by {profileName}</p>
                 </div>
               </div>
 
-              <div className="research_form_group">
-                <label>Issue name</label>
+              <div className="discussion_form_group">
+                <label>Topic title</label>
                 <input
                   value={issueTitle}
                   onChange={(e) => setIssueTitle(e.target.value)}
-                  placeholder="Enter issue name"
+                  placeholder="Example: Why does this constraint use >= ?"
                   autoFocus
                 />
               </div>
 
-              <div className="research_create_actions">
+              <div className="discussion_create_actions">
                 <button type="button" onClick={() => setShowIssueForm(false)}>
                   Cancel
                 </button>
 
-                <button type="submit">Create issue</button>
+                <button type="submit">Create topic</button>
               </div>
             </form>
           </div>
         )}
 
-        {issues.length > 0 && (
-          <section className="research_issue_grid">
-            {issues.map((issue, index) => (
-              <article
-                className={`research_issue_card ${index === 0 ? "large" : ""}`}
-                key={issue.id}
-                onClick={() => {
-                  setSelectedIssueId(issue.id);
-                  setIssueContent(issue.content || "");
-                  setIssueFiles([]);
-                }}
-              >
-                <div className="research_issue_top">
-                  <span>{issue.status}</span>
-                  <small>{issue.updatedAt}</small>
-                </div>
+        <section className="discussion_content_grid">
+          <div className="discussion_content_left">
+            {issues.length > 0 && (
+              <>
+                <section className="discussion_pinned_card">
+                  <div>
+                    <span>PINNED</span>
+                    <h3>Workspace rules and study schedule</h3>
+                    <p>
+                      Use this area for important group rules, deadlines, meeting links,
+                      or exam review plans.
+                    </p>
+                  </div>
 
-                <h3>{issue.title}</h3>
-                <p>
-                  Created by {issue.creator}. Open this issue to add notes and
-                  attach related research files.
-                </p>
+                  <i className="ti-pin-alt"></i>
+                </section>
 
-                <div className="research_issue_meta">
-                  <span>
-                    <i className="ti-comment-alt"></i>0 discussions
-                  </span>
+                <section className="discussion_topic_list">
+                  {issues.map((issue, index) => (
+                    <article
+                      className="discussion_topic_card"
+                      key={issue.id}
+                      onClick={() => {
+                        setSelectedIssueId(issue.id);
+                        setIssueContent(issue.content || "");
+                        setIssueFiles([]);
+                      }}
+                    >
+                      <div className="discussion_topic_type">
+                        <span>{topicTypes[index % topicTypes.length]}</span>
+                        <small>{issue.updatedAt}</small>
+                      </div>
 
-                  <span>
-                    <i className="ti-clip"></i>
-                    {issue.files?.length || 0} files
-                  </span>
-                </div>
-              </article>
-            ))}
-          </section>
-        )}
-        <section className="workspace_research_about">
-          <div className="workspace_research_about_header">
-            <i className="ti-bookmark-alt"></i>
-            <h3>About this workspace</h3>
+                      <h3>{issue.title}</h3>
+                      <p>
+                        Started by {issue.creator}. Open this topic to reply,
+                        add study notes, and attach learning files.
+                      </p>
+
+                      <div className="discussion_topic_meta">
+                        <span>
+                          <i className="ti-comment-alt"></i>0 replies
+                        </span>
+
+                        <span>
+                          <i className="ti-clip"></i>
+                          {issue.files?.length || 0} files
+                        </span>
+
+                        <span>
+                          <i className="ti-check"></i>Open
+                        </span>
+                      </div>
+                    </article>
+                  ))}
+                </section>
+              </>
+            )}
           </div>
 
-          <p>
-            {workspace?.description ||
-              "This workspace is used to organize research topics, study materials, and collaborative academic work."}
-          </p>
+          <aside className="discussion_content_sidebar">
+            <section className="discussion_side_card">
+              <div className="discussion_side_title">
+                <h3>Discussion overview</h3>
+                <i className="ti-comments"></i>
+              </div>
+
+              <div className="discussion_stats_grid">
+                <div>
+                  <strong>{issues.length}</strong>
+                  <span>Topics</span>
+                </div>
+
+                <div>
+                  <strong>{totalTopicFiles}</strong>
+                  <span>Files</span>
+                </div>
+              </div>
+            </section>
+
+            <section className="workspace_storage_card">
+              <div className="workspace_storage_header">
+                <div className="workspace_storage_icon">
+                  <i className="ti-harddrives"></i>
+                </div>
+
+                <div>
+                  <h3>Workspace Storage</h3>
+                  <p>Storage used by files uploaded in discussion topics</p>
+                </div>
+              </div>
+
+              <div className="workspace_storage_limit_row">
+                <strong>Storage limit</strong>
+                <span>
+                  {formatWorkspaceStorageSize(workspaceStorageUsedBytes)} / 50.0 MB
+                </span>
+              </div>
+
+              <div className="workspace_storage_progress">
+                <div style={{ width: `${workspaceStoragePercent}%` }}></div>
+              </div>
+
+              <div className="workspace_storage_numbers">
+                <div>
+                  <strong>{formatWorkspaceStorageSize(workspaceStorageUsedBytes)}</strong>
+                  <span>Used</span>
+                </div>
+
+                <div>
+                  <strong>{formatWorkspaceStorageSize(workspaceStorageRemainingBytes)}</strong>
+                  <span>Remaining</span>
+                </div>
+              </div>
+            </section>
+
+            <section className="discussion_side_card">
+              <div className="discussion_side_title">
+                <h3>Topic guide</h3>
+                <i className="ti-light-bulb"></i>
+              </div>
+
+              <ul className="discussion_guide_list">
+                <li>Use Question when you need help with a lesson or exercise.</li>
+                <li>Use Material when you share notes, slides, or documents.</li>
+                <li>Use Announcement for deadlines, schedules, or group updates.</li>
+              </ul>
+            </section>
+
+            <section className="workspace_research_about">
+              <div className="workspace_research_about_header">
+                <i className="ti-bookmark-alt"></i>
+                <h3>About this workspace</h3>
+              </div>
+
+              <p>
+                {workspace?.description ||
+                  "This workspace helps students discuss lessons, share documents, and collaborate with selected members."}
+              </p>
+            </section>
+          </aside>
         </section>
       </section>
     );
@@ -1489,8 +1652,8 @@ function handleRenameWorkspace(e) {
           className={activeTab === "research" ? "active" : ""}
           onClick={() => setActiveTab("research")}
         >
-          <i className="ti-search"></i>
-          Research
+          <i className="ti-comments"></i>
+          Discussion
         </button>
 
         <button

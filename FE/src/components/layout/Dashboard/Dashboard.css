@@ -140,13 +140,18 @@ body {
 .top_navbar {
   height: 74px;
   border-bottom: 1px solid #e2d3bc;
-  background: rgb(78 64 46 / 91%);
+  background: rgba(78, 64, 46, 0.96);
   display: grid;
   grid-template-columns: 1fr minmax(320px, 520px) 1fr;
   align-items: center;
   gap: 20px;
   padding: 0 28px;
   box-shadow: 0 8px 24px rgba(59, 38, 24, 0.12);
+
+  position: sticky;
+  top: 0;
+  z-index: 900;
+  backdrop-filter: blur(8px);
 }
 
 .nav_left {
