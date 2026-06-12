@@ -31,9 +31,13 @@ function HomePage() {
     },
   ];
 
-  const recentLibraries = libraries.slice(0, 2);
+const recentLibraries = JSON.parse(
+  localStorage.getItem("aiStudyHubRecentLibraries") || "[]"
+);
 
-  const recentWorkspaces = workspaces.slice(0, 3);
+const recentWorkspaces = JSON.parse(
+  localStorage.getItem("aiStudyHubRecentWorkspaces") || "[]"
+);
   return (
     <main className="home_page">
       <section className="home_workspace">
@@ -91,13 +95,15 @@ function HomePage() {
 
         <section className="home_content_grid">
           <section className="recent_libraries_section">
-            <div className="section_title_row">
-              <h2>Recent libraries</h2>
+<div className="section_title_row recent_libraries_title_row">
+  <div className="section_title_left">
+    <h2>Recent libraries</h2>
 
-              <Link to="/dashboard/libraries">
-                View all libraries
-              </Link>
-            </div>
+    <Link to="/dashboard/libraries" className="view_all_link">
+      View all libraries
+    </Link>
+  </div>
+</div>
 
             <div className="recent_library_grid">
               {recentLibraries.length === 0 ? (
@@ -112,7 +118,7 @@ function HomePage() {
                     </div>
 
                     <div className="library_card_body">
-                      <h3>{library.name}</h3>
+                      <h3>{library.name || library.libraryName || "Untitled Library"}</h3>
                       <p>{library.documents || 0} documents</p>
                     </div>
 
@@ -130,13 +136,13 @@ function HomePage() {
           </section>
 
           <aside className="recent_documents_section">
-  <div className="section_title_row">
-    <h2>Recent workspaces</h2>
+<div className="section_title_row recent_workspaces_title_row">
+  <h2>Recent workspaces</h2>
 
-    <Link to="/dashboard/workspaces" className="view_all_link">
-      View all workspaces
-    </Link>
-  </div>
+  <Link to="/dashboard/workspaces" className="view_all_link">
+    View all workspaces
+  </Link>
+</div>
 
   <div className="recent_document_list">
     {recentWorkspaces.length === 0 ? (
