@@ -4,7 +4,7 @@ import "./WorkSpacePage.css";
 import "../../../assets/icons/themify-icons-font/themify-icons/themify-icons.css";
 
 function WorkSpacePage() {
-  const WORKSPACE_NAME_MAX_LENGTH = 30;
+  const WORKSPACE_NAME_MAX_LENGTH = 20;
   
   const { workspaceId } = useParams();
   const location = useLocation();
