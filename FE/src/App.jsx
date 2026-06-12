@@ -13,7 +13,6 @@ import OTPVerification from "./components/pages/RegisterPage/OTPVerification.jsx
 import Dashboard from "./components/layout/Dashboard/Dashboard.jsx";
 
 import AIChatPage from "./components/pages/AiChatPage/AiChatPage.jsx";
-import CloudUploadPage from "./components/pages/CloudUploadPage/CloudUploadPage.jsx";
 import HomePage from "./components/pages/HomePage/HomePage.jsx";
 import MyLibraryPage from "./components/pages/MyLibraryPage/MyLibraryPage.jsx";
 import CreateLibraryPage from "./components/pages/CreateLibraryPage/CreateLibraryPage.jsx";
@@ -86,7 +85,6 @@ function App() {
           <Route path="profile" element={<PersonalProfilePage />} />
 
           <Route path="ai-chat" element={<AIChatPage />} />
-          <Route path="cloud-upload" element={<CloudUploadPage />} />
 
           <Route path="flashcards" element={<Flashcards />} />
         </Route>
