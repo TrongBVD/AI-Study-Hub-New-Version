@@ -265,10 +265,6 @@
   min-width: 0;
 }
 
-.recent_documents_section h2 {
-  margin-bottom: 18px;
-}
-
 .recent_document_list {
   display: flex;
   flex-direction: column;
@@ -466,4 +462,23 @@
 
 .workspace_recent_info .home_open_btn {
   flex-shrink: 0;
+}
+
+.section_title_left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.recent_libraries_title_row {
+  justify-content: flex-start;
+}
+
+.recent_workspaces_title_row {
+  align-items: center;
+  margin-bottom: 18px;
+}
+
+.recent_workspaces_title_row .view_all_link {
+  transform: translateY(-2px);
 }
