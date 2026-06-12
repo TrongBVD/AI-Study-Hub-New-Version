@@ -203,7 +203,7 @@ function LoginPage() {
             style={{
               color: "#0056b3",
               cursor: "pointer",
-              textDecoration: "underline",
+              textDecoration: "none",
             }}
           >
             Forgot password?
