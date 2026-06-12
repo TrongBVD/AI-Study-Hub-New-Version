@@ -81,6 +81,8 @@ function signAccessToken(user) {
     {
       userId: user.id,
       email: user.email,
+      role: user.role || "USER",
+      status: user.status || "ACTIVE",
     },
     getJwtSecret(),
     { expiresIn: ACCESS_TOKEN_EXPIRY },
@@ -96,6 +98,18 @@ function signSetupToken(email) {
     getJwtSecret(),
     { expiresIn: SETUP_TOKEN_EXPIRY },
   );
+}
+
+function buildPublicUser(user) {
+  if (!user) return null;
+
+  return{
+    id: user.id,
+    email: user.username,
+    full_name: user.full_name,
+    role: user.role || "USER",
+    status: user.status || "ACTIVE",
+    };
 }
 
 function verifySetupToken(setupToken, expectedEmail) {
@@ -121,5 +135,6 @@ module.exports = {
     hashPassword,
     signAccessToken,
     signSetupToken,
-    verifySetupToken
-}
+    verifySetupToken,
+    buildPublicUser,
+};
