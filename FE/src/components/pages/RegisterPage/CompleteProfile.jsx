@@ -27,7 +27,9 @@ function CompleteProfile() {
     const delayDebounceFn = setTimeout(async () => {
       if (formData.username.trim() !== "") {
         try {
-          const res = await api.get(`/auth/check-username?username=${encodeURIComponent(formData.username)}`);
+          const res = await api.get(
+            `/auth/check-username?username=${encodeURIComponent(formData.username)}`,
+          );
           if (res.data.exists) {
             setUsernameStatus("❌ Username này đã tồn tại.");
           } else {
@@ -49,7 +51,8 @@ function CompleteProfile() {
     setErrorMsg("");
 
     if (!formData.username) return setErrorMsg("Username là bắt buộc!");
-    if (usernameStatus.includes("❌")) return setErrorMsg("Vui lòng chọn Username khác.");
+    if (usernameStatus.includes("❌"))
+      return setErrorMsg("Vui lòng chọn Username khác.");
     if (!formData.password) return setErrorMsg("Mật khẩu là bắt buộc!");
 
     try {
@@ -57,13 +60,23 @@ function CompleteProfile() {
         email: email,
         username: formData.username,
         password: formData.password,
-        setupToken: setupToken
+        setupToken: setupToken,
       });
 
       const accessToken = response.data.data.accessToken;
+      const user = response.data.data.user;
+
       localStorage.setItem("accessToken", accessToken);
 
-      navigate("/dashboard");
+      if (user) {
+        localStorage.setItem("user", JSON.stringify(user));
+        localStorage.setItem(
+          "aiStudyHubProfileName",
+          user.username || user.full_name || user.email || "User",
+        );
+      }
+
+      navigate("/dashboard/home", { replace: true });
     } catch (error) {
       setErrorMsg(error.response?.data?.message || "Lỗi cập nhật.");
     }
@@ -82,11 +95,21 @@ function CompleteProfile() {
           label="Username *"
           required
         />
-        <span style={{ fontSize: "13px", color: usernameStatus.includes("✅") ? "green" : "red", display: 'block', marginTop: '-15px' }}>
+        <span
+          style={{
+            fontSize: "13px",
+            color: usernameStatus.includes("✅") ? "green" : "red",
+            display: "block",
+            marginTop: "-15px",
+          }}
+        >
           {usernameStatus}
         </span>
 
-        <p className="register_message" style={{ fontSize: "13px", color: "#7c6a58" }}>
+        <p
+          className="register_message"
+          style={{ fontSize: "13px", color: "#7c6a58" }}
+        >
           Mật khẩu cần &gt;= 8 ký tự, 1 chữ thường, 1 số, 1 ký tự đặc biệt.
         </p>
 
@@ -99,9 +122,22 @@ function CompleteProfile() {
           required
         />
 
-        {errorMsg && <p style={{ color: "red", textAlign: "center", fontSize: "14px", margin: "0" }}>{errorMsg}</p>}
+        {errorMsg && (
+          <p
+            style={{
+              color: "red",
+              textAlign: "center",
+              fontSize: "14px",
+              margin: "0",
+            }}
+          >
+            {errorMsg}
+          </p>
+        )}
 
-        <button className="register_submit" type="submit">Hoàn tất</button>
+        <button className="register_submit" type="submit">
+          Hoàn tất
+        </button>
       </form>
     </div>
   );
