@@ -2,6 +2,10 @@ const authService = require('../services/authService');
 const supabase = require('../config/supabase');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+const {
+    signAccessToken,
+    buildPublicUser,
+} = require("../utils/authHelpers");
 
 exports.googleLogin = async (req, res) => {
     try {
@@ -231,7 +235,7 @@ exports.completeSetup = async (req, res) => {
             })
             .eq('email', cleanEmail)
             .eq('password_hash', 'GOOGLE_SSO_NO_PASSWORD')
-            .select('id, email')
+            .select('id, email, username, full_name, role, status')
             .maybeSingle();
 
         if (updateError) {
@@ -248,22 +252,14 @@ exports.completeSetup = async (req, res) => {
         // ======================================================
         // 7. TẠO ACCESS TOKEN ĐỂ FRONTEND VÀO DASHBOARD
         // ======================================================
-        const accessToken = jwt.sign(
-            {
-                userId: updatedUser.id,
-                email: updatedUser.email
-            },
-            process.env.JWT_SECRET,
-            {
-                expiresIn: '24h'
-            }
-        );
+        const accessToken = signAccessToken(updatedUser);
 
         res.status(200).json({
             status: 'success',
             message: 'Cập nhật thành công',
             data: {
-                accessToken
+                accessToken,
+                user: buildPublicUser(updatedUser),
             }
         });
     } catch (error) {
@@ -295,7 +291,15 @@ exports.login = async (req, res) => {
 
         // Trạng thái: Chặn tài khoản chưa setup pass (chỉ mới login Google 1 nửa)
         if (user.password_hash === 'GOOGLE_SSO_NO_PASSWORD') {
-            return res.status(401).json({ status: 'error', message: 'Tài khoản này chưa hoàn tất thiết lập mật khẩu. Vui lòng đăng nhập qua Google.' });
+            return res.status(401).json({ 
+                status: 'error', 
+                message: 'Tài khoản này chưa hoàn tất thiết lập mật khẩu. Vui lòng đăng nhập qua Google.' });
+        }
+        if (user.status === "DISABLED") {
+            return res.status(403).json({
+                status: "error",
+                message: "Tài khoản của bạn đã bị vô hiệu hóa. Vui lòng liên hệ quản trị viên."
+            });
         }
 
         // 2. Phân tích vùng nhớ Password
@@ -307,13 +311,23 @@ exports.login = async (req, res) => {
         }
 
         // 3. Cấp phát Token
-        const accessToken = jwt.sign(
-            { userId: user.id, email: user.email },
-            process.env.JWT_SECRET,
-            { expiresIn: '24h' }
-        );
+        const accessToken = signAccessToken(user);
 
-        res.status(200).json({ status: 'success', data: { accessToken } });
+        await supabase
+            .from("profiles")
+            .update({
+                last_login_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+            })
+            .eq("id", user.id);
+            
+        res.status(200).json({
+            status: "success",
+            data:{
+                accessToken,
+                user: buildPublicUser(user),
+            },
+        });
     } catch (error) {
         console.error("🔴 Lỗi hệ thống Login:", error);
         res.status(500).json({ status: 'error', message: error.message });

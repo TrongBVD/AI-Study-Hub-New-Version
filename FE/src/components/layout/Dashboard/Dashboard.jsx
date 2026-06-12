@@ -16,10 +16,7 @@ function Dashboard() {
         />
       )}
 
-      <Sidebar
-        isOpen={isSidebarOpen}
-        onClose={() => setIsSidebarOpen(false)}
-      />
+      <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
 
       <div className="main_area">
         <Navbar onOpenSidebar={() => setIsSidebarOpen(true)} />
@@ -32,4 +29,3 @@ function Dashboard() {
   );
 }
 export default Dashboard;
-

@@ -10,14 +10,14 @@ const DESCRIPTION_LIMIT = 350;
   const [workspaceName, setWorkspaceName] = useState("");
   const [description, setDescription] = useState("");
 
-function handleReturn() {
-  if (window.history.length > 1) {
-    navigate(-1);
-    return;
-  }
+  function handleReturn() {
+    if (window.history.length > 1) {
+      navigate(-1);
+      return;
+    }
 
-  navigate("/dashboard/home");
-}
+    navigate("/dashboard/home");
+  }
 
 function handleCreateWorkSpace(e) {
   e.preventDefault();
@@ -83,7 +83,10 @@ function handleCreateWorkSpace(e) {
           </p>
         </div>
 
-        <form className="create_workspace_form" onSubmit={handleCreateWorkSpace}>
+        <form
+          className="create_workspace_form"
+          onSubmit={handleCreateWorkSpace}
+        >
           <div className="form_section">
             <h2>General information</h2>
 
