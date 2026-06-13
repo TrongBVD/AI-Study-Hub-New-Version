@@ -459,3 +459,10 @@ exports.resetPassword = async (req, res) => {
         });
     }
 };
+
+exports.logout = async (req, res) => {
+  return res.status(200).json({
+    status: "success",
+    message: "Logged out successfully.",
+  });
+};
