@@ -51,12 +51,9 @@ function App() {
         {/* DEFAULT: vào web sẽ về login */}
         <Route path="/" element={<Navigate to="/login" replace />} />
 
-        {/* AUTH ROUTES */}
-
         <Route path="/login" element={<LoginPage />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
-
         <Route path="/register" element={<RegisterGoogle />} />
         <Route path="/complete-profile" element={<CompleteProfile />} />
         <Route
@@ -65,8 +62,6 @@ function App() {
         />
         <Route path="/verify-otp" element={<OTPVerification />} />
         <Route path="/otp-verification" element={<OTPVerification />} />
-
-        {/* USER ROUTES - CẦN ĐĂNG NHẬP */}
         <Route
           path="/dashboard"
           element={
@@ -78,15 +73,12 @@ function App() {
           <Route index element={<Navigate to="/dashboard/home" replace />} />
 
           <Route path="home" element={<HomePage />} />
-
           <Route path="libraries" element={<MyLibraryPage />} />
           <Route path="create-library" element={<CreateLibraryPage />} />
           <Route path="libraries/:libraryId" element={<LibraryPage />} />
-
           <Route path="create-workspace" element={<CreateWorkSpacePage />} />
           <Route path="workspaces" element={<MyWorkSpace />} />
           <Route path="workspaces/:workspaceId" element={<WorkSpacePage />} />
-
           <Route path="profile" element={<PersonalProfilePage />} />
 
           <Route path="ai-chat" element={<AIChatPage />} />
@@ -94,6 +86,7 @@ function App() {
 
           <Route path="flashcards" element={<Flashcards />} />
         </Route>
+
 
         {/* ================= ADMIN ROUTES - TẠM THỜI COMMENT ================= */}
 
@@ -136,6 +129,7 @@ function App() {
         */}
 
         {/* NOT FOUND */}
+        {/* Catch-all route */}
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
     </BrowserRouter>
