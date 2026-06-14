@@ -251,3 +251,13 @@
     grid-template-columns: 1fr;
   }
 }
+.workspace_pagination button:disabled,
+.library_pagination button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.workspace_pagination button:disabled:hover,
+.library_pagination button:disabled:hover {
+  background: transparent;
+}
