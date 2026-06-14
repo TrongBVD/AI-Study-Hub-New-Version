@@ -5,36 +5,53 @@ import "../../../assets/icons/themify-icons-font/themify-icons/themify-icons.css
 
 function WorkSpacePage() {
   const WORKSPACE_NAME_MAX_LENGTH = 20;
-  
+
   const { workspaceId } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState("research");
-  const [showIssueForm, setShowIssueForm] = useState(false);
-  const [issueTitle, setIssueTitle] = useState("");
-  const [issueContent, setIssueContent] = useState("");
-  const [issueFiles, setIssueFiles] = useState([]);
-  const [selectedIssueId, setSelectedIssueId] = useState(null);
+  const [activeTab, setActiveTab] = useState("discussion");
+  const [isTopicFormOpen, setIsTopicFormOpen] = useState(false);
+  const [topicTitle, setTopicTitle] = useState("");
+  const [topicContent, setTopicContent] = useState("");
+  const [newTopicDescription, setNewTopicDescription] = useState("");
+const [newTopicType, setNewTopicType] = useState("Question");
+const [newTopicStatus, setNewTopicStatus] = useState("Open");
+const [newTopicPriority, setNewTopicPriority] = useState("Normal");
+const [newTopicDateMode, setNewTopicDateMode] = useState("none");
+const [newTopicStartDate, setNewTopicStartDate] = useState("");
+const [newTopicEndDate, setNewTopicEndDate] = useState("");
+  const [topicFiles, setTopicFiles] = useState([]);
+  const [topicCommentInput, setTopicCommentInput] = useState("");
+const [topicSubtaskInput, setTopicSubtaskInput] = useState("");
+const [isSubtaskEditing, setIsSubtaskEditing] = useState(false);
+const [subtaskPriority, setSubtaskPriority] = useState("");
+const [subtaskDateMode, setSubtaskDateMode] = useState("none");
+const [subtaskStartDate, setSubtaskStartDate] = useState("");
+const [subtaskEndDate, setSubtaskEndDate] = useState("");
+const [isSubtaskDateOpen, setIsSubtaskDateOpen] = useState(false);
+const [isSubtaskPriorityOpen, setIsSubtaskPriorityOpen] = useState(false);
+  const [selectedTopicId, setSelectedTopicId] = useState(null);
+  const [topicFilter, setTopicFilter] = useState("All");
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
   const [inviteQuery, setInviteQuery] = useState("");
   const [inviteRole, setInviteRole] = useState("Viewer");
   const [inviteStatus, setInviteStatus] = useState("idle");
-function handleWorkspaceNameChange(e) {
-  const nextValue = e.target.value;
+  function handleWorkspaceNameChange(e) {
+    const nextValue = e.target.value;
 
-  if (nextValue.length > WORKSPACE_NAME_MAX_LENGTH) return;
+    if (nextValue.length > WORKSPACE_NAME_MAX_LENGTH) return;
 
-  setWorkspaceNameInput(nextValue);
+    setWorkspaceNameInput(nextValue);
 
-  if (nextValue.length === WORKSPACE_NAME_MAX_LENGTH) {
-    setWorkspaceSettingMessage(
-      `Workspace name has reached the limit of ${WORKSPACE_NAME_MAX_LENGTH} characters.`
-    );
-    return;
+    if (nextValue.length === WORKSPACE_NAME_MAX_LENGTH) {
+      setWorkspaceSettingMessage(
+        `Workspace name has reached the limit of ${WORKSPACE_NAME_MAX_LENGTH} characters.`,
+      );
+      return;
+    }
+
+    setWorkspaceSettingMessage("");
   }
-
-  setWorkspaceSettingMessage("");
-}
   const [pendingInvitations, setPendingInvitations] = useState([
     {
       email: "alex.proctor@edu.com",
@@ -50,13 +67,14 @@ function handleWorkspaceNameChange(e) {
 
   const [messageText, setMessageText] = useState("");
   const [messageAttachment, setMessageAttachment] = useState(null);
-  const [selectedStudySetId, setSelectedStudySetId] = useState("software-architecture");
+  const [selectedStudySetId, setSelectedStudySetId] = useState(
+    "software-architecture",
+  );
   const [currentStudyCardIndex, setCurrentStudyCardIndex] = useState(0);
   const [isStudyCardFlipped, setIsStudyCardFlipped] = useState(false);
 
-
   const savedWorkSpaces = JSON.parse(
-    localStorage.getItem("aiStudyHubWorkspaces") || "[]"
+    localStorage.getItem("aiStudyHubWorkspaces") || "[]",
   );
 
   const workspace =
@@ -67,7 +85,7 @@ function handleWorkspaceNameChange(e) {
     if (!workspace?.id) return;
 
     const currentRecentWorkspaces = JSON.parse(
-      localStorage.getItem("aiStudyHubRecentWorkspaces") || "[]"
+      localStorage.getItem("aiStudyHubRecentWorkspaces") || "[]",
     );
 
     const recentWorkspace = {
@@ -85,7 +103,7 @@ function handleWorkspaceNameChange(e) {
 
     localStorage.setItem(
       "aiStudyHubRecentWorkspaces",
-      JSON.stringify(nextRecentWorkspaces)
+      JSON.stringify(nextRecentWorkspaces),
     );
   }, [
     workspace?.id,
@@ -96,7 +114,7 @@ function handleWorkspaceNameChange(e) {
   ]);
 
   const [workspaceNameInput, setWorkspaceNameInput] = useState(
-    workspace?.name || ""
+    workspace?.name || "",
   );
   const [workspaceSettingMessage, setWorkspaceSettingMessage] = useState("");
 
@@ -110,16 +128,14 @@ function handleWorkspaceNameChange(e) {
       id: "msg-1",
       senderName: "Sarah Jenkins",
       avatar: "https://i.pravatar.cc/80?img=32",
-      text:
-        "Does anyone have the notes for yesterday's lecture on architectural patterns? I missed the last 20 minutes.",
+      text: "Does anyone have the notes for yesterday's lecture on architectural patterns? I missed the last 20 minutes.",
       time: "10:42 AM",
       isOwn: false,
     },
     {
       id: "msg-2",
       senderName: profileName,
-      text:
-        "I have them here! I just finished digitizing the sketches of the microservices diagram we discussed.",
+      text: "I have them here! I just finished digitizing the sketches of the microservices diagram we discussed.",
       time: "10:45 AM · Read",
       isOwn: true,
       file: {
@@ -132,8 +148,7 @@ function handleWorkspaceNameChange(e) {
       id: "msg-3",
       senderName: "David Chen",
       avatar: "https://i.pravatar.cc/80?img=13",
-      text:
-        "Found this great reference in the university archives for our project proposal.",
+      text: "Found this great reference in the university archives for our project proposal.",
       time: "11:15 AM",
       isOwn: false,
       file: {
@@ -146,48 +161,57 @@ function handleWorkspaceNameChange(e) {
     },
   ]);
 
-  const issuesStorageKey = `aiStudyHubWorkspaceIssues_${workspaceId}`;
+  const discussionTopicsStorageKey = `aiStudyHubWorkspaceIssues_${workspaceId}`;
 
-  const initialIssues = useMemo(() => {
+  const initialDiscussionTopics = useMemo(() => {
     try {
-      return JSON.parse(localStorage.getItem(issuesStorageKey) || "[]");
+      return JSON.parse(
+        localStorage.getItem(discussionTopicsStorageKey) || "[]",
+      );
     } catch (error) {
-      console.error("Cannot read workspace issues:", error);
+      console.error("Cannot read workspace topics:", error);
       return [];
     }
-  }, [issuesStorageKey]);
+  }, [discussionTopicsStorageKey]);
 
-  const [issues, setIssues] = useState(initialIssues);
-const WORKSPACE_STORAGE_LIMIT_BYTES = 50 * 1024 * 1024;
-
-const workspaceStorageUsedBytes = issues.reduce((total, issue) => {
-  const issueFileSize = (issue.files || []).reduce(
-    (fileTotal, file) => fileTotal + (Number(file.size) || 0),
-    0
+  const [discussionTopics, setDiscussionTopics] = useState(
+    initialDiscussionTopics,
   );
 
-  return total + issueFileSize;
-}, 0);
+  
 
-const workspaceStorageRemainingBytes = Math.max(
-  WORKSPACE_STORAGE_LIMIT_BYTES - workspaceStorageUsedBytes,
-  0
-);
+  const WORKSPACE_STORAGE_LIMIT_BYTES = 50 * 1024 * 1024;
 
-const workspaceStoragePercent = Math.min(
-  (workspaceStorageUsedBytes / WORKSPACE_STORAGE_LIMIT_BYTES) * 100,
-  100
-);
+  const discussionStorageUsedBytes = discussionTopics.reduce((total, topic) => {
+    const topicFileSize = (topic.files || []).reduce(
+      (fileTotal, file) => fileTotal + (Number(file.size) || 0),
+      0,
+    );
 
-function formatWorkspaceStorageSize(bytes) {
-  if (!bytes) return "0 KB";
+    return total + topicFileSize;
+  }, 0);
 
-  if (bytes < 1024 * 1024) {
-    return `${Math.ceil(bytes / 1024)} KB`;
+const workspaceStorageUsedBytes = discussionStorageUsedBytes;
+  const workspaceStorageRemainingBytes = Math.max(
+    WORKSPACE_STORAGE_LIMIT_BYTES - workspaceStorageUsedBytes,
+    0,
+  );
+
+  const workspaceStoragePercent = Math.min(
+    (workspaceStorageUsedBytes / WORKSPACE_STORAGE_LIMIT_BYTES) * 100,
+    100,
+  );
+
+  function formatWorkspaceStorageSize(bytes) {
+    if (!bytes) return "0 KB";
+
+    if (bytes < 1024 * 1024) {
+      return `${Math.ceil(bytes / 1024)} KB`;
+    }
+
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   }
 
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
 
   if (!workspace) {
     return (
@@ -206,7 +230,9 @@ function formatWorkspaceStorageSize(bytes) {
     );
   }
 
-  const selectedIssue = issues.find((issue) => issue.id === selectedIssueId);
+  const selectedTopic = discussionTopics.find(
+    (topic) => topic.id === selectedTopicId,
+  );
 
   const studySets = [
     {
@@ -223,7 +249,8 @@ function formatWorkspaceStorageSize(bytes) {
             "It distributes incoming traffic across multiple servers to improve availability, performance, and fault tolerance.",
         },
         {
-          question: "What does high availability mean in software architecture?",
+          question:
+            "What does high availability mean in software architecture?",
           answer:
             "It means the system is designed to remain accessible and operational with minimal downtime.",
         },
@@ -286,8 +313,8 @@ function formatWorkspaceStorageSize(bytes) {
   const selectedStudySet =
     studySets.find((studySet) => studySet.id === selectedStudySetId) ||
     studySets[0];
-const currentStudyCard =
-  selectedStudySet.cards[currentStudyCardIndex] || selectedStudySet.cards[0];
+  const currentStudyCard =
+    selectedStudySet.cards[currentStudyCardIndex] || selectedStudySet.cards[0];
   function formatMessageFileSize(size) {
     if (!size) return "0 KB";
 
@@ -305,96 +332,235 @@ const currentStudyCard =
     });
   }
 
-  function saveIssues(nextIssues) {
-    localStorage.setItem(issuesStorageKey, JSON.stringify(nextIssues));
-    setIssues(nextIssues);
-  }
-
-  function handleCreateIssue(e) {
-    e.preventDefault();
-
-    if (issueTitle.trim() === "") {
-      alert("Please enter issue name");
-      return;
-    }
-
-    const newIssue = {
-      id: `issue-${Date.now()}`,
-      title: issueTitle.trim(),
-      creator: profileName,
-      status: "Active",
-      content: "",
-      files: [],
-      createdAt: "Created just now",
-      updatedAt: "Updated just now",
-    };
-
-    saveIssues([newIssue, ...issues]);
-    setSelectedIssueId(newIssue.id);
-    setIssueTitle("");
-    setIssueContent("");
-    setIssueFiles([]);
-    setShowIssueForm(false);
-  }
-
-function handleIssueFileChange(e) {
-  const selectedFiles = Array.from(e.target.files);
-
-  if (selectedFiles.length === 0 || !selectedIssue) return;
-
-  const selectedFilesSize = selectedFiles.reduce(
-    (total, file) => total + file.size,
-    0
-  );
-
-  const pendingFilesSize = issueFiles.reduce(
-    (total, file) => total + (Number(file.size) || 0),
-    0
-  );
-
-  const nextStorageUsed =
-    workspaceStorageUsedBytes + pendingFilesSize + selectedFilesSize;
-
-  if (nextStorageUsed > WORKSPACE_STORAGE_LIMIT_BYTES) {
-    alert(
-      "This workspace has reached the 50MB storage limit. You cannot upload more files."
+  function saveDiscussionTopics(nextTopics) {
+    localStorage.setItem(
+      discussionTopicsStorageKey,
+      JSON.stringify(nextTopics),
     );
+    setDiscussionTopics(nextTopics);
+  }
 
-    e.target.value = "";
+  function handleCreateTopic(e) {
+  e.preventDefault();
+
+  if (topicTitle.trim() === "") {
+    alert("Please enter topic title");
     return;
   }
 
-  const newFiles = selectedFiles.map((file) => ({
-    id: `issue-file-${Date.now()}-${file.name}`,
-    name: file.name,
-    size: file.size,
-    type: file.type,
-    addedAt: "Added just now",
-  }));
+  if (newTopicDescription.trim() === "") {
+    alert("Please enter topic description");
+    return;
+  }
 
-  setIssueFiles((prevFiles) => [...prevFiles, ...newFiles]);
-  e.target.value = "";
+  const newTopic = {
+    id: `topic-${Date.now()}`,
+    title: topicTitle.trim(),
+    creator: profileName,
+
+    type: newTopicType,
+    status: newTopicStatus,
+    priority: newTopicPriority,
+
+    dateMode: newTopicDateMode,
+    startDate: newTopicDateMode === "deadline" ? newTopicStartDate : "",
+    endDate: newTopicDateMode === "deadline" ? newTopicEndDate : "",
+
+    assignee: profileName,
+    content: newTopicDescription.trim(),
+    files: [],
+    comments: [],
+    subtasks: [],
+    tasks: [],
+    createdAt: "Created just now",
+    updatedAt: "Updated just now",
+  };
+
+  saveDiscussionTopics([newTopic, ...discussionTopics]);
+  setSelectedTopicId(newTopic.id);
+
+  setTopicTitle("");
+  setTopicContent(newTopic.content);
+  setTopicFiles([]);
+
+  setNewTopicDescription("");
+  setNewTopicType("Question");
+  setNewTopicStatus("Open");
+  setNewTopicPriority("Normal");
+  setNewTopicDateMode("none");
+  setNewTopicStartDate("");
+  setNewTopicEndDate("");
+
+  setIsTopicFormOpen(false);
 }
 
-  function handleSaveIssueNote(e) {
-    e.preventDefault();
+  function handleTopicFileChange(e) {
+    const selectedFiles = Array.from(e.target.files);
 
-    if (!selectedIssue) return;
+    if (selectedFiles.length === 0 || !selectedTopic) return;
 
-    const nextIssues = issues.map((issue) =>
-      issue.id === selectedIssue.id
-        ? {
-          ...issue,
-          content: issueContent,
-          files: [...(issue.files || []), ...issueFiles],
-          updatedAt: "Updated just now",
-        }
-        : issue
+    const selectedFilesSize = selectedFiles.reduce(
+      (total, file) => total + file.size,
+      0,
     );
 
-    saveIssues(nextIssues);
-    setIssueFiles([]);
+    const pendingFilesSize = topicFiles.reduce(
+      (total, file) => total + (Number(file.size) || 0),
+      0,
+    );
+
+    const nextStorageUsed =
+      workspaceStorageUsedBytes + pendingFilesSize + selectedFilesSize;
+
+    if (nextStorageUsed > WORKSPACE_STORAGE_LIMIT_BYTES) {
+      alert(
+        "This workspace has reached the 50MB storage limit. You cannot upload more files.",
+      );
+
+      e.target.value = "";
+      return;
+    }
+
+    const newFiles = selectedFiles.map((file) => ({
+      id: `topic-file-${selectedTopic.id}-${file.name}-${file.size}-${file.lastModified}`,
+      name: file.name,
+      size: file.size,
+      type: file.type,
+      addedAt: "Added just now",
+    }));
+
+    setTopicFiles((prevFiles) => [...prevFiles, ...newFiles]);
+    e.target.value = "";
   }
+
+  function handleSaveTopicNote(e) {
+    e.preventDefault();
+
+    if (!selectedTopic) return;
+
+    const nextTopics = discussionTopics.map((topic) =>
+      topic.id === selectedTopic.id
+        ? {
+            ...topic,
+            content: topicContent,
+            files: [...(topic.files || []), ...topicFiles],
+            updatedAt: "Updated just now",
+          }
+        : topic,
+    );
+
+    saveDiscussionTopics(nextTopics);
+    setTopicFiles([]);
+  }
+
+  function updateSelectedTopic(updater) {
+  if (!selectedTopic) return;
+
+  const nextTopics = discussionTopics.map((topic) =>
+    topic.id === selectedTopic.id
+      ? {
+          ...updater(topic),
+          updatedAt: "Updated just now",
+        }
+      : topic,
+  );
+
+  saveDiscussionTopics(nextTopics);
+}
+
+function handleAddTopicComment(e) {
+  e.preventDefault();
+
+  if (topicCommentInput.trim() === "") return;
+
+  updateSelectedTopic((topic) => ({
+    ...topic,
+    comments: [
+      ...(topic.comments || []),
+      {
+        id: `comment-${Date.now()}`,
+        author: profileName,
+        content: topicCommentInput.trim(),
+        createdAt: "Just now",
+      },
+    ],
+  }));
+
+  setTopicCommentInput("");
+}
+
+function handleAddTopicSubtask(e) {
+  e.preventDefault();
+
+  if (topicSubtaskInput.trim() === "") return;
+
+  updateSelectedTopic((topic) => ({
+    ...topic,
+    subtasks: [
+      ...(topic.subtasks || []),
+      {
+  id: `subtask-${Date.now()}`,
+  title: topicSubtaskInput.trim(),
+  completed: false,
+  priority: subtaskPriority,
+  dateMode: subtaskDateMode,
+  startDate: subtaskDateMode === "deadline" ? subtaskStartDate : "",
+  endDate: subtaskDateMode === "deadline" ? subtaskEndDate : "",
+  assignee: profileName,
+  createdAt: "Just now",
+},
+    ],
+  }));
+
+  setTopicSubtaskInput("");
+setSubtaskPriority("");
+setSubtaskDateMode("none");
+setSubtaskStartDate("");
+setSubtaskEndDate("");
+setIsSubtaskEditing(false);
+setIsSubtaskPriorityOpen(false);
+setIsSubtaskDateOpen(false);
+}
+
+function handleCancelSubtask() {
+  setTopicSubtaskInput("");
+  setSubtaskPriority("");
+  setSubtaskDateMode("none");
+  setSubtaskStartDate("");
+  setSubtaskEndDate("");
+  setIsSubtaskEditing(false);
+  setIsSubtaskPriorityOpen(false);
+  setIsSubtaskDateOpen(false);
+}
+
+function handleToggleSubtask(subtaskId) {
+  updateSelectedTopic((topic) => ({
+    ...topic,
+    subtasks: (topic.subtasks || []).map((subtask) =>
+      subtask.id === subtaskId
+        ? { ...subtask, completed: !subtask.completed }
+        : subtask,
+    ),
+  }));
+}
+
+function handleDeleteSubtask(subtaskId) {
+  updateSelectedTopic((topic) => ({
+    ...topic,
+    subtasks: (topic.subtasks || []).filter(
+      (subtask) => subtask.id !== subtaskId,
+    ),
+  }));
+}
+
+function getSubtaskPriorityIcon(priority) {
+  if (priority === "Urgent") return "🚩";
+  if (priority === "High") return "🟧";
+  if (priority === "Normal") return "🟦";
+  if (priority === "Low") return "⬜";
+  return "";
+}
+
 
   function handleOpenInviteModal() {
     setIsInviteModalOpen(true);
@@ -491,11 +657,11 @@ function handleIssueFileChange(e) {
       isOwn: true,
       file: messageAttachment
         ? {
-          name: messageAttachment.name,
-          sizeLabel: messageAttachment.sizeLabel,
-          isImage: messageAttachment.isImage,
-          previewUrl: messageAttachment.previewUrl,
-        }
+            name: messageAttachment.name,
+            sizeLabel: messageAttachment.sizeLabel,
+            isImage: messageAttachment.isImage,
+            previewUrl: messageAttachment.previewUrl,
+          }
         : null,
     };
 
@@ -511,51 +677,51 @@ function handleIssueFileChange(e) {
     handleSendMessage();
   }
 
-function handleRenameWorkspace(e) {
-  e.preventDefault();
+  function handleRenameWorkspace(e) {
+    e.preventDefault();
 
-  const rawName = workspaceNameInput;
-  const trimmedName = rawName.trim();
+    const rawName = workspaceNameInput;
+    const trimmedName = rawName.trim();
 
-  if (trimmedName === "") {
-    setWorkspaceSettingMessage("Workspace name cannot be empty.");
-    return;
-  }
+    if (trimmedName === "") {
+      setWorkspaceSettingMessage("Workspace name cannot be empty.");
+      return;
+    }
 
-  if (rawName.length > WORKSPACE_NAME_MAX_LENGTH) {
-    setWorkspaceSettingMessage(
-      `Workspace name cannot exceed ${WORKSPACE_NAME_MAX_LENGTH} characters.`
+    if (rawName.length > WORKSPACE_NAME_MAX_LENGTH) {
+      setWorkspaceSettingMessage(
+        `Workspace name cannot exceed ${WORKSPACE_NAME_MAX_LENGTH} characters.`,
+      );
+      return;
+    }
+
+    const updatedWorkspaces = savedWorkSpaces.map((item) =>
+      item.id === workspaceId ? { ...item, name: trimmedName } : item,
     );
-    return;
+
+    localStorage.setItem(
+      "aiStudyHubWorkspaces",
+      JSON.stringify(updatedWorkspaces),
+    );
+
+    setWorkspaceNameInput(trimmedName);
+    setWorkspaceSettingMessage("Workspace name updated successfully.");
   }
-
-  const updatedWorkspaces = savedWorkSpaces.map((item) =>
-    item.id === workspaceId ? { ...item, name: trimmedName } : item
-  );
-
-  localStorage.setItem(
-    "aiStudyHubWorkspaces",
-    JSON.stringify(updatedWorkspaces)
-  );
-
-  setWorkspaceNameInput(trimmedName);
-  setWorkspaceSettingMessage("Workspace name updated successfully.");
-}
 
   function handleDeleteWorkspace() {
     const isConfirmed = window.confirm(
-      "Are you sure you want to delete this workspace?"
+      "Are you sure you want to delete this workspace?",
     );
 
     if (!isConfirmed) return;
 
     const updatedWorkspaces = savedWorkSpaces.filter(
-      (item) => item.id !== workspaceId
+      (item) => item.id !== workspaceId,
     );
 
     localStorage.setItem(
       "aiStudyHubWorkspaces",
-      JSON.stringify(updatedWorkspaces)
+      JSON.stringify(updatedWorkspaces),
     );
 
     navigate("/dashboard/workspaces");
@@ -569,14 +735,14 @@ function handleRenameWorkspace(e) {
 
   function handlePreviousStudyCard() {
     setCurrentStudyCardIndex((currentIndex) =>
-      currentIndex === 0 ? selectedStudySet.cards.length - 1 : currentIndex - 1
+      currentIndex === 0 ? selectedStudySet.cards.length - 1 : currentIndex - 1,
     );
     setIsStudyCardFlipped(false);
   }
 
   function handleNextStudyCard() {
     setCurrentStudyCardIndex((currentIndex) =>
-      currentIndex === selectedStudySet.cards.length - 1 ? 0 : currentIndex + 1
+      currentIndex === selectedStudySet.cards.length - 1 ? 0 : currentIndex + 1,
     );
     setIsStudyCardFlipped(false);
   }
@@ -586,7 +752,9 @@ function handleRenameWorkspace(e) {
       <section className="workspace_message_tab">
         <header className="workspace_message_header">
           <div>
-            <h2>{workspaceNameInput || workspace.name || "Workspace Group Chat"}</h2>
+            <h2>
+              {workspaceNameInput || workspace.name || "Workspace Group Chat"}
+            </h2>
             <p>
               <span></span>
               14 members online
@@ -630,8 +798,9 @@ function handleRenameWorkspace(e) {
 
                 {message.text && (
                   <div
-                    className={`workspace_message_bubble ${message.isOwn ? "sent" : "received"
-                      }`}
+                    className={`workspace_message_bubble ${
+                      message.isOwn ? "sent" : "received"
+                    }`}
                   >
                     {message.text}
                   </div>
@@ -639,10 +808,14 @@ function handleRenameWorkspace(e) {
 
                 {message.file && message.file.isImage && (
                   <div
-                    className={`workspace_message_bubble image ${message.isOwn ? "sent" : "received"
-                      }`}
+                    className={`workspace_message_bubble image ${
+                      message.isOwn ? "sent" : "received"
+                    }`}
                   >
-                    <img src={message.file.previewUrl} alt={message.file.name} />
+                    <img
+                      src={message.file.previewUrl}
+                      alt={message.file.name}
+                    />
                   </div>
                 )}
 
@@ -660,8 +833,9 @@ function handleRenameWorkspace(e) {
                 )}
 
                 <span
-                  className={`workspace_message_time ${message.isOwn ? "own" : ""
-                    }`}
+                  className={`workspace_message_time ${
+                    message.isOwn ? "own" : ""
+                  }`}
                 >
                   {message.time}
                 </span>
@@ -673,7 +847,9 @@ function handleRenameWorkspace(e) {
         {messageAttachment && (
           <div className="workspace_message_selected_file">
             <div>
-              <i className={messageAttachment.isImage ? "ti-image" : "ti-file"}></i>
+              <i
+                className={messageAttachment.isImage ? "ti-image" : "ti-file"}
+              ></i>
               <span>
                 {messageAttachment.name} · {messageAttachment.sizeLabel}
               </span>
@@ -817,8 +993,9 @@ function handleRenameWorkspace(e) {
                 </div>
 
                 <span
-                  className={`workspace_member_status ${member.role === "Manager" ? "manager" : "member"
-                    }`}
+                  className={`workspace_member_status ${
+                    member.role === "Manager" ? "manager" : "member"
+                  }`}
                 >
                   {member.role}
                 </span>
@@ -859,7 +1036,10 @@ function handleRenameWorkspace(e) {
 
             <div className="workspace_pending_list">
               {pendingInvitations.map((invitation) => (
-                <article className="workspace_pending_item" key={invitation.email}>
+                <article
+                  className="workspace_pending_item"
+                  key={invitation.email}
+                >
                   <div className="workspace_pending_mail_icon">
                     <i className="ti-email"></i>
                   </div>
@@ -879,7 +1059,7 @@ function handleRenameWorkspace(e) {
         </section>
 
         <aside className="workspace_member_sidebar">
-          <section className="workspace_side_card workspace_roles_card">
+          <section className="workspace_side_card">
             <h3>About Roles</h3>
 
             <div className="workspace_role_item">
@@ -898,7 +1078,7 @@ function handleRenameWorkspace(e) {
             </div>
           </section>
 
-          <section className="workspace_side_card workspace_activity_card">
+          <section className="workspace_side_card">
             <div className="workspace_side_title">
               <h3>Activity</h3>
               <i className="ti-stats-up"></i>
@@ -917,7 +1097,7 @@ function handleRenameWorkspace(e) {
             </div>
           </section>
 
-          <section className="workspace_side_card workspace_latest_card">
+          <section className="workspace_side_card">
             <h3>Latest Activity</h3>
 
             <div className="workspace_latest_activity highlight">
@@ -937,90 +1117,500 @@ function handleRenameWorkspace(e) {
     );
   }
 
-
-  function renderResearchTab() {
-    const totalTopicFiles = issues.reduce(
-      (total, issue) => total + (issue.files?.length || 0),
-      0
+  function renderDiscussionTab() {
+    const totalTopicFiles = discussionTopics.reduce(
+      (total, topic) => total + (topic.files?.length || 0),
+      0,
     );
 
-    const topicTypes = ["Question", "Material", "Discussion", "Announcement"];
+const filteredDiscussionTopics = discussionTopics.filter((topic) => {
+  if (topicFilter === "All") return true;
+  if (topicFilter === "Solved") return topic.status === "Solved";
+  return topic.type === topicFilter;
+});
+    if (selectedTopic) {
+  const relatedFiles = [...(selectedTopic.files || []), ...topicFiles];
+  const comments = selectedTopic.comments || [];
+  const subtasks = selectedTopic.subtasks || [];
+  const topicDeadlineText =
+  selectedTopic.dateMode === "deadline"
+    ? `${selectedTopic.startDate || "No start date"} → ${
+        selectedTopic.endDate || "No end date"
+      }`
+    : "No deadline";
 
-    if (selectedIssue) {
-      const relatedFiles = [...(selectedIssue.files || []), ...issueFiles];
 
-      return (
-        <section className="discussion_topic_detail">
-          <div className="discussion_breadcrumb">
-            <button type="button" onClick={() => setSelectedIssueId(null)}>
-              Discussion
-            </button>
-            <i className="ti-angle-right"></i>
-            <span>{selectedIssue.title}</span>
+  return (
+    <section className="workspace_clickup_detail">
+      <main className="workspace_clickup_main">
+        <header className="workspace_clickup_header">
+          <button
+            type="button"
+            className="workspace_clickup_back"
+            onClick={() => setSelectedTopicId(null)}
+          >
+            <i className="ti-angle-left"></i>
+            Back to topics
+          </button>
+
+          <div className="workspace_clickup_title">
+            <span className="workspace_clickup_status_dot"></span>
+
+            <h1>
+              {selectedTopic.title}
+            </h1>
           </div>
+        </header>
 
-          <div className="discussion_topic_editor">
-            <header className="discussion_topic_editor_header">
-              <div>
-                <span className="discussion_status_badge">
-                  {selectedIssue.status === "Active" ? "Open" : selectedIssue.status}
-                </span>
-                <h2>{selectedIssue.title}</h2>
-                <p>
-                  Started by {selectedIssue.creator} · {selectedIssue.updatedAt}
-                </p>
-              </div>
+<section className="workspace_topic_info_panel">
+  <div className="workspace_topic_info_item">
+    <span>
+      <i className="ti-bookmark-alt"></i>
+      Type
+    </span>
+    <strong>{selectedTopic.type || "Question"}</strong>
+  </div>
 
-              <button type="button" onClick={() => setSelectedIssueId(null)}>
-                Back to topics
-              </button>
-            </header>
+  <div className="workspace_topic_info_item">
+    <span>
+      <i className="ti-target"></i>
+      Status
+    </span>
+    <strong>{selectedTopic.status || "Open"}</strong>
+  </div>
 
-            <form className="discussion_reply_form" onSubmit={handleSaveIssueNote}>
-              <label>Topic note</label>
-              <textarea
-                value={issueContent}
-                onChange={(e) => setIssueContent(e.target.value)}
-                placeholder="Write your question, explanation, study note, or group update here."
-              />
+  <div className="workspace_topic_info_item">
+    <span>
+      <i className="ti-flag-alt"></i>
+      Priority
+    </span>
+    <strong>{selectedTopic.priority || "Normal"}</strong>
+  </div>
 
-              <div className="discussion_attachment_area">
-                <label className="discussion_file_button">
-                  <i className="ti-clip"></i>
-                  Attach study files
-                  <input type="file" multiple onChange={handleIssueFileChange} />
-                </label>
+  <div className="workspace_topic_info_item">
+    <span>
+      <i className="ti-calendar"></i>
+      Deadline
+    </span>
+    <strong>{topicDeadlineText}</strong>
+  </div>
+</section>
+        <form
+          className="workspace_clickup_description"
+          onSubmit={handleSaveTopicNote}
+        >
+          <textarea
+            value={topicContent}
+            onChange={(e) => setTopicContent(e.target.value)}
+            placeholder="Add topic description, information, note, or wiki..."
+          />
 
-                <button type="submit" className="discussion_save_btn">
-                  Save topic update
+          <div className="workspace_clickup_description_actions">
+            <button type="submit">Save update</button>
+          </div>
+        </form>
+
+
+        <section className="workspace_clickup_section">
+  <div className="workspace_clickup_subtask_header">
+    <h2>Add subtask</h2>
+
+    <div className="workspace_clickup_subtask_header_actions">
+  <button type="button">
+    <i className="ti-exchange-vertical"></i>
+    Sort
+  </button>
+
+  <button type="button">
+    <i className="ti-arrows-corner"></i>
+  </button>
+</div>
+  </div>
+
+  <form
+    className={`workspace_clickup_subtask_form ${
+      isSubtaskEditing ? "editing" : ""
+    }`}
+    onSubmit={handleAddTopicSubtask}
+  >
+    <div className="workspace_clickup_subtask_input_side">
+      <span className="workspace_clickup_subtask_circle"></span>
+
+      <input
+        value={topicSubtaskInput}
+        onFocus={() => setIsSubtaskEditing(true)}
+        onChange={(e) => {
+          setTopicSubtaskInput(e.target.value);
+          setIsSubtaskEditing(true);
+        }}
+        placeholder="Add Task"
+      />
+    </div>
+
+    {isSubtaskEditing && (
+      <div className="workspace_clickup_subtask_tools">
+        <button type="button" title="Subtask type">
+          <i className="ti-package"></i>
+        </button>
+
+        <button type="button" title="Magic">
+          <i className="ti-wand"></i>
+        </button>
+
+        <button type="button" title="Assignee">
+          <i className="ti-user"></i>
+        </button>
+
+        <div className="workspace_clickup_subtask_tool_wrap">
+          <button
+            type="button"
+            title="Date"
+            onClick={() => {
+              setIsSubtaskDateOpen(!isSubtaskDateOpen);
+              setIsSubtaskPriorityOpen(false);
+            }}
+          >
+            <i className="ti-calendar"></i>
+          </button>
+
+{isSubtaskDateOpen && (
+  <div className="workspace_clickup_subtask_date_panel">
+    <div className="workspace_clickup_deadline_options">
+      <button
+        type="button"
+        className={subtaskDateMode === "none" ? "active" : ""}
+        onClick={() => {
+          setSubtaskDateMode("none");
+          setSubtaskStartDate("");
+          setSubtaskEndDate("");
+        }}
+      >
+        <i className="ti-close"></i>
+        No deadline
+      </button>
+
+      <button
+        type="button"
+        className={subtaskDateMode === "deadline" ? "active" : ""}
+        onClick={() => setSubtaskDateMode("deadline")}
+      >
+        <i className="ti-calendar"></i>
+        Set deadline
+      </button>
+    </div>
+
+    {subtaskDateMode === "deadline" && (
+      <div className="workspace_clickup_date_inputs">
+        <label>
+          <span>Start date</span>
+          <input
+            type="date"
+            value={subtaskStartDate}
+            onChange={(e) => setSubtaskStartDate(e.target.value)}
+          />
+        </label>
+
+        <label>
+          <span>End date</span>
+          <input
+            type="date"
+            value={subtaskEndDate}
+            min={subtaskStartDate}
+            onChange={(e) => setSubtaskEndDate(e.target.value)}
+          />
+        </label>
+      </div>
+    )}
+
+    <div className="workspace_clickup_date_footer">
+      <button
+        type="button"
+        onClick={() => {
+          setSubtaskDateMode("none");
+          setSubtaskStartDate("");
+          setSubtaskEndDate("");
+          setIsSubtaskDateOpen(false);
+        }}
+      >
+        Clear
+      </button>
+
+      <button
+        type="button"
+        onClick={() => setIsSubtaskDateOpen(false)}
+      >
+        Apply
+      </button>
+    </div>
+  </div>
+)}
+        </div>
+
+        <div className="workspace_clickup_subtask_tool_wrap">
+          <button
+            type="button"
+            title="Priority"
+            onClick={() => {
+              setIsSubtaskPriorityOpen(!isSubtaskPriorityOpen);
+              setIsSubtaskDateOpen(false);
+            }}
+          >
+            <i className="ti-flag-alt"></i>
+          </button>
+
+          {isSubtaskPriorityOpen && (
+            <div className="workspace_clickup_subtask_menu priority_menu">
+              <strong>Priority</strong>
+
+              {["Urgent", "High", "Normal", "Low"].map((priorityOption) => (
+                <button
+                  type="button"
+                  key={priorityOption}
+                  onClick={() => {
+                    setSubtaskPriority(priorityOption);
+                    setIsSubtaskPriorityOpen(false);
+                  }}
+                >
+                  <span>{getSubtaskPriorityIcon(priorityOption)}</span>
+                  {priorityOption}
                 </button>
-              </div>
-            </form>
+              ))}
 
-            {relatedFiles.length > 0 && (
-              <section className="discussion_related_files">
-                <h3>Shared study files</h3>
+              <button
+                type="button"
+                onClick={() => {
+                  setSubtaskPriority("");
+                  setIsSubtaskPriorityOpen(false);
+                }}
+              >
+                <span>⊘</span>
+                Clear
+              </button>
+            </div>
+          )}
+        </div>
 
-                <div className="discussion_file_list">
-                  {relatedFiles.map((file) => (
-                    <article className="discussion_file_item" key={file.id}>
-                      <i className="ti-file"></i>
+        <button type="button" title="Tag">
+          <i className="ti-tag"></i>
+        </button>
 
-                      <div>
-                        <strong>{file.name}</strong>
-                        <span>
-                          {(file.size / 1024).toFixed(1)} KB · {file.addedAt}
-                        </span>
-                      </div>
-                    </article>
-                  ))}
-                </div>
-              </section>
-            )}
+        <button type="button" title="Link">
+          <i className="ti-link"></i>
+        </button>
+
+        <button
+          type="button"
+          className="workspace_clickup_subtask_cancel"
+          onClick={handleCancelSubtask}
+        >
+          Cancel
+        </button>
+
+        <button type="submit" className="workspace_clickup_subtask_save">
+          Save ↵
+        </button>
+      </div>
+    )}
+  </form>
+
+  {subtasks.length > 0 && (
+    <div className="workspace_clickup_subtask_list">
+      {subtasks.map((subtask) => (
+        <article
+          className={`workspace_clickup_subtask_item ${
+            subtask.completed ? "completed" : ""
+          }`}
+          key={subtask.id}
+        >
+          <button
+            type="button"
+            className="workspace_clickup_subtask_check"
+            onClick={() => handleToggleSubtask(subtask.id)}
+          >
+            {subtask.completed ? <i className="ti-check"></i> : null}
+          </button>
+
+          <div className="workspace_clickup_subtask_info">
+            <strong>{subtask.title}</strong>
+
+            <div>
+              {subtask.priority && (
+                <span>
+                  {getSubtaskPriorityIcon(subtask.priority)} {subtask.priority}
+                </span>
+              )}
+
+{subtask.dateMode === "deadline" && (
+  <span>
+    <i className="ti-calendar"></i>
+    {subtask.startDate || "No start"} → {subtask.endDate || "No end"}
+  </span>
+)}
+
+{subtask.dateMode !== "deadline" && (
+  <span>
+    <i className="ti-close"></i>
+    No deadline
+  </span>
+)}
+
+              <span>
+                <i className="ti-user"></i>
+                {subtask.assignee || profileName}
+              </span>
+            </div>
           </div>
+
+          <button
+            type="button"
+            className="workspace_clickup_subtask_delete"
+            onClick={() => handleDeleteSubtask(subtask.id)}
+          >
+            <i className="ti-trash"></i>
+          </button>
+        </article>
+      ))}
+    </div>
+  )}
+</section>
+  <section className="workspace_clickup_attachment_section">
+  <div className="workspace_clickup_attachment_header">
+    <div>
+      <h2>Attachments</h2>
+      <span>{relatedFiles.length}</span>
+    </div>
+
+    <div className="workspace_clickup_attachment_tools">
+      <button type="button" title="Download">
+        <i className="ti-download"></i>
+      </button>
+
+      <button type="button" className="active" title="Grid view">
+        <i className="ti-layout-grid2"></i>
+      </button>
+
+      <button type="button" title="List view">
+        <i className="ti-menu-alt"></i>
+      </button>
+
+      <label title="Upload file">
+        <i className="ti-plus"></i>
+        <input type="file" multiple onChange={handleTopicFileChange} />
+      </label>
+    </div>
+  </div>
+
+  <label className="workspace_clickup_drop_zone">
+    Drop your files here to <span>upload</span>
+    <input type="file" multiple onChange={handleTopicFileChange} />
+  </label>
+
+  {relatedFiles.length === 0 ? (
+    <div className="workspace_clickup_attachment_empty">
+      <i className="ti-clip"></i>
+      <h3>No attachments yet</h3>
+      <p>Upload files related to this topic so members can review them.</p>
+    </div>
+  ) : (
+    <div className="workspace_clickup_attachment_grid">
+      {relatedFiles.map((file) => (
+        <article className="workspace_clickup_attachment_card" key={file.id}>
+          <div className="workspace_clickup_attachment_preview">
+            <i className="ti-clip"></i>
+          </div>
+
+          <div className="workspace_clickup_attachment_info">
+            <div>
+              <strong>{file.name}</strong>
+              <span>{file.addedAt || "Just now"}</span>
+            </div>
+
+            <span className="workspace_clickup_attachment_owner">
+              {profileName.slice(0, 1).toUpperCase()}
+            </span>
+          </div>
+        </article>
+      ))}
+    </div>
+  )}
+</section>
+      </main>
+
+      <aside className="workspace_clickup_activity">
+        <header>
+          <h2>Activity</h2>
+
+          <div>
+            <button type="button">
+              <i className="ti-search"></i>
+            </button>
+
+            <button type="button">
+              <i className="ti-bell"></i>
+            </button>
+
+            <button type="button">
+              <i className="ti-filter"></i>
+            </button>
+          </div>
+        </header>
+
+        <section className="workspace_clickup_activity_body">
+          {comments.length === 0 ? (
+            <div className="workspace_clickup_activity_empty">
+              <i className="ti-comments"></i>
+              <p>No activity yet.</p>
+            </div>
+          ) : (
+            comments.map((comment) => (
+              <article className="workspace_clickup_comment" key={comment.id}>
+                <div className="workspace_clickup_comment_head">
+                  <div className="workspace_clickup_comment_avatar">
+                    {comment.author.slice(0, 1).toUpperCase()}
+                  </div>
+
+                  <strong>{comment.author}</strong>
+                  <span>{comment.createdAt}</span>
+                </div>
+
+                <p>{comment.content}</p>
+
+                <footer>
+                  <button type="button">
+                    <i className="ti-thumb-up"></i>
+                  </button>
+
+                  <button type="button">Reply</button>
+                </footer>
+              </article>
+            ))
+          )}
         </section>
-      );
-    }
+
+        <form
+          className="workspace_clickup_comment_form"
+          onSubmit={handleAddTopicComment}
+        >
+          <textarea
+            value={topicCommentInput}
+            onChange={(e) => setTopicCommentInput(e.target.value)}
+            placeholder="Write a comment..."
+          />
+
+          <div>
+            <button type="button">
+              <i className="ti-plus"></i>
+            </button>
+
+            <button type="submit">
+              <i className="ti-control-play"></i>
+            </button>
+          </div>
+        </form>
+      </aside>
+    </section>
+  );
+}
 
     return (
       <section className="discussion_tab_page">
@@ -1037,7 +1627,7 @@ function handleRenameWorkspace(e) {
           <button
             type="button"
             className="new_discussion_topic_btn"
-            onClick={() => setShowIssueForm(true)}
+            onClick={() => setIsTopicFormOpen(true)}
           >
             <i className="ti-plus"></i>
             New Topic
@@ -1045,14 +1635,47 @@ function handleRenameWorkspace(e) {
         </div>
 
         <div className="discussion_filter_row">
-          <button type="button" className="active">All topics</button>
-          <button type="button">Questions</button>
-          <button type="button">Materials</button>
-          <button type="button">Announcements</button>
-          <button type="button">Solved</button>
-        </div>
+  <button
+    type="button"
+    className={topicFilter === "All" ? "active" : ""}
+    onClick={() => setTopicFilter("All")}
+  >
+    All topics
+  </button>
 
-        {issues.length === 0 && !showIssueForm ? (
+  <button
+    type="button"
+    className={topicFilter === "Question" ? "active" : ""}
+    onClick={() => setTopicFilter("Question")}
+  >
+    Questions
+  </button>
+
+  <button
+    type="button"
+    className={topicFilter === "Material" ? "active" : ""}
+    onClick={() => setTopicFilter("Material")}
+  >
+    Materials
+  </button>
+
+  <button
+    type="button"
+    className={topicFilter === "Announcement" ? "active" : ""}
+    onClick={() => setTopicFilter("Announcement")}
+  >
+    Announcements
+  </button>
+
+  <button
+    type="button"
+    className={topicFilter === "Solved" ? "active" : ""}
+    onClick={() => setTopicFilter("Solved")}
+  >
+    Solved
+  </button>
+</div>
+        {discussionTopics.length === 0 && !isTopicFormOpen ? (
           <section className="discussion_empty_state">
             <div className="discussion_empty_icon">
               <i className="ti-comments"></i>
@@ -1063,22 +1686,22 @@ function handleRenameWorkspace(e) {
               Start the first topic so members can ask questions, share notes,
               and exchange study materials.
             </p>
-            <button type="button" onClick={() => setShowIssueForm(true)}>
+            <button type="button" onClick={() => setIsTopicFormOpen(true)}>
               Create first topic
             </button>
           </section>
         ) : null}
 
-        {showIssueForm && (
-          <div className="research_issue_popup_overlay">
+        {isTopicFormOpen && (
+          <div className="discussion_topic_modal_overlay">
             <form
-              className="discussion_create_card research_issue_popup_card"
-              onSubmit={handleCreateIssue}
+              className="discussion_create_card discussion_topic_modal_card"
+              onSubmit={handleCreateTopic}
             >
               <button
                 type="button"
-                className="research_issue_popup_close"
-                onClick={() => setShowIssueForm(false)}
+                className="discussion_topic_modal_close"
+                onClick={() => setIsTopicFormOpen(false)}
                 aria-label="Close create topic popup"
               >
                 ×
@@ -1096,17 +1719,107 @@ function handleRenameWorkspace(e) {
               </div>
 
               <div className="discussion_form_group">
-                <label>Topic title</label>
-                <input
-                  value={issueTitle}
-                  onChange={(e) => setIssueTitle(e.target.value)}
-                  placeholder="Example: Why does this constraint use >= ?"
-                  autoFocus
-                />
-              </div>
+  <label>Topic title</label>
+  <input
+    value={topicTitle}
+    onChange={(e) => setTopicTitle(e.target.value)}
+    placeholder="Example: Why does this constraint use >= ?"
+    autoFocus
+  />
+</div>
+
+<div className="discussion_form_group">
+  <label>Topic description</label>
+  <textarea
+    value={newTopicDescription}
+    onChange={(e) => setNewTopicDescription(e.target.value)}
+    placeholder="Describe the problem, lesson note, question, or material you want members to discuss..."
+  />
+</div>
+
+<div className="discussion_topic_form_grid">
+  <div className="discussion_form_group">
+    <label>Topic type</label>
+    <select
+      value={newTopicType}
+      onChange={(e) => setNewTopicType(e.target.value)}
+    >
+      <option value="Question">Question</option>
+      <option value="Material">Material</option>
+      <option value="Discussion">Discussion</option>
+      <option value="Announcement">Announcement</option>
+    </select>
+  </div>
+
+  <div className="discussion_form_group">
+    <label>Status</label>
+    <select
+      value={newTopicStatus}
+      onChange={(e) => setNewTopicStatus(e.target.value)}
+    >
+      <option value="Open">Open</option>
+      <option value="In progress">In progress</option>
+      <option value="Solved">Solved</option>
+    </select>
+  </div>
+
+  <div className="discussion_form_group">
+    <label>Priority</label>
+    <select
+      value={newTopicPriority}
+      onChange={(e) => setNewTopicPriority(e.target.value)}
+    >
+      <option value="Low">Low</option>
+      <option value="Normal">Normal</option>
+      <option value="High">High</option>
+      <option value="Urgent">Urgent</option>
+    </select>
+  </div>
+
+  <div className="discussion_form_group">
+    <label>Deadline option</label>
+    <select
+      value={newTopicDateMode}
+      onChange={(e) => {
+        setNewTopicDateMode(e.target.value);
+
+        if (e.target.value === "none") {
+          setNewTopicStartDate("");
+          setNewTopicEndDate("");
+        }
+      }}
+    >
+      <option value="none">No deadline</option>
+      <option value="deadline">Set deadline</option>
+    </select>
+  </div>
+</div>
+
+{newTopicDateMode === "deadline" && (
+  <div className="discussion_topic_form_grid">
+    <div className="discussion_form_group">
+      <label>Start date</label>
+      <input
+        type="date"
+        value={newTopicStartDate}
+        onChange={(e) => setNewTopicStartDate(e.target.value)}
+      />
+    </div>
+
+    <div className="discussion_form_group">
+      <label>End date</label>
+      <input
+        type="date"
+        value={newTopicEndDate}
+        min={newTopicStartDate}
+        onChange={(e) => setNewTopicEndDate(e.target.value)}
+      />
+    </div>
+  </div>
+)}
 
               <div className="discussion_create_actions">
-                <button type="button" onClick={() => setShowIssueForm(false)}>
+                <button type="button" onClick={() => setIsTopicFormOpen(false)}>
                   Cancel
                 </button>
 
@@ -1118,15 +1831,15 @@ function handleRenameWorkspace(e) {
 
         <section className="discussion_content_grid">
           <div className="discussion_content_left">
-            {issues.length > 0 && (
+            {filteredDiscussionTopics.length > 0 && (
               <>
                 <section className="discussion_pinned_card">
                   <div>
                     <span>PINNED</span>
                     <h3>Workspace rules and study schedule</h3>
                     <p>
-                      Use this area for important group rules, deadlines, meeting links,
-                      or exam review plans.
+                      Use this area for important group rules, deadlines,
+                      meeting links, or exam review plans.
                     </p>
                   </div>
 
@@ -1134,24 +1847,26 @@ function handleRenameWorkspace(e) {
                 </section>
 
                 <section className="discussion_topic_list">
-                  {issues.map((issue, index) => (
+                  {filteredDiscussionTopics.map((topic) => (
                     <article
                       className="discussion_topic_card"
-                      key={issue.id}
+                      key={topic.id}
                       onClick={() => {
-                        setSelectedIssueId(issue.id);
-                        setIssueContent(issue.content || "");
-                        setIssueFiles([]);
-                      }}
+  setSelectedTopicId(topic.id);
+  setTopicContent(topic.content || "");
+  setTopicFiles([]);
+  setTopicCommentInput("");
+  setTopicSubtaskInput("");
+}}
                     >
                       <div className="discussion_topic_type">
-                        <span>{topicTypes[index % topicTypes.length]}</span>
-                        <small>{issue.updatedAt}</small>
+                        <span>{topic.type || "Question"}</span>
+                        <small>{topic.updatedAt}</small>
                       </div>
 
-                      <h3>{issue.title}</h3>
+                      <h3>{topic.title}</h3>
                       <p>
-                        Started by {issue.creator}. Open this topic to reply,
+                        Started by {topic.creator}. Open this topic to reply,
                         add study notes, and attach learning files.
                       </p>
 
@@ -1162,16 +1877,34 @@ function handleRenameWorkspace(e) {
 
                         <span>
                           <i className="ti-clip"></i>
-                          {issue.files?.length || 0} files
+                          {topic.files?.length || 0} files
                         </span>
 
-                        <span>
-                          <i className="ti-check"></i>Open
-                        </span>
+<span>
+  <i className="ti-check"></i>
+  {topic.status || "Open"}
+</span>
                       </div>
                     </article>
                   ))}
                 </section>
+                {discussionTopics.length > 0 && filteredDiscussionTopics.length === 0 && (
+  <section className="discussion_empty_state">
+    <div className="discussion_empty_icon">
+      <i className="ti-filter"></i>
+    </div>
+
+    <h3>No matching topics</h3>
+    <p>
+      There are no topics matching this filter. Try another topic type or
+      create a new one.
+    </p>
+
+    <button type="button" onClick={() => setTopicFilter("All")}>
+      Show all topics
+    </button>
+  </section>
+)}
               </>
             )}
           </div>
@@ -1185,7 +1918,7 @@ function handleRenameWorkspace(e) {
 
               <div className="discussion_stats_grid">
                 <div>
-                  <strong>{issues.length}</strong>
+                  <strong>{discussionTopics.length}</strong>
                   <span>Topics</span>
                 </div>
 
@@ -1211,7 +1944,8 @@ function handleRenameWorkspace(e) {
               <div className="workspace_storage_limit_row">
                 <strong>Storage limit</strong>
                 <span>
-                  {formatWorkspaceStorageSize(workspaceStorageUsedBytes)} / 50.0 MB
+                  {formatWorkspaceStorageSize(workspaceStorageUsedBytes)} / 50.0
+                  MB
                 </span>
               </div>
 
@@ -1221,12 +1955,16 @@ function handleRenameWorkspace(e) {
 
               <div className="workspace_storage_numbers">
                 <div>
-                  <strong>{formatWorkspaceStorageSize(workspaceStorageUsedBytes)}</strong>
+                  <strong>
+                    {formatWorkspaceStorageSize(workspaceStorageUsedBytes)}
+                  </strong>
                   <span>Used</span>
                 </div>
 
                 <div>
-                  <strong>{formatWorkspaceStorageSize(workspaceStorageRemainingBytes)}</strong>
+                  <strong>
+                    {formatWorkspaceStorageSize(workspaceStorageRemainingBytes)}
+                  </strong>
                   <span>Remaining</span>
                 </div>
               </div>
@@ -1239,14 +1977,20 @@ function handleRenameWorkspace(e) {
               </div>
 
               <ul className="discussion_guide_list">
-                <li>Use Question when you need help with a lesson or exercise.</li>
-                <li>Use Material when you share notes, slides, or documents.</li>
-                <li>Use Announcement for deadlines, schedules, or group updates.</li>
+                <li>
+                  Use Question when you need help with a lesson or exercise.
+                </li>
+                <li>
+                  Use Material when you share notes, slides, or documents.
+                </li>
+                <li>
+                  Use Announcement for deadlines, schedules, or group updates.
+                </li>
               </ul>
             </section>
 
-            <section className="workspace_research_about">
-              <div className="workspace_research_about_header">
+            <section className="workspace_about_card">
+              <div className="workspace_about_header">
                 <i className="ti-bookmark-alt"></i>
                 <h3>About this workspace</h3>
               </div>
@@ -1283,8 +2027,9 @@ function handleRenameWorkspace(e) {
             {studySets.map((studySet) => (
               <button
                 type="button"
-                className={`workspace_study_set_card ${selectedStudySetId === studySet.id ? "active" : ""
-                  }`}
+                className={`workspace_study_set_card ${
+                  selectedStudySetId === studySet.id ? "active" : ""
+                }`}
                 key={studySet.id}
                 onClick={() => handleSelectStudySet(studySet.id)}
               >
@@ -1324,17 +2069,19 @@ function handleRenameWorkspace(e) {
               <div>
                 <span
                   style={{
-                    width: `${((currentStudyCardIndex + 1) /
+                    width: `${
+                      ((currentStudyCardIndex + 1) /
                         selectedStudySet.cards.length) *
                       100
-                      }%`,
+                    }%`,
                   }}
                 ></span>
               </div>
 
               <p>
                 <strong>Session Progress</strong>
-                {currentStudyCardIndex + 1} of {selectedStudySet.cards.length} cards
+                {currentStudyCardIndex + 1} of {selectedStudySet.cards.length}{" "}
+                cards
               </p>
             </div>
           </header>
@@ -1342,8 +2089,9 @@ function handleRenameWorkspace(e) {
           <section className="workspace_study_stage">
             <button
               type="button"
-              className={`workspace_flashcard ${isStudyCardFlipped ? "flipped" : ""
-                }`}
+              className={`workspace_flashcard ${
+                isStudyCardFlipped ? "flipped" : ""
+              }`}
               onClick={() => setIsStudyCardFlipped(!isStudyCardFlipped)}
             >
               <span>{isStudyCardFlipped ? "Answer" : "Question"}</span>
@@ -1445,24 +2193,27 @@ function handleRenameWorkspace(e) {
             </div>
           </div>
 
-          <form className="workspace_settings_form" onSubmit={handleRenameWorkspace}>
+          <form
+            className="workspace_settings_form"
+            onSubmit={handleRenameWorkspace}
+          >
             <label>Workspace name</label>
-<input
-  type="text"
-  value={workspaceNameInput}
-  onChange={handleWorkspaceNameChange}
-  placeholder="Enter workspace name"
-/>
+            <input
+              type="text"
+              value={workspaceNameInput}
+              onChange={handleWorkspaceNameChange}
+              placeholder="Enter workspace name"
+            />
 
-<small
-  className={
-    workspaceNameInput.length > WORKSPACE_NAME_MAX_LENGTH
-      ? "settings_warning_text"
-      : ""
-  }
->
-  {workspaceNameInput.length}/{WORKSPACE_NAME_MAX_LENGTH} characters
-</small>
+            <small
+              className={
+                workspaceNameInput.length > WORKSPACE_NAME_MAX_LENGTH
+                  ? "settings_warning_text"
+                  : ""
+              }
+            >
+              {workspaceNameInput.length}/{WORKSPACE_NAME_MAX_LENGTH} characters
+            </small>
             <button type="submit">Save changes</button>
           </form>
 
@@ -1540,7 +2291,10 @@ function handleRenameWorkspace(e) {
             <section className="workspace_invite_result">
               <div className="workspace_invite_candidate">
                 <div className="workspace_invite_avatar">
-                  <img src="https://i.pravatar.cc/80?img=12" alt="Nguyễn Văn A" />
+                  <img
+                    src="https://i.pravatar.cc/80?img=12"
+                    alt="Nguyễn Văn A"
+                  />
                   <span></span>
                 </div>
 
@@ -1572,8 +2326,8 @@ function handleRenameWorkspace(e) {
 
               <h3>No user found</h3>
               <p>
-                We couldn't find any student or researcher matching
-                "{inviteQuery}". Check the spelling or try a different name.
+                We couldn't find any student or researcher matching "
+                {inviteQuery}". Check the spelling or try a different name.
               </p>
 
               <div className="workspace_invite_no_result_actions">
@@ -1649,12 +2403,13 @@ function handleRenameWorkspace(e) {
     <main className="workspace_page">
       <nav className="workspace_top_tabs">
         <button
-          className={activeTab === "research" ? "active" : ""}
-          onClick={() => setActiveTab("research")}
+          className={activeTab === "discussion" ? "active" : ""}
+          onClick={() => setActiveTab("discussion")}
         >
           <i className="ti-comments"></i>
           Discussion
         </button>
+
 
         <button
           className={activeTab === "messages" ? "active" : ""}
@@ -1691,7 +2446,7 @@ function handleRenameWorkspace(e) {
 
       {activeTab === "messages" && renderMessagesTab()}
 
-      {activeTab === "research" && renderResearchTab()}
+      {activeTab === "discussion" && renderDiscussionTab()}
 
       {activeTab === "study" && renderStudyTab()}
 
