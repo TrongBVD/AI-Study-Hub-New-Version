@@ -298,3 +298,13 @@
 .empty_library_state a:hover {
   text-decoration: underline;
 }
+.workspace_pagination button:disabled,
+.library_pagination button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.workspace_pagination button:disabled:hover,
+.library_pagination button:disabled:hover {
+  background: transparent;
+}

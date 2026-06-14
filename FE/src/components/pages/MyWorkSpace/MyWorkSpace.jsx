@@ -5,7 +5,6 @@ import "../../../assets/icons/themify-icons-font/themify-icons/themify-icons.css
 
 function MyWorkSpace() {
   const [currentPage, setCurrentPage] = useState(1);
-
   function getSavedWorkSpaces() {
     try {
       return JSON.parse(localStorage.getItem("aiStudyHubWorkspaces") || "[]");
@@ -16,7 +15,16 @@ function MyWorkSpace() {
   }
 
   const workspaces = getSavedWorkSpaces();
+const ITEMS_PER_PAGE = 12;
 
+const totalPages = Math.ceil(workspaces.length / ITEMS_PER_PAGE);
+
+const safeCurrentPage = Math.min(currentPage, totalPages || 1);
+
+const paginatedWorkspaces = workspaces.slice(
+  (safeCurrentPage - 1) * ITEMS_PER_PAGE,
+  safeCurrentPage * ITEMS_PER_PAGE,
+);
   return (
     <main className="my_workspace_page">
       <section className="workspace_content">
@@ -62,7 +70,7 @@ function MyWorkSpace() {
           </section>
         ) : (
           <section className="workspace_grid">
-            {workspaces.map((workspace) => (
+            {paginatedWorkspaces.map((workspace) => (
 <Link
   to={`/dashboard/workspaces/${workspace.id}`}
   state={{ workspace, from: "/dashboard/workspaces" }}
@@ -87,26 +95,40 @@ function MyWorkSpace() {
           </section>
         )}
 
-        {workspaces.length > 0 && (
-          <div className="workspace_pagination">
-            <button>‹</button>
+        {totalPages > 1 && (
+  <div className="workspace_pagination">
+    <button
+      type="button"
+      disabled={safeCurrentPage === 1}
+      onClick={() => setCurrentPage((page) => Math.max(page - 1, 1))}
+    >
+      ‹
+    </button>
 
-            {[1, 2, 3, 4].map((page) => (
-              <button
-                key={page}
-                className={currentPage === page ? "active" : ""}
-                onClick={() => setCurrentPage(page)}
-              >
-                {page}
-              </button>
-            ))}
+    {Array.from({ length: totalPages }, (_, index) => index + 1).map(
+      (page) => (
+        <button
+          type="button"
+          key={page}
+          className={safeCurrentPage === page ? "active" : ""}
+          onClick={() => setCurrentPage(page)}
+        >
+          {page}
+        </button>
+      ),
+    )}
 
-            <span>...</span>
-
-            <button onClick={() => setCurrentPage(12)}>12</button>
-            <button>›</button>
-          </div>
-        )}
+    <button
+      type="button"
+      disabled={safeCurrentPage === totalPages}
+      onClick={() =>
+        setCurrentPage((page) => Math.min(page + 1, totalPages))
+      }
+    >
+      ›
+    </button>
+  </div>
+)}
       </section>
     </main>
   );
