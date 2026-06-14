@@ -1,5 +1,5 @@
 import { useState } from "react";
-import "./AIChatPage.css";
+import "./AiChatPage.css";
 import "../../../assets/icons/themify-icons-font/themify-icons/themify-icons.css";
 
 function AIChatPage() {
