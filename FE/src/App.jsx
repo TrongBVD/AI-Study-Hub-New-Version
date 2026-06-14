@@ -30,11 +30,11 @@ import ProtectedRoute from "./components/common/ProtectedRoute/ProtectedRoute.js
 
 // ================= ADMIN IMPORTS =================
 import AdminLayout from "./components/pages/Admin/AdminLayout.jsx";
-import AdminDashboardPage from "./components/pages/Admin/AdminDashboardPage.jsx";
-import AdminModerationPage from "./components/pages/Admin/AdminModerationPage.jsx";
-import AdminUsersPage from "./components/pages/Admin/AdminUsersPage.jsx";
-import AdminLogsPage from "./components/pages/Admin/AdminLogsPage.jsx";
-import AdminUsagePage from "./components/pages/Admin/AdminUsagePage.jsx";
+
+import AdminDashboardPage from "./components/pages/Admin/AdminDashboardPage/AdminDashboardPage.jsx";
+import AIContentModerationPage from "./components/pages/Admin/AiContentModerationPage/AIContentModerationPage.jsx";
+import StorageManagementPage from "./components/pages/Admin/StorageManagementPage/StorageManagementPage.jsx";
+import UserManagementPage from "./components/pages/Admin/UserManagementPage/UserManagementPage.jsx";
 
 function App() {
   return (
@@ -90,11 +90,11 @@ function App() {
           }
         >
           <Route index element={<Navigate to="/admin/dashboard" replace />} />
+
           <Route path="dashboard" element={<AdminDashboardPage />} />
-          <Route path="moderation" element={<AdminModerationPage />} />
-          <Route path="users" element={<AdminUsersPage />} />
-          <Route path="logs" element={<AdminLogsPage />} />
-          <Route path="usage" element={<AdminUsagePage />} />
+          <Route path="users" element={<UserManagementPage />} />
+          <Route path="ai-moderation" element={<AIContentModerationPage />} />
+          <Route path="storage" element={<StorageManagementPage />} />
         </Route>
 
         {/* NOT FOUND */}

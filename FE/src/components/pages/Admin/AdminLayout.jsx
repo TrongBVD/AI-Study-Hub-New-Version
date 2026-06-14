@@ -23,20 +23,16 @@ function AdminLayout() {
             Dashboard
           </NavLink>
 
-          <NavLink className="admin_nav_link" to="/admin/moderation">
-            AI Moderation
-          </NavLink>
-
           <NavLink className="admin_nav_link" to="/admin/users">
-            Users
+            User Management
           </NavLink>
 
-          <NavLink className="admin_nav_link" to="/admin/logs">
-            Activity Logs
+          <NavLink className="admin_nav_link" to="/admin/ai-moderation">
+            AI Content Moderation
           </NavLink>
 
-          <NavLink className="admin_nav_link" to="/admin/usage">
-            Usage
+          <NavLink className="admin_nav_link" to="/admin/storage">
+            Storage Management
           </NavLink>
 
           <NavLink className="admin_nav_link" to="/dashboard/home">

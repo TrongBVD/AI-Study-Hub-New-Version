@@ -1,5 +1,5 @@
 import { useState } from "react";
-import "./UserManagement.css";
+import "./UserManagementPage.css";
 
 const UserManagementPage = () => {
   const [activeNav, setActiveNav] = useState('User Management');

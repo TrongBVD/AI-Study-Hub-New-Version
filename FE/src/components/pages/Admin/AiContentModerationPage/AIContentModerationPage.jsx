@@ -1,5 +1,5 @@
 import { useState } from "react";
-import "./AIContentModeration.css";
+import "./AIContentModerationPage.css";
 
 const AIContentModerationPage = () => {
   const [activeNav, setActiveNav] = useState('System Logs');
