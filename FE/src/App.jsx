@@ -10,10 +10,11 @@ import CompleteProfile from "./components/pages/RegisterPage/CompleteProfile.jsx
 import EnterUserNamePass from "./components/pages/RegisterPage/EnterUserNamePass.jsx";
 import OTPVerification from "./components/pages/RegisterPage/OTPVerification.jsx";
 
+// ================= LAYOUT IMPORTS =================
 import Dashboard from "./components/layout/Dashboard/Dashboard.jsx";
 
+// ================= USER PAGE IMPORTS =================
 import AIChatPage from "./components/pages/AiChatPage/AiChatPage.jsx";
-import CloudUploadPage from "./components/pages/CloudUploadPage/CloudUploadPage.jsx";
 import HomePage from "./components/pages/HomePage/HomePage.jsx";
 import MyLibraryPage from "./components/pages/MyLibraryPage/MyLibraryPage.jsx";
 import CreateLibraryPage from "./components/pages/CreateLibraryPage/CreateLibraryPage.jsx";
@@ -24,25 +25,16 @@ import PersonalProfilePage from "./components/pages/PersonalProfilePage/Personal
 import Flashcards from "./components/pages/Flashcards/Flashcards.jsx";
 import CreateWorkSpacePage from "./components/pages/CreateWorkSpacePage/CreateWorkSpacePage.jsx";
 
-// Nếu không dùng ChatBot nữa thì comment lại để tránh dư import
-// import ChatBot from "./components/pages/AIchatbot/ChatBot.jsx";
-
 // ================= PROTECTED ROUTE =================
-function ProtectedRoute({ children }) {
-  const token = localStorage.getItem("accessToken");
+import ProtectedRoute from "./components/common/ProtectedRoute/ProtectedRoute.jsx";
 
-  if (!token) {
-    return <Navigate to="/login" replace />;
-  }
-
-  return children;
-}
-
-// ================= ADMIN IMPORTS - TẠM THỜI COMMENT =================
-// import AdminDashboardPage from "./components/pages/Admin/AdminDashboardPage/AdminDashboardPage.jsx";
-// import UserManagementPage from "./components/pages/Admin/UserManagementPage/UserManagementPage.jsx";
-// import StorageManagementPage from "./components/pages/Admin/StorageManagementPage/StorageManagementPage.jsx";
-// import AIContentModerationPage from "./components/pages/Admin/AiContentModerationPage/AIContentModerationPage.jsx";
+// ================= ADMIN IMPORTS =================
+import AdminLayout from "./components/pages/Admin/AdminLayout.jsx";
+import AdminDashboardPage from "./components/pages/Admin/AdminDashboardPage.jsx";
+import AdminModerationPage from "./components/pages/Admin/AdminModerationPage.jsx";
+import AdminUsersPage from "./components/pages/Admin/AdminUsersPage.jsx";
+import AdminLogsPage from "./components/pages/Admin/AdminLogsPage.jsx";
+import AdminUsagePage from "./components/pages/Admin/AdminUsagePage.jsx";
 
 function App() {
   return (
@@ -56,10 +48,12 @@ function App() {
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/register" element={<RegisterGoogle />} />
         <Route path="/complete-profile" element={<CompleteProfile />} />
+
         <Route
           path="/enter-username-password"
           element={<EnterUserNamePass />}
         />
+
         <Route path="/verify-otp" element={<OTPVerification />} />
         <Route path="/otp-verification" element={<OTPVerification />} />
         <Route
@@ -82,51 +76,26 @@ function App() {
           <Route path="profile" element={<PersonalProfilePage />} />
 
           <Route path="ai-chat" element={<AIChatPage />} />
-          <Route path="cloud-upload" element={<CloudUploadPage />} />
 
           <Route path="flashcards" element={<Flashcards />} />
         </Route>
 
-
-        {/* ================= ADMIN ROUTES - TẠM THỜI COMMENT ================= */}
-
-        {/*
+        {/* ADMIN ROUTES - CHỈ SYSTEM_ADMIN TRUY CẬP ĐƯỢC */}
         <Route
-          path="/admin/dashboard"
+          path="/admin"
           element={
-            <ProtectedRoute>
-              <AdminDashboardPage />
+            <ProtectedRoute allowedRoles={["SYSTEM_ADMIN"]}>
+              <AdminLayout />
             </ProtectedRoute>
           }
-        />
-
-        <Route
-          path="/admin/users"
-          element={
-            <ProtectedRoute>
-              <UserManagementPage />
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/admin/storage"
-          element={
-            <ProtectedRoute>
-              <StorageManagementPage />
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/admin/moderation"
-          element={
-            <ProtectedRoute>
-              <AIContentModerationPage />
-            </ProtectedRoute>
-          }
-        />
-        */}
+        >
+          <Route index element={<Navigate to="/admin/dashboard" replace />} />
+          <Route path="dashboard" element={<AdminDashboardPage />} />
+          <Route path="moderation" element={<AdminModerationPage />} />
+          <Route path="users" element={<AdminUsersPage />} />
+          <Route path="logs" element={<AdminLogsPage />} />
+          <Route path="usage" element={<AdminUsagePage />} />
+        </Route>
 
         {/* NOT FOUND */}
         {/* Catch-all route */}

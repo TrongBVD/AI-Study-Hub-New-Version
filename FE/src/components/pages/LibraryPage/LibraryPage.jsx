@@ -12,8 +12,9 @@ import "../../../assets/icons/themify-icons-font/themify-icons/themify-icons.css
 
 function LibraryPage() {
   const LIBRARY_NAME_MAX_LENGTH = 20;
-
+const LIBRARY_STORAGE_LIMIT_BYTES = 50 * 1024 * 1024;
   const [libraryNameMessage, setLibraryNameMessage] = useState("");
+  const [isStorageLimitPopupOpen, setIsStorageLimitPopupOpen] = useState(false);
   const { libraryId } = useParams();
   const navigate = useNavigate();
 
@@ -45,26 +46,35 @@ function LibraryPage() {
     setLibraryNameMessage("");
   }
   function getInitialLibraryData() {
-    const savedLibraries = JSON.parse(
-      localStorage.getItem("aiStudyHubLibraries") || "[]",
-    );
-    const matchedLibrary = savedLibraries.find(
-      (library) => library.id === libraryId,
-    );
+  const savedLibraries = JSON.parse(
+    localStorage.getItem("aiStudyHubLibraries") || "[]",
+  );
 
-    return (
-      matchedLibrary || {
-        id: libraryId || "default-library",
-        name: "AI-student-hub",
-        description:
-          "A learning library for storing study materials, organizing subjects, and using AI to review documents.",
-        visibility: "public",
-        documents: 0,
-        updatedAt: "Updated just now",
-        icon: "ti-archive",
-      }
-    );
+  const matchedLibrary = savedLibraries.find(
+    (library) => library.id === libraryId,
+  );
+
+  if (matchedLibrary) {
+    return {
+      ...matchedLibrary,
+      stars: Number(matchedLibrary.stars) || 0,
+      isStarred: Boolean(matchedLibrary.isStarred),
+    };
   }
+
+  return {
+    id: libraryId || "default-library",
+    name: "AI-student-hub",
+    description:
+      "A learning library for storing study materials, organizing subjects, and using AI to review documents.",
+    visibility: "public",
+    documents: 0,
+    updatedAt: "Updated just now",
+    icon: "ti-archive",
+    stars: 0,
+    isStarred: false,
+  };
+}
 
   function formatVisibility(value) {
     return value === "private" ? "Private" : "Public";
@@ -74,6 +84,11 @@ function LibraryPage() {
   const authorName =
     localStorage.getItem("aiStudyHubProfileName") || "dangkhoabi456";
   const [libraryData, setLibraryData] = useState(getInitialLibraryData);
+  const [stars, setStars] = useState(() => Number(getInitialLibraryData().stars) || 0);
+
+const [isStarred, setIsStarred] = useState(
+  () => Boolean(getInitialLibraryData().isStarred)
+);
   const [activeTab, setActiveTab] = useState("documents");
   const [documentSearch, setDocumentSearch] = useState("");
   const [currentFolder, setCurrentFolder] = useState(null);
@@ -82,6 +97,43 @@ function LibraryPage() {
   const [libraryName, setLibraryName] = useState(
     () => getInitialLibraryData().name,
   );
+  useEffect(() => {
+  if (!libraryData?.id) return;
+
+  const currentRecentLibraries = JSON.parse(
+    localStorage.getItem("aiStudyHubRecentLibraries") || "[]"
+  );
+
+const recentLibrary = {
+  id: libraryData.id,
+  name: libraryName || libraryData.name || "Untitled Library",
+  documents: Number(libraryData.documents) || 0,
+  icon: libraryData.icon || "ti-archive",
+  updatedAt: libraryData.updatedAt || "Updated just now",
+  stars: Number(libraryData.stars) || 0,
+  isStarred: Boolean(libraryData.isStarred),
+  visitedAt: Date.now(),
+};
+
+  const nextRecentLibraries = [
+    recentLibrary,
+    ...currentRecentLibraries.filter((item) => item.id !== libraryData.id),
+  ].slice(0, 2);
+
+  localStorage.setItem(
+    "aiStudyHubRecentLibraries",
+    JSON.stringify(nextRecentLibraries)
+  );
+}, [
+  libraryData?.id,
+  libraryData?.name,
+  libraryData?.documents,
+  libraryData?.icon,
+  libraryData?.updatedAt,
+  libraryData?.stars,
+libraryData?.isStarred,
+  libraryName,
+]);
   const [libraryVisibility, setLibraryVisibility] = useState(
     () => getInitialLibraryData().visibility || "public",
   );
@@ -99,7 +151,58 @@ function LibraryPage() {
     () => getInitialLibraryData().shareOnProfile ?? false
   );
 
+function handleToggleStar() {
+  const nextIsStarred = !isStarred;
+  const nextStars = nextIsStarred ? stars + 1 : Math.max(stars - 1, 0);
 
+  const updatedLibrary = {
+    ...libraryData,
+    stars: nextStars,
+    isStarred: nextIsStarred,
+  };
+
+  const savedLibraries = JSON.parse(
+    localStorage.getItem("aiStudyHubLibraries") || "[]"
+  );
+
+  const hasCurrentLibrary = savedLibraries.some(
+    (library) => library.id === updatedLibrary.id
+  );
+
+  const updatedLibraries = hasCurrentLibrary
+    ? savedLibraries.map((library) =>
+        library.id === updatedLibrary.id ? updatedLibrary : library
+      )
+    : [updatedLibrary, ...savedLibraries];
+
+  localStorage.setItem(
+    "aiStudyHubLibraries",
+    JSON.stringify(updatedLibraries)
+  );
+
+  const recentLibraries = JSON.parse(
+    localStorage.getItem("aiStudyHubRecentLibraries") || "[]"
+  );
+
+  const updatedRecentLibraries = recentLibraries.map((library) =>
+    library.id === updatedLibrary.id
+      ? {
+          ...library,
+          stars: nextStars,
+          isStarred: nextIsStarred,
+        }
+      : library
+  );
+
+  localStorage.setItem(
+    "aiStudyHubRecentLibraries",
+    JSON.stringify(updatedRecentLibraries)
+  );
+
+  setStars(nextStars);
+  setIsStarred(nextIsStarred);
+  setLibraryData(updatedLibrary);
+}
   function countUploadedFiles(items) {
     return items.filter((item) => item.type !== "folder").length;
   }
@@ -164,6 +267,12 @@ function LibraryPage() {
     return `${(safeSize / 1024 / 1024).toFixed(1)} MB`;
   }
 
+function countUsedStorageBytes(items) {
+  return items
+    .filter((item) => item.type !== "folder")
+    .reduce((total, item) => total + (Number(item.sizeBytes) || 0), 0);
+}
+
   function mapBackendDocumentToLibraryItem(document) {
     return {
       id: document.id,
@@ -171,6 +280,7 @@ function LibraryPage() {
       name: document.title || "Untitled document",
       note: `${formatFileSize(document.file_size_bytes || 0)} · Uploaded`,
       size: formatFileSize(document.file_size_bytes || 0),
+      sizeBytes: Number(document.file_size_bytes) || 0,
       uploadedTime: document.created_at
         ? new Date(document.created_at).toLocaleString()
         : "Recently",
@@ -218,9 +328,9 @@ function LibraryPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   function handleUploadFile(e) {
-    const files = Array.from(e.target.files || []);
+  const files = Array.from(e.target.files || []);
 
-    if (files.length === 0) return;
+  if (files.length === 0) return;
 
     const MAX_SIZE = 50 * 1024 * 1024; // 50MB
 
@@ -248,8 +358,22 @@ function LibraryPage() {
     setHashtags(["", "", ""]);
     setIsTagModalOpen(true);
 
+  const currentUsedStorage = countUsedStorageBytes(libraryItems);
+  const nextUsedStorage = currentUsedStorage + selectedFilesSize;
+
+  if (nextUsedStorage > LIBRARY_STORAGE_LIMIT_BYTES) {
+    setIsStorageLimitPopupOpen(true);
     e.target.value = "";
+    return;
   }
+
+  setPendingFiles(files);
+  setPendingFolderId(currentFolder ? getFolderKey(currentFolder) : null);
+  setHashtags(["", "", ""]);
+  setIsTagModalOpen(true);
+
+  e.target.value = "";
+}
 
   function handleHashtagChange(index, value) {
     const updatedHashtags = [...hashtags];
@@ -285,11 +409,21 @@ function LibraryPage() {
 
       const uploadedDocuments = await uploadDocuments(pendingFiles);
 
-      const uploadedItems = (uploadedDocuments || []).map((document) => ({
-        ...mapBackendDocumentToLibraryItem(document),
-        folderId: pendingFolderId,
-        hashtags: validHashtags,
-      }));
+const uploadedItems = (uploadedDocuments || []).map((document, index) => ({
+  ...mapBackendDocumentToLibraryItem(document),
+  sizeBytes:
+    Number(document.file_size_bytes) ||
+    Number(pendingFiles[index]?.size) ||
+    0,
+  size:
+    formatFileSize(
+      Number(document.file_size_bytes) ||
+      Number(pendingFiles[index]?.size) ||
+      0
+    ),
+  folderId: pendingFolderId,
+  hashtags: validHashtags,
+}));
 
       setLibraryItems((currentItems) => {
         const nextItems = [...uploadedItems, ...currentItems];
@@ -334,6 +468,32 @@ function LibraryPage() {
     setCurrentFolder(null);
     setDocumentSearch("");
   }
+
+function getFolderPath(folder) {
+  const path = [];
+  let selectedFolder = folder;
+
+  while (selectedFolder) {
+    path.unshift(selectedFolder);
+
+    const parentFolderId = selectedFolder.folderId ?? null;
+
+    if (!parentFolderId) break;
+
+    selectedFolder = libraryItems.find(
+      (item) =>
+        item.type === "folder" &&
+        getFolderKey(item) === parentFolderId
+    );
+  }
+
+  return path;
+}
+
+function handleOpenBreadcrumbFolder(folder) {
+  setCurrentFolder(folder);
+  setDocumentSearch("");
+}
 
   function handleDeleteDocument(documentName) {
     setLibraryItems((currentItems) => {
@@ -524,13 +684,25 @@ function handleDeleteLibrary() {
 
   const documentItems = visibleItems.filter((item) => item.type !== "folder");
   const folderItems = visibleItems.filter((item) => item.type === "folder");
+  const currentFolderPath = currentFolder ? getFolderPath(currentFolder) : [];
 
   const filteredDocuments = documentItems.filter((item) =>
     item.name.toLowerCase().includes(documentSearch.toLowerCase()),
   );
 
-  const uploadedFileCount =
-    countUploadedFiles(libraryItems) || Number(libraryData.documents) || 0;
+  const uploadedFileCount = countUploadedFiles(libraryItems) || Number(libraryData.documents) || 0;
+
+    const usedStorageBytes = countUsedStorageBytes(libraryItems);
+
+const usedStoragePercent = Math.min(
+  (usedStorageBytes / LIBRARY_STORAGE_LIMIT_BYTES) * 100,
+  100
+);
+
+const remainingStorageBytes = Math.max(
+  LIBRARY_STORAGE_LIMIT_BYTES - usedStorageBytes,
+  0
+);
 
   return (
     <main className="library_page">
@@ -549,11 +721,17 @@ function handleDeleteLibrary() {
             </div>
           </div>
 
-          <div className="library_hero_actions">
-            <button className="star_btn" type="button">
-              <i className="ti-star"></i>
-              Star
-            </button>
+            <div className="library_hero_actions">
+<button
+  className={`star_btn ${isStarred ? "active" : ""}`}
+  type="button"
+  onClick={handleToggleStar}
+>
+  <i className="ti-star"></i>
+  {isStarred ? "Starred" : "Star"}
+
+  {stars > 0 && <span className="star_count">{stars}</span>}
+</button>
 
             <label className="upload_btn">
               <i className="ti-upload"></i>
@@ -613,28 +791,46 @@ function handleDeleteLibrary() {
                   </div>
                 </div>
 
-                {currentFolder && (
-                  <div className="documents_breadcrumb">
-                    <button type="button" onClick={handleBackToLibrary}>
-                      All subjects
-                    </button>
-                    <i className="ti-angle-right"></i>
-                    <button type="button" onClick={handleBackToLibrary}>
-                      Software Engineering
-                    </button>
-                    <i className="ti-angle-right"></i>
-                    <strong>{currentFolder.name}</strong>
-                  </div>
-                )}
+{currentFolder && (
+  <div className="documents_breadcrumb">
+    <button type="button" onClick={handleBackToLibrary}>
+      All subjects
+    </button>
 
-                {!currentFolder && folderItems.length > 0 && (
-                  <section className="folder_grid">
-                    {folderItems.map((folder) => (
-                      <article
-                        className="folder_card"
-                        key={getFolderKey(folder)}
-                        onClick={() => handleOpenFolder(folder)}
-                      >
+    {currentFolderPath.map((folder, index) => {
+      const isLastFolder = index === currentFolderPath.length - 1;
+
+      return (
+        <span
+          className="breadcrumb_item"
+          key={getFolderKey(folder)}
+        >
+          <i className="ti-angle-right"></i>
+
+          {isLastFolder ? (
+            <strong>{folder.name}</strong>
+          ) : (
+            <button
+              type="button"
+              onClick={() => handleOpenBreadcrumbFolder(folder)}
+            >
+              {folder.name}
+            </button>
+          )}
+        </span>
+      );
+    })}
+  </div>
+)}
+
+{folderItems.length > 0 && (
+  <section className="folder_grid">
+    {folderItems.map((folder) => (
+      <article
+        className="folder_card"
+        key={getFolderKey(folder)}
+        onClick={() => handleOpenFolder(folder)}
+      >
                         <button
                           className="folder_delete_btn"
                           type="button"
@@ -962,7 +1158,42 @@ function handleDeleteLibrary() {
 
           <aside className="library_sidebar">
 
+                  <div className="capacity_card">
+  <div className="storage_card_header">
+    <div className="storage_card_icon">
+      <i className="ti-harddrive"></i>
+    </div>
 
+    <div>
+      <h3>Library Storage</h3>
+      <p>Storage used by uploaded files</p>
+    </div>
+  </div>
+
+  <div className="storage_usage_line">
+    <span>Storage limit</span>
+    <strong>
+      {formatFileSize(usedStorageBytes)} /{" "}
+      {formatFileSize(LIBRARY_STORAGE_LIMIT_BYTES)}
+    </strong>
+  </div>
+
+  <div className="capacity_bar">
+    <div style={{ width: `${usedStoragePercent}%` }}></div>
+  </div>
+
+  <div className="storage_stats">
+    <div>
+      <strong>{formatFileSize(usedStorageBytes)}</strong>
+      <span>Used</span>
+    </div>
+
+    <div>
+      <strong>{formatFileSize(remainingStorageBytes)}</strong>
+      <span>Remaining</span>
+    </div>
+  </div>
+</div>
             <div className="side_card">
               <div className="side_title">
                 <h3>Author</h3>
@@ -989,6 +1220,11 @@ function handleDeleteLibrary() {
                 <span>Files uploaded</span>
                 <strong>{uploadedFileCount}</strong>
               </div>
+
+<div className="info_row">
+  <span>Stars</span>
+  <strong>{stars}</strong>
+</div>
 
               <div className="info_row">
                 <span>Profile visibility</span>
@@ -1079,9 +1315,40 @@ function handleDeleteLibrary() {
           </div>
         </div>
       )}
+{isStorageLimitPopupOpen && (
+  <div className="storage_limit_overlay">
+    <div className="storage_limit_modal">
+      <div className="storage_limit_icon">
+        <i className="ti-alert"></i>
+      </div>
 
+      <h2>Storage limit reached</h2>
+
+      <p>
+        This library has reached the 50MB upload limit. Please delete some
+        files before uploading more documents.
+      </p>
+
+      <div className="storage_limit_info">
+        <span>Current usage</span>
+        <strong>
+          {formatFileSize(usedStorageBytes)} /{" "}
+          {formatFileSize(LIBRARY_STORAGE_LIMIT_BYTES)}
+        </strong>
+      </div>
+
+      <button
+        type="button"
+        onClick={() => setIsStorageLimitPopupOpen(false)}
+      >
+        I understand
+      </button>
+    </div>
+  </div>
+)}
     </main>
   );
+
 }
 
 
