@@ -10,34 +10,31 @@ function HomePage() {
     localStorage.getItem("aiStudyHubLibraries") || "[]"
   );
 
-  const totalLibraries = libraries.length;
-
   const workspaces = JSON.parse(
     localStorage.getItem("aiStudyHubWorkspaces") || "[]"
   );
 
-  const joinedWorkspaces = workspaces.length;
+  const recentLibraries = JSON.parse(
+    localStorage.getItem("aiStudyHubRecentLibraries") || "[]"
+  );
+
+  const recentWorkspaces = JSON.parse(
+    localStorage.getItem("aiStudyHubRecentWorkspaces") || "[]"
+  );
 
   const stats = [
     {
       title: "Total libraries",
-      value: totalLibraries,
+      value: libraries.length,
       icon: "ti-folder",
     },
     {
       title: "Joined workspaces",
-      value: joinedWorkspaces,
+      value: workspaces.length,
       icon: "ti-layout-grid2",
     },
   ];
 
-const recentLibraries = JSON.parse(
-  localStorage.getItem("aiStudyHubRecentLibraries") || "[]"
-);
-
-const recentWorkspaces = JSON.parse(
-  localStorage.getItem("aiStudyHubRecentWorkspaces") || "[]"
-);
   return (
     <main className="home_page">
       <section className="home_workspace">
@@ -48,9 +45,7 @@ const recentWorkspaces = JSON.parse(
               {profileName}
             </h1>
 
-            <p>
-              Continue learning from your recent documents and libraries.
-            </p>
+            <p>Continue learning from your recent workspaces and libraries.</p>
           </div>
 
           <div className="welcome_actions">
@@ -83,27 +78,21 @@ const recentWorkspaces = JSON.parse(
               </div>
 
               <strong>{stat.value}</strong>
-
-              {stat.progress && (
-                <div className="home_progress_bar">
-                  <div></div>
-                </div>
-              )}
             </article>
           ))}
         </section>
 
         <section className="home_content_grid">
           <section className="recent_libraries_section">
-<div className="section_title_row recent_libraries_title_row">
-  <div className="section_title_left">
-    <h2>Recent libraries</h2>
+            <div className="section_title_row recent_libraries_title_row">
+              <div className="section_title_left">
+                <h2>Recent libraries</h2>
 
-    <Link to="/dashboard/libraries" className="view_all_link">
-      View all libraries
-    </Link>
-  </div>
-</div>
+                <Link to="/dashboard/libraries" className="view_all_link">
+                  View all libraries
+                </Link>
+              </div>
+            </div>
 
             <div className="recent_library_grid">
               {recentLibraries.length === 0 ? (
@@ -118,16 +107,18 @@ const recentWorkspaces = JSON.parse(
                     </div>
 
                     <div className="library_card_body">
-                      <h3>{library.name || library.libraryName || "Untitled Library"}</h3>
+                      <h3>
+                        {library.name ||
+                          library.libraryName ||
+                          "Untitled Library"}
+                      </h3>
                       <p>{library.documents || 0} documents</p>
                     </div>
 
                     <div className="library_card_footer">
                       <span>{library.updatedAt || "Updated just now"}</span>
 
-                      <Link to={`/dashboard/libraries/${library.id}`}>
-                        Open
-                      </Link>
+                      <Link to={`/dashboard/libraries/${library.id}`}>Open</Link>
                     </div>
                   </article>
                 ))
@@ -135,42 +126,42 @@ const recentWorkspaces = JSON.parse(
             </div>
           </section>
 
-          <aside className="recent_documents_section">
-<div className="section_title_row recent_workspaces_title_row">
-  <h2>Recent workspaces</h2>
+          <aside className="recent_workspaces_section">
+            <div className="section_title_row recent_workspaces_title_row">
+              <h2>Recent workspaces</h2>
 
-  <Link to="/dashboard/workspaces" className="view_all_link">
-    View all workspaces
-  </Link>
-</div>
+              <Link to="/dashboard/workspaces" className="view_all_link">
+                View all workspaces
+              </Link>
+            </div>
 
-  <div className="recent_document_list">
-    {recentWorkspaces.length === 0 ? (
-      <div className="empty_recent_box">
-        <p>No recent workspaces yet.</p>
-      </div>
-    ) : (
-      recentWorkspaces.map((workspace) => (
-        <article className="recent_document_card" key={workspace.id}>
-          <div className="document_icon">
-            <i className={workspace.icon || "ti-briefcase"}></i>
-          </div>
+            <div className="recent_workspace_list">
+              {recentWorkspaces.length === 0 ? (
+                <div className="empty_recent_box">
+                  <p>No recent workspaces yet.</p>
+                </div>
+              ) : (
+                recentWorkspaces.map((workspace) => (
+                  <article className="recent_workspace_card" key={workspace.id}>
+                    <div className="workspace_icon">
+                      <i className={workspace.icon || "ti-briefcase"}></i>
+                    </div>
 
-<div className="workspace_recent_info">
-  <h3>{workspace.name}</h3>
+                    <div className="workspace_recent_info">
+                      <h3>{workspace.name || "Untitled Workspace"}</h3>
 
-  <Link
-    to={`/dashboard/workspaces/${workspace.id}`}
-    className="home_open_btn"
-  >
-    Open
-  </Link>
-</div>
-        </article>
-      ))
-    )}
-  </div>
-</aside>
+                      <Link
+                        to={`/dashboard/workspaces/${workspace.id}`}
+                        className="home_open_btn"
+                      >
+                        Open
+                      </Link>
+                    </div>
+                  </article>
+                ))
+              )}
+            </div>
+          </aside>
         </section>
       </section>
     </main>
