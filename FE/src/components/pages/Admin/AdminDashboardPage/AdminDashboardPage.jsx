@@ -1,5 +1,5 @@
 import { useState } from "react";
-import "./AdminDashboard.css";
+import "./AdminDashboardPage.css";
 
 const AdminDashboardPage = () => {
   const [activeNav, setActiveNav] = useState("Home");

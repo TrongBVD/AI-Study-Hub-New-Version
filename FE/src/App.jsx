@@ -30,11 +30,11 @@ import ProtectedRoute from "./components/common/ProtectedRoute/ProtectedRoute.js
 
 // ================= ADMIN IMPORTS =================
 import AdminLayout from "./components/pages/Admin/AdminLayout.jsx";
-import AdminDashboardPage from "./components/pages/Admin/AdminDashboardPage.jsx";
-import AdminModerationPage from "./components/pages/Admin/AdminModerationPage.jsx";
-import AdminUsersPage from "./components/pages/Admin/AdminUsersPage.jsx";
-import AdminLogsPage from "./components/pages/Admin/AdminLogsPage.jsx";
-import AdminUsagePage from "./components/pages/Admin/AdminUsagePage.jsx";
+
+import AdminDashboardPage from "./components/pages/Admin/AdminDashboardPage/AdminDashboardPage.jsx";
+import AIContentModerationPage from "./components/pages/Admin/AiContentModerationPage/AIContentModerationPage.jsx";
+import StorageManagementPage from "./components/pages/Admin/StorageManagementPage/StorageManagementPage.jsx";
+import UserManagementPage from "./components/pages/Admin/UserManagementPage/UserManagementPage.jsx";
 
 function App() {
   return (
@@ -43,12 +43,9 @@ function App() {
         {/* DEFAULT: vào web sẽ về login */}
         <Route path="/" element={<Navigate to="/login" replace />} />
 
-        {/* AUTH ROUTES */}
-
         <Route path="/login" element={<LoginPage />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
-
         <Route path="/register" element={<RegisterGoogle />} />
         <Route path="/complete-profile" element={<CompleteProfile />} />
 
@@ -59,8 +56,6 @@ function App() {
 
         <Route path="/verify-otp" element={<OTPVerification />} />
         <Route path="/otp-verification" element={<OTPVerification />} />
-
-        {/* USER ROUTES - CẦN ĐĂNG NHẬP */}
         <Route
           path="/dashboard"
           element={
@@ -72,7 +67,6 @@ function App() {
           <Route index element={<Navigate to="/dashboard/home" replace />} />
 
           <Route path="home" element={<HomePage />} />
-
           <Route path="libraries" element={<MyLibraryPage />} />
           <Route path="create-library" element={<CreateLibraryPage />} />
           <Route path="libraries/:libraryId" element={<LibraryPage />} />
@@ -80,7 +74,6 @@ function App() {
           <Route path="create-workspace" element={<CreateWorkSpacePage />} />
           <Route path="workspaces" element={<MyWorkSpace />} />
           <Route path="workspaces/:workspaceId" element={<WorkSpacePage />} />
-
           <Route path="profile" element={<PersonalProfilePage />} />
 
           <Route path="ai-chat" element={<AIChatPage />} />
@@ -98,14 +91,15 @@ function App() {
           }
         >
           <Route index element={<Navigate to="/admin/dashboard" replace />} />
+
           <Route path="dashboard" element={<AdminDashboardPage />} />
-          <Route path="moderation" element={<AdminModerationPage />} />
-          <Route path="users" element={<AdminUsersPage />} />
-          <Route path="logs" element={<AdminLogsPage />} />
-          <Route path="usage" element={<AdminUsagePage />} />
+          <Route path="users" element={<UserManagementPage />} />
+          <Route path="ai-moderation" element={<AIContentModerationPage />} />
+          <Route path="storage" element={<StorageManagementPage />} />
         </Route>
 
         {/* NOT FOUND */}
+        {/* Catch-all route */}
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
     </BrowserRouter>
