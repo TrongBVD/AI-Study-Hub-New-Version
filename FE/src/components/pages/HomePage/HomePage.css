@@ -177,7 +177,7 @@
 }
 
 .section_title_row h2,
-.recent_documents_section h2 {
+.recent_workspaces_section h2 {
   margin: 0;
   color: #3b2618;
   font-size: 18px;
@@ -259,19 +259,19 @@
   background: #2f2015;
 }
 
-/* Recent documents */
+/* Recent workspaces */
 
-.recent_documents_section {
+.recent_workspaces_section {
   min-width: 0;
 }
 
-.recent_document_list {
+.recent_workspace_list {
   display: flex;
   flex-direction: column;
   gap: 18px;
 }
 
-.recent_document_card {
+.recent_workspace_card {
   background: #f2e3c9;
   border: 1px solid #e2d3bc;
   border-radius: 18px;
@@ -283,7 +283,7 @@
   width: 100%;
 }
 
-.document_icon {
+.workspace_icon {
   width: 42px;
   height: 42px;
   border-radius: 10px;
@@ -296,13 +296,13 @@
 }
 
 
-.document_actions {
+.workspace_actions {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
 }
 
-.document_actions button {
+.workspace_actions button {
   border: 1px solid #e2d3bc;
   background: #fffaf0;
   color: #2f2015;
@@ -312,7 +312,7 @@
   font-weight: 700;
 }
 
-.document_actions button:hover {
+.workspace_actions button:hover {
   background: #ead7bd;
 }
 
@@ -434,7 +434,7 @@
   color: #ffffff;
 }
 
-.document_actions .home_open_btn {
+.workspace_actions .home_open_btn {
   width: fit-content;
 }
 
