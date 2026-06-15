@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-
+import SettingPage from "./components/pages/SettingPage/SettingPage.jsx";
 // ================= AUTH IMPORTS =================
 import LoginPage from "./components/pages/LoginPage/LoginPage.jsx";
 import ForgotPassword from "./components/pages/LoginPage/ForgotPassword.jsx";
@@ -76,7 +76,7 @@ function App() {
           <Route path="libraries" element={<MyLibraryPage />} />
           <Route path="create-library" element={<CreateLibraryPage />} />
           <Route path="libraries/:libraryId" element={<LibraryPage />} />
-
+          <Route path="settings" element={<SettingPage />} />
           <Route path="create-workspace" element={<CreateWorkSpacePage />} />
           <Route path="workspaces" element={<MyWorkSpace />} />
           <Route path="workspaces/:workspaceId" element={<WorkSpacePage />} />
