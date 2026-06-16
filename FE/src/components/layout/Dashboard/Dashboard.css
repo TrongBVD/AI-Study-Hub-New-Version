@@ -43,7 +43,6 @@ body {
   background: rgba(47, 32, 21, 0.45);
   backdrop-filter: blur(3px);
   -webkit-backdrop-filter: blur(3px);
-  z-index: 999;
 }
 .sidebar_header {
   display: flex;

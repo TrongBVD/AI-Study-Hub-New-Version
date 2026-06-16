@@ -1,5 +1,5 @@
 import { useState } from "react";
-import "./StorageManagement.css";
+import "./StorageManagementPage.css";
 
 const StorageManagementPage = () => {
   const [activeNav, setActiveNav] = useState("Storage Nodes");
