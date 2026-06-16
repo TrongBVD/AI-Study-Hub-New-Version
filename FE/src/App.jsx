@@ -29,12 +29,12 @@ import CreateWorkSpacePage from "./components/pages/CreateWorkSpacePage/CreateWo
 import ProtectedRoute from "./components/common/ProtectedRoute/ProtectedRoute.jsx";
 
 // ================= ADMIN IMPORTS =================
-import AdminLayout from "./components/pages/Admin/AdminLayout.jsx";
-import AdminDashboardPage from "./components/pages/Admin/AdminDashboardPage.jsx";
-import AdminModerationPage from "./components/pages/Admin/AdminModerationPage.jsx";
-import AdminUsersPage from "./components/pages/Admin/AdminUsersPage.jsx";
-import AdminLogsPage from "./components/pages/Admin/AdminLogsPage.jsx";
-import AdminUsagePage from "./components/pages/Admin/AdminUsagePage.jsx";
+import AdminLayout from "./components/pages/Admin/AdminLayout/AdminLayout.jsx";
+import AdminDashboardPage from "./components/pages/Admin/AdminDashboardPage/AdminDashboardPage.jsx";
+import AdminModerationPage from "./components/pages/Admin/AiContentModerationPage/AIContentModerationPage.jsx";
+import AdminUsersPage from "./components/pages/Admin/UserManagementPage/UserManagementPage.jsx";
+import AdminLogsPage from "./components/pages/Admin/ActivityLogPage/ActivityLogPage.jsx";
+import AdminUsagePage from "./components/pages/Admin/AdminUsagePage/AdminUsagePage.jsx";
 
 function App() {
   return (
