@@ -1,414 +1,380 @@
-import { useState } from "react";
+
+import { useMemo, useState } from "react";
+
 import "./AdminDashboardPage.css";
 
-const AdminDashboardPage = () => {
-  const [activeNav, setActiveNav] = useState("Home");
-  const [selectedFilter, setSelectedFilter] = useState("All");
-  const [showFilterBar, setShowFilterBar] = useState(false);
-  const [approvedItems, setApprovedItems] = useState([]);
-  const [removedItems, setRemovedItems] = useState([]);
-  const [showNotifications, setShowNotifications] = useState(false);
-  const [showBroadcast, setShowBroadcast] = useState(false);
-  const [broadcastMessage, setBroadcastMessage] = useState("");
+const INITIAL_USERS = [
+  { id: "U-1024", name: "Dang Khoa", email: "dangkhoa@example.com", status: "active", role: "Student" },
+  { id: "U-1088", name: "Mina Tran", email: "mina.tran@example.com", status: "active", role: "Teacher" },
+  { id: "U-1120", name: "Aris Nguyen", email: "aris.nguyen@example.com", status: "disabled", role: "Student" },
+  { id: "U-1171", name: "Bao Le", email: "bao.le@example.com", status: "pending", role: "Student" },
+];
 
-  const navItems = [
-    { name: "Home", icon: "🏠" },
-    { name: "Library", icon: "" },
-    { name: "Documents", icon: "📄" },
-    { name: "AI Chat", icon: "🤖" },
-    { name: "Study", icon: "" },
-    { name: "Members", icon: "👥" },
-    { name: "Settings", icon: "⚙️" },
-  ];
+const INITIAL_DOCUMENTS = [
+  { id: "DOC-401", title: "Research-method-notes.pdf", owner: "Dang Khoa", size: "18.4 MB", status: "approved" },
+  { id: "DOC-402", title: "ML-summary-v2.docx", owner: "Mina Tran", size: "6.8 MB", status: "review" },
+  { id: "DOC-403", title: "Copied-reference-pack.zip", owner: "Aris Nguyen", size: "48.2 MB", status: "flagged" },
+  { id: "DOC-404", title: "Workspace-outline.xlsx", owner: "Bao Le", size: "2.1 MB", status: "approved" },
+];
 
-  const flaggedDocs = [
-    {
-      id: 1,
-      name: "Quantum-Dynamics-Thesis.pdf",
-      uploader: "Dr. Aris Thorne",
-      time: "2 hours ago",
-      reason: "Copyright Concern",
-      reasonClass: "green",
-      icon: "⚠️",
-      iconClass: "red",
-    },
-    {
-      id: 2,
-      name: "Neural-Networks-Survey.docx",
-      uploader: "Janet Lee",
-      time: "5 hours ago",
-      reason: "AI-Generated Content",
-      reasonClass: "orange",
-      icon: "🤖",
-      iconClass: "orange",
-    },
-    {
-      id: 3,
-      name: "Forbidden-Archives-Excerpt.txt",
-      uploader: "Anonymous",
-      time: "1 day ago",
-      reason: "Banned Keywords",
-      reasonClass: "green",
-      icon: "🚫",
-      iconClass: "red",
-    },
-  ];
+const INITIAL_QUEUE = [
+  {
+    id: "MOD-901",
+    document: "Copied-reference-pack.zip",
+    reason: "Possible copyrighted source bundle",
+    uploader: "Aris Nguyen",
+    severity: "critical",
+    confidence: 92,
+  },
+  {
+    id: "MOD-902",
+    document: "ML-summary-v2.docx",
+    reason: "AI-generated section detected",
+    uploader: "Mina Tran",
+    severity: "warning",
+    confidence: 78,
+  },
+  {
+    id: "MOD-903",
+    document: "Exam-bank-draft.pdf",
+    reason: "Suspicious academic integrity pattern",
+    uploader: "Dang Khoa",
+    severity: "warning",
+    confidence: 84,
+  },
+];
 
-  const filters = [
-    "All",
-    "Copyright Concern",
-    "AI-Generated Content",
-    "Banned Keywords",
-  ];
+const INITIAL_QUOTAS = [
+  { id: "Q-01", owner: "Dang Khoa", used: 34, limit: 50, type: "Library quota" },
+  { id: "Q-02", owner: "Mina Tran", used: 41, limit: 50, type: "Workspace quota" },
+  { id: "Q-03", owner: "Aris Nguyen", used: 49, limit: 50, type: "Library quota" },
+];
 
-  const visibleDocs = flaggedDocs.filter((doc) => {
-    if (approvedItems.includes(doc.id) || removedItems.includes(doc.id)) {
-      return false;
-    }
+const INITIAL_AI_USAGE = [
+  { id: "AI-01", owner: "Dang Khoa", tokens: 42000, requests: 61, risk: "normal" },
+  { id: "AI-02", owner: "Mina Tran", tokens: 78500, requests: 112, risk: "warning" },
+  { id: "AI-03", owner: "Aris Nguyen", tokens: 126000, requests: 244, risk: "critical" },
+];
 
-    if (selectedFilter === "All") {
-      return true;
-    }
+const INITIAL_LOGS = [
+  { id: "LOG-704", user: "Aris Nguyen", action: "Upload blocked", target: "Copied-reference-pack.zip", time: "Today, 14:20", type: "moderation" },
+  { id: "LOG-703", user: "System", action: "Quota warning sent", target: "Aris Nguyen", time: "Today, 13:58", type: "quota" },
+  { id: "LOG-702", user: "Mina Tran", action: "AI summary generated", target: "ML-summary-v2.docx", time: "Today, 12:41", type: "ai" },
+  { id: "LOG-701", user: "Dang Khoa", action: "Created workspace", target: "Research Group A", time: "Yesterday, 18:22", type: "workspace" },
+];
 
-    return doc.reason === selectedFilter;
-  });
+function getInitials(name) {
+  return name
+    .split(" ")
+    .map((part) => part[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+}
 
-  const handleApprove = (id) => {
-    setApprovedItems([...approvedItems, id]);
-  };
+function getQuotaPercent(item) {
+  return Math.min(Math.round((item.used / item.limit) * 100), 100);
+}
 
-  const handleRemove = (id) => {
-    setRemovedItems([...removedItems, id]);
-  };
+function AdminDashboardPage() {
+  const [searchTerm, setSearchTerm] = useState("");
+  const [queue, setQueue] = useState(INITIAL_QUEUE);
+  const [selectedLog, setSelectedLog] = useState(INITIAL_LOGS[0]);
+  const [notice, setNotice] = useState("");
 
-  const handleSendBroadcast = () => {
-    setShowBroadcast(false);
-    setBroadcastMessage("");
-  };
+  const visibleLogs = useMemo(() => {
+    const keyword = searchTerm.trim().toLowerCase();
+    if (!keyword) return INITIAL_LOGS;
+
+    return INITIAL_LOGS.filter((log) =>
+      [log.user, log.action, log.target, log.type]
+        .join(" ")
+        .toLowerCase()
+        .includes(keyword)
+    );
+  }, [searchTerm]);
+
+  const activeUsers = INITIAL_USERS.filter((user) => user.status === "active").length;
+  const flaggedDocs = INITIAL_DOCUMENTS.filter((doc) => doc.status === "flagged").length;
+  const moderationQueueCount = queue.length;
+  const avgQuotaUsage = Math.round(
+    INITIAL_QUOTAS.reduce((sum, item) => sum + getQuotaPercent(item), 0) / INITIAL_QUOTAS.length
+  );
+  const aiCriticalUsers = INITIAL_AI_USAGE.filter((item) => item.risk === "critical").length;
+  const totalAiTokens = INITIAL_AI_USAGE.reduce((sum, item) => sum + item.tokens, 0);
+
+  function resolveModerationCase(caseId, action) {
+    const target = queue.find((item) => item.id === caseId);
+    setQueue((current) => current.filter((item) => item.id !== caseId));
+    setNotice(`${action} completed for ${target?.document || "selected document"}.`);
+  }
+
+  function handleQuotaAction(owner) {
+    setNotice(`Quota review opened for ${owner}.`);
+  }
+
+  function handleAiAction(owner) {
+    setNotice(`AI usage investigation opened for ${owner}.`);
+  }
 
   return (
-    <div className="admin-dashboard">
-      <aside className="sidebar">
-        <div className="sidebar-brand">
-          <h1>
-            Resource
-            <br />
-            Hub
-          </h1>
-          <p>University Library</p>
+    <section className="admin-dashboard">
+      <header className="admin-dashboard__topbar">
+        <div className="admin-dashboard__brand-block">
+          <div className="admin-dashboard__brand-icon">
+            <i className="ti-shield" />
+          </div>
+          <div>
+            <strong>AI Study Hub Admin</strong>
+            <span>System overview</span>
+          </div>
         </div>
 
-        <nav className="sidebar-nav">
-          {navItems.map((item) => (
-            <button
-              key={item.name}
-              className={`nav-item ${activeNav === item.name ? "active" : ""}`}
-              onClick={() => setActiveNav(item.name)}
-            >
-              <span className="nav-icon">{item.icon}</span>
-              <span>{item.name}</span>
-            </button>
-          ))}
-        </nav>
+        <label className="admin-dashboard__search-box" aria-label="Search dashboard logs">
+          <i className="ti-search" />
+          <input
+            value={searchTerm}
+            onChange={(event) => setSearchTerm(event.target.value)}
+            type="search"
+            placeholder="Search users, documents, actions or logs..."
+          />
+        </label>
 
-        <div className="sidebar-actions">
-          <button className="btn-primary">New Resource</button>
-
-          <button className="btn-ghost">
-            <span>❓</span>
-            <span>Help</span>
+        <div className="admin-dashboard__topbar-right">
+          <button type="button" className="admin-dashboard__ghost-btn">
+            <i className="ti-bell" />
           </button>
-
-          <button className="btn-ghost">
-            <span></span>
-            <span>Logout</span>
+          <button type="button" className="admin-dashboard__primary-btn">
+            <i className="ti-control-panel" />
+            System settings
           </button>
+          <div className="admin-dashboard__avatar">AD</div>
         </div>
-      </aside>
+      </header>
 
-      <main className="main">
-        <header className="header">
-          <div className="search-box">
-            <span className="search-icon">🔍</span>
-            <input type="text" placeholder="Search system logs..." />
-          </div>
-
-          <div className="header-actions">
-            <button
-              className="icon-btn"
-              aria-label="Notifications"
-              onClick={(e) => {
-                e.stopPropagation();
-                setShowNotifications(!showNotifications);
-              }}
-            >
-              <span>🔔</span>
-              <span className="pulse-dot"></span>
-            </button>
-
-            <button className="icon-btn" aria-label="Help">
-              <span>❓</span>
-            </button>
-
-            <button className="btn-upload">Upload</button>
-
-            <div className="avatar">A</div>
-          </div>
-        </header>
-
-        {showNotifications && (
-          <div className="notifications-dropdown">
-            <h3>Notifications</h3>
-
-            <div className="notif-item">
-              <p>3 documents pending review</p>
-              <p>2 hours ago</p>
-            </div>
-
-            <div className="notif-item">
-              <p>Storage at 84% capacity</p>
-              <p>5 hours ago</p>
-            </div>
+      <main className="admin-dashboard__inner">
+        {notice && (
+          <div className="admin-dashboard__notice" role="status">
+            <i className="ti-check" />
+            <span>{notice}</span>
+            <button type="button" onClick={() => setNotice("")}>Close</button>
           </div>
         )}
 
-        <div className="content">
-          <div className="page-header">
-            <h1>Admin Dashboard Home</h1>
-            <p>Overview of the AI Study Hub scholarly ecosystem.</p>
+        <section className="admin-dashboard__hero">
+          <div>
+            <span className="admin-dashboard__kicker">Admin dashboard</span>
+            <h1>Monitor users, documents, moderation, quota, AI usage and recent logs.</h1>
+            <p>
+              Use this page as the first control point before opening deeper admin modules.
+            </p>
           </div>
 
-          <div className="stats-grid">
-            <div className="stat-card">
-              <div className="stat-card-header">
-                <div className="stat-icon">👥</div>
-                <span className="stat-trend">+12% this week</span>
-              </div>
-
-              <p className="stat-label">Total Users</p>
-              <p className="stat-value">2,840</p>
-            </div>
-
-            <div className="stat-card">
-              <div className="stat-card-header">
-                <div className="stat-icon">️</div>
-                <span className="stat-trend">84% Capacity</span>
-              </div>
-
-              <p className="stat-label">Storage Used</p>
-              <p className="stat-value">1.2 TB</p>
-            </div>
-
-            <div className="stat-card">
-              <div className="stat-card-header">
-                <div className="stat-icon">📄</div>
-                <span className="stat-trend">42 New Today</span>
-              </div>
-
-              <p className="stat-label">Active Docs</p>
-              <p className="stat-value">14,203</p>
-            </div>
-
-            <div className="stat-card stat-card-alt">
-              <div className="stat-card-header">
-                <span className="stat-title">Storage Health</span>
-                <span className="stat-chart-icon">📈</span>
-              </div>
-
-              <div className="progress-bar">
-                <div className="progress-fill"></div>
-              </div>
-
-              <div className="progress-info">
-                <span>Used: 1,228 GB</span>
-                <span>Limit: 1,500 GB</span>
-              </div>
-
-              <button className="link-btn">Manage Quotas →</button>
-            </div>
+          <div className="admin-dashboard__hero-card">
+            <span>Today status</span>
+            <strong>{moderationQueueCount + aiCriticalUsers}</strong>
+            <p>items need admin attention</p>
           </div>
+        </section>
 
-          <div className="two-col">
-            <div className="moderation-card">
-              <div className="section-header">
+        <section className="admin-dashboard__stats-grid" aria-label="Dashboard summary">
+          <article className="admin-dashboard__stat-card">
+            <div className="admin-dashboard__stat-top">
+              <span className="admin-dashboard__stat-icon"><i className="ti-user" /></span>
+              <span className="admin-dashboard__stat-note">{activeUsers} active</span>
+            </div>
+            <span className="admin-dashboard__stat-label">Users</span>
+            <strong className="admin-dashboard__stat-value">{INITIAL_USERS.length}</strong>
+          </article>
+
+          <article className="admin-dashboard__stat-card">
+            <div className="admin-dashboard__stat-top">
+              <span className="admin-dashboard__stat-icon"><i className="ti-files" /></span>
+              <span className="admin-dashboard__stat-note">{flaggedDocs} flagged</span>
+            </div>
+            <span className="admin-dashboard__stat-label">Documents</span>
+            <strong className="admin-dashboard__stat-value">{INITIAL_DOCUMENTS.length}</strong>
+          </article>
+
+          <article className="admin-dashboard__stat-card admin-dashboard__stat-card--alert">
+            <div className="admin-dashboard__stat-top">
+              <span className="admin-dashboard__stat-icon"><i className="ti-alert" /></span>
+              <span className="admin-dashboard__stat-note">Review queue</span>
+            </div>
+            <span className="admin-dashboard__stat-label">Moderation</span>
+            <strong className="admin-dashboard__stat-value">{moderationQueueCount}</strong>
+          </article>
+
+          <article className="admin-dashboard__stat-card">
+            <div className="admin-dashboard__stat-top">
+              <span className="admin-dashboard__stat-icon"><i className="ti-harddrives" /></span>
+              <span className="admin-dashboard__stat-note">Average {avgQuotaUsage}%</span>
+            </div>
+            <span className="admin-dashboard__stat-label">Quota usage</span>
+            <strong className="admin-dashboard__stat-value">{avgQuotaUsage}%</strong>
+          </article>
+
+          <article className="admin-dashboard__stat-card admin-dashboard__stat-card--dark">
+            <div className="admin-dashboard__stat-top">
+              <span className="admin-dashboard__stat-icon"><i className="ti-bolt" /></span>
+              <span className="admin-dashboard__stat-note">{aiCriticalUsers} critical</span>
+            </div>
+            <span className="admin-dashboard__stat-label">AI usage</span>
+            <strong className="admin-dashboard__stat-value">{totalAiTokens.toLocaleString()}</strong>
+          </article>
+        </section>
+
+        <section className="admin-dashboard__content-grid">
+          <div className="admin-dashboard__main-stack">
+            <section className="admin-dashboard__panel">
+              <div className="admin-dashboard__panel-header">
                 <div>
-                  <h2>Moderation Hub</h2>
-                  <p>AI-flagged documents requiring scholarly review</p>
+                  <h2>Moderation queue</h2>
+                  <p>Documents flagged by AI that need a decision.</p>
                 </div>
-
-                <button
-                  className="btn-filter"
-                  onClick={() => setShowFilterBar(!showFilterBar)}
-                >
-                  <span>⚙️</span>
-                  <span>Filters</span>
-                </button>
+                <button type="button" className="admin-dashboard__outline-btn">Open moderation</button>
               </div>
 
-              {showFilterBar && (
-                <div className="filter-bar">
-                  {filters.map((filter) => (
-                    <button
-                      key={filter}
-                      className={`filter-chip ${
-                        selectedFilter === filter ? "active" : ""
-                      }`}
-                      onClick={() => setSelectedFilter(filter)}
-                    >
-                      {filter}
-                    </button>
-                  ))}
-                </div>
-              )}
-
-              <div className="doc-list">
-                {visibleDocs.length === 0 ? (
-                  <div className="empty-state">
-                    <div className="emoji">✅</div>
-                    <p>All documents have been reviewed!</p>
+              <div className="admin-dashboard__queue-list">
+                {queue.length === 0 ? (
+                  <div className="admin-dashboard__empty-state">
+                    <i className="ti-check-box" />
+                    <h3>No pending cases</h3>
+                    <p>All moderation cases have been handled.</p>
                   </div>
                 ) : (
-                  visibleDocs.map((doc) => (
-                    <div key={doc.id} className="doc-item">
-                      <div className={`doc-icon ${doc.iconClass}`}>
-                        <span>{doc.icon}</span>
+                  queue.map((item) => (
+                    <article className="admin-dashboard__queue-item" key={item.id}>
+                      <div className={`admin-dashboard__queue-icon ${item.severity === "critical" ? "is-critical" : ""}`}>
+                        <i className="ti-alert" />
                       </div>
-
-                      <div className="doc-info">
-                        <p className="doc-name">{doc.name}</p>
-                        <p className="doc-meta">
-                          Uploader: {doc.uploader} • {doc.time}
-                        </p>
+                      <div>
+                        <strong>{item.document}</strong>
+                        <p>{item.reason}</p>
+                        <span>Uploader: {item.uploader} · Confidence {item.confidence}%</span>
                       </div>
-
-                      <span className={`doc-reason ${doc.reasonClass}`}>
-                        {doc.reason}
-                      </span>
-
-                      <button
-                        className="btn-approve"
-                        onClick={() => handleApprove(doc.id)}
-                      >
-                        Approve
-                      </button>
-
-                      <button
-                        className="btn-remove"
-                        onClick={() => handleRemove(doc.id)}
-                      >
-                        Remove
-                      </button>
-                    </div>
+                      <span className={`admin-dashboard__severity is-${item.severity}`}>{item.severity}</span>
+                      <button type="button" onClick={() => resolveModerationCase(item.id, "Approved")}>Approve</button>
+                      <button type="button" onClick={() => resolveModerationCase(item.id, "Removed")}>Remove</button>
+                    </article>
                   ))
                 )}
               </div>
+            </section>
 
-              <button className="btn-view-all">View All Flagged Items (14)</button>
-            </div>
-
-            <div className="right-col">
-              <div className="quick-actions">
-                <h3>Quick Actions</h3>
-
-                <button className="action-btn">
-                  <span>Manage Users</span>
-                  <span>→</span>
-                </button>
-
-                <button
-                  className="action-btn"
-                  onClick={() => setShowBroadcast(true)}
-                >
-                  <span>Broadcast Message</span>
-                  <span>📢</span>
-                </button>
-
-                <button className="action-btn">
-                  <span>System Reports</span>
-                  <span>📊</span>
-                </button>
-              </div>
-
-              <div className="insights-card">
-                <h3>Admin Insights</h3>
-
-                <div className="insight-item">
-                  <div className="insight-bar red"></div>
-                  <p className="insight-text">
-                    <strong>Peak upload traffic</strong> detected between 2 PM -
-                    4 PM today.
-                  </p>
+            <section className="admin-dashboard__dual-grid">
+              <div className="admin-dashboard__panel">
+                <div className="admin-dashboard__panel-header compact">
+                  <div>
+                    <h2>Quota monitor</h2>
+                    <p>Users close to storage limits.</p>
+                  </div>
                 </div>
 
-                <div className="insight-item">
-                  <div className="insight-bar green"></div>
-                  <p className="insight-text">
-                    <strong>AI categorization accuracy</strong> improved by 5.4%
-                    this cycle.
-                  </p>
+                <div className="admin-dashboard__quota-list">
+                  {INITIAL_QUOTAS.map((item) => {
+                    const percent = getQuotaPercent(item);
+                    return (
+                      <article className="admin-dashboard__quota-row" key={item.id}>
+                        <div>
+                          <strong>{item.owner}</strong>
+                          <span>{item.type}</span>
+                        </div>
+                        <div className="admin-dashboard__quota-meter">
+                          <div><span style={{ width: `${percent}%` }} /></div>
+                          <small>{item.used} MB / {item.limit} MB</small>
+                        </div>
+                        <button type="button" onClick={() => handleQuotaAction(item.owner)}>Review</button>
+                      </article>
+                    );
+                  })}
                 </div>
               </div>
-            </div>
+
+              <div className="admin-dashboard__panel">
+                <div className="admin-dashboard__panel-header compact">
+                  <div>
+                    <h2>AI usage watch</h2>
+                    <p>High request and token usage.</p>
+                  </div>
+                </div>
+
+                <div className="admin-dashboard__ai-list">
+                  {INITIAL_AI_USAGE.map((item) => (
+                    <article className="admin-dashboard__ai-row" key={item.id}>
+                      <div className="admin-dashboard__avatar small">{getInitials(item.owner)}</div>
+                      <div>
+                        <strong>{item.owner}</strong>
+                        <span>{item.tokens.toLocaleString()} tokens · {item.requests} requests</span>
+                      </div>
+                      <button className={`admin-dashboard__risk is-${item.risk}`} type="button" onClick={() => handleAiAction(item.owner)}>
+                        {item.risk}
+                      </button>
+                    </article>
+                  ))}
+                </div>
+              </div>
+            </section>
           </div>
 
-          <div className="update-banner">
-            <div className="update-content">
-              <span className="update-badge">System Update</span>
+          <aside className="admin-dashboard__side-stack">
+            <section className="admin-dashboard__panel admin-dashboard__users-panel">
+              <div className="admin-dashboard__panel-header compact">
+                <div>
+                  <h2>Users</h2>
+                  <p>Current account state.</p>
+                </div>
+              </div>
+              {INITIAL_USERS.map((user) => (
+                <article className="admin-dashboard__user-row" key={user.id}>
+                  <div className="admin-dashboard__avatar small">{getInitials(user.name)}</div>
+                  <div>
+                    <strong>{user.name}</strong>
+                    <span>{user.email}</span>
+                  </div>
+                  <span className={`admin-dashboard__user-status is-${user.status}`}>{user.status}</span>
+                </article>
+              ))}
+            </section>
 
-              <h2>Neural Semantic Tagging is Live</h2>
+            <section className="admin-dashboard__panel admin-dashboard__logs-panel">
+              <div className="admin-dashboard__panel-header compact">
+                <div>
+                  <h2>Recent logs</h2>
+                  <p>{visibleLogs.length} entries shown</p>
+                </div>
+              </div>
 
-              <p>
-                The new AI engine now automatically applies smart hashtags to all
-                library documents, improving search discoverability by up to 40%
-                across all faculty departments.
-              </p>
+              <div className="admin-dashboard__log-list">
+                {visibleLogs.map((log) => (
+                  <button
+                    key={log.id}
+                    type="button"
+                    className={`admin-dashboard__log-item ${selectedLog?.id === log.id ? "is-selected" : ""}`}
+                    onClick={() => setSelectedLog(log)}
+                  >
+                    <span className={`admin-dashboard__log-dot is-${log.type}`} />
+                    <div>
+                      <strong>{log.action}</strong>
+                      <small>{log.user} · {log.time}</small>
+                    </div>
+                  </button>
+                ))}
+              </div>
 
-              <button className="btn-read-notes">Read Release Notes</button>
-            </div>
-
-            <div className="update-image">
-              <img
-                src="https://image.qwenlm.ai/public_source/c5f9999d-9e90-4bcb-94a9-21c1c120b45b/14b1c136f-ac9e-4aa5-ae04-63d5484d93b0.png"
-                alt="University Library"
-              />
-            </div>
-          </div>
-        </div>
+              {selectedLog && (
+                <div className="admin-dashboard__log-detail">
+                  <span>Selected log</span>
+                  <strong>{selectedLog.id}</strong>
+                  <p>{selectedLog.action} on {selectedLog.target}</p>
+                </div>
+              )}
+            </section>
+          </aside>
+        </section>
       </main>
-
-      {showBroadcast && (
-        <div
-          className="modal-overlay"
-          onClick={() => setShowBroadcast(false)}
-        >
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <h3>Broadcast Message</h3>
-            <p>Send a message to all users</p>
-
-            <textarea
-              rows="4"
-              placeholder="Type your message here..."
-              value={broadcastMessage}
-              onChange={(e) => setBroadcastMessage(e.target.value)}
-            />
-
-            <div className="modal-actions">
-              <button
-                className="btn-cancel"
-                onClick={() => setShowBroadcast(false)}
-              >
-                Cancel
-              </button>
-
-              <button className="btn-send" onClick={handleSendBroadcast}>
-                Send
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
+    </section>
   );
-};
+}
 
 export default AdminDashboardPage;
