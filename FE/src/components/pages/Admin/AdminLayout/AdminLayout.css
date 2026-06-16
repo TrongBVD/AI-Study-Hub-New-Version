@@ -1,0 +1,155 @@
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  width: 100%;
+  min-height: 100%;
+  margin: 0;
+}
+
+body {
+  overflow-x: hidden;
+}
+
+.admin-layout {
+  width: 100vw;
+  min-height: 100vh;
+  display: flex;
+  background: #fdfae9;
+  color: #342717;
+  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
+  overflow-x: hidden;
+}
+
+/* ================= SIDEBAR ================= */
+
+.admin-layout__sidebar {
+  width: 285px;
+  min-height: 100vh;
+  background: #f7f4e3;
+  color: #342717;
+  padding: 36px 16px 28px;
+  position: sticky;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  border-right: 1px solid #d8ceb9;
+}
+
+.admin-layout__brand {
+  margin-bottom: 38px;
+  padding: 0 8px;
+}
+
+.admin-layout__brand h2 {
+  margin: 0;
+  max-width: 220px;
+  font-size: 46px;
+  line-height: 0.95;
+  font-weight: 900;
+  letter-spacing: -0.055em;
+  color: #342717;
+}
+
+.admin-layout__brand p {
+  margin: 12px 0 0;
+  color: #766a55;
+  font-size: 16px;
+}
+
+/* ================= NAV ================= */
+
+.admin-layout__nav {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.admin-layout__nav-link {
+  color: #342717;
+  text-decoration: none;
+  padding: 14px 16px;
+  border-radius: 10px;
+  font-size: 17px;
+  font-weight: 500;
+  transition: background 0.18s ease, color 0.18s ease, transform 0.18s ease;
+}
+
+.admin-layout__nav-link:hover {
+  background: #eee8d4;
+  color: #100500;
+  transform: translateX(2px);
+}
+
+.admin-layout__nav-link.active {
+  background: #100500;
+  color: #ffffff;
+}
+
+/* ================= LOGOUT ================= */
+
+.admin-layout__logout {
+  margin-top: auto;
+  width: 100%;
+  border: none;
+  border-radius: 10px;
+  padding: 15px 12px;
+  cursor: pointer;
+  background: #46382b;
+  color: #e8dcc5;
+  font-size: 15px;
+  font-weight: 700;
+  transition: background 0.18s ease, color 0.18s ease;
+}
+
+.admin-layout__logout:hover {
+  background: #100500;
+  color: #ffffff;
+}
+
+/* ================= CONTENT ================= */
+
+.admin-layout__content {
+  flex: 1;
+  width: calc(100vw - 285px);
+  min-width: 0;
+  min-height: 100vh;
+  background: #fdfae9;
+  overflow-x: hidden;
+}
+
+/* ================= RESPONSIVE ================= */
+
+@media (max-width: 900px) {
+  .admin-layout {
+    flex-direction: column;
+  }
+
+  .admin-layout__sidebar {
+    width: 100%;
+    min-height: auto;
+    position: relative;
+  }
+
+  .admin-layout__brand h2 {
+    max-width: none;
+    font-size: 34px;
+  }
+
+  .admin-layout__nav-link {
+    font-size: 16px;
+  }
+
+  .admin-layout__content {
+    width: 100%;
+  }
+
+  .admin-layout__logout {
+    margin-top: 24px;
+  }
+}
