@@ -328,12 +328,11 @@ function countUsedStorageBytes(items) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   function handleUploadFile(e) {
-  const files = Array.from(e.target.files || []);
+    const files = Array.from(e.target.files || []);
 
-  if (files.length === 0) return;
+    if (files.length === 0) return;
 
-    const MAX_SIZE = 50 * 1024 * 1024; // 50MB
-
+    const MAX_SIZE = 50 * 1024 * 1024;
     const validFiles = [];
     const tooLargeFiles = [];
 
@@ -353,27 +352,28 @@ function countUsedStorageBytes(items) {
       e.target.value = "";
       return;
     }
-    setPendingFiles(files);
+
+    const selectedFilesSize = validFiles.reduce(
+      (total, file) => total + (Number(file.size) || 0),
+      0
+    );
+
+    const currentUsedStorage = countUsedStorageBytes(libraryItems);
+    const nextUsedStorage = currentUsedStorage + selectedFilesSize;
+
+    if (nextUsedStorage > LIBRARY_STORAGE_LIMIT_BYTES) {
+      setIsStorageLimitPopupOpen(true);
+      e.target.value = "";
+      return;
+    }
+
+    setPendingFiles(validFiles);
     setPendingFolderId(currentFolder ? getFolderKey(currentFolder) : null);
     setHashtags(["", "", ""]);
     setIsTagModalOpen(true);
 
-  const currentUsedStorage = countUsedStorageBytes(libraryItems);
-  const nextUsedStorage = currentUsedStorage + selectedFilesSize;
-
-  if (nextUsedStorage > LIBRARY_STORAGE_LIMIT_BYTES) {
-    setIsStorageLimitPopupOpen(true);
     e.target.value = "";
-    return;
   }
-
-  setPendingFiles(files);
-  setPendingFolderId(currentFolder ? getFolderKey(currentFolder) : null);
-  setHashtags(["", "", ""]);
-  setIsTagModalOpen(true);
-
-  e.target.value = "";
-}
 
   function handleHashtagChange(index, value) {
     const updatedHashtags = [...hashtags];
@@ -704,56 +704,110 @@ const remainingStorageBytes = Math.max(
   0
 );
 
+  const totalFolderCount = libraryItems.filter((item) => item.type === "folder").length;
+  const currentLocationLabel = currentFolder ? currentFolder.name : "All subjects";
+  const statusText = isLoadingDocuments
+    ? "Syncing documents"
+    : `${uploadedFileCount} files ready`;
+
   return (
     <main className="library_page">
       <section className="library_workspace">
-        <section className="library_hero">
-          <div className="library_hero_left">
-            <div className="library_logo">
-              <i className="ti-archive"></i>
-            </div>
+        <section className="library_command_panel">
+          <div className="library_command_left">
+            <button
+              className="library_back_btn"
+              type="button"
+              onClick={() => navigate("/dashboard/libraries")}
+            >
+              <i className="ti-angle-left"></i>
+              Back to libraries
+            </button>
 
-            <div>
-              <div className="library_title">
-                <h1>{libraryData.name}</h1>
-                <span>{formatVisibility(libraryData.visibility)}</span>
+            <div className="library_identity_block">
+              <div className="library_logo">
+                <i className="ti-archive"></i>
+              </div>
+
+              <div>
+                <div className="library_title">
+                  <h1>{libraryData.name}</h1>
+                  <span>{formatVisibility(libraryData.visibility)}</span>
+                </div>
+
+                <p>
+                  {libraryData.description ||
+                    "Organize files, folders, tags, storage and AI review materials in one library."}
+                </p>
               </div>
             </div>
           </div>
 
+          <div className="library_command_right">
+            <div className="library_status_card">
+              <span>Current view</span>
+              <strong>{currentLocationLabel}</strong>
+              <p>{statusText}</p>
+            </div>
+
             <div className="library_hero_actions">
-<button
-  className={`star_btn ${isStarred ? "active" : ""}`}
-  type="button"
-  onClick={handleToggleStar}
->
-  <i className="ti-star"></i>
-  {isStarred ? "Starred" : "Star"}
+              <button
+                className={`star_btn ${isStarred ? "active" : ""}`}
+                type="button"
+                onClick={handleToggleStar}
+              >
+                <i className="ti-star"></i>
+                {isStarred ? "Starred" : "Star"}
+                {stars > 0 && <span className="star_count">{stars}</span>}
+              </button>
 
-  {stars > 0 && <span className="star_count">{stars}</span>}
-</button>
-
-            <label className="upload_btn">
-              <i className="ti-upload"></i>
-              Upload
-              <input type="file" multiple onChange={handleUploadFile} />
-            </label>
+              <label className="upload_btn">
+                <i className="ti-upload"></i>
+                Upload
+                <input type="file" multiple onChange={handleUploadFile} />
+              </label>
+            </div>
           </div>
         </section>
 
-        <nav className="library_tabs">
+        <section className="library_metric_strip">
+          <article>
+            <span>Files</span>
+            <strong>{uploadedFileCount}</strong>
+          </article>
+
+          <article>
+            <span>Folders</span>
+            <strong>{totalFolderCount}</strong>
+          </article>
+
+          <article>
+            <span>Stars</span>
+            <strong>{stars}</strong>
+          </article>
+
+          <article>
+            <span>Visibility</span>
+            <strong>{shareOnProfile ? "Profile" : "Hidden"}</strong>
+          </article>
+        </section>
+
+        <nav className="library_tabs" aria-label="Library sections">
           <button
             type="button"
             className={activeTab === "documents" ? "active" : ""}
             onClick={() => setActiveTab("documents")}
           >
+            <i className="ti-files"></i>
             Documents
           </button>
+
           <button
             type="button"
             className={activeTab === "settings" ? "active" : ""}
             onClick={() => setActiveTab("settings")}
           >
+            <i className="ti-settings"></i>
             Settings
           </button>
         </nav>
@@ -763,74 +817,79 @@ const remainingStorageBytes = Math.max(
             {activeTab === "documents" && (
               <section className="documents_tab_panel">
                 <div className="documents_tab_toolbar">
-                  <div className="documents_tab_search">
-                    <i className="ti-search"></i>
-                    <input
-                      type="text"
-                      placeholder="Search file..."
-                      value={documentSearch}
-                      onChange={(e) => setDocumentSearch(e.target.value)}
-                    />
+                  <div className="documents_toolbar_copy">
+                    <h2>Document board</h2>
+                    <p>Search files, open folders, add tags and keep uploads inside the 50MB limit.</p>
                   </div>
 
-                  <div className="documents_tab_actions">
-                    <button
-                      type="button"
-                      className="documents_new_folder_btn"
-                      onClick={handleCreateFolder}
-                    >
-                      <i className="ti-folder"></i>
-                      New folder
-                    </button>
-
-                    <label className="documents_upload_btn">
-                      <i className="ti-upload"></i>
-                      Upload File
-                      <input type="file" multiple onChange={handleUploadFile} />
+                  <div className="documents_toolbar_controls">
+                    <label className="documents_tab_search">
+                      <i className="ti-search"></i>
+                      <input
+                        type="text"
+                        placeholder="Search file"
+                        value={documentSearch}
+                        onChange={(e) => setDocumentSearch(e.target.value)}
+                      />
                     </label>
+
+                    <div className="documents_tab_actions">
+                      <button
+                        type="button"
+                        className="documents_new_folder_btn"
+                        onClick={handleCreateFolder}
+                      >
+                        <i className="ti-folder"></i>
+                        New folder
+                      </button>
+
+                      <label className="documents_upload_btn">
+                        <i className="ti-upload"></i>
+                        Upload file
+                        <input type="file" multiple onChange={handleUploadFile} />
+                      </label>
+                    </div>
                   </div>
                 </div>
 
-{currentFolder && (
-  <div className="documents_breadcrumb">
-    <button type="button" onClick={handleBackToLibrary}>
-      All subjects
-    </button>
+                <div className="documents_path_bar">
+                  <div className="documents_breadcrumb">
+                    <button type="button" onClick={handleBackToLibrary}>
+                      All subjects
+                    </button>
 
-    {currentFolderPath.map((folder, index) => {
-      const isLastFolder = index === currentFolderPath.length - 1;
+                    {currentFolderPath.map((folder, index) => {
+                      const isLastFolder = index === currentFolderPath.length - 1;
 
-      return (
-        <span
-          className="breadcrumb_item"
-          key={getFolderKey(folder)}
-        >
-          <i className="ti-angle-right"></i>
+                      return (
+                        <span className="breadcrumb_item" key={getFolderKey(folder)}>
+                          <i className="ti-angle-right"></i>
+                          {isLastFolder ? (
+                            <strong>{folder.name}</strong>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => handleOpenBreadcrumbFolder(folder)}
+                            >
+                              {folder.name}
+                            </button>
+                          )}
+                        </span>
+                      );
+                    })}
+                  </div>
 
-          {isLastFolder ? (
-            <strong>{folder.name}</strong>
-          ) : (
-            <button
-              type="button"
-              onClick={() => handleOpenBreadcrumbFolder(folder)}
-            >
-              {folder.name}
-            </button>
-          )}
-        </span>
-      );
-    })}
-  </div>
-)}
+                  <span>{filteredDocuments.length} shown</span>
+                </div>
 
-{folderItems.length > 0 && (
-  <section className="folder_grid">
-    {folderItems.map((folder) => (
-      <article
-        className="folder_card"
-        key={getFolderKey(folder)}
-        onClick={() => handleOpenFolder(folder)}
-      >
+                {folderItems.length > 0 && (
+                  <section className="folder_grid">
+                    {folderItems.map((folder) => (
+                      <article
+                        className="folder_card"
+                        key={getFolderKey(folder)}
+                        onClick={() => handleOpenFolder(folder)}
+                      >
                         <button
                           className="folder_delete_btn"
                           type="button"
@@ -854,12 +913,11 @@ const remainingStorageBytes = Math.max(
                 )}
 
                 {isLoadingDocuments ? (
-                  <div className="empty_state_card">
+                  <div className="empty_state_card loading_state_card">
                     <div className="empty_state_icon">
                       <i className="ti-reload"></i>
                     </div>
-
-                    <h3>Loading documents...</h3>
+                    <h3>Loading documents</h3>
                     <p>Please wait while we load your files.</p>
                   </div>
                 ) : visibleItems.length === 0 ? (
@@ -867,14 +925,8 @@ const remainingStorageBytes = Math.max(
                     <div className="empty_state_icon">
                       <i className="ti-folder"></i>
                     </div>
-
-                    <h3>
-                      {currentFolder
-                        ? "This folder is empty"
-                        : "Your library is empty"}
-                    </h3>
-                    <p>Be the first one to add it.</p>
-
+                    <h3>{currentFolder ? "This folder is empty" : "Your library is empty"}</h3>
+                    <p>Add your first document to start building this study library.</p>
                     <label className="empty_state_action">
                       <i className="ti-upload"></i>
                       Upload document
@@ -886,10 +938,8 @@ const remainingStorageBytes = Math.max(
                     <div className="empty_state_icon">
                       <i className="ti-search"></i>
                     </div>
-
                     <h3>No documents found</h3>
                     <p>Try another keyword or upload a new document.</p>
-
                     <label className="empty_state_action">
                       <i className="ti-upload"></i>
                       Upload document
@@ -900,7 +950,7 @@ const remainingStorageBytes = Math.max(
                   filteredDocuments.length > 0 && (
                     <section className="documents_table_card">
                       <div className="documents_table_header">
-                        <span>File Name</span>
+                        <span>File</span>
                         <span>Size</span>
                         <span>Uploaded</span>
                         <span>Actions</span>
@@ -910,31 +960,28 @@ const remainingStorageBytes = Math.max(
                         {filteredDocuments.map((document) => (
                           <div
                             className="documents_table_row"
-                            key={
-                              document.id ||
-                              `${document.name}-${document.uploadedTime || ""}`
-                            }
+                            key={document.id || `${document.name}-${document.uploadedTime || ""}`}
                           >
                             <div className="document_file_name">
-                              <i className={getFileIcon(document.name)}></i>
+                              <div className="document_icon_shell">
+                                <i className={getFileIcon(document.name)}></i>
+                              </div>
 
                               <div className="document_name_with_tags">
                                 <span>{document.name}</span>
 
-                                {document.hashtags &&
-                                  document.hashtags.length > 0 && (
-                                    <div className="document_hashtags">
-                                      {document.hashtags.map((tag) => (
-                                        <small key={tag}>{tag}</small>
-                                      ))}
-                                    </div>
-                                  )}
+                                {document.hashtags && document.hashtags.length > 0 && (
+                                  <div className="document_hashtags">
+                                    {document.hashtags.map((tag) => (
+                                      <small key={tag}>{tag}</small>
+                                    ))}
+                                  </div>
+                                )}
                               </div>
                             </div>
 
                             <div className="document_size">
-                              {document.size ||
-                                document.note.split("·")[0].trim()}
+                              {document.size || document.note.split("·")[0].trim()}
                             </div>
 
                             <div className="document_uploaded">
@@ -943,9 +990,7 @@ const remainingStorageBytes = Math.max(
                                   document.note.split("·")[1]?.trim() ||
                                   "Recently"}
                               </strong>
-                              <span>
-                                by {document.uploadedBy || "dangkhoabi456"}
-                              </span>
+                              <span>by {document.uploadedBy || "dangkhoabi456"}</span>
                             </div>
 
                             <div className="document_actions">
@@ -961,9 +1006,7 @@ const remainingStorageBytes = Math.max(
                                 type="button"
                                 className="delete_document_btn"
                                 title="Delete"
-                                onClick={() =>
-                                  handleDeleteDocument(document.name)
-                                }
+                                onClick={() => handleDeleteDocument(document.name)}
                               >
                                 <i className="ti-trash"></i>
                               </button>
@@ -976,34 +1019,28 @@ const remainingStorageBytes = Math.max(
                 )}
               </section>
             )}
+
             {activeTab === "settings" && (
               <section className="settings_tab_panel">
                 <div className="settings_header">
-                  <h2>Library Settings</h2>
-                  <p>
-                    Manage your library&apos;s core information and
-                    administrative controls to keep your resources organized and
-                    secure.
-                  </p>
+                  <h2>Library settings</h2>
+                  <p>Manage naming, privacy, profile visibility and library removal.</p>
                 </div>
 
-                <form
-                  className="settings_general_card"
-                  onSubmit={handleSaveSettings}
-                >
+                <form className="settings_general_card" onSubmit={handleSaveSettings}>
                   <div className="settings_card_title">
                     <div className="settings_card_icon">
                       <i className="ti-write"></i>
                     </div>
 
                     <div>
-                      <h3>General Information</h3>
-                      <p>Identify your library collection.</p>
+                      <h3>General information</h3>
+                      <p>Keep this library clear and easy to identify.</p>
                     </div>
                   </div>
 
                   <div className="settings_form_group">
-                    <label htmlFor="libraryName">Library Name</label>
+                    <label htmlFor="libraryName">Library name</label>
                     <input
                       id="libraryName"
                       type="text"
@@ -1011,32 +1048,20 @@ const remainingStorageBytes = Math.max(
                       onChange={handleLibraryNameChange}
                     />
 
-                    <small
-                      className={
-                        libraryName.length > LIBRARY_NAME_MAX_LENGTH
-                          ? "settings_warning_text"
-                          : ""
-                      }
-                    >
-                      {libraryName.length}/{LIBRARY_NAME_MAX_LENGTH} characters
-                    </small>
-
-                    {libraryNameMessage && (
-                      <small className="settings_warning_text">{libraryNameMessage}</small>
-                    )}
-                    <small>
-                      This name will be visible to all members and shown in
-                      search results if public.
-                    </small>
+                    <div className="settings_helper_row">
+                      <small>{libraryName.length}/{LIBRARY_NAME_MAX_LENGTH} characters</small>
+                      {libraryNameMessage && (
+                        <small className="settings_warning_text">{libraryNameMessage}</small>
+                      )}
+                    </div>
                   </div>
 
                   <div className="settings_form_group">
-                    <label>Privacy & Visibility</label>
+                    <label>Privacy and visibility</label>
 
                     <div className="settings_visibility_options">
                       <label
-                        className={`settings_visibility_card ${libraryVisibility === "public" ? "selected" : ""
-                          }`}
+                        className={`settings_visibility_card ${libraryVisibility === "public" ? "selected" : ""}`}
                       >
                         <input
                           type="radio"
@@ -1051,16 +1076,12 @@ const remainingStorageBytes = Math.max(
 
                         <div>
                           <h4>Public</h4>
-                          <p>
-                            Visible to all members and searchable within the
-                            university hub.
-                          </p>
+                          <p>Visible to members and searchable inside the study hub.</p>
                         </div>
                       </label>
 
                       <label
-                        className={`settings_visibility_card ${libraryVisibility === "private" ? "selected" : ""
-                          }`}
+                        className={`settings_visibility_card ${libraryVisibility === "private" ? "selected" : ""}`}
                       >
                         <input
                           type="radio"
@@ -1076,21 +1097,17 @@ const remainingStorageBytes = Math.max(
 
                         <div>
                           <h4>Private</h4>
-                          <p>
-                            Only visible to you and invited collaborators.
-                            Hidden from search.
-                          </p>
+                          <p>Only visible to you and invited collaborators.</p>
                         </div>
                       </label>
                     </div>
                   </div>
+
                   <div className="settings_profile_visibility">
                     <div>
-                      <label>Visibility</label>
+                      <label>Profile visibility</label>
                       <p>Show this library on your personal profile.</p>
-                      <small>
-                        When enabled, this library will appear in your profile library list.
-                      </small>
+                      <small>Private libraries cannot be shown on profile.</small>
                     </div>
 
                     <button
@@ -1105,31 +1122,25 @@ const remainingStorageBytes = Math.max(
                 </form>
 
                 <div className="settings_save_bar">
-                  <span>Last updated: 2 hours ago by admin</span>
+                  <span>Save updates to local library data.</span>
                   <button type="button" onClick={handleSaveSettings}>
-                    Save Changes
+                    Save changes
                   </button>
                 </div>
 
                 <section className="danger_zone_card">
                   <div className="danger_zone_intro">
                     <div>
-                      <h3>Danger Zone</h3>
-                      <p>
-                        Irreversible actions that affect the entire library and
-                        its contents.
-                      </p>
+                      <h3>Danger zone</h3>
+                      <p>Deleting this library removes it from saved and recent libraries.</p>
                     </div>
-
                     <i className="ti-alert"></i>
                   </div>
 
                   <div className="danger_zone_action">
                     <div>
-                      <strong>Delete Library</strong>
-                      <p>
-                        Permanently remove this library and all its documents.
-                      </p>
+                      <strong>Delete library</strong>
+                      <p>This action cannot be undone.</p>
                     </div>
 
                     <button
@@ -1137,83 +1148,80 @@ const remainingStorageBytes = Math.max(
                       className="delete_library_button"
                       onClick={handleDeleteLibrary}
                     >
-                      Delete Library
+                      Delete library
                     </button>
                   </div>
                 </section>
               </section>
             )}
-            <section className="library_about_center">
-              <div className="library_about_header">
-                <i className="ti-book"></i>
-                <h3>About this library</h3>
-              </div>
-
-              <p>
-                {libraryData.description ||
-                  "This library helps students manage learning resources, upload documents, and use AI to summarize or ask questions from files."}
-              </p>
-            </section>
           </section>
 
           <aside className="library_sidebar">
+            <div className="capacity_card">
+              <div className="storage_card_header">
+                <div className="storage_card_icon">
+                  <i className="ti-harddrive"></i>
+                </div>
 
-                  <div className="capacity_card">
-  <div className="storage_card_header">
-    <div className="storage_card_icon">
-      <i className="ti-harddrive"></i>
-    </div>
-
-    <div>
-      <h3>Library Storage</h3>
-      <p>Storage used by uploaded files</p>
-    </div>
-  </div>
-
-  <div className="storage_usage_line">
-    <span>Storage limit</span>
-    <strong>
-      {formatFileSize(usedStorageBytes)} /{" "}
-      {formatFileSize(LIBRARY_STORAGE_LIMIT_BYTES)}
-    </strong>
-  </div>
-
-  <div className="capacity_bar">
-    <div style={{ width: `${usedStoragePercent}%` }}></div>
-  </div>
-
-  <div className="storage_stats">
-    <div>
-      <strong>{formatFileSize(usedStorageBytes)}</strong>
-      <span>Used</span>
-    </div>
-
-    <div>
-      <strong>{formatFileSize(remainingStorageBytes)}</strong>
-      <span>Remaining</span>
-    </div>
-  </div>
-</div>
-            <div className="side_card">
-              <div className="side_title">
-                <h3>Author</h3>
+                <div>
+                  <h3>Library storage</h3>
+                  <p>Storage used by uploaded files</p>
+                </div>
               </div>
 
-              <div className="collaborator_list">
-                <div className="collaborator_item">
-                  <div className="collaborator_icon">
-                    <i className="ti-user"></i>
-                  </div>
+              <div className="storage_usage_line">
+                <span>Storage limit</span>
+                <strong>
+                  {formatFileSize(usedStorageBytes)} / {formatFileSize(LIBRARY_STORAGE_LIMIT_BYTES)}
+                </strong>
+              </div>
 
-                  <div>
-                    <strong>{authorName}</strong>
-                    <p>Owner</p>
-                  </div>
+              <div className="capacity_bar">
+                <div style={{ width: `${usedStoragePercent}%` }}></div>
+              </div>
+
+              <div className="storage_stats">
+                <div>
+                  <strong>{formatFileSize(usedStorageBytes)}</strong>
+                  <span>Used</span>
+                </div>
+
+                <div>
+                  <strong>{formatFileSize(remainingStorageBytes)}</strong>
+                  <span>Remaining</span>
                 </div>
               </div>
             </div>
 
+            <div className="side_card library_about_card">
+              <div className="library_about_header">
+                <i className="ti-book"></i>
+                <h3>About</h3>
+              </div>
+              <p>
+                {libraryData.description ||
+                  "This library helps students manage learning resources, upload documents, and use AI to summarize or ask questions from files."}
+              </p>
+            </div>
+
             <div className="side_card">
+              <div className="side_title">
+                <h3>Owner</h3>
+              </div>
+
+              <div className="collaborator_item">
+                <div className="collaborator_icon">
+                  <i className="ti-user"></i>
+                </div>
+
+                <div>
+                  <strong>{authorName}</strong>
+                  <p>Library owner</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="side_card library_info_card">
               <h3>Library info</h3>
 
               <div className="info_row">
@@ -1221,10 +1229,10 @@ const remainingStorageBytes = Math.max(
                 <strong>{uploadedFileCount}</strong>
               </div>
 
-<div className="info_row">
-  <span>Stars</span>
-  <strong>{stars}</strong>
-</div>
+              <div className="info_row">
+                <span>Stars</span>
+                <strong>{stars}</strong>
+              </div>
 
               <div className="info_row">
                 <span>Profile visibility</span>
@@ -1233,11 +1241,9 @@ const remainingStorageBytes = Math.max(
             </div>
 
             <div className="summarize_card">
-              <h3>Summarize Library</h3>
-              <p>Use AI to generate a curriculum overview from these files.</p>
-
-              <button type="button">Start Analysis</button>
-
+              <h3>Summarize library</h3>
+              <p>Use AI to generate a study overview from uploaded files.</p>
+              <button type="button">Start analysis</button>
               <div className="flash_btn">
                 <i className="ti-bolt"></i>
               </div>
@@ -1251,11 +1257,8 @@ const remainingStorageBytes = Math.max(
           <div className="hashtag_modal">
             <div className="hashtag_modal_header">
               <div>
-                <h2>Add Tags to Your Document</h2>
-                <p>
-                  Please provide 3 hashtags to help categorize your file for
-                  better AI search results.
-                </p>
+                <h2>Add tags to your document</h2>
+                <p>Provide 3 hashtags to help categorize your file for search and AI review.</p>
               </div>
 
               <button type="button" onClick={handleCancelTaggedUpload}>
@@ -1264,11 +1267,6 @@ const remainingStorageBytes = Math.max(
             </div>
 
             <div className="hashtag_modal_body">
-              <p className="hashtag_modal_desc">
-                Please provide 3 hashtags to help categorize your file for
-                better AI search results.
-              </p>
-
               <div className="hashtag_input_list">
                 {hashtags.map((tag, index) => (
                   <input
@@ -1309,43 +1307,38 @@ const remainingStorageBytes = Math.max(
                 onClick={handleConfirmTaggedUpload}
                 disabled={isUploadingDocuments}
               >
-                {isUploadingDocuments ? "Uploading..." : "Save & Upload"}
+                {isUploadingDocuments ? "Uploading" : "Save and upload"}
               </button>
             </div>
           </div>
         </div>
       )}
-{isStorageLimitPopupOpen && (
-  <div className="storage_limit_overlay">
-    <div className="storage_limit_modal">
-      <div className="storage_limit_icon">
-        <i className="ti-alert"></i>
-      </div>
 
-      <h2>Storage limit reached</h2>
+      {isStorageLimitPopupOpen && (
+        <div className="storage_limit_overlay">
+          <div className="storage_limit_modal">
+            <div className="storage_limit_icon">
+              <i className="ti-alert"></i>
+            </div>
 
-      <p>
-        This library has reached the 50MB upload limit. Please delete some
-        files before uploading more documents.
-      </p>
+            <h2>Storage limit reached</h2>
+            <p>
+              This library has reached the 50MB upload limit. Delete some files before uploading more documents.
+            </p>
 
-      <div className="storage_limit_info">
-        <span>Current usage</span>
-        <strong>
-          {formatFileSize(usedStorageBytes)} /{" "}
-          {formatFileSize(LIBRARY_STORAGE_LIMIT_BYTES)}
-        </strong>
-      </div>
+            <div className="storage_limit_info">
+              <span>Current usage</span>
+              <strong>
+                {formatFileSize(usedStorageBytes)} / {formatFileSize(LIBRARY_STORAGE_LIMIT_BYTES)}
+              </strong>
+            </div>
 
-      <button
-        type="button"
-        onClick={() => setIsStorageLimitPopupOpen(false)}
-      >
-        I understand
-      </button>
-    </div>
-  </div>
-)}
+            <button type="button" onClick={() => setIsStorageLimitPopupOpen(false)}>
+              I understand
+            </button>
+          </div>
+        </div>
+      )}
     </main>
   );
 
