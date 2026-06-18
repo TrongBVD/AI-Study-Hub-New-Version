@@ -705,3 +705,186 @@
 .ai_chat_sidebar_bottom {
   flex-shrink: 0;
 }
+/* =========================================================
+   No-scroll height correction for AI Chat default screen
+   Keeps existing JSX and all chat functions unchanged
+========================================================= */
+
+.ai_chat_main {
+  min-height: 100dvh;
+  padding: 22px 28px 28px;
+  display: flex;
+  flex-direction: column;
+}
+
+.ai_chat_content {
+  width: min(1080px, 100%);
+  margin: 0 auto;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.ai_chat_intro {
+  margin-bottom: 18px;
+}
+
+.ai_chat_intro span {
+  min-height: 24px;
+  padding: 0 12px;
+  font-size: 11px;
+}
+
+.ai_chat_intro h1 {
+  margin: 12px 0 6px;
+  font-size: clamp(28px, 3vw, 38px);
+  line-height: 1.05;
+}
+
+.ai_chat_intro p {
+  max-width: 620px;
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.ai_chat_workspace {
+  grid-template-columns: minmax(0, 1fr) 300px;
+  gap: 18px;
+  align-items: stretch;
+  flex: 1;
+  min-height: 0;
+}
+
+.ai_chat_conversation {
+  min-height: auto;
+  height: auto;
+  border-radius: 26px;
+}
+
+.ai_chat_conversation_bar {
+  min-height: 56px;
+  padding: 0 22px;
+}
+
+.ai_chat_conversation_body {
+  max-height: none;
+  min-height: 0;
+  padding: 20px 28px 24px;
+  overflow-y: visible;
+}
+
+.ai_chat_default_state {
+  min-height: auto;
+  padding: 28px 54px 4px;
+  border-radius: 22px;
+  justify-content: flex-start;
+}
+
+.ai_chat_default_icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 14px;
+  margin-bottom: 20px;
+}
+
+.ai_chat_default_state h2 {
+  margin-bottom: 10px;
+  font-size: clamp(30px, 3.6vw, 42px);
+  line-height: 1.04;
+}
+
+.ai_chat_default_state p {
+  max-width: 720px;
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.ai_chat_default_prompts {
+  width: min(760px, 100%);
+  margin-top: 22px;
+  gap: 10px 14px;
+}
+
+.ai_chat_default_prompts button {
+  min-height: 48px;
+  border-radius: 16px;
+  padding: 0 18px;
+  font-size: 14px;
+}
+
+.ai_chat_panel {
+  gap: 14px;
+}
+
+.ai_chat_panel_card,
+.ai_chat_panel_note {
+  padding: 18px;
+  border-radius: 20px;
+}
+
+.ai_chat_panel_title {
+  padding-bottom: 12px;
+  margin-bottom: 12px;
+}
+
+.ai_chat_suggestion_list {
+  gap: 8px;
+}
+
+.ai_chat_suggestion_list button {
+  min-height: 42px;
+}
+
+.ai_chat_panel_note {
+  min-height: auto;
+}
+
+.ai_chat_panel_note h3 {
+  margin-bottom: 8px;
+  font-size: 19px;
+}
+
+.ai_chat_panel_note p {
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.ai_chat_composer {
+  margin-top: 16px;
+  padding: 14px;
+  border-radius: 22px;
+}
+
+.ai_chat_composer textarea {
+  min-height: 58px;
+  max-height: 92px;
+}
+
+.ai_chat_send_btn {
+  height: 40px;
+}
+
+@media (max-width: 1180px) {
+  .ai_chat_workspace {
+    grid-template-columns: 1fr;
+  }
+
+  .ai_chat_panel {
+    display: none;
+  }
+}
+
+@media (max-width: 900px) {
+  .ai_chat_main {
+    padding: 16px;
+  }
+
+  .ai_chat_default_state {
+    padding: 24px 22px 4px;
+  }
+
+  .ai_chat_default_prompts {
+    grid-template-columns: 1fr;
+  }
+}

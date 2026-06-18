@@ -35,6 +35,7 @@ body {
   border-radius: 50%;
   overflow: hidden;
   border: 1px solid #30363d;
+  background: linear-gradient(135deg, #c084fc, #f0abfc);
   margin-bottom: 22px;
   position: relative;
   cursor: pointer;

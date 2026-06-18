@@ -1,7 +1,18 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "./PersonalProfilePage.css";
-import defaultAvatar from "../../../assets/imgs/default_avatar.png";
+
+const PROFILE_AVATAR_KEY = "aiStudyHubProfileAvatar";
+
+function getLoggedInUserEmail() {
+  try {
+    const storedUser = JSON.parse(localStorage.getItem("user") || "null");
+    return storedUser?.email || "";
+  } catch (error) {
+    console.error("Cannot read logged-in user from localStorage:", error);
+    return "";
+  }
+}
 
 function PersonalProfile() {
   const navigate = useNavigate();
@@ -9,11 +20,14 @@ function PersonalProfile() {
   const [userName, setUserName] = useState(() => {
     return localStorage.getItem("aiStudyHubProfileName") || "dangkhoabi456";
   });
+  const [userEmail] = useState(getLoggedInUserEmail);
 
   const dateOfBirth = new Date("2003-11-19");
   const [isEditingName, setIsEditingName] = useState(false);
   const [newName, setNewName] = useState(userName);
-  const [avatar, setAvatar] = useState(defaultAvatar);
+  const [avatar, setAvatar] = useState(() => {
+    return localStorage.getItem(PROFILE_AVATAR_KEY) || "";
+  });
 
   const libraries = JSON.parse(
     localStorage.getItem("aiStudyHubLibraries") || "[]"
@@ -24,8 +38,19 @@ function PersonalProfile() {
 
     if (!file) return;
 
-    const imageUrl = URL.createObjectURL(file);
-    setAvatar(imageUrl);
+    const reader = new FileReader();
+
+    reader.onload = () => {
+      const imageUrl = reader.result;
+
+      if (typeof imageUrl !== "string") return;
+
+      setAvatar(imageUrl);
+      localStorage.setItem(PROFILE_AVATAR_KEY, imageUrl);
+      window.dispatchEvent(new Event("aiStudyHubProfileAvatarChanged"));
+    };
+
+    reader.readAsDataURL(file);
   }
 
   function handleSaveName() {
@@ -47,7 +72,7 @@ function PersonalProfile() {
     <main className="profile_page">
       <aside className="profile_sidebar">
         <label className="profile_main_avatar">
-          <img src={avatar} alt="User avatar" />
+          {avatar ? <img src={avatar} alt="User avatar" /> : null}
 
           <div className="avatar_overlay">Change avatar</div>
 
@@ -76,7 +101,7 @@ function PersonalProfile() {
           ) : (
             <div className="profile_name_row">
               <h2>{userName}</h2>
-              <h2>{userName}@gmail.com</h2>
+              <h2>{userEmail || "Email unavailable"}</h2>
               <h2>{dateOfBirth.toDateString()}</h2>
 
               <button

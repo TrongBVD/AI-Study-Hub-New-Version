@@ -1,5 +1,12 @@
 import { Link, useNavigate } from "react-router-dom";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import {
+  getNotificationSettings,
+  getNotifications,
+  markAllNotificationsAsRead,
+} from "../../../utils/notificationStore.js";
+
+const PROFILE_AVATAR_KEY = "aiStudyHubProfileAvatar";
 
 function getSavedLibraries() {
   try {
@@ -72,6 +79,61 @@ function Navbar({ onOpenSidebar }) {
   const navigate = useNavigate();
   const [searchValue, setSearchValue] = useState("");
   const [isSearchFocused, setIsSearchFocused] = useState(false);
+  const [profileAvatar, setProfileAvatar] = useState(() => {
+    return localStorage.getItem(PROFILE_AVATAR_KEY) || "";
+  });
+
+const [notifications, setNotifications] = useState(() => getNotifications());
+  const [notificationSettings, setNotificationSettings] = useState(() =>
+    getNotificationSettings()
+  );
+
+  useEffect(() => {
+    function syncNotifications() {
+      setNotifications(getNotifications());
+      setNotificationSettings(getNotificationSettings());
+    }
+
+    window.addEventListener("aiStudyHubNotificationsChanged", syncNotifications);
+    window.addEventListener(
+      "aiStudyHubNotificationSettingsChanged",
+      syncNotifications
+    );
+    window.addEventListener("storage", syncNotifications);
+
+    return () => {
+      window.removeEventListener(
+        "aiStudyHubNotificationsChanged",
+        syncNotifications
+      );
+      window.removeEventListener(
+        "aiStudyHubNotificationSettingsChanged",
+        syncNotifications
+      );
+      window.removeEventListener("storage", syncNotifications);
+    };
+  }, []);
+
+  useEffect(() => {
+    function syncProfileAvatar() {
+      setProfileAvatar(localStorage.getItem(PROFILE_AVATAR_KEY) || "");
+    }
+
+    window.addEventListener("aiStudyHubProfileAvatarChanged", syncProfileAvatar);
+    window.addEventListener("storage", syncProfileAvatar);
+
+    return () => {
+      window.removeEventListener(
+        "aiStudyHubProfileAvatarChanged",
+        syncProfileAvatar
+      );
+      window.removeEventListener("storage", syncProfileAvatar);
+    };
+  }, []);
+
+  const unreadNotificationCount = notifications.filter(
+    (notification) => !notification.isRead
+  ).length;
 
   const libraries = getSavedLibraries();
   const workspaces = getSavedWorkspaces();
@@ -228,14 +290,86 @@ function Navbar({ onOpenSidebar }) {
           </div>
         </div>
 
-        <button>
-          <i className="ti-bell"></i>
-        </button>
+<div className="notification_dropdown">
+  <button type="button" className="notification_btn">
+    <i className="ti-bell"></i>
+    {notificationSettings.showBadge && unreadNotificationCount > 0 && (
+  <span className="notification_badge">{unreadNotificationCount}</span>
+)}
+  </button>
+
+  <div className="notification_panel">
+    <div className="notification_header">
+      <div>
+        <strong>Notifications</strong>
+        <p>Recent workspace activity</p>
+      </div>
+
+      <button
+  type="button"
+  onClick={() => {
+    markAllNotificationsAsRead();
+    setNotifications(getNotifications());
+  }}
+>
+  Mark all read
+</button>
+    </div>
+
+<div className="notification_list">
+  {!notificationSettings.enabled ? (
+    <div className="notification_empty">
+      <i className="ti-bell"></i>
+      <p>Notifications are turned off.</p>
+    </div>
+  ) : notifications.length === 0 ? (
+    <div className="notification_empty">
+      <i className="ti-bell"></i>
+      <p>No notifications yet.</p>
+    </div>
+  ) : (
+    notifications.map((notification) => (
+      <button
+        type="button"
+        key={notification.id}
+        className={`notification_item ${
+          notification.isRead ? "" : "unread"
+        }`}
+        onClick={() => {
+          if (notification.link) {
+            navigate(notification.link);
+          }
+        }}
+      >
+        <div className="notification_icon">
+          <i className={notification.icon}></i>
+        </div>
+
+        <div>
+          <strong>{notification.title}</strong>
+          <p>{notification.message}</p>
+          <span>{notification.createdAt}</span>
+        </div>
+      </button>
+    ))
+  )}
+</div>
+
+    <button type="button" className="notification_view_all">
+      View all notifications
+    </button>
+  </div>
+</div>
 
         <Link
           to="/dashboard/profile"
           className="profile_avatar"
           aria-label="Go to personal profile"
+          style={
+            profileAvatar
+              ? { backgroundImage: `url(${profileAvatar})` }
+              : undefined
+          }
         />
       </div>
     </header>

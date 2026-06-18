@@ -1,4 +1,5 @@
 import { Link, useLocation, useParams, useNavigate } from "react-router-dom";
+import { createAppNotification } from "../../../utils/notificationStore.js";
 import { useEffect, useMemo, useState } from "react";
 import "./WorkSpacePage.css";
 import "../../../assets/icons/themify-icons-font/themify-icons/themify-icons.css";
@@ -12,6 +13,7 @@ function WorkSpacePage() {
   const [activeTab, setActiveTab] = useState("discussion");
   const [isTopicFormOpen, setIsTopicFormOpen] = useState(false);
   const [topicTitle, setTopicTitle] = useState("");
+  const [editingTopicField, setEditingTopicField] = useState(null);
   const [topicContent, setTopicContent] = useState("");
   const [newTopicDescription, setNewTopicDescription] = useState("");
 const [newTopicType, setNewTopicType] = useState("Question");
@@ -212,7 +214,6 @@ const workspaceStorageUsedBytes = discussionStorageUsedBytes;
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   }
 
-
   if (!workspace) {
     return (
       <main className="workspace_page">
@@ -377,6 +378,14 @@ const workspaceStorageUsedBytes = discussionStorageUsedBytes;
   };
 
   saveDiscussionTopics([newTopic, ...discussionTopics]);
+  createAppNotification({
+  category: "discussion",
+  action: "newTopic",
+  title: "New discussion topic",
+  message: `${profileName} created topic "${newTopic.title}".`,
+  icon: "ti-comments",
+  link: `/dashboard/workspaces/${workspaceId}`,
+});
   setSelectedTopicId(newTopic.id);
 
   setTopicTitle("");
@@ -392,6 +401,46 @@ const workspaceStorageUsedBytes = discussionStorageUsedBytes;
   setNewTopicEndDate("");
 
   setIsTopicFormOpen(false);
+}
+
+function handleDeleteTopicFile(fileId) {
+  if (!selectedTopic) return;
+
+  const savedFile = (selectedTopic.files || []).find(
+    (file) => file.id === fileId,
+  );
+
+  const pendingFile = topicFiles.find((file) => file.id === fileId);
+
+  const fileToDelete = savedFile || pendingFile;
+
+  if (!fileToDelete) return;
+
+  const confirmDelete = window.confirm(
+    `Delete "${fileToDelete.name}" from this topic?`,
+  );
+
+  if (!confirmDelete) return;
+
+  // Xóa file đang chờ lưu
+  setTopicFiles((prevFiles) =>
+    prevFiles.filter((file) => file.id !== fileId),
+  );
+
+  // Xóa file đã lưu trong topic
+  updateSelectedTopic((topic) => ({
+    ...topic,
+    files: (topic.files || []).filter((file) => file.id !== fileId),
+  }));
+
+  createAppNotification({
+    category: "file",
+    action: "deleted",
+    title: "File deleted",
+    message: `${profileName} deleted ${fileToDelete.name} from ${selectedTopic.title}.`,
+    icon: "ti-trash",
+    link: `/dashboard/workspaces/${workspaceId}`,
+  });
 }
 
   function handleTopicFileChange(e) {
@@ -412,14 +461,23 @@ const workspaceStorageUsedBytes = discussionStorageUsedBytes;
     const nextStorageUsed =
       workspaceStorageUsedBytes + pendingFilesSize + selectedFilesSize;
 
-    if (nextStorageUsed > WORKSPACE_STORAGE_LIMIT_BYTES) {
-      alert(
-        "This workspace has reached the 50MB storage limit. You cannot upload more files.",
-      );
+if (nextStorageUsed > WORKSPACE_STORAGE_LIMIT_BYTES) {
+  createAppNotification({
+    category: "file",
+    action: "storageWarning",
+    title: "Workspace storage warning",
+    message: "This workspace has reached the 50MB storage limit.",
+    icon: "ti-alert",
+    link: `/dashboard/workspaces/${workspaceId}`,
+  });
 
-      e.target.value = "";
-      return;
-    }
+  alert(
+    "This workspace has reached the 50MB storage limit. You cannot upload more files.",
+  );
+
+  e.target.value = "";
+  return;
+}
 
     const newFiles = selectedFiles.map((file) => ({
       id: `topic-file-${selectedTopic.id}-${file.name}-${file.size}-${file.lastModified}`,
@@ -430,28 +488,45 @@ const workspaceStorageUsedBytes = discussionStorageUsedBytes;
     }));
 
     setTopicFiles((prevFiles) => [...prevFiles, ...newFiles]);
-    e.target.value = "";
+
+createAppNotification({
+  category: "file",
+  action: "uploaded",
+  title: "File uploaded",
+  message: `${profileName} uploaded ${newFiles.length} file(s) to ${selectedTopic.title}.`,
+  icon: "ti-folder",
+  link: `/dashboard/workspaces/${workspaceId}`,
+});
+
+e.target.value = "";
   }
 
   function handleSaveTopicNote(e) {
-    e.preventDefault();
+  e.preventDefault();
 
-    if (!selectedTopic) return;
+  if (!selectedTopic) return;
 
-    const nextTopics = discussionTopics.map((topic) =>
-      topic.id === selectedTopic.id
-        ? {
-            ...topic,
-            content: topicContent,
-            files: [...(topic.files || []), ...topicFiles],
-            updatedAt: "Updated just now",
-          }
-        : topic,
+  const nextTopics = discussionTopics.map((topic) => {
+    if (topic.id !== selectedTopic.id) return topic;
+
+    const mergedFiles = [...(topic.files || []), ...topicFiles];
+
+    const uniqueFiles = mergedFiles.filter(
+      (file, index, array) =>
+        index === array.findIndex((item) => item.id === file.id),
     );
 
-    saveDiscussionTopics(nextTopics);
-    setTopicFiles([]);
-  }
+    return {
+      ...topic,
+      content: topicContent,
+      files: uniqueFiles,
+      updatedAt: "Updated just now",
+    };
+  });
+
+  saveDiscussionTopics(nextTopics);
+  setTopicFiles([]);
+}
 
   function updateSelectedTopic(updater) {
   if (!selectedTopic) return;
@@ -466,6 +541,43 @@ const workspaceStorageUsedBytes = discussionStorageUsedBytes;
   );
 
   saveDiscussionTopics(nextTopics);
+}
+
+function handleUpdateTopicField(field, value) {
+  const previousStatus = selectedTopic?.status;
+
+  updateSelectedTopic((topic) => ({
+    ...topic,
+    [field]: value,
+  }));
+
+  if (field === "status" && value === "Solved" && previousStatus !== "Solved") {
+    createAppNotification({
+      category: "discussion",
+      action: "solved",
+      title: "Topic solved",
+      message: `Topic "${selectedTopic.title}" was marked as solved.`,
+      icon: "ti-check-box",
+      link: `/dashboard/workspaces/${workspaceId}`,
+    });
+  }
+}
+
+function handleUpdateTopicDeadlineMode(value) {
+  updateSelectedTopic((topic) => ({
+    ...topic,
+    dateMode: value,
+    startDate: value === "deadline" ? topic.startDate : "",
+    endDate: value === "deadline" ? topic.endDate : "",
+  }));
+}
+
+function handleUpdateTopicDate(field, value) {
+  updateSelectedTopic((topic) => ({
+    ...topic,
+    dateMode: "deadline",
+    [field]: value,
+  }));
 }
 
 function handleAddTopicComment(e) {
@@ -560,7 +672,6 @@ function getSubtaskPriorityIcon(priority) {
   if (priority === "Low") return "⬜";
   return "";
 }
-
 
   function handleOpenInviteModal() {
     setIsInviteModalOpen(true);
@@ -1139,7 +1250,6 @@ const filteredDiscussionTopics = discussionTopics.filter((topic) => {
       }`
     : "No deadline";
 
-
   return (
     <section className="workspace_clickup_detail">
       <main className="workspace_clickup_main">
@@ -1163,37 +1273,155 @@ const filteredDiscussionTopics = discussionTopics.filter((topic) => {
         </header>
 
 <section className="workspace_topic_info_panel">
-  <div className="workspace_topic_info_item">
+  <button
+    type="button"
+    className="workspace_topic_info_item editable"
+    onClick={() => setEditingTopicField("type")}
+  >
     <span>
       <i className="ti-bookmark-alt"></i>
       Type
     </span>
-    <strong>{selectedTopic.type || "Question"}</strong>
-  </div>
 
-  <div className="workspace_topic_info_item">
+    {editingTopicField === "type" ? (
+      <select
+        value={selectedTopic.type || "Question"}
+        onClick={(e) => e.stopPropagation()}
+        onChange={(e) => {
+          handleUpdateTopicField("type", e.target.value);
+          setEditingTopicField(null);
+        }}
+        onBlur={() => setEditingTopicField(null)}
+        autoFocus
+      >
+        <option value="Question">Question</option>
+        <option value="Material">Material</option>
+        <option value="Announcement">Announcement</option>
+        <option value="Discussion">Discussion</option>
+      </select>
+    ) : (
+      <strong>{selectedTopic.type || "Question"}</strong>
+    )}
+  </button>
+
+  <button
+    type="button"
+    className="workspace_topic_info_item editable"
+    onClick={() => setEditingTopicField("status")}
+  >
     <span>
       <i className="ti-target"></i>
       Status
     </span>
-    <strong>{selectedTopic.status || "Open"}</strong>
-  </div>
 
-  <div className="workspace_topic_info_item">
+    {editingTopicField === "status" ? (
+      <select
+        value={selectedTopic.status || "Open"}
+        onClick={(e) => e.stopPropagation()}
+        onChange={(e) => {
+          handleUpdateTopicField("status", e.target.value);
+          setEditingTopicField(null);
+        }}
+        onBlur={() => setEditingTopicField(null)}
+        autoFocus
+      >
+        <option value="Open">Open</option>
+        <option value="In progress">In progress</option>
+        <option value="Solved">Solved</option>
+        <option value="Closed">Closed</option>
+      </select>
+    ) : (
+      <strong>{selectedTopic.status || "Open"}</strong>
+    )}
+  </button>
+
+  <button
+    type="button"
+    className="workspace_topic_info_item editable"
+    onClick={() => setEditingTopicField("priority")}
+  >
     <span>
       <i className="ti-flag-alt"></i>
       Priority
     </span>
-    <strong>{selectedTopic.priority || "Normal"}</strong>
-  </div>
 
-  <div className="workspace_topic_info_item">
+    {editingTopicField === "priority" ? (
+      <select
+        value={selectedTopic.priority || "Normal"}
+        onClick={(e) => e.stopPropagation()}
+        onChange={(e) => {
+          handleUpdateTopicField("priority", e.target.value);
+          setEditingTopicField(null);
+        }}
+        onBlur={() => setEditingTopicField(null)}
+        autoFocus
+      >
+        <option value="Low">Low</option>
+        <option value="Normal">Normal</option>
+        <option value="High">High</option>
+        <option value="Urgent">Urgent</option>
+      </select>
+    ) : (
+      <strong>{selectedTopic.priority || "Normal"}</strong>
+    )}
+  </button>
+
+  <button
+    type="button"
+    className="workspace_topic_info_item editable deadline"
+    onClick={() => setEditingTopicField("deadline")}
+  >
     <span>
       <i className="ti-calendar"></i>
       Deadline
     </span>
-    <strong>{topicDeadlineText}</strong>
-  </div>
+
+    {editingTopicField === "deadline" ? (
+      <div
+        className="workspace_topic_deadline_editor"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <select
+          value={selectedTopic.dateMode || "none"}
+          onChange={(e) => handleUpdateTopicDeadlineMode(e.target.value)}
+          autoFocus
+        >
+          <option value="none">No deadline</option>
+          <option value="deadline">Has deadline</option>
+        </select>
+
+        {selectedTopic.dateMode === "deadline" && (
+          <div className="workspace_topic_deadline_dates">
+            <input
+              type="date"
+              value={selectedTopic.startDate || ""}
+              onChange={(e) =>
+                handleUpdateTopicDate("startDate", e.target.value)
+              }
+            />
+
+            <input
+              type="date"
+              value={selectedTopic.endDate || ""}
+              onChange={(e) =>
+                handleUpdateTopicDate("endDate", e.target.value)
+              }
+            />
+          </div>
+        )}
+
+        <button
+          type="button"
+          className="workspace_topic_done_btn"
+          onClick={() => setEditingTopicField(null)}
+        >
+          Done
+        </button>
+      </div>
+    ) : (
+      <strong>{topicDeadlineText}</strong>
+    )}
+  </button>
 </section>
         <form
           className="workspace_clickup_description"
@@ -1209,7 +1437,6 @@ const filteredDiscussionTopics = discussionTopics.filter((topic) => {
             <button type="submit">Save update</button>
           </div>
         </form>
-
 
         <section className="workspace_clickup_section">
   <div className="workspace_clickup_subtask_header">
@@ -1525,9 +1752,20 @@ const filteredDiscussionTopics = discussionTopics.filter((topic) => {
               <span>{file.addedAt || "Just now"}</span>
             </div>
 
-            <span className="workspace_clickup_attachment_owner">
-              {profileName.slice(0, 1).toUpperCase()}
-            </span>
+<div className="workspace_clickup_attachment_actions">
+  <span className="workspace_clickup_attachment_owner">
+    {profileName.slice(0, 1).toUpperCase()}
+  </span>
+
+  <button
+    type="button"
+    className="workspace_clickup_attachment_delete"
+    onClick={() => handleDeleteTopicFile(file.id)}
+    title="Delete file"
+  >
+    <i className="ti-trash"></i>
+  </button>
+</div>
           </div>
         </article>
       ))}
@@ -2409,7 +2647,6 @@ const filteredDiscussionTopics = discussionTopics.filter((topic) => {
           <i className="ti-comments"></i>
           Discussion
         </button>
-
 
         <button
           className={activeTab === "messages" ? "active" : ""}

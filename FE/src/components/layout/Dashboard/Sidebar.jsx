@@ -2,7 +2,18 @@ import { NavLink } from "react-router-dom";
 import Logo from "../../../assets/logo/Logo.jsx";
 import "../../../assets/icons/themify-icons-font/themify-icons/themify-icons.css";
 
+function getStoredUserRole() {
+  try {
+    const storedUser = JSON.parse(localStorage.getItem("user") || "null");
+    return String(storedUser?.role || "").toUpperCase();
+  } catch {
+    return "";
+  }
+}
+
 function Sidebar({ isOpen, onClose }) {
+  const isSystemAdmin = getStoredUserRole() === "SYSTEM_ADMIN";
+
   const menuItems = [
     { icon: "ti-home", label: "Home", path: "/dashboard/home" },
     { icon: "ti-folder", label: "My libraries", path: "/dashboard/libraries" },
@@ -12,6 +23,15 @@ function Sidebar({ isOpen, onClose }) {
   ];
 
   return (
+    <>
+      {isOpen && (
+    <button
+      type="button"
+      className="sidebar_overlay"
+      aria-label="Close sidebar"
+      onClick={onClose}
+    />
+  )}
     <aside className={`sidebar ${isOpen ? "sidebar_open" : ""}`}>
       <div className="sidebar_top">
         <div className="sidebar_header">
@@ -39,11 +59,25 @@ function Sidebar({ isOpen, onClose }) {
         </nav>
       </div>
 
-      <button className="logout_btn">
-        <i className="ti-power-off"></i>
-        <span>Log out</span>
-      </button>
+      <div className="sidebar_bottom_actions">
+        {isSystemAdmin && (
+          <NavLink
+            to="/admin/dashboard"
+            className="admin_dashboard_btn"
+            onClick={onClose}
+          >
+            <i className="ti-dashboard"></i>
+            <span>Admin dashboard</span>
+          </NavLink>
+        )}
+
+        <button type="button" className="logout_btn">
+          <i className="ti-power-off"></i>
+          <span>Log out</span>
+        </button>
+      </div>
     </aside>
+        </>
   );
 }
 

@@ -1,4 +1,4 @@
-import {Link} from "react-router";
+import { Link } from "react-router-dom";
 import "./HeroSection.css";
 import Logo from "../../../assets/logo/Logo.jsx";
 
