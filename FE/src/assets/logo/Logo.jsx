@@ -1,11 +1,10 @@
-import "./Logo.css";
-import logoImage from "../imgs/new_logo.png";
+import bookLogo from "../images/StudyHubBookLogo.svg";
 
-function Logo() {
+function Logo({ className = "" }) {
   return (
-    <div className="logo">
-      <img className="logo_image" src={logoImage} alt="AI Study Hub logo" />
-    </div>
+    <span className={`github_logo ${className}`.trim()}>
+      <img src={bookLogo} alt="Study Hub" />
+    </span>
   );
 }
 

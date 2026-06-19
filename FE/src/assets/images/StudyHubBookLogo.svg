@@ -1,0 +1,38 @@
+<svg
+  xmlns="http://www.w3.org/2000/svg"
+  viewBox="0 0 128 128"
+  role="img"
+  aria-labelledby="studyHubBookTitle"
+>
+  <title id="studyHubBookTitle">Study Hub book logo</title>
+
+  <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <path
+      d="M64 66C53 53 40 48 22 49v37c18-1 31 4 42 16V66Z"
+      stroke="#ededed"
+      stroke-width="5"
+    />
+    <path
+      d="M64 66c11-13 24-18 42-17v37c-18-1-31 4-42 16V66Z"
+      stroke="#9c968d"
+      stroke-width="5"
+    />
+    <path
+      d="M22 86c17 0 30 5 42 16 12-11 25-16 42-16"
+      stroke="#9c968d"
+      stroke-width="5"
+    />
+    <path d="M64 66v36" stroke="#ededed" stroke-width="4" />
+
+    <path d="M34 71c10 0 18 3 25 9" stroke="#ededed" stroke-width="3" />
+    <path d="M94 71c-10 0-18 3-25 9" stroke="#9c968d" stroke-width="3" />
+    <path d="M34 80c10 0 18 3 25 9" stroke="#ededed" stroke-width="3" />
+    <path d="M94 80c-10 0-18 3-25 9" stroke="#9c968d" stroke-width="3" />
+
+    <path d="M64 16v27" stroke="#ededed" stroke-width="5" />
+    <path d="M42 24l10 22" stroke="#ededed" stroke-width="5" />
+    <path d="M86 24 76 46" stroke="#9c968d" stroke-width="5" />
+    <path d="M27 39l20 13" stroke="#ededed" stroke-width="5" />
+    <path d="m101 39-20 13" stroke="#9c968d" stroke-width="5" />
+  </g>
+</svg>
