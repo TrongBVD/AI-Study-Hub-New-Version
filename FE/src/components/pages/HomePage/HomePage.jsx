@@ -1,12 +1,13 @@
 import "./HomePage.css";
 import "../../../assets/icons/themify-icons-font/themify-icons/themify-icons.css";
 import { Link } from "react-router-dom";
+import studyHubLogo from "../../../assets/images/StudyHubLogo.svg";
 
 function readStorageList(key) {
   try {
     const value = JSON.parse(localStorage.getItem(key) || "[]");
     return Array.isArray(value) ? value : [];
-  } catch (error) {
+  } catch {
     return [];
   }
 }
@@ -77,8 +78,7 @@ function HomePage() {
         <section className="home_intro_grid" aria-label="Home overview">
           <div className="home_command_panel">
             <div className="home_brand_row">
-              <span className="home_brand_mark">AI</span>
-              <span>Study Hub</span>
+              <img src={studyHubLogo} alt="Study Hub" />
             </div>
 
             <div className="home_headline_block">

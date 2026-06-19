@@ -91,31 +91,20 @@
 }
 
 .home_brand_row {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  width: fit-content;
-  min-height: 36px;
-  padding: 5px 12px 5px 5px;
-  border-radius: 999px;
-  color: rgba(255, 250, 240, 0.9);
-  background: rgba(255, 250, 240, 0.1);
-  border: 1px solid rgba(255, 250, 240, 0.16);
-  backdrop-filter: blur(12px);
-  font-size: 13px;
-  font-weight: 800;
+  width: 176px;
+  height: 50px;
+  overflow: hidden;
+  position: relative;
 }
 
-.home_brand_mark {
-  width: 26px;
-  height: 26px;
-  border-radius: 999px;
-  display: grid;
-  place-items: center;
-  background: #efcbb0;
-  color: #3b2a1a;
-  font-size: 10px;
-  letter-spacing: 0.05em;
+.home_brand_row img {
+  width: 176px;
+  height: 132px;
+  max-width: none;
+  position: absolute;
+  top: -41px;
+  left: 0;
+  object-fit: contain;
 }
 
 .home_label {

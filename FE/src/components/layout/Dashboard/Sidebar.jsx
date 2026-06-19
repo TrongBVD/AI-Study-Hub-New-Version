@@ -1,5 +1,6 @@
-import { NavLink } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 import Logo from "../../../assets/logo/Logo.jsx";
+import api from "../../../utils/api.js";
 import "../../../assets/icons/themify-icons-font/themify-icons/themify-icons.css";
 
 function getStoredUserRole() {
@@ -12,6 +13,7 @@ function getStoredUserRole() {
 }
 
 function Sidebar({ isOpen, onClose }) {
+  const navigate = useNavigate();
   const isSystemAdmin = getStoredUserRole() === "SYSTEM_ADMIN";
 
   const menuItems = [
@@ -21,6 +23,20 @@ function Sidebar({ isOpen, onClose }) {
     { icon: "ti-comments", label: "AI Chat", path: "/dashboard/ai-chat"},
     { icon: "ti-settings", label: "Settings", path: "/dashboard/settings" },
   ];
+
+  async function handleLogout() {
+    try {
+      await api.post("/auth/logout");
+    } catch (error) {
+      console.error("Logout request failed:", error);
+    } finally {
+      localStorage.removeItem("accessToken");
+      localStorage.removeItem("user");
+      localStorage.removeItem("aiStudyHubProfileName");
+      onClose();
+      navigate("/login", { replace: true });
+    }
+  }
 
   return (
     <>
@@ -71,7 +87,7 @@ function Sidebar({ isOpen, onClose }) {
           </NavLink>
         )}
 
-        <button type="button" className="logout_btn">
+        <button type="button" className="logout_btn" onClick={handleLogout}>
           <i className="ti-power-off"></i>
           <span>Log out</span>
         </button>
