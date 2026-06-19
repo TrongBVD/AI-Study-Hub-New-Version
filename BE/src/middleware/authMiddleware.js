@@ -32,7 +32,7 @@ async function authMiddleware(req, res, next) {
 
     const { data: user, error} = await supabase
       .from("profiles")
-      .select("id, email, username, full_name, role, status")
+      .select("id, email, username, full_name, role, status, session_id ")
       .eq("id", userID)
       .maybeSingle();
     
@@ -52,6 +52,14 @@ async function authMiddleware(req, res, next) {
         status: "error",
         message: "Your account has been disabled.",
       });
+    }
+
+    if (user.session_id && user.session_id !== decoded.session_id) {
+        return res.status(401).json({
+          status: "error",
+          message: "Tài khoản của bạn đã được đăng nhập ở một thiết bị khác.",
+          code: "SESSION_EXPIRED"
+        });
     }
 
     req.user = {

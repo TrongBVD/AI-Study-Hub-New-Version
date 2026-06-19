@@ -312,7 +312,13 @@ exports.login = async (req, res) => {
             return res.status(401).json({ status: 'error', message: 'Mật khẩu không chính xác.' });
         }
 
-        // 3. Cấp phát Token
+        // 3. Tạo session_id ngẫu nhiên
+        const currentSessionId = crypto.randomUUID();
+        
+        // 4. Gán session_id vào object user để đưa vào payload của Token
+        user.session_id = currentSessionId;
+
+        // 5. Cấp phát Token
         const accessToken = signAccessToken(user);
 
         await supabase
@@ -320,6 +326,7 @@ exports.login = async (req, res) => {
             .update({
                 last_login_at: new Date().toISOString(),
                 updated_at: new Date().toISOString(),
+                session_id: currentSessionId
             })
             .eq("id", user.id);
             

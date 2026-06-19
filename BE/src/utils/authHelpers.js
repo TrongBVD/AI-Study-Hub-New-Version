@@ -81,7 +81,8 @@ function signAccessToken(user) {
       userId: user.id,
       email: user.email,
       role: user.role || "USER",
-      status: user.status || "ACTIVE",
+      status: user.status || "ACTIVE",  
+      session_id: user.session_id
     },
     getJwtSecret(),
     { expiresIn: ACCESS_TOKEN_EXPIRY },
