@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import SettingPage from "./components/pages/SettingPage/SettingPage.jsx";
 // ================= AUTH IMPORTS =================
+import HeroSection from "./components/pages/HeroSection/HeroSection.jsx";
 import LoginPage from "./components/pages/LoginPage/LoginPage.jsx";
 import ForgotPassword from "./components/pages/LoginPage/ForgotPassword.jsx";
 import ResetPassword from "./components/pages/LoginPage/ResetPassword.jsx";
@@ -41,7 +42,7 @@ function App() {
     <BrowserRouter>
       <Routes>
         {/* DEFAULT: vào web sẽ về login */}
-        <Route path="/" element={<Navigate to="/login" replace />} />
+        <Route path="/" element={<HeroSection />} />
 
         {/* AUTH ROUTES */}
 
@@ -106,7 +107,7 @@ function App() {
         </Route>
 
         {/* NOT FOUND */}
-        <Route path="*" element={<Navigate to="/login" replace />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
   );
