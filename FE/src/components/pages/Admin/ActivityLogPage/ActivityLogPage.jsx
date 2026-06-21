@@ -1,198 +1,69 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { getActivityLogs } from "../../../../utils/adminApi";
 import "./ActivityLogPage.css";
 
-const INITIAL_LOGS = [
-  {
-    id: "LOG-1001",
-    user: "j.smith@scholar.edu",
-    userName: "Jordan Smith",
-    role: "Senior Archivist",
-    avatar: "JS",
-    action: "DOCUMENT_UPLOADED",
-    actionLabel: "Document uploaded",
-    actionType: "create",
-    document: "research-methods-week-4.pdf",
-    documentId: "DOC-492-X901",
-    workspace: "Academic Research",
-    workspaceId: "WSP-1402",
-    entityType: "Document",
-    ipAddress: "192.168.1.24",
-    device: "Chrome on Windows",
-    date: "2026-06-16",
-    time: "14:22:10",
-    result: "Success",
-    details:
-      "User uploaded a PDF document to Academic Research. The file passed storage and content validation.",
-  },
-  {
-    id: "LOG-1002",
-    user: "admin_root",
-    userName: "System Admin",
-    role: "System Root",
-    avatar: "AR",
-    action: "USER_DISABLED",
-    actionLabel: "User disabled",
-    actionType: "security",
-    document: "N/A",
-    documentId: "N/A",
-    workspace: "System",
-    workspaceId: "SYS",
-    entityType: "User",
-    ipAddress: "10.0.0.12",
-    device: "Admin Console",
-    date: "2026-06-16",
-    time: "13:05:44",
-    result: "Requires audit",
-    details:
-      "Admin disabled a user account after suspicious access attempts. The account can be reactivated by an authorized admin.",
-  },
-  {
-    id: "LOG-1003",
-    user: "m.vance@scholar.edu",
-    userName: "Mira Vance",
-    role: "Editor",
-    avatar: "MV",
-    action: "TOPIC_STATUS_CHANGED",
-    actionLabel: "Topic status changed",
-    actionType: "update",
-    document: "N/A",
-    documentId: "N/A",
-    workspace: "Business Case Review",
-    workspaceId: "WSP-2218",
-    entityType: "Workspace",
-    ipAddress: "172.16.4.8",
-    device: "Firefox on macOS",
-    date: "2026-06-15",
-    time: "18:12:03",
-    result: "Success",
-    details:
-      "Topic status changed from In progress to Completed inside Business Case Review workspace.",
-  },
-  {
-    id: "LOG-1004",
-    user: "k.lee@scholar.edu",
-    userName: "Khoa Lee",
-    role: "Member",
-    avatar: "KL",
-    action: "DOCUMENT_DELETED",
-    actionLabel: "Document deleted",
-    actionType: "danger",
-    document: "old-testing-plan.xlsx",
-    documentId: "DOC-802-XLS",
-    workspace: "Software Testing",
-    workspaceId: "WSP-3310",
-    entityType: "Document",
-    ipAddress: "192.168.1.88",
-    device: "Edge on Windows",
-    date: "2026-06-14",
-    time: "10:44:12",
-    result: "Success",
-    details:
-      "User deleted an outdated spreadsheet from Software Testing. The action is reversible only if backup retention is enabled.",
-  },
-  {
-    id: "LOG-1005",
-    user: "system",
-    userName: "System",
-    role: "Automation",
-    avatar: "SY",
-    action: "QUOTA_RESET",
-    actionLabel: "Quota reset",
-    actionType: "quota",
-    document: "N/A",
-    documentId: "N/A",
-    workspace: "Personal Library",
-    workspaceId: "LIB-1180",
-    entityType: "Quota",
-    ipAddress: "127.0.0.1",
-    device: "Scheduled job",
-    date: "2026-06-13",
-    time: "09:12:15",
-    result: "Success",
-    details:
-      "Storage quota was reset after an admin confirmation. The previous usage record was archived in the audit ledger.",
-  },
-  {
-    id: "LOG-1006",
-    user: "n.chen@scholar.edu",
-    userName: "Nina Chen",
-    role: "Manager",
-    avatar: "NC",
-    action: "MEMBER_INVITED",
-    actionLabel: "Member invited",
-    actionType: "create",
-    document: "N/A",
-    documentId: "N/A",
-    workspace: "AI Study Hub",
-    workspaceId: "WSP-9081",
-    entityType: "Workspace",
-    ipAddress: "192.168.2.15",
-    device: "Safari on iPad",
-    date: "2026-06-12",
-    time: "16:30:40",
-    result: "Pending",
-    details:
-      "A new member invitation was sent to the workspace. The invite remains pending until accepted or revoked.",
-  },
-  {
-    id: "LOG-1007",
-    user: "r.nguyen@scholar.edu",
-    userName: "Rin Nguyen",
-    role: "Member",
-    avatar: "RN",
-    action: "COMMENT_ADDED",
-    actionLabel: "Comment added",
-    actionType: "update",
-    document: "requirement-note.docx",
-    documentId: "DOC-228-DOC",
-    workspace: "Requirement Analysis",
-    workspaceId: "WSP-7714",
-    entityType: "Document",
-    ipAddress: "192.168.1.31",
-    device: "Chrome on Android",
-    date: "2026-06-11",
-    time: "21:08:18",
-    result: "Success",
-    details:
-      "User added a comment to a requirement document. The document owner received a notification.",
-  },
-  {
-    id: "LOG-1008",
-    user: "admin_root",
-    userName: "System Admin",
-    role: "System Root",
-    avatar: "AR",
-    action: "POLICY_UPDATED",
-    actionLabel: "Policy updated",
-    actionType: "security",
-    document: "N/A",
-    documentId: "N/A",
-    workspace: "System",
-    workspaceId: "SYS",
-    entityType: "System",
-    ipAddress: "10.0.0.12",
-    device: "Admin Console",
-    date: "2026-06-10",
-    time: "11:55:02",
-    result: "Success",
-    details:
-      "Admin updated the moderation policy for document uploads and workspace collaboration events.",
-  },
-];
+function getDisplayName(user) {
+  return user?.full_name || user?.username || user?.email || "Unknown user";
+}
 
-const ACTION_FILTERS = [
-  "All actions",
-  "DOCUMENT_UPLOADED",
-  "DOCUMENT_DELETED",
-  "USER_DISABLED",
-  "TOPIC_STATUS_CHANGED",
-  "QUOTA_RESET",
-  "MEMBER_INVITED",
-  "COMMENT_ADDED",
-  "POLICY_UPDATED",
-];
+function getInitials(name = "") {
+  return (
+    name
+      .split(" ")
+      .filter(Boolean)
+      .map((part) => part[0])
+      .join("")
+      .slice(0, 2)
+      .toUpperCase() || "AL"
+  );
+}
+
+function getActionType(action = "") {
+  if (action.includes("DISABLE") || action.includes("SECURITY")) return "security";
+  if (action.includes("DELETE") || action.includes("REJECT")) return "danger";
+  if (action.includes("QUOTA")) return "quota";
+  if (action.includes("CREATE") || action.includes("UPLOAD")) return "create";
+  return "update";
+}
+
+function getActionLabel(action = "") {
+  return action
+    .toLowerCase()
+    .split("_")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
+function mapLog(row) {
+  const actorName = getDisplayName(row.actor);
+  const createdAt = row.created_at ? new Date(row.created_at) : null;
+
+  return {
+    id: row.id,
+    user: row.actor?.email || row.actor?.username || row.user_id || "unknown",
+    userName: actorName,
+    role: row.actor?.username || "User",
+    avatar: getInitials(actorName),
+    action: row.action_type || "UNKNOWN_ACTION",
+    actionLabel: getActionLabel(row.action_type || "UNKNOWN_ACTION"),
+    actionType: getActionType(row.action_type || ""),
+    document: row.entity_type === "documents" ? row.entity_id : "N/A",
+    documentId: row.entity_type === "documents" ? row.entity_id : "N/A",
+    workspace: row.entity_type === "workspaces" ? row.entity_id : row.entity_type || "System",
+    workspaceId: row.entity_type === "workspaces" ? row.entity_id : row.entity_type || "SYS",
+    entityType: row.entity_type || "System",
+    ipAddress: "N/A",
+    device: "Backend API",
+    date: createdAt ? createdAt.toISOString().slice(0, 10) : "",
+    time: createdAt ? createdAt.toLocaleTimeString() : "",
+    result: "Recorded",
+    details: `${row.action_type} on ${row.entity_type} ${row.entity_id}`,
+    raw: row,
+  };
+}
 
 function formatDate(dateString) {
+  if (!dateString) return "No date";
   return new Date(`${dateString}T00:00:00`).toLocaleDateString("en-GB", {
     day: "2-digit",
     month: "short",
@@ -201,25 +72,51 @@ function formatDate(dateString) {
 }
 
 function ActivityLogPage() {
-  const [logs] = useState(INITIAL_LOGS);
+  const [logs, setLogs] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [userFilter, setUserFilter] = useState("All users");
   const [actionFilter, setActionFilter] = useState("All actions");
   const [documentFilter, setDocumentFilter] = useState("");
   const [workspaceFilter, setWorkspaceFilter] = useState("All workspaces");
-  const [startDate, setStartDate] = useState("2026-06-10");
-  const [endDate, setEndDate] = useState("2026-06-16");
-  const [selectedLog, setSelectedLog] = useState(logs[0]);
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+  const [selectedLog, setSelectedLog] = useState(null);
   const [notice, setNotice] = useState("");
+  const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadLogs() {
+      try {
+        setIsLoading(true);
+        setError("");
+        const data = await getActivityLogs();
+        const mapped = (data || []).map(mapLog);
+        setLogs(mapped);
+        setSelectedLog(mapped[0] || null);
+      } catch (err) {
+        setError(err.response?.data?.message || "Could not load activity logs.");
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    loadLogs();
+  }, []);
+
+  const actionFilters = useMemo(
+    () => ["All actions", ...new Set(logs.map((log) => log.action))],
+    [logs],
+  );
 
   const uniqueUsers = useMemo(
     () => ["All users", ...new Set(logs.map((log) => log.user))],
-    [logs]
+    [logs],
   );
 
   const uniqueWorkspaces = useMemo(
     () => ["All workspaces", ...new Set(logs.map((log) => log.workspace))],
-    [logs]
+    [logs],
   );
 
   const filteredLogs = useMemo(() => {
@@ -256,12 +153,13 @@ function ActivityLogPage() {
         workspaceFilter === "All workspaces" ||
         log.workspace === workspaceFilter;
 
-      const logDate = new Date(`${log.date}T00:00:00`);
+      const logDate = log.date ? new Date(`${log.date}T00:00:00`) : null;
       const fromDate = startDate ? new Date(`${startDate}T00:00:00`) : null;
       const toDate = endDate ? new Date(`${endDate}T23:59:59`) : null;
 
       const matchesDate =
-        (!fromDate || logDate >= fromDate) && (!toDate || logDate <= toDate);
+        (!fromDate || !logDate || logDate >= fromDate) &&
+        (!toDate || !logDate || logDate <= toDate);
 
       return (
         matchesKeyword &&
@@ -285,10 +183,10 @@ function ActivityLogPage() {
 
   const stats = useMemo(() => {
     const securityCount = filteredLogs.filter(
-      (log) => log.actionType === "security" || log.actionType === "danger"
+      (log) => log.actionType === "security" || log.actionType === "danger",
     ).length;
     const documentCount = filteredLogs.filter(
-      (log) => log.entityType === "Document"
+      (log) => log.entityType === "documents",
     ).length;
     const workspaceCount = new Set(filteredLogs.map((log) => log.workspace)).size;
 
@@ -306,8 +204,8 @@ function ActivityLogPage() {
     setActionFilter("All actions");
     setDocumentFilter("");
     setWorkspaceFilter("All workspaces");
-    setStartDate("2026-06-10");
-    setEndDate("2026-06-16");
+    setStartDate("");
+    setEndDate("");
     setNotice("Filters reset.");
   }
 
@@ -328,7 +226,7 @@ function ActivityLogPage() {
 
     const csv = rows
       .map((row) =>
-        row.map((cell) => `"${String(cell).replaceAll('"', '""')}"`).join(",")
+        row.map((cell) => `"${String(cell).replaceAll('"', '""')}"`).join(","),
       )
       .join("\n");
 
@@ -367,6 +265,8 @@ function ActivityLogPage() {
           </div>
         </section>
 
+        {isLoading && <div className="activity-log-page__notice">Loading activity logs...</div>}
+        {error && <div className="activity-log-page__notice">{error}</div>}
         {notice && (
           <div className="activity-log-page__notice">
             <i className="ti-check" />
@@ -404,9 +304,7 @@ function ActivityLogPage() {
           <div className="activity-log-page__filter-header">
             <div>
               <h2>Filter activity logs</h2>
-              <p>
-                Filter by user, action, document, workspace and date range.
-              </p>
+              <p>Filter by user, action, document, workspace and date range.</p>
             </div>
             <strong>{filteredLogs.length} shown</strong>
           </div>
@@ -443,7 +341,7 @@ function ActivityLogPage() {
                 value={actionFilter}
                 onChange={(event) => setActionFilter(event.target.value)}
               >
-                {ACTION_FILTERS.map((action) => (
+                {actionFilters.map((action) => (
                   <option key={action}>{action}</option>
                 ))}
               </select>
@@ -496,9 +394,7 @@ function ActivityLogPage() {
             <header className="activity-log-page__table-toolbar">
               <div>
                 <h2>Audit records</h2>
-                <p>
-                  Showing {filteredLogs.length} of {logs.length} total events.
-                </p>
+                <p>Showing {filteredLogs.length} of {logs.length} total events.</p>
               </div>
             </header>
 
@@ -531,9 +427,7 @@ function ActivityLogPage() {
                     filteredLogs.map((log) => (
                       <tr
                         key={log.id}
-                        className={
-                          selectedLog?.id === log.id ? "is-selected" : ""
-                        }
+                        className={selectedLog?.id === log.id ? "is-selected" : ""}
                       >
                         <td>
                           <div className="activity-log-page__actor">
@@ -545,9 +439,7 @@ function ActivityLogPage() {
                           </div>
                         </td>
                         <td>
-                          <span
-                            className={`activity-log-page__action-badge activity-log-page__action-badge--${log.actionType}`}
-                          >
+                          <span className={`activity-log-page__action-badge activity-log-page__action-badge--${log.actionType}`}>
                             {log.actionLabel}
                           </span>
                         </td>
@@ -570,9 +462,7 @@ function ActivityLogPage() {
                           </div>
                         </td>
                         <td>
-                          <span className="activity-log-page__result">
-                            {log.result}
-                          </span>
+                          <span className="activity-log-page__result">{log.result}</span>
                         </td>
                         <td>
                           <button
@@ -607,14 +497,9 @@ function ActivityLogPage() {
                     <small>{selectedLog.user}</small>
                   </div>
                   <div>
-                    <span>Document</span>
-                    <strong>{selectedLog.document}</strong>
-                    <small>{selectedLog.documentId}</small>
-                  </div>
-                  <div>
-                    <span>Workspace</span>
-                    <strong>{selectedLog.workspace}</strong>
-                    <small>{selectedLog.workspaceId}</small>
+                    <span>Entity</span>
+                    <strong>{selectedLog.entityType}</strong>
+                    <small>{selectedLog.raw?.entity_id}</small>
                   </div>
                   <div>
                     <span>Device</span>

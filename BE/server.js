@@ -10,10 +10,16 @@ const documentRoutes = require("./src/routes/documentRoutes");
 const app = express();
 const aiRoutes = require("./src/routes/aiRoutes");
 const adminRoutes = require("./src/routes/adminRoutes");
+const workspaceRoutes = require("./src/routes/workspaceRoutes");
 
 // 1. Cấu hình Middleware CORS để cho phép Frontend (Vite - 5173) gọi API
 app.use(cors({
-    origin: ['http://localhost:5173', 'http://localhost:5174'], // Địa chỉ của Frontend
+    origin: [
+        'http://localhost:5173',
+        'http://localhost:5174',
+        'http://127.0.0.1:5173',
+        'http://127.0.0.1:5174',
+    ], // Địa chỉ của Frontend
     credentials: true // Cho phép gửi token/cookie nếu có
 }));
 
@@ -26,6 +32,7 @@ app.use('/api/auth', authRoutes);
 app.use("/api/documents", documentRoutes);
 app.use("/api/ai", aiRoutes);
 app.use("/api/admin", adminRoutes);
+app.use("/api/workspaces", workspaceRoutes);
 
 // Route test để kiểm tra xem server có sống không
 app.get('/', (req, res) => {

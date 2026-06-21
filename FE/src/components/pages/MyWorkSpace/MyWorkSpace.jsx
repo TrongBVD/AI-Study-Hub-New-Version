@@ -1,5 +1,6 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import { getWorkspaces } from "../../../utils/workspaceApi";
 import "./MyWorkSpace.css";
 import "../../../assets/icons/themify-icons-font/themify-icons/themify-icons.css";
 
@@ -7,6 +8,7 @@ const ITEMS_PER_PAGE = 6;
 
 function MyWorkSpace() {
   const [currentPage, setCurrentPage] = useState(1);
+  const [workspaces, setWorkspaces] = useState([]);
 
   function getSavedWorkSpaces() {
     try {
@@ -17,7 +19,29 @@ function MyWorkSpace() {
     }
   }
 
-  const workspaces = getSavedWorkSpaces();
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadWorkspaces() {
+      try {
+        const data = await getWorkspaces();
+        if (isMounted) {
+          setWorkspaces(data || []);
+        }
+      } catch (error) {
+        console.error("Cannot load workspaces:", error);
+        if (isMounted) {
+          setWorkspaces(getSavedWorkSpaces());
+        }
+      }
+    }
+
+    loadWorkspaces();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const totalPages = Math.ceil(workspaces.length / ITEMS_PER_PAGE);
   const safeCurrentPage = Math.min(currentPage, totalPages || 1);

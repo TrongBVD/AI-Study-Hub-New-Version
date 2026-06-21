@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { createWorkspace } from "../../../utils/workspaceApi";
 import "./CreateWorkSpacePage.css";
 
 const PROFILE_NAME_KEY = "aiStudyHubProfileName";
@@ -63,7 +64,7 @@ function CreateWorkSpacePage() {
     navigate("/dashboard/home");
   }
 
-  function handleCreateWorkSpace(e) {
+  async function handleCreateWorkSpace(e) {
     e.preventDefault();
 
     if (trimmedWorkspaceName === "") {
@@ -81,35 +82,22 @@ function CreateWorkSpacePage() {
       return;
     }
 
-    const newWorkSpace = {
-      id: `workspace-${Date.now()}`,
-      owner: ownerName,
-      ownerAvatar,
-      name: trimmedWorkspaceName,
-      description: previewDescription,
-      visibility: "private",
-      documents: 0,
-      updatedAt: "Updated just now",
-      icon: "ti-briefcase",
-      highlight: false,
-      createdAt: new Date().toISOString(),
-    };
+    try {
+      const newWorkSpace = await createWorkspace({
+        name: trimmedWorkspaceName,
+        description: previewDescription,
+      });
 
-    const savedWorkSpaces = JSON.parse(
-      localStorage.getItem("aiStudyHubWorkspaces") || "[]"
-    );
-
-    localStorage.setItem(
-      "aiStudyHubWorkspaces",
-      JSON.stringify([newWorkSpace, ...savedWorkSpaces])
-    );
-
-    navigate(`/dashboard/workspaces/${newWorkSpace.id}`, {
-      state: {
-        workspace: newWorkSpace,
-        from: "/dashboard/create-workspace",
-      },
-    });
+      navigate(`/dashboard/workspaces/${newWorkSpace.id}`, {
+        state: {
+          workspace: newWorkSpace,
+          from: "/dashboard/create-workspace",
+        },
+      });
+    } catch (error) {
+      console.error("Cannot create workspace:", error);
+      alert("Cannot create workspace. Please login again and try later.");
+    }
   }
 
   return (

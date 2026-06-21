@@ -1,112 +1,178 @@
-
-import { useMemo, useState } from "react";
-
+import { useEffect, useMemo, useState } from "react";
+import {
+  getActivityLogs,
+  getAdminDashboard,
+  getAdminUsers,
+  getModerationDocuments,
+  getUsageStats,
+  reviewDocument,
+} from "../../../../utils/adminApi";
 import "./AdminDashboardPage.css";
 
-const INITIAL_USERS = [
-  { id: "U-1024", name: "Dang Khoa", email: "dangkhoa@example.com", status: "active", role: "Student" },
-  { id: "U-1088", name: "Mina Tran", email: "mina.tran@example.com", status: "active", role: "Teacher" },
-  { id: "U-1120", name: "Aris Nguyen", email: "aris.nguyen@example.com", status: "disabled", role: "Student" },
-  { id: "U-1171", name: "Bao Le", email: "bao.le@example.com", status: "pending", role: "Student" },
-];
+const STORAGE_LIMIT_BYTES = 50 * 1024 * 1024;
+const AI_TOKEN_LIMIT = 120000;
 
-const INITIAL_DOCUMENTS = [
-  { id: "DOC-401", title: "Research-method-notes.pdf", owner: "Dang Khoa", size: "18.4 MB", status: "approved" },
-  { id: "DOC-402", title: "ML-summary-v2.docx", owner: "Mina Tran", size: "6.8 MB", status: "review" },
-  { id: "DOC-403", title: "Copied-reference-pack.zip", owner: "Aris Nguyen", size: "48.2 MB", status: "flagged" },
-  { id: "DOC-404", title: "Workspace-outline.xlsx", owner: "Bao Le", size: "2.1 MB", status: "approved" },
-];
-
-const INITIAL_QUEUE = [
-  {
-    id: "MOD-901",
-    document: "Copied-reference-pack.zip",
-    reason: "Possible copyrighted source bundle",
-    uploader: "Aris Nguyen",
-    severity: "critical",
-    confidence: 92,
-  },
-  {
-    id: "MOD-902",
-    document: "ML-summary-v2.docx",
-    reason: "AI-generated section detected",
-    uploader: "Mina Tran",
-    severity: "warning",
-    confidence: 78,
-  },
-  {
-    id: "MOD-903",
-    document: "Exam-bank-draft.pdf",
-    reason: "Suspicious academic integrity pattern",
-    uploader: "Dang Khoa",
-    severity: "warning",
-    confidence: 84,
-  },
-];
-
-const INITIAL_QUOTAS = [
-  { id: "Q-01", owner: "Dang Khoa", used: 34, limit: 50, type: "Library quota" },
-  { id: "Q-02", owner: "Mina Tran", used: 41, limit: 50, type: "Workspace quota" },
-  { id: "Q-03", owner: "Aris Nguyen", used: 49, limit: 50, type: "Library quota" },
-];
-
-const INITIAL_AI_USAGE = [
-  { id: "AI-01", owner: "Dang Khoa", tokens: 42000, requests: 61, risk: "normal" },
-  { id: "AI-02", owner: "Mina Tran", tokens: 78500, requests: 112, risk: "warning" },
-  { id: "AI-03", owner: "Aris Nguyen", tokens: 126000, requests: 244, risk: "critical" },
-];
-
-const INITIAL_LOGS = [
-  { id: "LOG-704", user: "Aris Nguyen", action: "Upload blocked", target: "Copied-reference-pack.zip", time: "Today, 14:20", type: "moderation" },
-  { id: "LOG-703", user: "System", action: "Quota warning sent", target: "Aris Nguyen", time: "Today, 13:58", type: "quota" },
-  { id: "LOG-702", user: "Mina Tran", action: "AI summary generated", target: "ML-summary-v2.docx", time: "Today, 12:41", type: "ai" },
-  { id: "LOG-701", user: "Dang Khoa", action: "Created workspace", target: "Research Group A", time: "Yesterday, 18:22", type: "workspace" },
-];
-
-function getInitials(name) {
+function getInitials(name = "") {
   return name
     .split(" ")
+    .filter(Boolean)
     .map((part) => part[0])
     .join("")
     .slice(0, 2)
-    .toUpperCase();
+    .toUpperCase() || "AD";
 }
 
-function getQuotaPercent(item) {
-  return Math.min(Math.round((item.used / item.limit) * 100), 100);
+function getDisplayName(user) {
+  return user?.full_name || user?.username || user?.email || "Unknown user";
+}
+
+function getLogTime(value) {
+  if (!value) return "No timestamp";
+  return new Date(value).toLocaleString();
+}
+
+function getDocumentReason(document) {
+  const reason = document.ai_reject_reason;
+  if (!reason) return "Document needs admin review.";
+  if (typeof reason === "string") return reason;
+  return reason.reason || reason.error || "Document needs admin review.";
+}
+
+function getQueueSeverity(status) {
+  if (status === "FLAGGED" || status === "REJECTED") return "critical";
+  return "warning";
+}
+
+function getUsagePercent(value, limit) {
+  if (!limit) return 0;
+  return Math.min(Math.round((Number(value || 0) / limit) * 100), 100);
+}
+
+function formatBytes(bytes) {
+  const value = Number(bytes || 0);
+  if (value < 1024) return `${value} B`;
+  if (value < 1024 * 1024) return `${(value / 1024).toFixed(1)} KB`;
+  return `${(value / 1024 / 1024).toFixed(1)} MB`;
 }
 
 function AdminDashboardPage() {
   const [searchTerm, setSearchTerm] = useState("");
-  const [queue, setQueue] = useState(INITIAL_QUEUE);
-  const [selectedLog, setSelectedLog] = useState(INITIAL_LOGS[0]);
+  const [stats, setStats] = useState(null);
+  const [queue, setQueue] = useState([]);
+  const [users, setUsers] = useState([]);
+  const [logs, setLogs] = useState([]);
+  const [usage, setUsage] = useState({ quotaUsage: [], aiUsage: [] });
+  const [selectedLog, setSelectedLog] = useState(null);
   const [notice, setNotice] = useState("");
+  const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadDashboard() {
+      try {
+        setIsLoading(true);
+        setError("");
+
+        const [dashboardData, moderationData, userData, logData, usageData] =
+          await Promise.all([
+            getAdminDashboard(),
+            getModerationDocuments(),
+            getAdminUsers(),
+            getActivityLogs(),
+            getUsageStats(),
+          ]);
+
+        setStats(dashboardData);
+        setQueue(moderationData || []);
+        setUsers(userData || []);
+        setLogs(logData || []);
+        setSelectedLog((logData || [])[0] || null);
+        setUsage({
+          quotaUsage: usageData?.quotaUsage || [],
+          aiUsage: usageData?.aiUsage || [],
+        });
+      } catch (err) {
+        setError(err.response?.data?.message || "Could not load admin dashboard.");
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    loadDashboard();
+  }, []);
 
   const visibleLogs = useMemo(() => {
     const keyword = searchTerm.trim().toLowerCase();
-    if (!keyword) return INITIAL_LOGS;
+    if (!keyword) return logs;
 
-    return INITIAL_LOGS.filter((log) =>
-      [log.user, log.action, log.target, log.type]
+    return logs.filter((log) =>
+      [
+        getDisplayName(log.actor),
+        log.action_type,
+        log.entity_type,
+        log.entity_id,
+      ]
         .join(" ")
         .toLowerCase()
-        .includes(keyword)
+        .includes(keyword),
     );
-  }, [searchTerm]);
+  }, [logs, searchTerm]);
 
-  const activeUsers = INITIAL_USERS.filter((user) => user.status === "active").length;
-  const flaggedDocs = INITIAL_DOCUMENTS.filter((doc) => doc.status === "flagged").length;
-  const moderationQueueCount = queue.length;
-  const avgQuotaUsage = Math.round(
-    INITIAL_QUOTAS.reduce((sum, item) => sum + getQuotaPercent(item), 0) / INITIAL_QUOTAS.length
+  const quotaRows = useMemo(
+    () =>
+      usage.quotaUsage
+        .map((row) => {
+          const used = Number(row.bytes_uploaded || 0) + Number(row.bytes_downloaded || 0);
+          return {
+            id: row.id,
+            owner: getDisplayName(row.user),
+            used,
+            percent: getUsagePercent(used, STORAGE_LIMIT_BYTES),
+          };
+        })
+        .sort((a, b) => b.used - a.used)
+        .slice(0, 3),
+    [usage.quotaUsage],
   );
-  const aiCriticalUsers = INITIAL_AI_USAGE.filter((item) => item.risk === "critical").length;
-  const totalAiTokens = INITIAL_AI_USAGE.reduce((sum, item) => sum + item.tokens, 0);
 
-  function resolveModerationCase(caseId, action) {
-    const target = queue.find((item) => item.id === caseId);
-    setQueue((current) => current.filter((item) => item.id !== caseId));
-    setNotice(`${action} completed for ${target?.document || "selected document"}.`);
+  const aiRows = useMemo(
+    () =>
+      usage.aiUsage
+        .map((row) => {
+          const tokens = Number(row.tokens_consumed || 0);
+          const percent = getUsagePercent(tokens, AI_TOKEN_LIMIT);
+          return {
+            id: row.id,
+            owner: getDisplayName(row.user),
+            tokens,
+            requests: Number(row.chat_count || 0),
+            risk: percent >= 100 ? "critical" : percent >= 80 ? "warning" : "normal",
+          };
+        })
+        .sort((a, b) => b.tokens - a.tokens)
+        .slice(0, 3),
+    [usage.aiUsage],
+  );
+
+  const activeUsers = users.filter((user) => user.status === "ACTIVE").length;
+  const moderationQueueCount = queue.length;
+  const avgQuotaUsage =
+    quotaRows.length === 0
+      ? 0
+      : Math.round(quotaRows.reduce((sum, item) => sum + item.percent, 0) / quotaRows.length);
+  const aiCriticalUsers = aiRows.filter((item) => item.risk === "critical").length;
+  const totalAiTokens = stats?.totalTokensToday || 0;
+
+  async function resolveModerationCase(documentId, action) {
+    const decision = action === "Approved" ? "APPROVE" : "KEEP_REJECTED";
+
+    try {
+      await reviewDocument(documentId, decision, `${action} from admin dashboard.`);
+      setQueue((current) => current.filter((item) => item.id !== documentId));
+      setNotice(`${action} completed for selected document.`);
+    } catch (err) {
+      setNotice(err.response?.data?.message || "Could not save moderation decision.");
+    }
   }
 
   function handleQuotaAction(owner) {
@@ -153,6 +219,8 @@ function AdminDashboardPage() {
       </header>
 
       <main className="admin-dashboard__inner">
+        {isLoading && <div className="admin-dashboard__notice">Loading admin data...</div>}
+        {error && <div className="admin-dashboard__notice">{error}</div>}
         {notice && (
           <div className="admin-dashboard__notice" role="status">
             <i className="ti-check" />
@@ -165,9 +233,7 @@ function AdminDashboardPage() {
           <div>
             <span className="admin-dashboard__kicker">Admin dashboard</span>
             <h1>Monitor users, documents, moderation, quota, AI usage and recent logs.</h1>
-            <p>
-              Use this page as the first control point before opening deeper admin modules.
-            </p>
+            <p>Use this page as the first control point before opening deeper admin modules.</p>
           </div>
 
           <div className="admin-dashboard__hero-card">
@@ -184,16 +250,16 @@ function AdminDashboardPage() {
               <span className="admin-dashboard__stat-note">{activeUsers} active</span>
             </div>
             <span className="admin-dashboard__stat-label">Users</span>
-            <strong className="admin-dashboard__stat-value">{INITIAL_USERS.length}</strong>
+            <strong className="admin-dashboard__stat-value">{stats?.totalUsers || 0}</strong>
           </article>
 
           <article className="admin-dashboard__stat-card">
             <div className="admin-dashboard__stat-top">
               <span className="admin-dashboard__stat-icon"><i className="ti-files" /></span>
-              <span className="admin-dashboard__stat-note">{flaggedDocs} flagged</span>
+              <span className="admin-dashboard__stat-note">{stats?.pendingModeration || 0} flagged</span>
             </div>
             <span className="admin-dashboard__stat-label">Documents</span>
-            <strong className="admin-dashboard__stat-value">{INITIAL_DOCUMENTS.length}</strong>
+            <strong className="admin-dashboard__stat-value">{stats?.totalDocuments || 0}</strong>
           </article>
 
           <article className="admin-dashboard__stat-card admin-dashboard__stat-card--alert">
@@ -210,14 +276,14 @@ function AdminDashboardPage() {
               <span className="admin-dashboard__stat-icon"><i className="ti-harddrives" /></span>
               <span className="admin-dashboard__stat-note">Average {avgQuotaUsage}%</span>
             </div>
-            <span className="admin-dashboard__stat-label">Quota usage</span>
-            <strong className="admin-dashboard__stat-value">{avgQuotaUsage}%</strong>
+            <span className="admin-dashboard__stat-label">Uploaded today</span>
+            <strong className="admin-dashboard__stat-value">{formatBytes(stats?.totalBytesUploadedToday)}</strong>
           </article>
 
           <article className="admin-dashboard__stat-card admin-dashboard__stat-card--dark">
             <div className="admin-dashboard__stat-top">
               <span className="admin-dashboard__stat-icon"><i className="ti-bolt" /></span>
-              <span className="admin-dashboard__stat-note">{aiCriticalUsers} critical</span>
+              <span className="admin-dashboard__stat-note">{stats?.totalAiChatsToday || 0} chats</span>
             </div>
             <span className="admin-dashboard__stat-label">AI usage</span>
             <strong className="admin-dashboard__stat-value">{totalAiTokens.toLocaleString()}</strong>
@@ -245,15 +311,15 @@ function AdminDashboardPage() {
                 ) : (
                   queue.map((item) => (
                     <article className="admin-dashboard__queue-item" key={item.id}>
-                      <div className={`admin-dashboard__queue-icon ${item.severity === "critical" ? "is-critical" : ""}`}>
+                      <div className={`admin-dashboard__queue-icon ${getQueueSeverity(item.status) === "critical" ? "is-critical" : ""}`}>
                         <i className="ti-alert" />
                       </div>
                       <div>
-                        <strong>{item.document}</strong>
-                        <p>{item.reason}</p>
-                        <span>Uploader: {item.uploader} · Confidence {item.confidence}%</span>
+                        <strong>{item.title}</strong>
+                        <p>{getDocumentReason(item)}</p>
+                        <span>Uploader: {getDisplayName(item.uploader)} · Status {item.status}</span>
                       </div>
-                      <span className={`admin-dashboard__severity is-${item.severity}`}>{item.severity}</span>
+                      <span className={`admin-dashboard__severity is-${getQueueSeverity(item.status)}`}>{getQueueSeverity(item.status)}</span>
                       <button type="button" onClick={() => resolveModerationCase(item.id, "Approved")}>Approve</button>
                       <button type="button" onClick={() => resolveModerationCase(item.id, "Removed")}>Remove</button>
                     </article>
@@ -272,22 +338,23 @@ function AdminDashboardPage() {
                 </div>
 
                 <div className="admin-dashboard__quota-list">
-                  {INITIAL_QUOTAS.map((item) => {
-                    const percent = getQuotaPercent(item);
-                    return (
+                  {quotaRows.length === 0 ? (
+                    <div className="admin-dashboard__empty-state">No quota usage yet.</div>
+                  ) : (
+                    quotaRows.map((item) => (
                       <article className="admin-dashboard__quota-row" key={item.id}>
                         <div>
                           <strong>{item.owner}</strong>
-                          <span>{item.type}</span>
+                          <span>Daily quota usage</span>
                         </div>
                         <div className="admin-dashboard__quota-meter">
-                          <div><span style={{ width: `${percent}%` }} /></div>
-                          <small>{item.used} MB / {item.limit} MB</small>
+                          <div><span style={{ width: `${item.percent}%` }} /></div>
+                          <small>{formatBytes(item.used)} / {formatBytes(STORAGE_LIMIT_BYTES)}</small>
                         </div>
                         <button type="button" onClick={() => handleQuotaAction(item.owner)}>Review</button>
                       </article>
-                    );
-                  })}
+                    ))
+                  )}
                 </div>
               </div>
 
@@ -300,18 +367,22 @@ function AdminDashboardPage() {
                 </div>
 
                 <div className="admin-dashboard__ai-list">
-                  {INITIAL_AI_USAGE.map((item) => (
-                    <article className="admin-dashboard__ai-row" key={item.id}>
-                      <div className="admin-dashboard__avatar small">{getInitials(item.owner)}</div>
-                      <div>
-                        <strong>{item.owner}</strong>
-                        <span>{item.tokens.toLocaleString()} tokens · {item.requests} requests</span>
-                      </div>
-                      <button className={`admin-dashboard__risk is-${item.risk}`} type="button" onClick={() => handleAiAction(item.owner)}>
-                        {item.risk}
-                      </button>
-                    </article>
-                  ))}
+                  {aiRows.length === 0 ? (
+                    <div className="admin-dashboard__empty-state">No AI usage yet.</div>
+                  ) : (
+                    aiRows.map((item) => (
+                      <article className="admin-dashboard__ai-row" key={item.id}>
+                        <div className="admin-dashboard__avatar small">{getInitials(item.owner)}</div>
+                        <div>
+                          <strong>{item.owner}</strong>
+                          <span>{item.tokens.toLocaleString()} tokens · {item.requests} requests</span>
+                        </div>
+                        <button className={`admin-dashboard__risk is-${item.risk}`} type="button" onClick={() => handleAiAction(item.owner)}>
+                          {item.risk}
+                        </button>
+                      </article>
+                    ))
+                  )}
                 </div>
               </div>
             </section>
@@ -325,16 +396,20 @@ function AdminDashboardPage() {
                   <p>Current account state.</p>
                 </div>
               </div>
-              {INITIAL_USERS.map((user) => (
-                <article className="admin-dashboard__user-row" key={user.id}>
-                  <div className="admin-dashboard__avatar small">{getInitials(user.name)}</div>
-                  <div>
-                    <strong>{user.name}</strong>
-                    <span>{user.email}</span>
-                  </div>
-                  <span className={`admin-dashboard__user-status is-${user.status}`}>{user.status}</span>
-                </article>
-              ))}
+              {users.slice(0, 5).map((user) => {
+                const name = getDisplayName(user);
+                const status = String(user.status || "ACTIVE").toLowerCase();
+                return (
+                  <article className="admin-dashboard__user-row" key={user.id}>
+                    <div className="admin-dashboard__avatar small">{getInitials(name)}</div>
+                    <div>
+                      <strong>{name}</strong>
+                      <span>{user.email}</span>
+                    </div>
+                    <span className={`admin-dashboard__user-status is-${status}`}>{status}</span>
+                  </article>
+                );
+              })}
             </section>
 
             <section className="admin-dashboard__panel admin-dashboard__logs-panel">
@@ -353,10 +428,10 @@ function AdminDashboardPage() {
                     className={`admin-dashboard__log-item ${selectedLog?.id === log.id ? "is-selected" : ""}`}
                     onClick={() => setSelectedLog(log)}
                   >
-                    <span className={`admin-dashboard__log-dot is-${log.type}`} />
+                    <span className="admin-dashboard__log-dot is-ai" />
                     <div>
-                      <strong>{log.action}</strong>
-                      <small>{log.user} · {log.time}</small>
+                      <strong>{log.action_type}</strong>
+                      <small>{getDisplayName(log.actor)} · {getLogTime(log.created_at)}</small>
                     </div>
                   </button>
                 ))}
@@ -366,7 +441,7 @@ function AdminDashboardPage() {
                 <div className="admin-dashboard__log-detail">
                   <span>Selected log</span>
                   <strong>{selectedLog.id}</strong>
-                  <p>{selectedLog.action} on {selectedLog.target}</p>
+                  <p>{selectedLog.action_type} on {selectedLog.entity_type}</p>
                 </div>
               )}
             </section>
