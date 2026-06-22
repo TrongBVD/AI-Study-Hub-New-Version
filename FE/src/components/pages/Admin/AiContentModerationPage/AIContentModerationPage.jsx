@@ -85,11 +85,27 @@ function AIContentModerationPage() {
   }
 
   useEffect(() => {
-    loadCases();
+    async function loadInitialCases() {
+      try {
+        setIsLoading(true);
+        setError("");
+        const data = await getModerationDocuments();
+        setCases(data || []);
+        setSelectedCaseId((data || [])[0]?.id || null);
+      } catch (err) {
+        setError(
+          err.response?.data?.message || "Could not load moderation queue.",
+        );
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    loadInitialCases();
   }, []);
 
   const selectedCase =
-    cases.find((item) => item.id === selectedCaseId) || cases[0] || null;
+    cases.find((item) => item.id === selectedCaseId) || null;
 
   const filteredCases = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
@@ -142,26 +158,35 @@ function AIContentModerationPage() {
     }
   }
 
+  function resetFilters() {
+    setQuery("");
+    setStatusFilter("All");
+    setSeverityFilter("All");
+  }
+
   return (
     <section className="ai-moderation-page">
-      <header className="ai-moderation-page__hero">
-        <div className="ai-moderation-page__hero-copy">
-          <span className="ai-moderation-page__eyebrow">AI moderation desk</span>
-          <h1>Review risky uploads before they reach students.</h1>
-          <p>
-            Inspect AI reason, suspicious content, uploader identity and document
-            metadata in one admin workflow.
-          </p>
+      <header className="ai-moderation-page__page-header">
+        <div>
+          <h1>AI Moderation</h1>
+          <p>Review AI-detected issues and decide on the right action to keep the study space safe.</p>
         </div>
 
-        <div className="ai-moderation-page__hero-panel">
-          <span>Current queue</span>
-          <strong>{cases.length} cases</strong>
-          <p>{filteredCases.length} visible after filters</p>
-          <button type="button" onClick={loadCases}>
-            <i className="ti-reload"></i>
-            Refresh queue
+        <div className="ai-moderation-page__admin-tools">
+          <button
+            type="button"
+            className="ai-moderation-page__notification"
+            aria-label="Notifications"
+            onClick={loadCases}
+          >
+            <i className="ti-bell" />
+            <span>{cases.length}</span>
           </button>
+          <div className="ai-moderation-page__admin-avatar">AD</div>
+          <div className="ai-moderation-page__admin-name">
+            <strong>Admin</strong>
+            <i className="ti-angle-down" />
+          </div>
         </div>
       </header>
 
@@ -175,12 +200,70 @@ function AIContentModerationPage() {
         </div>
       )}
 
+      <section className="ai-moderation-page__toolbar" aria-label="Moderation filters">
+        <label className="ai-moderation-page__search-box">
+          <i className="ti-search" />
+          <input
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Search documents, uploaders, IDs..."
+          />
+        </label>
+
+        <select
+          aria-label="Risk level"
+          value={severityFilter}
+          onChange={(event) => setSeverityFilter(event.target.value)}
+        >
+          <option value="All">Risk level</option>
+          <option>High</option>
+          <option>Medium</option>
+        </select>
+
+        <select
+          aria-label="Status"
+          value={statusFilter}
+          onChange={(event) => setStatusFilter(event.target.value)}
+        >
+          {FILTERS.map((filter) => (
+            <option key={filter} value={filter}>
+              {filter === "All" ? "Status" : filter}
+            </option>
+          ))}
+        </select>
+
+        <button type="button" className="ai-moderation-page__toolbar-btn">
+          <i className="ti-user" />
+          <span>Uploader</span>
+          <i className="ti-angle-down ai-moderation-page__toolbar-chevron" />
+        </button>
+
+        <button type="button" className="ai-moderation-page__toolbar-btn">
+          <i className="ti-calendar" />
+          <span>Date</span>
+          <i className="ti-angle-down ai-moderation-page__toolbar-chevron" />
+        </button>
+
+        <button
+          type="button"
+          className="ai-moderation-page__reset-btn"
+          onClick={resetFilters}
+        >
+          Reset
+        </button>
+      </section>
+
       <div className="ai-moderation-page__stats-grid">
-        {stats.map((item) => (
+        {stats.map((item, index) => (
           <article key={item.label} className="ai-moderation-page__stat-card">
-            <span>{item.label}</span>
-            <strong>{item.value}</strong>
-            <p>{item.note}</p>
+            <span className={`ai-moderation-page__stat-icon is-${index + 1}`}>
+              <i className={["ti-files", "ti-time", "ti-shield", "ti-stats-up"][index]} />
+            </span>
+            <div>
+              <span>{item.label}</span>
+              <strong>{item.value}</strong>
+              <p>{item.note}</p>
+            </div>
           </article>
         ))}
       </div>
@@ -188,39 +271,18 @@ function AIContentModerationPage() {
       <div className="ai-moderation-page__workbench">
         <main className="ai-moderation-page__queue-card">
           <div className="ai-moderation-page__queue-header">
-            <div>
-              <h2>Moderation queue</h2>
-              <p>Search and filter flagged documents before taking action.</p>
-            </div>
+            <h2>Moderation queue</h2>
+            <span>{filteredCases.length} items</span>
+          </div>
 
-            <div className="ai-moderation-page__filters">
-              <label className="ai-moderation-page__search-box">
-                <i className="ti-search"></i>
-                <input
-                  value={query}
-                  onChange={(event) => setQuery(event.target.value)}
-                  placeholder="Search document, uploader or status..."
-                />
-              </label>
-
-              <select
-                value={statusFilter}
-                onChange={(event) => setStatusFilter(event.target.value)}
-              >
-                {FILTERS.map((filter) => (
-                  <option key={filter}>{filter}</option>
-                ))}
-              </select>
-
-              <select
-                value={severityFilter}
-                onChange={(event) => setSeverityFilter(event.target.value)}
-              >
-                <option>All</option>
-                <option>High</option>
-                <option>Medium</option>
-              </select>
-            </div>
+          <div className="ai-moderation-page__table-head" aria-hidden="true">
+            <span className="ai-moderation-page__checkbox-spacer" />
+            <span>Document</span>
+            <span>Uploader &amp; Date</span>
+            <span>Risk level</span>
+            <span>AI Confidence</span>
+            <span>Status</span>
+            <span />
           </div>
 
           <div className="ai-moderation-page__case-list">
@@ -234,15 +296,28 @@ function AIContentModerationPage() {
                     className={`ai-moderation-page__case-row ${
                       selectedCase?.id === item.id ? "is-selected" : ""
                     }`}
-                    onClick={() => setSelectedCaseId(item.id)}
+                    onClick={() =>
+                    setSelectedCaseId((currentId) =>
+                        currentId === item.id ? null : item.id,
+                    )
+                  }
                   >
-                    <span className="ai-moderation-page__file-icon">
-                      <i className="ti-file"></i>
+                    <span className="ai-moderation-page__checkbox">
+                    {selectedCase?.id === item.id && <i className="ti-check" />}
+                  </span>
+
+                  <span className="ai-moderation-page__file-icon">
+                      <i className="ti-file" />
                     </span>
 
                     <span className="ai-moderation-page__case-main">
                       <strong>{item.title}</strong>
-                      <small>{getDisplayName(item.uploader)} · {formatDate(item.created_at)}</small>
+                      <small>{item.id}</small>
+                    </span>
+
+                    <span className="ai-moderation-page__uploader-cell">
+                      <strong>{getDisplayName(item.uploader)}</strong>
+                      <small>{formatDate(item.created_at)}</small>
                     </span>
 
                     <span className={`ai-moderation-page__severity ${getSeverityClass(severity)}`}>
@@ -251,10 +326,12 @@ function AIContentModerationPage() {
 
                     <span className="ai-moderation-page__confidence">N/A</span>
 
-                    <span className="ai-moderation-page__status-pill">
+                    <span className={`ai-moderation-page__status-pill is-${getStatusLabel(item.status).toLowerCase().replaceAll(" ", "-")}`}>
                       {getStatusLabel(item.status)}
                     </span>
-                  </button>
+  
+                  <i className="ti-angle-right ai-moderation-page__row-arrow" />
+                </button>
                 );
               })
             ) : (
@@ -265,15 +342,40 @@ function AIContentModerationPage() {
               </div>
             )}
           </div>
+
+          <footer className="ai-moderation-page__queue-footer">
+            <span>Showing {filteredCases.length ? 1 : 0}–{filteredCases.length} of {filteredCases.length} items</span>
+            <div>
+              <button type="button" aria-label="Previous page" disabled>
+                <i className="ti-angle-left" />
+              </button>
+              <button type="button" className="is-current">1</button>
+              <button type="button" aria-label="Next page" disabled>
+                <i className="ti-angle-right" />
+              </button>
+            </div>
+          </footer>
         </main>
 
         <aside className="ai-moderation-page__detail-panel">
           {selectedCase ? (
             <>
+              <div className="ai-moderation-page__selected-label">
+                <strong>Selected case</strong>
+                <span>{selectedCase.id}</span>
+              </div>
+
               <div className="ai-moderation-page__detail-top">
-                <div>
-                  <span>{selectedCase.id}</span>
+                <span className="ai-moderation-page__file-icon">
+                  <i className="ti-file" />
+                </span>
+                <div className="ai-moderation-page__detail-title">
                   <h2>{selectedCase.title}</h2>
+                  <div>
+                    <strong>N/A</strong>
+                    <span>AI confidence</span>
+                    <i><b style={{ width: "0%" }} /></i>
+                  </div>
                 </div>
                 <span className={`ai-moderation-page__severity ${getSeverityClass(getSeverity(selectedCase.status))}`}>
                   {getSeverity(selectedCase.status)}
@@ -338,13 +440,23 @@ function AIContentModerationPage() {
                   className="approve"
                   onClick={() => updateCaseStatus(selectedCase.id, "Approved")}
                 >
+                  <i className="ti-check" />
                   Approve
+                </button>
+                <button
+                  type="button"
+                  className="quarantine"
+                  onClick={() => updateCaseStatus(selectedCase.id, "Quarantined")}
+                >
+                  <i className="ti-lock" />
+                  Quarantine
                 </button>
                 <button
                   type="button"
                   className="flag"
                   onClick={() => updateCaseStatus(selectedCase.id, "Flagged")}
                 >
+                  <i className="ti-flag-alt" />
                   Keep flagged
                 </button>
               </div>

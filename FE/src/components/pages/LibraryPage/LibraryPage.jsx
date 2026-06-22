@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import JSZip from "jszip";
 
 import {
   getMyDocuments,
@@ -144,13 +145,148 @@ libraryData?.isStarred,
   const [isTagModalOpen, setIsTagModalOpen] = useState(false);
   const [hashtags, setHashtags] = useState(["", "", ""]);
 
-  const [libraryItems, setLibraryItems] = useState([]);
+  const [libraryItems, setLibraryItems] = useState(() => {
+    try {
+      const importedItems = JSON.parse(
+        localStorage.getItem(`aiStudyHubImportedLibraryItems:${libraryId}`) || "[]",
+      );
+      return Array.isArray(importedItems) ? importedItems : [];
+    } catch {
+      return [];
+    }
+  });
   const [isLoadingDocuments, setIsLoadingDocuments] = useState(false);
   const [isUploadingDocuments, setIsUploadingDocuments] = useState(false);
+  const [isExportingLibrary, setIsExportingLibrary] = useState(false);
 
   const [shareOnProfile, setShareOnProfile] = useState(
     () => getInitialLibraryData().shareOnProfile ?? false
   );
+
+  function sanitizeArchiveName(value, fallback = "file") {
+    const safeValue = String(value || fallback)
+      .replace(/[<>:"/\\|?*]+/g, "-")
+      .trim();
+
+    return safeValue || fallback;
+  }
+
+  async function handleDownloadLibrary() {
+    if (isExportingLibrary) return;
+
+    const libraryPackage = {
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      library: {
+        ...libraryData,
+        name: libraryName.trim() || libraryData.name,
+        visibility: libraryVisibility,
+        shareOnProfile,
+        stars,
+        isStarred,
+      },
+      items: libraryItems,
+    };
+    const safeLibraryName = sanitizeArchiveName(
+      libraryPackage.library.name,
+      "library",
+    );
+
+    try {
+      setIsExportingLibrary(true);
+      const zip = new JSZip();
+      const filesFolder = zip.folder("files");
+      const failedFiles = [];
+      const foldersById = new Map(
+        libraryItems
+          .filter((item) => item.type === "folder")
+          .map((folder) => [folder.id, sanitizeArchiveName(folder.name, "folder")]),
+      );
+
+      zip.file("library.json", JSON.stringify(libraryPackage, null, 2));
+
+      for (const item of libraryItems.filter((entry) => entry.type !== "folder")) {
+        const fileName = sanitizeArchiveName(item.name, "document");
+        const folderName = item.folderId
+          ? foldersById.get(item.folderId)
+          : null;
+        const targetFolder = folderName
+          ? filesFolder.folder(folderName)
+          : filesFolder;
+
+        if (!item.isBackendFile || !item.id) {
+          failedFiles.push(`${item.name}: file content is not available from backend`);
+          continue;
+        }
+
+        try {
+          const downloadData = await downloadDocument(item.id);
+          if (!downloadData?.downloadUrl) {
+            throw new Error("Missing download URL");
+          }
+
+          const response = await fetch(downloadData.downloadUrl);
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+          }
+
+          targetFolder.file(fileName, await response.blob());
+        } catch (error) {
+          failedFiles.push(`${item.name}: ${error.message || "download failed"}`);
+        }
+      }
+
+      if (failedFiles.length > 0) {
+        zip.file(
+          "export-report.txt",
+          [
+            "Some files could not be included in this archive:",
+            "",
+            ...failedFiles.map((message) => `- ${message}`),
+          ].join("\n"),
+        );
+      }
+
+      const zipBlob = await zip.generateAsync({ type: "blob" });
+      const downloadUrl = URL.createObjectURL(zipBlob);
+      const link = document.createElement("a");
+
+      link.href = downloadUrl;
+      link.download = `${safeLibraryName}.zip`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(downloadUrl);
+    } catch (error) {
+      console.error("Cannot export library:", error);
+      alert("Cannot create the library ZIP. Please try again.");
+    } finally {
+      setIsExportingLibrary(false);
+    }
+  }
+
+  async function handleShareLibrary() {
+    const shareData = {
+      title: libraryName || libraryData.name || "Study library",
+      text: `Open the "${libraryName || libraryData.name}" library on AI Study Hub.`,
+      url: window.location.href,
+    };
+
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData);
+        return;
+      }
+
+      await navigator.clipboard.writeText(shareData.url);
+      alert("Library link copied to clipboard.");
+    } catch (error) {
+      if (error?.name !== "AbortError") {
+        console.error("Cannot share library:", error);
+        alert("Cannot share this library right now.");
+      }
+    }
+  }
 
 function handleToggleStar() {
   const nextIsStarred = !isStarred;
@@ -304,10 +440,10 @@ function countUsedStorageBytes(items) {
       );
 
       setLibraryItems((currentItems) => {
-        const localFolders = currentItems.filter(
-          (item) => item.type === "folder",
+        const localItems = currentItems.filter(
+          (item) => !item.isBackendFile,
         );
-        const nextItems = [...localFolders, ...backendItems];
+        const nextItems = [...localItems, ...backendItems];
 
         syncLibraryDocumentCount(nextItems);
 
@@ -470,32 +606,6 @@ const uploadedItems = (uploadedDocuments || []).map((document, index) => ({
     setCurrentFolder(null);
     setDocumentSearch("");
   }
-
-function getFolderPath(folder) {
-  const path = [];
-  let selectedFolder = folder;
-
-  while (selectedFolder) {
-    path.unshift(selectedFolder);
-
-    const parentFolderId = selectedFolder.folderId ?? null;
-
-    if (!parentFolderId) break;
-
-    selectedFolder = libraryItems.find(
-      (item) =>
-        item.type === "folder" &&
-        getFolderKey(item) === parentFolderId
-    );
-  }
-
-  return path;
-}
-
-function handleOpenBreadcrumbFolder(folder) {
-  setCurrentFolder(folder);
-  setDocumentSearch("");
-}
 
   async function handleDeleteDocument(fileItem) {
     if (!window.confirm(`Delete "${fileItem.name}"?`)) return;
@@ -697,11 +807,16 @@ function handleDeleteLibrary() {
 
   const documentItems = visibleItems.filter((item) => item.type !== "folder");
   const folderItems = visibleItems.filter((item) => item.type === "folder");
-  const currentFolderPath = currentFolder ? getFolderPath(currentFolder) : [];
+  const normalizedDocumentSearch = documentSearch.trim().toLowerCase();
 
   const filteredDocuments = documentItems.filter((item) =>
-    item.name.toLowerCase().includes(documentSearch.toLowerCase()),
+    item.name.toLowerCase().includes(normalizedDocumentSearch),
   );
+  const filteredFolders = folderItems.filter((item) =>
+    item.name.toLowerCase().includes(normalizedDocumentSearch),
+  );
+  const filteredStorageItemsCount =
+    filteredFolders.length + filteredDocuments.length;
 
   const uploadedFileCount = countUploadedFiles(libraryItems) || Number(libraryData.documents) || 0;
 
@@ -717,7 +832,6 @@ const remainingStorageBytes = Math.max(
   0
 );
 
-  const totalFolderCount = libraryItems.filter((item) => item.type === "folder").length;
   const currentLocationLabel = currentFolder ? currentFolder.name : "All subjects";
   const statusText = isLoadingDocuments
     ? "Syncing documents"
@@ -737,21 +851,10 @@ const remainingStorageBytes = Math.max(
               Back to libraries
             </button>
 
-            <div className="library_identity_block">
-              <div className="library_logo">
-                <i className="ti-archive"></i>
-              </div>
-
-              <div>
-                <div className="library_title">
-                  <h1>{libraryData.name}</h1>
-                  <span>{formatVisibility(libraryData.visibility)}</span>
-                </div>
-
-                <p>
-                  {libraryData.description ||
-                    "Organize files, folders, tags, storage and AI review materials in one library."}
-                </p>
+            <div className="library_heading_block">
+              <div className="library_title">
+                <h1>{libraryData.name}</h1>
+                <span>{formatVisibility(libraryData.visibility)}</span>
               </div>
             </div>
           </div>
@@ -781,28 +884,6 @@ const remainingStorageBytes = Math.max(
               </label>
             </div>
           </div>
-        </section>
-
-        <section className="library_metric_strip">
-          <article>
-            <span>Files</span>
-            <strong>{uploadedFileCount}</strong>
-          </article>
-
-          <article>
-            <span>Folders</span>
-            <strong>{totalFolderCount}</strong>
-          </article>
-
-          <article>
-            <span>Stars</span>
-            <strong>{stars}</strong>
-          </article>
-
-          <article>
-            <span>Visibility</span>
-            <strong>{shareOnProfile ? "Profile" : "Hidden"}</strong>
-          </article>
         </section>
 
         <nav className="library_tabs" aria-label="Library sections">
@@ -865,66 +946,6 @@ const remainingStorageBytes = Math.max(
                   </div>
                 </div>
 
-                <div className="documents_path_bar">
-                  <div className="documents_breadcrumb">
-                    <button type="button" onClick={handleBackToLibrary}>
-                      All subjects
-                    </button>
-
-                    {currentFolderPath.map((folder, index) => {
-                      const isLastFolder = index === currentFolderPath.length - 1;
-
-                      return (
-                        <span className="breadcrumb_item" key={getFolderKey(folder)}>
-                          <i className="ti-angle-right"></i>
-                          {isLastFolder ? (
-                            <strong>{folder.name}</strong>
-                          ) : (
-                            <button
-                              type="button"
-                              onClick={() => handleOpenBreadcrumbFolder(folder)}
-                            >
-                              {folder.name}
-                            </button>
-                          )}
-                        </span>
-                      );
-                    })}
-                  </div>
-
-                  <span>{filteredDocuments.length} shown</span>
-                </div>
-
-                {folderItems.length > 0 && (
-                  <section className="folder_grid">
-                    {folderItems.map((folder) => (
-                      <article
-                        className="folder_card"
-                        key={getFolderKey(folder)}
-                        onClick={() => handleOpenFolder(folder)}
-                      >
-                        <button
-                          className="folder_delete_btn"
-                          type="button"
-                          title="Delete folder"
-                          onClick={(event) => handleDeleteFolder(folder, event)}
-                        >
-                          <i className="ti-trash"></i>
-                        </button>
-
-                        <div className="folder_card_icon">
-                          <i className="ti-folder"></i>
-                        </div>
-
-                        <div>
-                          <h3>{folder.name}</h3>
-                          <p>{folder.note}</p>
-                        </div>
-                      </article>
-                    ))}
-                  </section>
-                )}
-
                 {isLoadingDocuments ? (
                   <div className="empty_state_card loading_state_card">
                     <div className="empty_state_icon">
@@ -946,7 +967,7 @@ const remainingStorageBytes = Math.max(
                       <input type="file" multiple onChange={handleUploadFile} />
                     </label>
                   </div>
-                ) : documentSearch && filteredDocuments.length === 0 ? (
+                ) : documentSearch && filteredStorageItemsCount === 0 ? (
                   <div className="empty_state_card">
                     <div className="empty_state_icon">
                       <i className="ti-search"></i>
@@ -959,17 +980,91 @@ const remainingStorageBytes = Math.max(
                       <input type="file" multiple onChange={handleUploadFile} />
                     </label>
                   </div>
-                ) : (
-                  filteredDocuments.length > 0 && (
-                    <section className="documents_table_card">
-                      <div className="documents_table_header">
-                        <span>File</span>
-                        <span>Size</span>
-                        <span>Uploaded</span>
-                        <span>Actions</span>
+                ) : filteredStorageItemsCount > 0 ? (
+                  <section className="documents_table_card storage_table_card">
+                    <header className="storage_table_title">
+                      <div>
+                        {currentFolder && (
+                          <button type="button" onClick={handleBackToLibrary}>
+                            <i className="ti-angle-left"></i>
+                          </button>
+                        )}
+                        <div>
+                          <h3>Storage</h3>
+                          <p>
+                            {currentFolder
+                              ? currentFolder.name
+                              : "Folders and uploaded files"}
+                          </p>
+                        </div>
                       </div>
+                      <span>{filteredStorageItemsCount} items</span>
+                    </header>
 
-                      <div className="documents_table_body">
+                    <div className="documents_table_header">
+                      <span>Item</span>
+                      <span>Size / Type</span>
+                      <span>Uploaded / Details</span>
+                      <span>Actions</span>
+                    </div>
+
+                    <div className="documents_table_body">
+                      {filteredFolders.map((folder) => (
+                        <div
+                          className="documents_table_row storage_folder_row"
+                          key={getFolderKey(folder)}
+                          role="button"
+                          tabIndex={0}
+                          onClick={() => handleOpenFolder(folder)}
+                          onKeyDown={(event) => {
+                            if (event.key === "Enter" || event.key === " ") {
+                              event.preventDefault();
+                              handleOpenFolder(folder);
+                            }
+                          }}
+                        >
+                          <div className="document_file_name">
+                            <div className="document_icon_shell storage_folder_icon">
+                              <i className="ti-folder"></i>
+                            </div>
+                            <div className="document_name_with_tags">
+                              <span>{folder.name}</span>
+                              <small>Folder</small>
+                            </div>
+                          </div>
+
+                          <div className="document_size">Folder</div>
+
+                          <div className="document_uploaded">
+                            <strong>{folder.note || "Created recently"}</strong>
+                            <span>Open to view contents</span>
+                          </div>
+
+                          <div className="document_actions">
+                            <button
+                              type="button"
+                              title="Open folder"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                handleOpenFolder(folder);
+                              }}
+                            >
+                              <i className="ti-folder"></i>
+                            </button>
+                            <button
+                              type="button"
+                              className="delete_document_btn"
+                              title="Delete folder"
+                              onClick={(event) =>
+                                handleDeleteFolder(folder, event)
+                              }
+                            >
+                              <i className="ti-trash"></i>
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+
                         {filteredDocuments.map((document) => (
                           <div
                             className="documents_table_row"
@@ -1026,9 +1121,16 @@ const remainingStorageBytes = Math.max(
                             </div>
                           </div>
                         ))}
-                      </div>
-                    </section>
-                  )
+                    </div>
+                  </section>
+                ) : (
+                  <div className="empty_state_card">
+                    <div className="empty_state_icon">
+                      <i className="ti-folder"></i>
+                    </div>
+                    <h3>{currentFolder ? "This folder is empty" : "Your storage is empty"}</h3>
+                    <p>Add a folder or upload a document to get started.</p>
+                  </div>
                 )}
               </section>
             )}
@@ -1206,17 +1308,6 @@ const remainingStorageBytes = Math.max(
               </div>
             </div>
 
-            <div className="side_card library_about_card">
-              <div className="library_about_header">
-                <i className="ti-book"></i>
-                <h3>About</h3>
-              </div>
-              <p>
-                {libraryData.description ||
-                  "This library helps students manage learning resources, upload documents, and use AI to summarize or ask questions from files."}
-              </p>
-            </div>
-
             <div className="side_card">
               <div className="side_title">
                 <h3>Owner</h3>
@@ -1254,15 +1345,48 @@ const remainingStorageBytes = Math.max(
             </div>
 
             <div className="summarize_card">
-              <h3>Summarize library</h3>
-              <p>Use AI to generate a study overview from uploaded files.</p>
-              <button type="button">Start analysis</button>
-              <div className="flash_btn">
-                <i className="ti-bolt"></i>
+              <h3>Library access</h3>
+              <p>Download the full library as ZIP or share access with others.</p>
+              <div className="library_access_actions">
+                <button
+                  type="button"
+                  onClick={handleDownloadLibrary}
+                  disabled={isExportingLibrary}
+                >
+                  <i className="ti-download"></i>
+                  {isExportingLibrary ? "Preparing..." : "Download"}
+                </button>
+                <button
+                  type="button"
+                  className="library_import_button"
+                  onClick={handleShareLibrary}
+                >
+                  <i className="ti-share"></i>
+                  Share
+                </button>
               </div>
             </div>
           </aside>
         </section>
+
+        {activeTab === "documents" && (
+          <section className="library_readme_card">
+            <header className="library_readme_header">
+              <div>
+                <i className="ti-book"></i>
+                <strong>Title Description</strong>
+              </div>
+            </header>
+
+            <div className="library_readme_content">
+              <h2>{libraryData.name}</h2>
+              <p>
+                {libraryData.description ||
+                  "This library helps students manage learning resources, upload documents, and use AI to summarize or ask questions from files."}
+              </p>
+            </div>
+          </section>
+        )}
       </section>
 
       {isTagModalOpen && (

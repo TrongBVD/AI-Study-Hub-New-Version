@@ -174,46 +174,6 @@
   transform: translateX(0);
 }
 
-.settings_sidebar_account {
-  border-top: 1px solid var(--settings-line);
-  margin-top: 0.6rem;
-  padding: 1rem 0.45rem 0;
-  display: grid;
-  grid-template-columns: 2.25rem minmax(0, 1fr);
-  align-items: center;
-  gap: 0.7rem;
-}
-
-.settings_account_avatar {
-  width: 2.25rem;
-  height: 2.25rem;
-  border-radius: 0.65rem;
-  background: var(--settings-accent);
-  color: #fffaf0;
-  display: grid;
-  place-items: center;
-  font-size: 0.85rem;
-  font-weight: 800;
-}
-
-.settings_sidebar_account strong,
-.settings_sidebar_account span {
-  display: block;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.settings_sidebar_account strong {
-  font-size: 0.78rem;
-}
-
-.settings_sidebar_account span {
-  margin-top: 0.2rem;
-  color: var(--settings-subtle);
-  font-size: 0.68rem;
-}
-
 .settings_content {
   min-width: 0;
 }
@@ -826,10 +786,6 @@
     border-radius: 0.8rem;
     background: rgba(255, 250, 240, 0.55);
     padding: 0.25rem;
-  }
-
-  .settings_sidebar_account {
-    display: none;
   }
 
   .settings_content_inner {

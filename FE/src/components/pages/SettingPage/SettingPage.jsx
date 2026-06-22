@@ -384,17 +384,7 @@ const NOTIFICATION_CATEGORIES = [
   },
 ];
 
-function getStoredUser() {
-  try {
-    return JSON.parse(localStorage.getItem("user") || "null") || {};
-  } catch (error) {
-    console.error("Cannot read user settings profile:", error);
-    return {};
-  }
-}
-
 function SettingPage() {
-  const storedUser = getStoredUser();
   const [workspaceName, setWorkspaceName] = useState("AI Student Hub");
   const [customBranding, setCustomBranding] = useState(false);
   const [selectedColor, setSelectedColor] = useState("#b4531a");
@@ -433,13 +423,6 @@ function SettingPage() {
       },
     }));
   }
-
-  const displayName =
-    storedUser.full_name ||
-    storedUser.username ||
-    localStorage.getItem("aiStudyHubProfileName") ||
-    "Study account";
-  const displayEmail = storedUser.email || "Signed-in account";
 
   return (
     <main className="settings_page">
@@ -485,15 +468,6 @@ function SettingPage() {
           ))}
         </nav>
 
-        <footer className="settings_sidebar_account">
-          <div className="settings_account_avatar" aria-hidden="true">
-            {displayName.slice(0, 1).toUpperCase()}
-          </div>
-          <div>
-            <strong>{displayName}</strong>
-            <span>{displayEmail}</span>
-          </div>
-        </footer>
       </aside>
 
       <section className="settings_content">

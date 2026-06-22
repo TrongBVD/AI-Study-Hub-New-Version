@@ -1,6 +1,6 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import FormInput from "../../common/FormInput/FormInput.jsx";
-import axios from "axios";
+import api from "../../../utils/api.js";
 import { useNavigate } from "react-router-dom";
 import "./LoginPage.css";
 
@@ -13,14 +13,10 @@ function ForgotPassword() {
     e.preventDefault();
     setLoading(true);
     
-    // Ghi nhận trạng thái gửi đi
-    console.log("[DRY RUN] Yêu cầu cấp OTP reset cho:", email);
-
     try {
-      await axios.post("http://localhost:5000/api/auth/forgot-password", { email });
+      await api.post("/auth/forgot-password", { email });
       alert("Mã OTP khôi phục đã được gửi vào Email của bạn.");
-      // Đẩy email vào History State và chuyển hướng sang trang nhập OTP mới
-      navigate('/reset-password-otp', { state: { email } });
+      navigate("/reset-password", { state: { email } });
     } catch (error) {
       alert(error.response?.data?.message || "Lỗi hệ thống. Vui lòng thử lại.");
     } finally {

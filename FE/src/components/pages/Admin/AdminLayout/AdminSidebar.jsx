@@ -1,31 +1,18 @@
 import { NavLink, useNavigate } from "react-router-dom";
-import Logo from "../../../assets/logo/Logo.jsx";
-import api from "../../../utils/api.js";
-import "../../../assets/icons/themify-icons-font/themify-icons/themify-icons.css";
+import Logo from "../../../../assets/logo/Logo.jsx";
+import api from "../../../../utils/api.js";
 
-function getStoredUserRole() {
-  try {
-    const storedUser = JSON.parse(localStorage.getItem("user") || "null");
-    return String(storedUser?.role || "").toUpperCase();
-  } catch {
-    return "";
-  }
-}
+const ADMIN_MENU_ITEMS = [
+  { icon: "ti-dashboard", label: "Dashboard", path: "/admin/dashboard" },
+  { icon: "ti-shield", label: "AI Moderation", path: "/admin/moderation" },
+  { icon: "ti-user", label: "Users", path: "/admin/users" },
+  { icon: "ti-list", label: "Activity Logs", path: "/admin/logs" },
+  { icon: "ti-pie-chart", label: "Usage", path: "/admin/usage" },
+  { icon: "ti-settings", label: "System settings", path: "/admin/settings" },
+];
 
-function Sidebar({ isOpen, onClose }) {
+function AdminSidebar({ isOpen, onClose }) {
   const navigate = useNavigate();
-  const isSystemAdmin = getStoredUserRole() === "SYSTEM_ADMIN";
-
-  const menuItems = [
-    { icon: "ti-home", label: "Home", path: "/dashboard/home" },
-    { icon: "ti-folder", label: "My libraries", path: "/dashboard/libraries" },
-    { icon: "ti-layout-grid2", label: "My workspaces", path: "/dashboard/workspaces" },
-
-    // Đã thay đổi AI Chat thành Search User ở đây
-    { icon: "ti-search", label: "Search User", path: "/dashboard/search-user"},
-
-    { icon: "ti-settings", label: "Settings", path: "/dashboard/settings" },
-  ];
 
   async function handleLogout() {
     try {
@@ -47,22 +34,27 @@ function Sidebar({ isOpen, onClose }) {
         <button
           type="button"
           className="sidebar_overlay"
-          aria-label="Close sidebar"
+          aria-label="Close admin sidebar"
           onClick={onClose}
         />
       )}
+
       <aside className={`sidebar ${isOpen ? "sidebar_open" : ""}`}>
         <div className="sidebar_top">
           <div className="sidebar_header">
             <Logo />
-
-            <button className="close_btn" onClick={onClose}>
+            <button
+              type="button"
+              className="close_btn"
+              aria-label="Close admin sidebar"
+              onClick={onClose}
+            >
               ×
             </button>
           </div>
 
           <nav className="sidebar_nav">
-            {menuItems.map((item) => (
+            {ADMIN_MENU_ITEMS.map((item) => (
               <NavLink
                 to={item.path}
                 className={({ isActive }) =>
@@ -79,16 +71,14 @@ function Sidebar({ isOpen, onClose }) {
         </div>
 
         <div className="sidebar_bottom_actions">
-          {isSystemAdmin && (
-            <NavLink
-              to="/admin/dashboard"
-              className="admin_dashboard_btn"
-              onClick={onClose}
-            >
-              <i className="ti-dashboard"></i>
-              <span>Admin dashboard</span>
-            </NavLink>
-          )}
+          <NavLink
+            to="/dashboard/home"
+            className="admin_dashboard_btn"
+            onClick={onClose}
+          >
+            <i className="ti-home"></i>
+            <span>User dashboard</span>
+          </NavLink>
 
           <button type="button" className="logout_btn" onClick={handleLogout}>
             <i className="ti-power-off"></i>
@@ -100,4 +90,4 @@ function Sidebar({ isOpen, onClose }) {
   );
 }
 
-export default Sidebar;
+export default AdminSidebar;

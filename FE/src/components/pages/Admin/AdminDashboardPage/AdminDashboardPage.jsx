@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   getActivityLogs,
   getAdminDashboard,
@@ -56,7 +57,7 @@ function formatBytes(bytes) {
 }
 
 function AdminDashboardPage() {
-  const [searchTerm, setSearchTerm] = useState("");
+  const navigate = useNavigate();
   const [stats, setStats] = useState(null);
   const [queue, setQueue] = useState([]);
   const [users, setUsers] = useState([]);
@@ -101,22 +102,7 @@ function AdminDashboardPage() {
     loadDashboard();
   }, []);
 
-  const visibleLogs = useMemo(() => {
-    const keyword = searchTerm.trim().toLowerCase();
-    if (!keyword) return logs;
-
-    return logs.filter((log) =>
-      [
-        getDisplayName(log.actor),
-        log.action_type,
-        log.entity_type,
-        log.entity_id,
-      ]
-        .join(" ")
-        .toLowerCase()
-        .includes(keyword),
-    );
-  }, [logs, searchTerm]);
+  const visibleLogs = logs.slice(0, 5);
 
   const quotaRows = useMemo(
     () =>
@@ -134,7 +120,6 @@ function AdminDashboardPage() {
         .slice(0, 3),
     [usage.quotaUsage],
   );
-
   const aiRows = useMemo(
     () =>
       usage.aiUsage
@@ -162,6 +147,10 @@ function AdminDashboardPage() {
       : Math.round(quotaRows.reduce((sum, item) => sum + item.percent, 0) / quotaRows.length);
   const aiCriticalUsers = aiRows.filter((item) => item.risk === "critical").length;
   const totalAiTokens = stats?.totalTokensToday || 0;
+  const criticalModerationCount = queue.filter(
+    (item) => getQueueSeverity(item.status) === "critical",
+  ).length;
+  const attentionCount = moderationQueueCount + aiCriticalUsers;
 
   async function resolveModerationCase(documentId, action) {
     const decision = action === "Approved" ? "APPROVE" : "KEEP_REJECTED";
@@ -185,39 +174,6 @@ function AdminDashboardPage() {
 
   return (
     <section className="admin-dashboard">
-      <header className="admin-dashboard__topbar">
-        <div className="admin-dashboard__brand-block">
-          <div className="admin-dashboard__brand-icon">
-            <i className="ti-shield" />
-          </div>
-          <div>
-            <strong>AI Study Hub Admin</strong>
-            <span>System overview</span>
-          </div>
-        </div>
-
-        <label className="admin-dashboard__search-box" aria-label="Search dashboard logs">
-          <i className="ti-search" />
-          <input
-            value={searchTerm}
-            onChange={(event) => setSearchTerm(event.target.value)}
-            type="search"
-            placeholder="Search users, documents, actions or logs..."
-          />
-        </label>
-
-        <div className="admin-dashboard__topbar-right">
-          <button type="button" className="admin-dashboard__ghost-btn">
-            <i className="ti-bell" />
-          </button>
-          <button type="button" className="admin-dashboard__primary-btn">
-            <i className="ti-control-panel" />
-            System settings
-          </button>
-          <div className="admin-dashboard__avatar">AD</div>
-        </div>
-      </header>
-
       <main className="admin-dashboard__inner">
         {isLoading && <div className="admin-dashboard__notice">Loading admin data...</div>}
         {error && <div className="admin-dashboard__notice">{error}</div>}
@@ -229,64 +185,103 @@ function AdminDashboardPage() {
           </div>
         )}
 
-        <section className="admin-dashboard__hero">
-          <div>
-            <span className="admin-dashboard__kicker">Admin dashboard</span>
-            <h1>Monitor users, documents, moderation, quota, AI usage and recent logs.</h1>
-            <p>Use this page as the first control point before opening deeper admin modules.</p>
-          </div>
+        <section className="admin-dashboard__overview-grid">
+          <article className="admin-dashboard__overview-card">
+            <div>
+              <span className="admin-dashboard__kicker">Operations console</span>
+              <h1>System overview</h1>
+              <p>Monitor platform activity, review flagged content, track usage and manage users.</p>
+              <p>Use the modules below to keep the system safe, reliable and efficient.</p>
+            </div>
 
-          <div className="admin-dashboard__hero-card">
-            <span>Today status</span>
-            <strong>{moderationQueueCount + aiCriticalUsers}</strong>
-            <p>items need admin attention</p>
-          </div>
+            <footer className="admin-dashboard__overview-footer">
+              <span>Last updated: Jun 19, 2026 03:52 PM</span>
+              <button type="button" aria-label="Refresh dashboard">
+                <i className="ti-reload" />
+              </button>
+              <span className="admin-dashboard__auto-refresh">
+                Auto refresh: On
+                <i aria-hidden="true" />
+              </span>
+            </footer>
+          </article>
+
+          <article className="admin-dashboard__attention-card">
+            <header>
+              <span className="admin-dashboard__attention-icon">
+                <i className="ti-alert" />
+              </span>
+              <div>
+                <h2>Needs attention</h2>
+                <p>Items require admin review today.</p>
+              </div>
+            </header>
+
+            <div className="admin-dashboard__attention-metrics">
+              <div>
+                <strong>{attentionCount}</strong>
+                <span>Items need admin attention</span>
+              </div>
+              <div>
+                <strong>{criticalModerationCount}</strong>
+                <span>Critical items</span>
+              </div>
+              <div>
+                <strong>{moderationQueueCount}</strong>
+                <span>In review</span>
+              </div>
+              <div>
+                <strong>{aiCriticalUsers}</strong>
+                <span>High priority</span>
+              </div>
+            </div>
+          </article>
         </section>
 
         <section className="admin-dashboard__stats-grid" aria-label="Dashboard summary">
           <article className="admin-dashboard__stat-card">
-            <div className="admin-dashboard__stat-top">
-              <span className="admin-dashboard__stat-icon"><i className="ti-user" /></span>
+            <span className="admin-dashboard__stat-icon"><i className="ti-user" /></span>
+            <div>
+              <span className="admin-dashboard__stat-label">Users</span>
+              <strong className="admin-dashboard__stat-value">{stats?.totalUsers || users.length}</strong>
               <span className="admin-dashboard__stat-note">{activeUsers} active</span>
             </div>
-            <span className="admin-dashboard__stat-label">Users</span>
-            <strong className="admin-dashboard__stat-value">{stats?.totalUsers || 0}</strong>
           </article>
 
           <article className="admin-dashboard__stat-card">
-            <div className="admin-dashboard__stat-top">
-              <span className="admin-dashboard__stat-icon"><i className="ti-files" /></span>
-              <span className="admin-dashboard__stat-note">{stats?.pendingModeration || 0} flagged</span>
+            <span className="admin-dashboard__stat-icon"><i className="ti-files" /></span>
+            <div>
+              <span className="admin-dashboard__stat-label">Documents</span>
+              <strong className="admin-dashboard__stat-value">{stats?.totalDocuments || 0}</strong>
+              <span className="admin-dashboard__stat-note">{stats?.pendingModeration || moderationQueueCount} flagged</span>
             </div>
-            <span className="admin-dashboard__stat-label">Documents</span>
-            <strong className="admin-dashboard__stat-value">{stats?.totalDocuments || 0}</strong>
           </article>
 
           <article className="admin-dashboard__stat-card admin-dashboard__stat-card--alert">
-            <div className="admin-dashboard__stat-top">
-              <span className="admin-dashboard__stat-icon"><i className="ti-alert" /></span>
+            <span className="admin-dashboard__stat-icon"><i className="ti-shield" /></span>
+            <div>
+              <span className="admin-dashboard__stat-label">Moderation</span>
+              <strong className="admin-dashboard__stat-value">{moderationQueueCount}</strong>
               <span className="admin-dashboard__stat-note">Review queue</span>
             </div>
-            <span className="admin-dashboard__stat-label">Moderation</span>
-            <strong className="admin-dashboard__stat-value">{moderationQueueCount}</strong>
           </article>
 
           <article className="admin-dashboard__stat-card">
-            <div className="admin-dashboard__stat-top">
-              <span className="admin-dashboard__stat-icon"><i className="ti-harddrives" /></span>
-              <span className="admin-dashboard__stat-note">Average {avgQuotaUsage}%</span>
+            <span className="admin-dashboard__stat-icon"><i className="ti-pie-chart" /></span>
+            <div>
+              <span className="admin-dashboard__stat-label">Quota usage</span>
+              <strong className="admin-dashboard__stat-value">{avgQuotaUsage}%</strong>
+              <span className="admin-dashboard__stat-note">Of storage limit</span>
             </div>
-            <span className="admin-dashboard__stat-label">Uploaded today</span>
-            <strong className="admin-dashboard__stat-value">{formatBytes(stats?.totalBytesUploadedToday)}</strong>
           </article>
 
           <article className="admin-dashboard__stat-card admin-dashboard__stat-card--dark">
-            <div className="admin-dashboard__stat-top">
-              <span className="admin-dashboard__stat-icon"><i className="ti-bolt" /></span>
+            <span className="admin-dashboard__stat-icon"><i className="ti-bolt" /></span>
+            <div>
+              <span className="admin-dashboard__stat-label">AI usage</span>
+              <strong className="admin-dashboard__stat-value">{totalAiTokens.toLocaleString()}</strong>
               <span className="admin-dashboard__stat-note">{stats?.totalAiChatsToday || 0} chats</span>
             </div>
-            <span className="admin-dashboard__stat-label">AI usage</span>
-            <strong className="admin-dashboard__stat-value">{totalAiTokens.toLocaleString()}</strong>
           </article>
         </section>
 
@@ -298,7 +293,13 @@ function AdminDashboardPage() {
                   <h2>Moderation queue</h2>
                   <p>Documents flagged by AI that need a decision.</p>
                 </div>
-                <button type="button" className="admin-dashboard__outline-btn">Open moderation</button>
+                <button
+                  type="button"
+                  className="admin-dashboard__outline-btn"
+                  onClick={() => navigate("/admin/moderation")}
+                >
+                  Open moderation
+                </button>
               </div>
 
               <div className="admin-dashboard__queue-list">

@@ -69,7 +69,7 @@ function MyLibraryPage() {
                 className="create_library_btn"
               >
                 <i className="ti-folder"></i>
-                Create library
+                Create or import library
               </Link>
             </div>
           </div>

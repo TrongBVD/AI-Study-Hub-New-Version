@@ -5,6 +5,13 @@ import "./CreateLibraryPage.css";
 const PROFILE_NAME_KEY = "aiStudyHubProfileName";
 const PROFILE_AVATAR_KEY = "aiStudyHubProfileAvatar";
 
+function normalizeLibraryName(value) {
+  return String(value || "")
+    .normalize("NFKC")
+    .trim()
+    .toLocaleLowerCase();
+}
+
 function getInitials(name) {
   const normalizedName = name.trim();
 
@@ -40,7 +47,17 @@ function CreateLibraryPage() {
 
   const trimmedLibraryName = libraryName.trim();
   const trimmedDescription = description.trim();
-  const canCreate = trimmedLibraryName.length > 0;
+  const savedLibraries = JSON.parse(
+    localStorage.getItem("aiStudyHubLibraries") || "[]",
+  );
+  const isDuplicateName =
+    trimmedLibraryName.length > 0 &&
+    savedLibraries.some(
+      (library) =>
+        normalizeLibraryName(library.name || library.libraryName) ===
+        normalizeLibraryName(trimmedLibraryName),
+    );
+  const canCreate = trimmedLibraryName.length > 0 && !isDuplicateName;
 
   const previewName = trimmedLibraryName || "Untitled library";
   const previewDescription =
@@ -69,6 +86,11 @@ function CreateLibraryPage() {
       return;
     }
 
+    if (isDuplicateName) {
+      alert("A library with this name already exists. Please choose another name.");
+      return;
+    }
+
     if (trimmedDescription.length > DESCRIPTION_LIMIT) {
       alert(`Library description cannot exceed ${DESCRIPTION_LIMIT} characters.`);
       return;
@@ -87,10 +109,6 @@ function CreateLibraryPage() {
       highlight: false,
       createdAt: new Date().toISOString(),
     };
-
-    const savedLibraries = JSON.parse(
-      localStorage.getItem("aiStudyHubLibraries") || "[]"
-    );
 
     localStorage.setItem(
       "aiStudyHubLibraries",
@@ -201,10 +219,22 @@ function CreateLibraryPage() {
                   placeholder="Example: Marketing notes"
                 />
                 <div className="field_meta_row">
-                  <p className={`character_count ${titleCountClass}`}>
-                    {libraryName.length} / {TITLE_LIMIT} characters
+                  <p
+                    className={`character_count ${
+                      isDuplicateName ? "error" : titleCountClass
+                    }`}
+                  >
+                    {isDuplicateName
+                      ? "This library name already exists."
+                      : `${libraryName.length} / ${TITLE_LIMIT} characters`}
                   </p>
-                  <span>{canCreate ? "Ready" : "Required"}</span>
+                  <span>
+                    {isDuplicateName
+                      ? "Unavailable"
+                      : canCreate
+                        ? "Ready"
+                        : "Required"}
+                  </span>
                 </div>
               </div>
             </div>
@@ -285,7 +315,7 @@ function CreateLibraryPage() {
             </button>
             <button type="submit" className="create_library_btn" disabled={!canCreate}>
               <i className="ti-plus" />
-              Create library
+              Create or import library
             </button>
           </div>
         </form>

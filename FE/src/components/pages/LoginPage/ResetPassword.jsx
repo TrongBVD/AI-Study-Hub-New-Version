@@ -1,6 +1,6 @@
 import { useState } from "react";
 import FormInput from "../../common/FormInput/FormInput.jsx";
-import axios from "axios";
+import api from "../../../utils/api.js";
 import { useNavigate, useLocation, Navigate } from "react-router-dom";
 import "./LoginPage.css";
 
@@ -19,25 +19,52 @@ function ResetPassword() {
 
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
+  const [resetToken, setResetToken] = useState("");
+  const isOtpVerified = Boolean(resetToken);
 
   if (!email) {
     return <Navigate to="/forgot-password" replace />;
   }
 
   const handleChange = (e) => {
+    const nextValue =
+      e.target.name === "otp"
+        ? e.target.value.replace(/\D/g, "").slice(0, 6)
+        : e.target.value;
+
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value,
+      [e.target.name]: nextValue,
     });
   };
 
-  const handleSubmit = async (e) => {
+  const handleVerifyOTP = async (e) => {
     e.preventDefault();
     setErrorMsg("");
 
     if (!formData.otp.trim()) {
       return setErrorMsg("Vui lòng nhập OTP.");
     }
+
+    try {
+      setLoading(true);
+
+      const response = await api.post("/auth/verify-reset-otp", {
+        email,
+        otp: formData.otp,
+      });
+
+      setResetToken(response.data.data.resetToken);
+    } catch (error) {
+      setErrorMsg(error.response?.data?.message || "Không thể xác minh OTP.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResetPassword = async (e) => {
+    e.preventDefault();
+    setErrorMsg("");
 
     if (!formData.newPassword) {
       return setErrorMsg("Vui lòng nhập mật khẩu mới.");
@@ -50,9 +77,9 @@ function ResetPassword() {
     try {
       setLoading(true);
 
-      await axios.post("http://ai-student-hub-xtw6.onrender.com/api/auth/reset-password", {
+      await api.post("/auth/reset-password", {
         email,
-        otp: formData.otp,
+        resetToken,
         newPassword: formData.newPassword,
       });
       alert("Đổi mật khẩu thành công. Vui lòng đăng nhập lại.");
@@ -66,55 +93,73 @@ function ResetPassword() {
 
   return (
     <div className="login_page">
-      <form className="login_form" onSubmit={handleSubmit}>
+      <form
+        className="login_form"
+        onSubmit={isOtpVerified ? handleResetPassword : handleVerifyOTP}
+      >
         <p className="login_title">Đặt lại mật khẩu</p>
 
         <p
           className="login_message"
           style={{ textAlign: "left", marginBottom: "15px" }}
         >
-          Nhập mã OTP đã gửi tới <b>{email}</b> và mật khẩu mới của bạn.
+          {isOtpVerified ? (
+            <>OTP đã được xác minh. Hãy nhập mật khẩu mới cho <b>{email}</b>.</>
+          ) : (
+            <>Nhập mã OTP gồm 6 chữ số đã gửi tới <b>{email}</b>.</>
+          )}
         </p>
         <div className="login_flex">
-          <FormInput
-            type="text"
-            name="otp"
-            label="OTP"
-            value={formData.otp}
-            onChange={handleChange}
-            required
-          />
-          <FormInput
-            type="password"
-            name="newPassword"
-            label="Mật khẩu mới"
-            value={formData.newPassword}
-            onChange={handleChange}
-            required
-          />
-          <FormInput
-            type="password"
-            name="confirmPassword"
-            label="Xác nhận mật khẩu"
-            value={formData.confirmPassword}
-            onChange={handleChange}
-            required
-          />
+          {!isOtpVerified ? (
+            <FormInput
+              type="text"
+              name="otp"
+              label="OTP"
+              value={formData.otp}
+              onChange={handleChange}
+              required
+            />
+          ) : (
+            <>
+              <FormInput
+                type="password"
+                name="newPassword"
+                label="Mật khẩu mới"
+                value={formData.newPassword}
+                onChange={handleChange}
+                required
+              />
+              <FormInput
+                type="password"
+                name="confirmPassword"
+                label="Xác nhận mật khẩu"
+                value={formData.confirmPassword}
+                onChange={handleChange}
+                required
+              />
+            </>
+          )}
         </div>
-        <p
-          className="login_message"
-          style={{ fontSize: "13px", color: "#7c6a58", textAlign: "left" }}
-        >
-          Mật khẩu mới cần có ít nhất 8 ký tự, bao gồm chữ thường, số và ký tự
-          đặc biệt.
-        </p>
+        {isOtpVerified && (
+          <p
+            className="login_message"
+            style={{ fontSize: "13px", color: "#7c6a58", textAlign: "left" }}
+          >
+            Mật khẩu mới cần có ít nhất 8 ký tự, bao gồm chữ thường, số và ký tự
+            đặc biệt.
+          </p>
+        )}
         {errorMsg && (
           <p style={{ color: "red", textAlign: "center", fontSize: "14px" }}>
             {errorMsg}
           </p>
         )}
         <button className="login_submit" type="submit" disabled={loading}>
-          {loading ? "Đang xử lý..." : "Đổi mật khẩu"}
+          {loading
+            ? "Đang xử lý..."
+            : isOtpVerified
+              ? "Đổi mật khẩu"
+              : "Xác minh OTP"}
         </button>
         <p className="login_message" style={{ marginTop: "20px" }}>
           <span

@@ -232,295 +232,242 @@ function AdminUsagePage() {
 
   return (
     <main className="usage_admin_page">
-      <section className="usage_admin_hero">
+      <header className="usage_admin_header">
         <div>
           <span className="usage_admin_kicker">Admin usage monitor</span>
-          <h1>Quota and AI usage control center</h1>
-          <p>
-            Track heavy storage activity, AI token consumption, and take action
-            when usage looks abnormal.
-          </p>
+          <h1>Usage monitor</h1>
+          <p>Track storage, AI consumption and accounts that require review.</p>
         </div>
 
-        <div className="usage_admin_hero_card">
-          <span>Risk queue</span>
-          <strong>{stats.riskyUsers}</strong>
-          <p>Users above warning or critical threshold.</p>
+        <div className="usage_admin_header_actions">
+          <div>
+            <span>Risk queue</span>
+            <strong>{stats.riskyUsers}</strong>
+          </div>
+          <button type="button" onClick={() => setNotice("Usage report is ready for export.")}>
+            <i className="ti-download" />
+            Export report
+          </button>
         </div>
-      </section>
+      </header>
 
       {error && <div className="usage_admin_error">{error}</div>}
       {notice && (
         <div className="usage_admin_notice">
           <i className="ti-check" />
           <span>{notice}</span>
-          <button type="button" onClick={() => setNotice("")}>
-            Dismiss
-          </button>
+          <button type="button" onClick={() => setNotice("")}>×</button>
         </div>
       )}
 
       <section className="usage_admin_stats_grid">
         <article>
-          <span>Total uploaded</span>
-          <strong>{formatBytes(stats.totalUpload)}</strong>
-          <p>Files uploaded across all monitored users.</p>
-        </article>
-
-        <article>
-          <span>Total downloaded</span>
-          <strong>{formatBytes(stats.totalDownload)}</strong>
-          <p>Download traffic from libraries and workspaces.</p>
-        </article>
-
-        <article>
-          <span>AI tokens</span>
-          <strong>{formatNumber(stats.totalTokens)}</strong>
-          <p>Combined AI token consumption in the selected period.</p>
-        </article>
-
-        <article>
-          <span>Risk users</span>
-          <strong>{stats.riskyUsers}</strong>
-          <p>Accounts requiring admin review.</p>
-        </article>
-      </section>
-
-      <section className="usage_admin_panel">
-        <div className="usage_admin_toolbar">
+          <span className="usage_admin_stat_icon is-upload"><i className="ti-upload" /></span>
           <div>
-            <h2>Usage records</h2>
-            <p>{filteredRecords.length} records shown from quota and AI usage data.</p>
+            <span>Total uploaded</span>
+            <strong>{formatBytes(stats.totalUpload)}</strong>
+            <p>Across monitored accounts</p>
+          </div>
+        </article>
+
+        <article>
+          <span className="usage_admin_stat_icon is-download"><i className="ti-download" /></span>
+          <div>
+            <span>Total downloaded</span>
+            <strong>{formatBytes(stats.totalDownload)}</strong>
+            <p>Library and workspace traffic</p>
+          </div>
+        </article>
+
+        <article>
+          <span className="usage_admin_stat_icon is-ai"><i className="ti-bolt" /></span>
+          <div>
+            <span>AI tokens</span>
+            <strong>{formatNumber(stats.totalTokens)}</strong>
+            <p>Combined token consumption</p>
+          </div>
+        </article>
+
+        <article>
+          <span className="usage_admin_stat_icon is-risk"><i className="ti-alert" /></span>
+          <div>
+            <span>Risk users</span>
+            <strong>{stats.riskyUsers}</strong>
+            <p>Accounts requiring review</p>
+          </div>
+        </article>
+      </section>
+
+      <section className="usage_admin_workspace">
+        <section className="usage_admin_panel">
+          <div className="usage_admin_toolbar">
+            <div>
+              <h2>Usage records</h2>
+              <p>{filteredRecords.length} records from quota and AI usage data.</p>
+            </div>
+
+            <div className="usage_admin_filters">
+              <label>
+                <i className="ti-search" />
+                <input
+                  value={searchText}
+                  onChange={(event) => setSearchText(event.target.value)}
+                  placeholder="Search users..."
+                />
+              </label>
+              <select value={riskFilter} onChange={(event) => setRiskFilter(event.target.value)}>
+                <option value="all">All risks</option>
+                <option value="normal">Normal</option>
+                <option value="warning">Warning</option>
+                <option value="critical">Critical</option>
+              </select>
+              <select value={usageTypeFilter} onChange={(event) => setUsageTypeFilter(event.target.value)}>
+                <option value="all">All usage</option>
+                <option value="quota">Storage</option>
+                <option value="ai">AI usage</option>
+              </select>
+            </div>
           </div>
 
-          <div className="usage_admin_filters">
-            <label>
-              <i className="ti-search" />
-              <input
-                value={searchText}
-                onChange={(event) => setSearchText(event.target.value)}
-                placeholder="Search user, email or date"
-              />
-            </label>
-
-            <select value={riskFilter} onChange={(event) => setRiskFilter(event.target.value)}>
-              <option value="all">All risk levels</option>
-              <option value="normal">Normal</option>
-              <option value="warning">Warning</option>
-              <option value="critical">Critical</option>
-            </select>
-
-            <select
-              value={usageTypeFilter}
-              onChange={(event) => setUsageTypeFilter(event.target.value)}
-            >
-              <option value="all">All usage</option>
-              <option value="quota">Quota only</option>
-              <option value="ai">AI only</option>
-            </select>
-          </div>
-        </div>
-
-        <div className="usage_admin_table_wrapper">
-          <table className="usage_admin_table">
-            <thead>
-              <tr>
-                <th>User</th>
-                <th>Date</th>
-                <th>Quota usage</th>
-                <th>AI usage</th>
-                <th>Risk</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-
-            <tbody>
-              {filteredRecords.map((record) => {
-                const risk = getRiskLevel(record);
-                const quotaPercent = getPercent(record.bytesUploaded, QUOTA_LIMIT_BYTES);
-                const aiPercent = getPercent(record.tokensConsumed, AI_TOKEN_LIMIT);
-
-                return (
-                  <tr key={record.id}>
-                    <td>
-                      <div className="usage_admin_user_cell">
-                        <span>{record.userName.slice(0, 2).toUpperCase()}</span>
-                        <div>
-                          <strong>{record.userName}</strong>
-                          <small>{record.email}</small>
-                        </div>
-                      </div>
-                    </td>
-
-                    <td>{record.date}</td>
-
-                    <td>
-                      <div className="usage_admin_meter_cell">
-                        <div>
-                          <span>{formatBytes(record.bytesUploaded)}</span>
-                          <small>{quotaPercent}%</small>
-                        </div>
-                        <div className="usage_admin_meter">
-                          <span style={{ width: `${quotaPercent}%` }} />
-                        </div>
-                        <small>Downloaded: {formatBytes(record.bytesDownloaded)}</small>
-                      </div>
-                    </td>
-
-                    <td>
-                      <div className="usage_admin_meter_cell">
-                        <div>
-                          <span>{formatNumber(record.tokensConsumed)} tokens</span>
-                          <small>{aiPercent}%</small>
-                        </div>
-                        <div className="usage_admin_meter">
-                          <span style={{ width: `${aiPercent}%` }} />
-                        </div>
-                        <small>{formatNumber(record.chatCount)} chats</small>
-                      </div>
-                    </td>
-
-                    <td>
-                      <span className={`usage_admin_risk usage_admin_risk_${risk}`}>
-                        {risk}
-                      </span>
-                    </td>
-
-                    <td>
-                      <div className="usage_admin_actions">
-                        <button type="button" onClick={() => setSelectedRecord(record)}>
-                          View
-                        </button>
-                        <button type="button" onClick={() => openAction("review", record)}>
-                          Review
-                        </button>
-                        <button type="button" onClick={() => openAction("reset", record)}>
-                          Reset
-                        </button>
-                        <button type="button" onClick={() => openAction("suspend", record)}>
-                          Suspend
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-
-              {filteredRecords.length === 0 && (
+          <div className="usage_admin_table_wrapper">
+            <table className="usage_admin_table">
+              <thead>
                 <tr>
-                  <td colSpan="6" className="usage_admin_empty">
-                    No usage records match the current filters.
-                  </td>
+                  <th>User</th>
+                  <th>Date</th>
+                  <th>Storage usage</th>
+                  <th>AI usage</th>
+                  <th>Risk</th>
+                  <th />
                 </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </section>
+              </thead>
+              <tbody>
+                {filteredRecords.map((record) => {
+                  const risk = getRiskLevel(record);
+                  const quotaPercent = getPercent(record.bytesUploaded, QUOTA_LIMIT_BYTES);
+                  const aiPercent = getPercent(record.tokensConsumed, AI_TOKEN_LIMIT);
 
-      <section className="usage_admin_bottom_grid">
-        <article>
-          <h2>Abuse signals</h2>
-          <div className="usage_admin_signal_list">
-            <div>
-              <strong>Quota spike</strong>
-              <span>Uploaded usage over 80% of the workspace limit.</span>
-            </div>
-            <div>
-              <strong>AI spike</strong>
-              <span>Token usage close to or above the daily threshold.</span>
-            </div>
-            <div>
-              <strong>Admin response</strong>
-              <span>Review, reset quota, or suspend user access.</span>
-            </div>
+                  return (
+                    <tr
+                      key={record.id}
+                      className={selectedRecord?.id === record.id ? "is-selected" : ""}
+                      onClick={() => setSelectedRecord(record)}
+                    >
+                      <td>
+                        <div className="usage_admin_user_cell">
+                          <span>{record.userName.slice(0, 2).toUpperCase()}</span>
+                          <div><strong>{record.userName}</strong><small>{record.email}</small></div>
+                        </div>
+                      </td>
+                      <td>{record.date}</td>
+                      <td>
+                        <div className="usage_admin_meter_cell">
+                          <div><span>{formatBytes(record.bytesUploaded)}</span><small>{quotaPercent}%</small></div>
+                          <div className="usage_admin_meter"><span className={quotaPercent >= 80 ? "danger" : ""} style={{ width: `${quotaPercent}%` }} /></div>
+                          <small>Down: {formatBytes(record.bytesDownloaded)}</small>
+                        </div>
+                      </td>
+                      <td>
+                        <div className="usage_admin_meter_cell">
+                          <div><span>{formatNumber(record.tokensConsumed)}</span><small>{aiPercent}%</small></div>
+                          <div className="usage_admin_meter"><span className={aiPercent >= 80 ? "danger" : ""} style={{ width: `${aiPercent}%` }} /></div>
+                          <small>{formatNumber(record.chatCount)} chats</small>
+                        </div>
+                      </td>
+                      <td><span className={`usage_admin_risk usage_admin_risk_${risk}`}>{risk}</span></td>
+                      <td>
+                        <button
+                          type="button"
+                          className="usage_admin_more"
+                          aria-label={`View usage for ${record.userName}`}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            setSelectedRecord(record);
+                          }}
+                        >
+                          <i className="ti-more-alt" />
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
-        </article>
 
-        <article>
-          <h2>Action policy</h2>
-          <p>
-            Use review first for unclear cases. Reset quota when usage is
-            confirmed as accidental. Suspend only when repeated abuse is clear.
-          </p>
-        </article>
-      </section>
-
-      {selectedRecord && (
-        <div className="usage_admin_modal_overlay" role="dialog" aria-modal="true">
-          <div className="usage_admin_modal">
-            <header>
-              <div>
-                <h2>Usage detail</h2>
-                <p>{selectedRecord.email}</p>
-              </div>
-              <button type="button" onClick={() => setSelectedRecord(null)}>
-                ×
-              </button>
-            </header>
-
-            <div className="usage_admin_detail_grid">
-              <div>
-                <span>Date</span>
-                <strong>{selectedRecord.date}</strong>
-              </div>
-              <div>
-                <span>Uploaded</span>
-                <strong>{formatBytes(selectedRecord.bytesUploaded)}</strong>
-              </div>
-              <div>
-                <span>Downloaded</span>
-                <strong>{formatBytes(selectedRecord.bytesDownloaded)}</strong>
-              </div>
-              <div>
-                <span>AI chats</span>
-                <strong>{formatNumber(selectedRecord.chatCount)}</strong>
-              </div>
-              <div>
-                <span>Tokens</span>
-                <strong>{formatNumber(selectedRecord.tokensConsumed)}</strong>
-              </div>
-              <div>
-                <span>Risk</span>
-                <strong>{getRiskLevel(selectedRecord)}</strong>
-              </div>
-            </div>
-
-            <footer>
-              <button type="button" onClick={() => openAction("review", selectedRecord)}>
-                Mark for review
-              </button>
-              <button type="button" onClick={() => openAction("reset", selectedRecord)}>
-                Reset quota
-              </button>
-              <button type="button" onClick={() => openAction("suspend", selectedRecord)}>
-                Suspend user
-              </button>
+          {filteredRecords.length === 0 ? (
+            <div className="usage_admin_empty">No usage records match the current filters.</div>
+          ) : (
+            <footer className="usage_admin_table_footer">
+              <span>Showing 1–{filteredRecords.length} of {filteredRecords.length} records</span>
+              <div><button disabled><i className="ti-angle-left" /></button><button className="active">1</button><button disabled><i className="ti-angle-right" /></button></div>
             </footer>
-          </div>
-        </div>
-      )}
+          )}
+        </section>
+
+        <aside className="usage_admin_detail_panel">
+          {selectedRecord ? (
+            <>
+              <div className="usage_admin_detail_header">
+                <h2>Usage details</h2>
+                <button type="button" onClick={() => setSelectedRecord(null)} aria-label="Close usage details">×</button>
+              </div>
+              <div className="usage_admin_profile">
+                <span>{selectedRecord.userName.slice(0, 2).toUpperCase()}</span>
+                <div><h3>{selectedRecord.userName}</h3><p>{selectedRecord.email}</p><small>{selectedRecord.date}</small></div>
+              </div>
+
+              <div className="usage_admin_detail_section">
+                <div className="usage_admin_detail_title"><h3>Storage usage</h3><strong>{getPercent(selectedRecord.bytesUploaded, QUOTA_LIMIT_BYTES)}%</strong></div>
+                <div className="usage_admin_meter"><span className={getPercent(selectedRecord.bytesUploaded, QUOTA_LIMIT_BYTES) >= 80 ? "danger" : ""} style={{ width: `${getPercent(selectedRecord.bytesUploaded, QUOTA_LIMIT_BYTES)}%` }} /></div>
+                <dl><div><dt>Uploaded</dt><dd>{formatBytes(selectedRecord.bytesUploaded)}</dd></div><div><dt>Downloaded</dt><dd>{formatBytes(selectedRecord.bytesDownloaded)}</dd></div><div><dt>Quota limit</dt><dd>{formatBytes(QUOTA_LIMIT_BYTES)}</dd></div></dl>
+              </div>
+
+              <div className="usage_admin_detail_section">
+                <div className="usage_admin_detail_title"><h3>AI usage</h3><strong>{getPercent(selectedRecord.tokensConsumed, AI_TOKEN_LIMIT)}%</strong></div>
+                <div className="usage_admin_meter"><span className={getPercent(selectedRecord.tokensConsumed, AI_TOKEN_LIMIT) >= 80 ? "danger" : ""} style={{ width: `${getPercent(selectedRecord.tokensConsumed, AI_TOKEN_LIMIT)}%` }} /></div>
+                <dl><div><dt>Tokens</dt><dd>{formatNumber(selectedRecord.tokensConsumed)}</dd></div><div><dt>Chats</dt><dd>{formatNumber(selectedRecord.chatCount)}</dd></div><div><dt>Daily limit</dt><dd>{formatNumber(AI_TOKEN_LIMIT)}</dd></div></dl>
+              </div>
+
+              <div className="usage_admin_detail_risk">
+                <span>Risk level</span>
+                <strong className={`usage_admin_risk usage_admin_risk_${getRiskLevel(selectedRecord)}`}>{getRiskLevel(selectedRecord)}</strong>
+              </div>
+
+              <div className="usage_admin_detail_actions">
+                <button type="button" onClick={() => openAction("review", selectedRecord)}><i className="ti-flag" /> Mark for review</button>
+                <button type="button" onClick={() => openAction("reset", selectedRecord)}><i className="ti-reload" /> Reset usage</button>
+                <button type="button" onClick={() => openAction("suspend", selectedRecord)}><i className="ti-lock" /> Suspend user</button>
+              </div>
+            </>
+          ) : (
+            <div className="usage_admin_detail_empty">
+              <i className="ti-bar-chart" />
+              <h2>Select a record</h2>
+              <p>Choose a user to review storage and AI consumption.</p>
+            </div>
+          )}
+        </aside>
+      </section>
+
+      <section className="usage_admin_policy_bar">
+        <div><span><i className="ti-alert" /></span><p><strong>Quota spike</strong> Storage usage reaches 80% of the account limit.</p></div>
+        <div><span><i className="ti-bolt" /></span><p><strong>AI spike</strong> Token consumption approaches the daily threshold.</p></div>
+        <div><span><i className="ti-shield" /></span><p><strong>Admin policy</strong> Review first; suspend only when repeated abuse is clear.</p></div>
+      </section>
 
       {confirmAction && (
         <div className="usage_admin_modal_overlay" role="dialog" aria-modal="true">
           <div className="usage_admin_confirm">
-            <div className="usage_admin_confirm_icon">
-              <i className="ti-alert" />
-            </div>
+            <div className="usage_admin_confirm_icon"><i className="ti-alert" /></div>
             <h2>Confirm admin action</h2>
             <p>
               You are about to <strong>{confirmAction.type}</strong>{" "}
-              <strong>{confirmAction.record.email}</strong>. This action is recorded
-              for audit review.
+              <strong>{confirmAction.record.email}</strong>. This action is recorded for audit review.
             </p>
-
             <div>
-              <button type="button" onClick={() => setConfirmAction(null)}>
-                Cancel
-              </button>
-              <button type="button" onClick={applyAction}>
-                Confirm
-              </button>
+              <button type="button" onClick={() => setConfirmAction(null)}>Cancel</button>
+              <button type="button" onClick={applyAction}>Confirm</button>
             </div>
           </div>
         </div>
