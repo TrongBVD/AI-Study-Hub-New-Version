@@ -244,6 +244,40 @@ ${content}
     }));
 }
 
+// src/services/aiService.js
+
+exports.generateTagsAndName = async (extractedText, originalName) => {
+  // Chỉ lấy khoảng 1000 ký tự đầu tiên để tiết kiệm token
+  const sampleText = extractedText.substring(0, 1000);
+
+  const prompt = `Bạn là hệ thống phân loại tài liệu. 
+  Tên file gốc: "${originalName}"
+  Nội dung trích xuất: "${sampleText}"
+  
+  Nhiệm vụ:
+  1. Gợi ý 1-3 tags mô tả nội dung (dạng danh từ, ví dụ: #math, #grade12).
+  2. Kiểm tra tên file gốc có sai chính tả hoặc sai nội dung không. Nếu sai, hãy gợi ý tên mới và viết 1 câu thông báo ngắn. Nếu đúng, để rỗng.
+  
+  BẮT BUỘC trả về ĐÚNG định dạng JSON sau, không có text nào khác:
+  {
+    "tags": ["#tag1", "#tag2"],
+    "suggestedName": "Tên chuẩn (nếu cần đổi)",
+    "message": "Thông báo (ví dụ: File về toán học nhưng đặt tên physic, bạn có muốn đổi thành math.pdf không?)"
+  }`;
+
+  // Giả mã gọi API OpenAI/Gemini (Cần thay bằng hàm gọi API thực tế của dự án)
+  // const response = await llmClient.generateText(prompt);
+  // const parsedJSON = JSON.parse(response);
+  
+  // Trả về mock data cho ví dụ
+  return {
+    tags: ["#university", "#software"],
+    suggestedName: "", 
+    message: ""
+  };
+};
+
+
 module.exports = {
   moderateDocument,
   createEmbedding,
@@ -251,3 +285,4 @@ module.exports = {
   answerWithContext,
   generateFlashcardsFromChunks,
 };
+

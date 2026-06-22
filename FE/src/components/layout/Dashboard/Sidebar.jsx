@@ -20,7 +20,8 @@ function Sidebar({ isOpen, onClose }) {
     { icon: "ti-home", label: "Home", path: "/dashboard/home" },
     { icon: "ti-folder", label: "My libraries", path: "/dashboard/libraries" },
     { icon: "ti-layout-grid2", label: "My workspaces", path: "/dashboard/workspaces" },
-    { icon: "ti-comments", label: "AI Chat", path: "/dashboard/ai-chat"},
+    // Đã thay đổi AI Chat thành Search User ở đây
+    { icon: "ti-search", label: "Search User", path: "/dashboard/search-user"},
     { icon: "ti-settings", label: "Settings", path: "/dashboard/settings" },
   ];
 
@@ -41,59 +42,59 @@ function Sidebar({ isOpen, onClose }) {
   return (
     <>
       {isOpen && (
-    <button
-      type="button"
-      className="sidebar_overlay"
-      aria-label="Close sidebar"
-      onClick={onClose}
-    />
-  )}
-    <aside className={`sidebar ${isOpen ? "sidebar_open" : ""}`}>
-      <div className="sidebar_top">
-        <div className="sidebar_header">
-          <Logo />
+        <button
+          type="button"
+          className="sidebar_overlay"
+          aria-label="Close sidebar"
+          onClick={onClose}
+        />
+      )}
+      <aside className={`sidebar ${isOpen ? "sidebar_open" : ""}`}>
+        <div className="sidebar_top">
+          <div className="sidebar_header">
+            <Logo />
 
-          <button className="close_btn" onClick={onClose}>
-            ×
-          </button>
+            <button className="close_btn" onClick={onClose}>
+              ×
+            </button>
+          </div>
+
+          <nav className="sidebar_nav">
+            {menuItems.map((item) => (
+              <NavLink
+                to={item.path}
+                className={({ isActive }) =>
+                  `sidebar_link ${isActive ? "active" : ""}`
+                }
+                key={item.label}
+                onClick={onClose}
+              >
+                <i className={item.icon}></i>
+                <span>{item.label}</span>
+              </NavLink>
+            ))}
+          </nav>
         </div>
 
-        <nav className="sidebar_nav">
-          {menuItems.map((item) => (
+        <div className="sidebar_bottom_actions">
+          {isSystemAdmin && (
             <NavLink
-              to={item.path}
-              className={({ isActive }) =>
-                `sidebar_link ${isActive ? "active" : ""}`
-              }
-              key={item.label}
+              to="/admin/dashboard"
+              className="admin_dashboard_btn"
               onClick={onClose}
             >
-              <i className={item.icon}></i>
-              <span>{item.label}</span>
+              <i className="ti-dashboard"></i>
+              <span>Admin dashboard</span>
             </NavLink>
-          ))}
-        </nav>
-      </div>
+          )}
 
-      <div className="sidebar_bottom_actions">
-        {isSystemAdmin && (
-          <NavLink
-            to="/admin/dashboard"
-            className="admin_dashboard_btn"
-            onClick={onClose}
-          >
-            <i className="ti-dashboard"></i>
-            <span>Admin dashboard</span>
-          </NavLink>
-        )}
-
-        <button type="button" className="logout_btn" onClick={handleLogout}>
-          <i className="ti-power-off"></i>
-          <span>Log out</span>
-        </button>
-      </div>
-    </aside>
-        </>
+          <button type="button" className="logout_btn" onClick={handleLogout}>
+            <i className="ti-power-off"></i>
+            <span>Log out</span>
+          </button>
+        </div>
+      </aside>
+    </>
   );
 }
 

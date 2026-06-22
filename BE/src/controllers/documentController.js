@@ -37,18 +37,11 @@ async function processDocumentWithAI(file, documentId) {
         .from("documents")
         .update({
           status: "REJECTED",
-          ai_reject_reason: {
-            reason: "Could not extract enough readable text from this file.",
-            suspicious_text: [],
-          },
+          ai_reject_reason: { reason: "Could not extract enough readable text from this file." },
         })
         .eq("id", documentId);
 
-      return {
-        status: "REJECTED",
-        reason: "Could not extract enough readable text from this file.",
-        chunkCount: 0,
-      };
+      return { status: "REJECTED", reason: "Could not extract enough readable text", chunkCount: 0 };
     }
 
     const moderation = await moderateDocument(extractedText);
@@ -56,18 +49,47 @@ async function processDocumentWithAI(file, documentId) {
     if (moderation.status === "REJECTED") {
       await supabase
         .from("documents")
-        .update({
-          status: "REJECTED",
-          ai_reject_reason: moderation,
-        })
+        .update({ status: "REJECTED", ai_reject_reason: moderation })
         .eq("id", documentId);
 
-      return {
-        status: "REJECTED",
-        reason: moderation.reason,
-        chunkCount: 0,
-      };
+      return { status: "REJECTED", reason: moderation.reason, chunkCount: 0 };
     }
+
+    // ==============================================================================
+    // BƯỚC MỚI: Gọi AI phân tích tạo Tags và kiểm tra tên file
+    // ==============================================================================
+    let aiTagsAndName = null;
+    try {
+      if (generateTagsAndName) {
+        aiTagsAndName = await generateTagsAndName(extractedText, file.originalname);
+      }
+    } catch (tagError) {
+      console.warn("Lỗi khi AI generate tags, bỏ qua bước này:", tagError);
+    }
+
+    // Nếu AI sinh ra tags, tiến hành lưu vào DB
+    if (aiTagsAndName && aiTagsAndName.tags && aiTagsAndName.tags.length > 0) {
+      for (const tagName of aiTagsAndName.tags) {
+        const cleanTagName = tagName.replace('#', '').trim().toLowerCase();
+        
+        // 1. Kiểm tra xem Tag đã tồn tại trong bảng `tags` chưa, chưa có thì insert
+        let { data: tagData } = await supabase.from("tags").select("id").eq("name", cleanTagName).single();
+        
+        if (!tagData) {
+          const { data: newTag } = await supabase.from("tags").insert({ name: cleanTagName }).select("id").single();
+          tagData = newTag;
+        }
+
+        // 2. Gắn tag vào document thông qua bảng `document_tags`
+        if (tagData && tagData.id) {
+          await supabase.from("document_tags").insert({
+            document_id: documentId,
+            tag_id: tagData.id
+          });
+        }
+      }
+    }
+    // ==============================================================================
 
     const chunks = splitTextIntoChunks(extractedText);
 
@@ -76,25 +98,16 @@ async function processDocumentWithAI(file, documentId) {
         .from("documents")
         .update({
           status: "REJECTED",
-          ai_reject_reason: {
-            reason: "No readable text chunks could be created.",
-            suspicious_text: [],
-          },
+          ai_reject_reason: { reason: "No readable text chunks could be created." },
         })
         .eq("id", documentId);
 
-      return {
-        status: "REJECTED",
-        reason: "No readable text chunks could be created.",
-        chunkCount: 0,
-      };
+      return { status: "REJECTED", reason: "No readable text chunks could be created.", chunkCount: 0 };
     }
 
     const chunkRows = [];
-
     for (let i = 0; i < chunks.length; i++) {
       const embedding = await createEmbedding(chunks[i], "document");
-
       chunkRows.push({
         document_id: documentId,
         chunk_index: i,
@@ -105,21 +118,28 @@ async function processDocumentWithAI(file, documentId) {
 
     await supabase.from("document_chunks").delete().eq("document_id", documentId);
 
-    const { error: chunkInsertError } = await supabase
-      .from("document_chunks")
-      .insert(chunkRows);
+    const { error: chunkInsertError } = await supabase.from("document_chunks").insert(chunkRows);
 
     if (chunkInsertError) {
       throw chunkInsertError;
     }
 
-    await supabase
-      .from("documents")
-      .update({
-        status: "APPROVED",
-        ai_reject_reason: null,
-      })
-      .eq("id", documentId);
+    // Chuẩn bị object cập nhật trạng thái Document
+    const updatePayload = {
+      status: "APPROVED",
+      ai_reject_reason: null, // Mặc định là null
+    };
+
+    // Nếu AI gợi ý đổi tên file do sai ngữ nghĩa, lưu thông báo này vào DB để hiển thị lên UI
+    if (aiTagsAndName && aiTagsAndName.message) {
+      updatePayload.ai_reject_reason = {
+        type: "RENAME_SUGGESTION",
+        suggested_name: aiTagsAndName.suggestedName,
+        message: aiTagsAndName.message
+      };
+    }
+
+    await supabase.from("documents").update(updatePayload).eq("id", documentId);
 
     console.log("AI processing completed for document:", documentId);
 
@@ -127,6 +147,7 @@ async function processDocumentWithAI(file, documentId) {
       status: "APPROVED",
       reason: "Document approved by AI moderation.",
       chunkCount: chunks.length,
+      aiSuggestion: updatePayload.ai_reject_reason
     };
   } catch (error) {
     console.error("AI processing failed:", error);
@@ -198,12 +219,29 @@ exports.uploadDocuments = async (req, res) => {
     const userID = req.user.id;
     const files = req.files || [];
     const workspaceId = req.body?.workspaceId || null;
+    const libraryId = req.body?.libraryId || null; // Hỗ trợ up lên Library
 
     if (files.length === 0) {
-      return res.status(400).json({
-        status: "error",
-        message: "Vui lòng chọn ít nhất một tệp để upload.",
-      });
+      return res.status(400).json({ status: "error", message: "Vui lòng chọn tệp." });
+    }
+
+    // CHECK GIỚI HẠN 50MB NẾU UP VÀO WORKSPACE
+    if (workspaceId) {
+      const { data: existingDocs } = await supabase
+        .from("documents")
+        .select("file_size_bytes")
+        .eq("workspace_id", workspaceId)
+        .is("deleted_at", null);
+
+      const currentUsedBytes = (existingDocs || []).reduce((acc, doc) => acc + (Number(doc.file_size_bytes) || 0), 0);
+      const incomingBytes = files.reduce((acc, file) => acc + file.size, 0);
+
+      if (currentUsedBytes + incomingBytes > 50 * 1024 * 1024) {
+        return res.status(400).json({
+          status: "error",
+          message: "Workspace đã đạt giới hạn 50MB dung lượng tải lên."
+        });
+      }
     }
 
     const uploadedDocuments = [];
@@ -215,68 +253,36 @@ exports.uploadDocuments = async (req, res) => {
       const { error: uploadError } = await supabase.storage
         .from(BUCKET)
         .upload(storagePath, file.buffer, {
-          contentType: file.mimetype || "application/octet-stream",
-          upsert: false,
+          contentType: file.mimetype || "application/octet-stream"
         });
 
-      if (uploadError) {
-        throw uploadError;
-      }
+      if (uploadError) throw uploadError;
 
+      // Lưu thông tin vào DB, bao gồm cả library_id
       const { data: document, error: insertError } = await supabase
         .from("documents")
         .insert({
           uploader_id: userID,
           workspace_id: workspaceId,
+          library_id: libraryId, // Cột mới trong DB
           title: file.originalname,
           file_url: storagePath,
           file_size_bytes: file.size,
-          is_public: false,
-          status: "PENDING",
-          ai_reject_reason: null,
+          is_public: libraryId ? true : false, // Nếu up lên lib thì public theo cấu hình
+          status: "PENDING"
         })
-        .select(
-          `
-          id,
-          uploader_id,
-          workspace_id,
-          title,
-          file_size_bytes,
-          is_public,
-          status,
-          ai_reject_reason,
-          created_at
-        `
-        )
-        .single();
+        .select("*").single();
 
-      if (insertError) {
-        await supabase.storage.from(BUCKET).remove([storagePath]);
-        throw insertError;
-      }
+      if (insertError) throw insertError;
 
+      // Gọi hàm xử lý AI (Sẽ cấu hình auto-tag ở bước sau)
       const aiResult = await processDocumentWithAI(file, document.id);
-
-      uploadedDocuments.push({
-        ...document,
-        status: aiResult.status,
-        ai_result: aiResult,
-      });
+      uploadedDocuments.push({ ...document, status: aiResult.status });
     }
 
-    return res.status(201).json({
-      status: "success",
-      message: "Upload thành công. AI processing completed.",
-      data: uploadedDocuments,
-    });
+    return res.status(201).json({ status: "success", data: uploadedDocuments });
   } catch (error) {
-    console.error("Lỗi uploadDocuments:", error);
-
-    return res.status(500).json({
-      status: "error",
-      message: "Không thể upload tài liệu.",
-      error: error.message,
-    });
+    return res.status(500).json({ status: "error", error: error.message });
   }
 };
 

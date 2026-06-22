@@ -395,7 +395,7 @@ function countUsedStorageBytes(items) {
       .map((tag) => (tag.startsWith("#") ? tag : `#${tag}`));
 
     if (validHashtags.length < 3) {
-      alert("Please enter 3 hashtags before uploading.");
+      alert("Please enter 1-3 hashtags before uploading.");
       return;
     }
 

@@ -83,7 +83,7 @@ function Navbar({ onOpenSidebar }) {
     return localStorage.getItem(PROFILE_AVATAR_KEY) || "";
   });
 
-const [notifications, setNotifications] = useState(() => getNotifications());
+  const [notifications, setNotifications] = useState(() => getNotifications());
   const [notificationSettings, setNotificationSettings] = useState(() =>
     getNotificationSettings()
   );
@@ -290,76 +290,76 @@ const [notifications, setNotifications] = useState(() => getNotifications());
           </div>
         </div>
 
-<div className="notification_dropdown">
-  <button type="button" className="notification_btn">
-    <i className="ti-bell"></i>
-    {notificationSettings.showBadge && unreadNotificationCount > 0 && (
-  <span className="notification_badge">{unreadNotificationCount}</span>
-)}
-  </button>
+        <div className="notification_dropdown">
+          <button type="button" className="notification_btn">
+            <i className="ti-bell"></i>
+            {notificationSettings.showBadge && unreadNotificationCount > 0 && (
+              <span className="notification_badge">{unreadNotificationCount}</span>
+            )}
+          </button>
 
-  <div className="notification_panel">
-    <div className="notification_header">
-      <div>
-        <strong>Notifications</strong>
-        <p>Recent workspace activity</p>
-      </div>
+          <div className="notification_panel">
+            <div className="notification_header">
+              <div>
+                <strong>Notifications</strong>
+                <p>Recent workspace activity</p>
+              </div>
 
-      <button
-  type="button"
-  onClick={() => {
-    markAllNotificationsAsRead();
-    setNotifications(getNotifications());
-  }}
->
-  Mark all read
-</button>
-    </div>
+              <button
+                type="button"
+                onClick={() => {
+                  markAllNotificationsAsRead();
+                  setNotifications(getNotifications());
+                }}
+              >
+                Mark all read
+              </button>
+            </div>
 
-<div className="notification_list">
-  {!notificationSettings.enabled ? (
-    <div className="notification_empty">
-      <i className="ti-bell"></i>
-      <p>Notifications are turned off.</p>
-    </div>
-  ) : notifications.length === 0 ? (
-    <div className="notification_empty">
-      <i className="ti-bell"></i>
-      <p>No notifications yet.</p>
-    </div>
-  ) : (
-    notifications.map((notification) => (
-      <button
-        type="button"
-        key={notification.id}
-        className={`notification_item ${
-          notification.isRead ? "" : "unread"
-        }`}
-        onClick={() => {
-          if (notification.link) {
-            navigate(notification.link);
-          }
-        }}
-      >
-        <div className="notification_icon">
-          <i className={notification.icon}></i>
+            <div className="notification_list">
+              {!notificationSettings.enabled ? (
+                <div className="notification_empty">
+                  <i className="ti-bell"></i>
+                  <p>Notifications are turned off.</p>
+                </div>
+              ) : notifications.length === 0 ? (
+                <div className="notification_empty">
+                  <i className="ti-bell"></i>
+                  <p>No notifications yet.</p>
+                </div>
+              ) : (
+                notifications.map((notification) => (
+                  <button
+                    type="button"
+                    key={notification.id}
+                    className={`notification_item ${
+                      notification.isRead ? "" : "unread"
+                    }`}
+                    onClick={() => {
+                      if (notification.link) {
+                        navigate(notification.link);
+                      }
+                    }}
+                  >
+                    <div className="notification_icon">
+                      <i className={notification.icon}></i>
+                    </div>
+
+                    <div>
+                      <strong>{notification.title}</strong>
+                      <p>{notification.message}</p>
+                      <span>{notification.createdAt}</span>
+                    </div>
+                  </button>
+                ))
+              )}
+            </div>
+
+            <button type="button" className="notification_view_all">
+              View all notifications
+            </button>
+          </div>
         </div>
-
-        <div>
-          <strong>{notification.title}</strong>
-          <p>{notification.message}</p>
-          <span>{notification.createdAt}</span>
-        </div>
-      </button>
-    ))
-  )}
-</div>
-
-    <button type="button" className="notification_view_all">
-      View all notifications
-    </button>
-  </div>
-</div>
 
         <Link
           to="/dashboard/profile"

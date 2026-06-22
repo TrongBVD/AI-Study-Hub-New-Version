@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useEffect } from "react";
 import FormInput from "../../common/FormInput/FormInput.jsx";
 import { GoogleLogin, GoogleOAuthProvider } from "@react-oauth/google";
 import api from "../../../utils/api.js";
@@ -12,6 +13,16 @@ function LoginPage() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const navigate = useNavigate();
+
+  useEffect(() => {
+    // Kiểm tra xem token có tồn tại trong localStorage không
+    const token = localStorage.getItem("accessToken");
+    
+    // Nếu có token (nghĩa là chưa log out), đá thẳng vào trang chủ Dashboard
+    if (token) {
+      navigate("/dashboard/home", { replace: true });
+    }
+  }, [navigate]);
 
   function extractAccessToken(responseData) {
     return (

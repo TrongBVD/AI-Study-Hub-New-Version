@@ -469,6 +469,42 @@ exports.resetPassword = async (req, res) => {
     }
 };
 
+exports.searchUsers = async (req, res) => {
+  try {
+    const { q } = req.query;
+
+    if (!q || q.trim() === "") {
+      return res.status(200).json({ status: "success", data: [] });
+    }
+
+    const keyword = `%${q.trim()}%`;
+
+    // Truy vấn Supabase: tìm theo username HOẶC full_name (không phân biệt hoa thường)
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("id, username, full_name, date_of_birth, is_dob_public, email")
+      .or(`username.ilike.${keyword}`)
+      .eq("status", "ACTIVE") // Chỉ tìm tài khoản đang hoạt động
+      .limit(50);
+
+    if (error) {
+      throw error;
+    }
+
+    return res.status(200).json({
+      status: "success",
+      data: data || []
+    });
+  } catch (error) {
+    console.error("Lỗi searchUsers:", error);
+    return res.status(500).json({
+      status: "error",
+      message: "Lỗi khi tìm kiếm người dùng từ Supabase.",
+      error: error.message
+    });
+  }
+};
+
 exports.logout = async (req, res) => {
   return res.status(200).json({
     status: "success",

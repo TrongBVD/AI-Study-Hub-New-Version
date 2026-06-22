@@ -25,6 +25,7 @@ import WorkSpacePage from "./components/pages/WorkSpacePage/WorkSpacePage.jsx";
 import PersonalProfilePage from "./components/pages/PersonalProfilePage/PersonalProfilePage.jsx";
 import Flashcards from "./components/pages/Flashcards/Flashcards.jsx";
 import CreateWorkSpacePage from "./components/pages/CreateWorkSpacePage/CreateWorkSpacePage.jsx";
+import SearchUserPage from "./components/pages/SearchUserPage/SearchUserPage";
 
 // ================= PROTECTED ROUTE =================
 import ProtectedRoute from "./components/common/ProtectedRoute/ProtectedRoute.jsx";
@@ -87,6 +88,7 @@ function App() {
           <Route path="ai-chat" element={<AIChatPage />} />
 
           <Route path="flashcards" element={<Flashcards />} />
+          <Route path="search-user" element={<SearchUserPage />} />
         </Route>
 
         {/* ADMIN ROUTES - CHỈ SYSTEM_ADMIN TRUY CẬP ĐƯỢC */}
