@@ -6,6 +6,7 @@ const GOOGLE_SSO_NO_PASSWORD = "GOOGLE_SSO_NO_PASSWORD";
 const OTP_EXPIRY_MINUTES = 10;
 const ACCESS_TOKEN_EXPIRY = "24h";
 const SETUP_TOKEN_EXPIRY = "15m";
+const PASSWORD_RESET_TOKEN_EXPIRY = "15m";
 
 function getJwtSecret() {
   if (!process.env.JWT_SECRET) {
@@ -100,6 +101,17 @@ function signSetupToken(email) {
   );
 }
 
+function signPasswordResetToken(email) {
+  return jwt.sign(
+    {
+      email,
+      type: "password_reset",
+    },
+    getJwtSecret(),
+    { expiresIn: PASSWORD_RESET_TOKEN_EXPIRY },
+  );
+}
+
 function buildPublicUser(user) {
   if (!user) return null;
 
@@ -124,6 +136,21 @@ function verifySetupToken(setupToken, expectedEmail) {
     }
     return payload;
 }
+
+function verifyPasswordResetToken(resetToken, expectedEmail) {
+  if (!resetToken) {
+    throw new Error("Phiên đặt lại mật khẩu không hợp lệ hoặc đã hết hạn.");
+  }
+
+  const payload = jwt.verify(resetToken, getJwtSecret());
+
+  if (payload.type !== "password_reset" || payload.email !== expectedEmail) {
+    throw new Error("Phiên đặt lại mật khẩu không hợp lệ hoặc đã hết hạn.");
+  }
+
+  return payload;
+}
+
 module.exports = {
     GOOGLE_SSO_NO_PASSWORD,
     OTP_EXPIRY_MINUTES,
@@ -136,6 +163,8 @@ module.exports = {
     hashPassword,
     signAccessToken,
     signSetupToken,
+    signPasswordResetToken,
     verifySetupToken,
+    verifyPasswordResetToken,
     buildPublicUser,
 };

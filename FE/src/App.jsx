@@ -1,7 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import SettingPage from "./components/pages/SettingPage/SettingPage.jsx";
 // ================= AUTH IMPORTS =================
-import HeroSection from "./components/pages/HeroSection/HeroSection.jsx";
+import LandingPage from "./components/pages/LandingPage/LandingPage.jsx";
 import LoginPage from "./components/pages/LoginPage/LoginPage.jsx";
 import ForgotPassword from "./components/pages/LoginPage/ForgotPassword.jsx";
 import ResetPassword from "./components/pages/LoginPage/ResetPassword.jsx";
@@ -15,10 +15,10 @@ import OTPVerification from "./components/pages/RegisterPage/OTPVerification.jsx
 import Dashboard from "./components/layout/Dashboard/Dashboard.jsx";
 
 // ================= USER PAGE IMPORTS =================
-import AIChatPage from "./components/pages/AiChatPage/AiChatPage.jsx";
 import HomePage from "./components/pages/HomePage/HomePage.jsx";
 import MyLibraryPage from "./components/pages/MyLibraryPage/MyLibraryPage.jsx";
 import CreateLibraryPage from "./components/pages/CreateLibraryPage/CreateLibraryPage.jsx";
+import ImportLibraryPage from "./components/pages/ImportLibraryPage/ImportLibraryPage.jsx";
 import LibraryPage from "./components/pages/LibraryPage/LibraryPage.jsx";
 import MyWorkSpace from "./components/pages/MyWorkSpace/MyWorkSpace.jsx";
 import WorkSpacePage from "./components/pages/WorkSpacePage/WorkSpacePage.jsx";
@@ -26,6 +26,8 @@ import PersonalProfilePage from "./components/pages/PersonalProfilePage/Personal
 import Flashcards from "./components/pages/Flashcards/Flashcards.jsx";
 import CreateWorkSpacePage from "./components/pages/CreateWorkSpacePage/CreateWorkSpacePage.jsx";
 import SearchUserPage from "./components/pages/SearchUserPage/SearchUserPage";
+import SearchResultPage from "./components/pages/SearchResultPage/SearchResultPage.jsx";
+
 
 // ================= PROTECTED ROUTE =================
 import ProtectedRoute from "./components/common/ProtectedRoute/ProtectedRoute.jsx";
@@ -43,13 +45,14 @@ function App() {
     <BrowserRouter>
       <Routes>
         {/* DEFAULT: vào web sẽ về login */}
-        <Route path="/" element={<HeroSection />} />
+        <Route path="/" element={<LandingPage />} />
 
         {/* AUTH ROUTES */}
 
         <Route path="/login" element={<LoginPage />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
+        <Route path="/reset-password-otp" element={<ResetPassword />} />
 
         <Route path="/register" element={<RegisterGoogle />} />
         <Route path="/complete-profile" element={<CompleteProfile />} />
@@ -77,6 +80,7 @@ function App() {
 
           <Route path="libraries" element={<MyLibraryPage />} />
           <Route path="create-library" element={<CreateLibraryPage />} />
+          <Route path="import-library" element={<ImportLibraryPage />} />
           <Route path="libraries/:libraryId" element={<LibraryPage />} />
           <Route path="settings" element={<SettingPage />} />
           <Route path="create-workspace" element={<CreateWorkSpacePage />} />
@@ -84,12 +88,14 @@ function App() {
           <Route path="workspaces/:workspaceId" element={<WorkSpacePage />} />
 
           <Route path="profile" element={<PersonalProfilePage />} />
+
           <Route path="profile/:id" element={<PersonalProfilePage />} />
-          
-          <Route path="ai-chat" element={<AIChatPage />} />
+
+
 
           <Route path="flashcards" element={<Flashcards />} />
           <Route path="search-user" element={<SearchUserPage />} />
+          <Route path="search" element={<SearchResultPage />} />
         </Route>
 
         {/* ADMIN ROUTES - CHỈ SYSTEM_ADMIN TRUY CẬP ĐƯỢC */}
@@ -107,6 +113,8 @@ function App() {
           <Route path="users" element={<AdminUsersPage />} />
           <Route path="logs" element={<AdminLogsPage />} />
           <Route path="usage" element={<AdminUsagePage />} />
+          <Route path="settings" element={<SettingPage />} />
+          <Route path="profile" element={<PersonalProfilePage />} />
         </Route>
 
         {/* NOT FOUND */}

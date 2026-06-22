@@ -5,6 +5,7 @@ import {
   getNotifications,
   markAllNotificationsAsRead,
 } from "../../../utils/notificationStore.js";
+import { searchUsers } from "../../../utils/searchApi.js";
 
 const PROFILE_AVATAR_KEY = "aiStudyHubProfileAvatar";
 
@@ -75,15 +76,22 @@ function saveRecentWorkspace(workspace) {
   );
 }
 
-function Navbar({ onOpenSidebar }) {
+function Navbar({
+  onOpenSidebar,
+  profilePath = "/dashboard/profile",
+  searchPlaceholder = "Search library or workspace...",
+}) {
   const navigate = useNavigate();
   const [searchValue, setSearchValue] = useState("");
   const [isSearchFocused, setIsSearchFocused] = useState(false);
+  const [matchedUsers, setMatchedUsers] = useState([]);
   const [profileAvatar, setProfileAvatar] = useState(() => {
     return localStorage.getItem(PROFILE_AVATAR_KEY) || "";
   });
 
+
   const [notifications, setNotifications] = useState(() => getNotifications());
+
   const [notificationSettings, setNotificationSettings] = useState(() =>
     getNotificationSettings()
   );
@@ -113,6 +121,29 @@ function Navbar({ onOpenSidebar }) {
       window.removeEventListener("storage", syncNotifications);
     };
   }, []);
+
+  useEffect(() => {
+    const keyword = searchValue.trim();
+
+    if (keyword.length < 2) {
+      return undefined;
+    }
+
+    let isCancelled = false;
+    const timer = window.setTimeout(async () => {
+      try {
+        const users = await searchUsers(keyword);
+        if (!isCancelled) setMatchedUsers(users || []);
+      } catch {
+        if (!isCancelled) setMatchedUsers([]);
+      }
+    }, 250);
+
+    return () => {
+      isCancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [searchValue]);
 
   useEffect(() => {
     function syncProfileAvatar() {
@@ -183,8 +214,20 @@ function Navbar({ onOpenSidebar }) {
         data: workspace,
       }));
 
-    return [...matchedLibraries, ...matchedWorkspaces].slice(0, 8);
-  }, [searchValue, libraries, workspaces]);
+    const userResults = (keyword.length >= 2 ? matchedUsers : []).map((user) => ({
+      id: user.id,
+      type: "user",
+      title: user.full_name || user.username || user.email || "Unknown user",
+      description: user.username ? `@${user.username}` : user.email,
+      icon: "ti-user",
+      data: user,
+    }));
+
+    return [...userResults, ...matchedLibraries, ...matchedWorkspaces].slice(
+      0,
+      8,
+    );
+  }, [searchValue, libraries, workspaces, matchedUsers]);
 
   function handleOpenSearchResult(result) {
     if (result.type === "library") {
@@ -207,6 +250,12 @@ function Navbar({ onOpenSidebar }) {
       });
     }
 
+    if (result.type === "user") {
+      navigate(
+        `/dashboard/search?q=${encodeURIComponent(searchValue.trim())}&type=user`,
+      );
+    }
+
     setSearchValue("");
     setIsSearchFocused(false);
   }
@@ -214,9 +263,11 @@ function Navbar({ onOpenSidebar }) {
   function handleSearchSubmit(e) {
     e.preventDefault();
 
-    if (searchResults.length === 0) return;
+    const keyword = searchValue.trim();
+    if (!keyword) return;
 
-    handleOpenSearchResult(searchResults[0]);
+    navigate(`/dashboard/search?q=${encodeURIComponent(keyword)}`);
+    setIsSearchFocused(false);
   }
 
   const shouldShowSearchPanel = isSearchFocused && searchValue.trim() !== "";
@@ -233,7 +284,7 @@ function Navbar({ onOpenSidebar }) {
         <input
           type="text"
           value={searchValue}
-          placeholder="Search your library or workspace..."
+          placeholder={searchPlaceholder}
           onChange={(e) => setSearchValue(e.target.value)}
           onFocus={() => setIsSearchFocused(true)}
         />
@@ -243,7 +294,7 @@ function Navbar({ onOpenSidebar }) {
             {searchResults.length === 0 ? (
               <div className="global_search_empty">
                 <i className="ti-search"></i>
-                <p>No library or workspace found.</p>
+                <p>No user, library or workspace found.</p>
               </div>
             ) : (
               searchResults.map((result) => (
@@ -267,6 +318,14 @@ function Navbar({ onOpenSidebar }) {
                 </button>
               ))
             )}
+            <button
+              type="submit"
+              className="global_search_view_all"
+              onMouseDown={(e) => e.preventDefault()}
+            >
+              <i className="ti-search" />
+              View all results for “{searchValue.trim()}”
+            </button>
           </div>
         )}
       </form>
@@ -281,6 +340,14 @@ function Navbar({ onOpenSidebar }) {
             <Link to="/dashboard/create-library">
               <i className="ti-folder"></i>
               Create library
+            </Link>
+
+            <Link
+              to="/dashboard/import-library"
+              state={{ from: "/dashboard/home" }}
+            >
+              <i className="ti-import"></i>
+              Import library
             </Link>
 
             <Link to="/dashboard/create-workspace">
@@ -362,7 +429,7 @@ function Navbar({ onOpenSidebar }) {
         </div>
 
         <Link
-          to="/dashboard/profile"
+          to={profilePath}
           className="profile_avatar"
           aria-label="Go to personal profile"
           style={

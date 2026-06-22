@@ -392,20 +392,12 @@ exports.forgotPassword = async (req, res) => {
         res.status(500).json({ status: 'error', message: error.message });
     }
 };
-exports.resetPassword = async (req, res) => {
-    try {
-        const { email, otp, newPassword } = req.body;
 
+exports.verifyResetPasswordOTP = async (req, res) => {
+    try {
+        const { email, otp } = req.body;
         const cleanEmail = email.toLowerCase().trim();
         const cleanOtp = String(otp || "").trim();
-
-        const passwordRegex = /^(?=.*[a-z])(?=.*\d)(?=.*[^A-Za-z0-9])\S{8,}$/;
-        if (!passwordRegex.test(newPassword)) {
-            return res.status(400).json({
-                status: "error",
-                message: "Mật khẩu cần >= 8 ký tự, có ít nhất 1 chữ thường, 1 số, 1 ký tự đặc biệt và không chứa khoảng trắng."
-            });
-        }
 
         const { data: user, error: userError } = await supabase
             .from("profiles")
@@ -441,6 +433,71 @@ exports.resetPassword = async (req, res) => {
             });
         }
 
+        await supabase
+            .from("otp_tokens")
+            .delete()
+            .eq("id", otpRecord.id);
+
+        const { signPasswordResetToken } = require("../utils/authHelpers");
+        const resetToken = signPasswordResetToken(cleanEmail);
+
+        return res.status(200).json({
+            status: "success",
+            message: "Xác minh OTP thành công.",
+            data: {
+                email: cleanEmail,
+                resetToken
+            }
+        });
+    } catch (error) {
+        console.error("🔴 Lỗi verifyResetPasswordOTP:", error);
+        return res.status(500).json({
+            status: "error",
+            message: error.message
+        });
+    }
+};
+
+exports.resetPassword = async (req, res) => {
+    try {
+        const { email, resetToken, newPassword } = req.body;
+
+        const cleanEmail = email.toLowerCase().trim();
+
+        const { verifyPasswordResetToken } = require("../utils/authHelpers");
+
+        try {
+            verifyPasswordResetToken(resetToken, cleanEmail);
+        } catch {
+            return res.status(401).json({
+                status: "error",
+                message: "Phiên đặt lại mật khẩu không hợp lệ hoặc đã hết hạn."
+            });
+        }
+
+        const passwordRegex = /^(?=.*[a-z])(?=.*\d)(?=.*[^A-Za-z0-9])\S{8,}$/;
+        if (!passwordRegex.test(newPassword)) {
+            return res.status(400).json({
+                status: "error",
+                message: "Mật khẩu cần >= 8 ký tự, có ít nhất 1 chữ thường, 1 số, 1 ký tự đặc biệt và không chứa khoảng trắng."
+            });
+        }
+
+        const { data: user, error: userError } = await supabase
+            .from("profiles")
+            .select("id, email, password_hash")
+            .eq("email", cleanEmail)
+            .maybeSingle();
+
+        if (userError) throw userError;
+
+        if (!user || user.password_hash === "GOOGLE_SSO_NO_PASSWORD") {
+            return res.status(400).json({
+                status: "error",
+                message: "Thông tin khôi phục không hợp lệ hoặc tài khoản không hỗ trợ đặt lại mật khẩu."
+            });
+        }
+
         const salt = await bcrypt.genSalt(10);
         const passwordHash = await bcrypt.hash(newPassword, salt);
 
@@ -450,11 +507,6 @@ exports.resetPassword = async (req, res) => {
             .eq("id", user.id);
 
         if (updateError) throw updateError;
-
-        await supabase
-            .from("otp_tokens")
-            .delete()
-            .eq("id", otpRecord.id);
 
         res.status(200).json({
             status: "success",
