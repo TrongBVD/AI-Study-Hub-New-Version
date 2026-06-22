@@ -472,36 +472,73 @@ exports.resetPassword = async (req, res) => {
 exports.searchUsers = async (req, res) => {
   try {
     const { q } = req.query;
-
     if (!q || q.trim() === "") {
       return res.status(200).json({ status: "success", data: [] });
     }
 
     const keyword = `%${q.trim()}%`;
-
-    // Truy vấn Supabase: tìm theo username HOẶC full_name (không phân biệt hoa thường)
     const { data, error } = await supabase
       .from("profiles")
       .select("id, username, full_name, date_of_birth, is_dob_public, email")
-      .or(`username.ilike.${keyword}`)
-      .eq("status", "ACTIVE") // Chỉ tìm tài khoản đang hoạt động
-      .limit(50);
+      .or(`username.ilike.${keyword},full_name.ilike.${keyword}`)
+      .eq("status", "ACTIVE")
+      .limit(20);
 
-    if (error) {
-      throw error;
-    }
+    if (error) throw error;
 
-    return res.status(200).json({
-      status: "success",
-      data: data || []
-    });
+    return res.status(200).json({ status: "success", data: data || [] });
   } catch (error) {
     console.error("Lỗi searchUsers:", error);
-    return res.status(500).json({
-      status: "error",
-      message: "Lỗi khi tìm kiếm người dùng từ Supabase.",
-      error: error.message
+    return res.status(500).json({ status: "error", message: error.message });
+  }
+};
+
+exports.getUserProfileById = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Kiểm tra đề phòng trường hợp frontend truyền nhầm chuỗi "undefined"
+    if (!id || id === "undefined") {
+      return res.status(400).json({ status: "error", message: "ID người dùng không hợp lệ." });
+    }
+
+    // 1. Lấy thông tin tài khoản người dùng từ bảng profiles
+    const { data: profile, error: profileError } = await supabase
+      .from("profiles")
+      .select("id, username, full_name, date_of_birth, is_dob_public")
+      .eq("id", id)
+      .eq("status", "ACTIVE")
+      .maybeSingle();
+
+    if (profileError) throw profileError;
+    
+    if (!profile) {
+      return res.status(404).json({ status: "error", message: "Không tìm thấy người dùng này trong hệ thống." });
+    }
+
+    // 2. Lấy danh sách thư viện được cấu hình công khai (is_public = true) của user đó
+    const { data: libraries, error: libError } = await supabase
+      .from("libraries")
+      .select("id, name, description, created_at")
+      .eq("user_id", id)
+      .eq("is_public", true);
+
+    if (libError) {
+      console.warn("Không thể tải danh sách libraries cá nhân, bỏ qua lỗi này:", libError);
+    }
+
+    // Trả về cấu trúc dữ liệu đồng bộ cho Frontend nhận diện
+    return res.status(200).json({
+      status: "success",
+      data: {
+        profile,
+        libraries: libraries || []
+      }
     });
+
+  } catch (error) {
+    console.error("Lỗi hệ thống tại getUserProfileById:", error);
+    return res.status(500).json({ status: "error", message: "Lỗi xử lý server nội bộ.", error: error.message });
   }
 };
 

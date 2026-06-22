@@ -11,5 +11,6 @@ router.post('/logout', authController.logout);
 router.post('/forgot-password', authController.forgotPassword);
 router.post('/reset-password', authController.resetPassword);
 router.get("/search", authController.searchUsers);
+router.get("/users/:id/profile", authController.getUserProfileById);
 
 module.exports = router;

@@ -84,7 +84,8 @@ function App() {
           <Route path="workspaces/:workspaceId" element={<WorkSpacePage />} />
 
           <Route path="profile" element={<PersonalProfilePage />} />
-
+          <Route path="profile/:id" element={<PersonalProfilePage />} />
+          
           <Route path="ai-chat" element={<AIChatPage />} />
 
           <Route path="flashcards" element={<Flashcards />} />
