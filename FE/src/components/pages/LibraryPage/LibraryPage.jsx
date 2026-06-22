@@ -5,6 +5,7 @@ import {
   getMyDocuments,
   uploadDocuments,
   downloadDocument,
+  deleteDocument,
 } from "../../../utils/documentApi";
 
 import "./LibraryPage.css";
@@ -407,7 +408,8 @@ function countUsedStorageBytes(items) {
     try {
       setIsUploadingDocuments(true);
 
-      const uploadedDocuments = await uploadDocuments(pendingFiles);
+      const workspaceId = libraryData?.workspaceId || libraryData?.workspace_id;
+      const uploadedDocuments = await uploadDocuments(pendingFiles, workspaceId);
 
 const uploadedItems = (uploadedDocuments || []).map((document, index) => ({
   ...mapBackendDocumentToLibraryItem(document),
@@ -495,18 +497,29 @@ function handleOpenBreadcrumbFolder(folder) {
   setDocumentSearch("");
 }
 
-  function handleDeleteDocument(documentName) {
-    setLibraryItems((currentItems) => {
-      const nextItems = currentItems.filter(
-        (item) => item.name !== documentName,
-      );
-      syncLibraryDocumentCount(nextItems);
-      return nextItems;
-    });
+  async function handleDeleteDocument(fileItem) {
+    if (!window.confirm(`Delete "${fileItem.name}"?`)) return;
 
-    alert(
-      "This only removes the file from the frontend list. Backend delete is not implemented yet.",
-    );
+    try {
+      if (fileItem.id && fileItem.isBackendFile) {
+        await deleteDocument(fileItem.id);
+      }
+
+      setLibraryItems((currentItems) => {
+        const nextItems = currentItems.filter((item) =>
+          fileItem.id
+            ? item.id !== fileItem.id
+            : item.name !== fileItem.name
+        );
+        syncLibraryDocumentCount(nextItems);
+        return nextItems;
+      });
+
+      alert("Document deleted successfully.");
+    } catch (error) {
+      console.error("Delete failed:", error);
+      alert("Delete failed. Please try again.");
+    }
   }
 
   async function handleDownloadDocument(fileItem) {
@@ -1006,7 +1019,7 @@ const remainingStorageBytes = Math.max(
                                 type="button"
                                 className="delete_document_btn"
                                 title="Delete"
-                                onClick={() => handleDeleteDocument(document.name)}
+                                onClick={() => handleDeleteDocument(document)}
                               >
                                 <i className="ti-trash"></i>
                               </button>

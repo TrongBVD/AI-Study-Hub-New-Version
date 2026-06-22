@@ -1,74 +1,78 @@
-
-import { useMemo, useState } from "react";
-
+import { useEffect, useMemo, useState } from "react";
+import { getAdminUsers, updateUserStatus } from "../../../../utils/adminApi";
 import "./UserManagementPage.css";
-
-const INITIAL_USERS = [
-  {
-    id: "USR-1024",
-    name: "Dr. Elena Rostova",
-    email: "elena.r@scholarhub.edu",
-    role: "Faculty",
-    status: "Active",
-    storageUsed: 41,
-    quota: 50,
-    lastActive: "2 mins ago",
-    avatar: "https://i.pravatar.cc/80?img=32",
-    department: "Research Methods",
-  },
-  {
-    id: "USR-1025",
-    name: "Julian Marchetti",
-    email: "j.marchetti@scholarhub.edu",
-    role: "Researcher",
-    status: "Active",
-    storageUsed: 12,
-    quota: 100,
-    lastActive: "1 hour ago",
-    avatarText: "JM",
-    department: "Data Lab",
-  },
-  {
-    id: "USR-1026",
-    name: "Liam Thorne",
-    email: "l.thorne@scholarhub.edu",
-    role: "Student",
-    status: "Disabled",
-    storageUsed: 4.5,
-    quota: 10,
-    lastActive: "Oct 12, 2023",
-    avatar: "https://i.pravatar.cc/80?img=12",
-    department: "Software Engineering",
-  },
-  {
-    id: "USR-1027",
-    name: "Maya Linton",
-    email: "maya.linton@scholarhub.edu",
-    role: "Student",
-    status: "Active",
-    storageUsed: 47,
-    quota: 50,
-    lastActive: "Yesterday",
-    avatarText: "ML",
-    department: "Design Research",
-  },
-];
 
 function formatStorage(used, quota) {
   return `${used} / ${quota} GB`;
 }
 
 function getStoragePercent(user) {
+  if (!user.quota) return 0;
   return Math.min(100, Math.round((user.storageUsed / user.quota) * 100));
 }
 
+function getInitials(name = "") {
+  return (
+    name
+      .split(" ")
+      .filter(Boolean)
+      .map((part) => part[0])
+      .join("")
+      .slice(0, 2)
+      .toUpperCase() || "US"
+  );
+}
+
+function formatDate(value) {
+  if (!value) return "Never";
+  return new Date(value).toLocaleString();
+}
+
+function mapUser(row) {
+  const name = row.full_name || row.username || row.email || "Unknown user";
+  const status = row.status === "DISABLED" ? "Disabled" : "Active";
+
+  return {
+    id: row.id,
+    name,
+    email: row.email || "",
+    role: row.role || "USER",
+    status,
+    storageUsed: 0,
+    quota: 50,
+    lastActive: formatDate(row.last_login_at || row.updated_at),
+    avatarText: getInitials(name),
+    department: row.username ? `@${row.username}` : "No username",
+    raw: row,
+  };
+}
+
 function UserManagementPage() {
-  const [users, setUsers] = useState(INITIAL_USERS);
+  const [users, setUsers] = useState([]);
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [confirmAction, setConfirmAction] = useState(null);
   const [inviteEmail, setInviteEmail] = useState("");
   const [notice, setNotice] = useState("");
+  const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadUsers() {
+      try {
+        setIsLoading(true);
+        setError("");
+        const data = await getAdminUsers();
+        setUsers((data || []).map(mapUser));
+      } catch (err) {
+        setError(err.response?.data?.message || "Could not load users.");
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    loadUsers();
+  }, []);
 
   const filteredUsers = useMemo(() => {
     return users.filter((user) => {
@@ -106,39 +110,43 @@ function UserManagementPage() {
     setConfirmAction(null);
   }
 
-  function applyConfirmedAction() {
+  async function applyConfirmedAction() {
     if (!confirmAction) return;
 
     const { type, user } = confirmAction;
 
-    setUsers((currentUsers) =>
-      currentUsers.map((item) => {
-        if (item.id !== user.id) return item;
+    if (type === "resetQuota") {
+      setUsers((currentUsers) =>
+        currentUsers.map((item) =>
+          item.id === user.id ? { ...item, storageUsed: 0, quota: 50 } : item,
+        ),
+      );
+      setNotice(`${user.name} quota was reset locally. Backend quota reset is not implemented yet.`);
+      closeConfirmation();
+      return;
+    }
 
-        if (type === "disable") {
-          return { ...item, status: "Disabled" };
-        }
+    const nextBackendStatus = type === "disable" ? "DISABLED" : "ACTIVE";
 
-        if (type === "reactivate") {
-          return { ...item, status: "Active" };
-        }
+    try {
+      const updated = await updateUserStatus(
+        user.id,
+        nextBackendStatus,
+        `${type} from admin user management page.`,
+      );
 
-        if (type === "resetQuota") {
-          return { ...item, storageUsed: 0, quota: 50 };
-        }
+      setUsers((currentUsers) =>
+        currentUsers.map((item) =>
+          item.id === user.id ? mapUser({ ...item.raw, ...updated }) : item,
+        ),
+      );
 
-        return item;
-      })
-    );
-
-    const actionText = {
-      disable: "disabled",
-      reactivate: "reactivated",
-      resetQuota: "quota reset",
-    }[type];
-
-    setNotice(`${user.name} has been ${actionText}.`);
-    closeConfirmation();
+      const actionText = type === "disable" ? "disabled" : "reactivated";
+      setNotice(`${user.name} has been ${actionText}.`);
+      closeConfirmation();
+    } catch (err) {
+      setNotice(err.response?.data?.message || "Could not update user status.");
+    }
   }
 
   function handleInviteUser(event) {
@@ -150,22 +158,8 @@ function UserManagementPage() {
       return;
     }
 
-    const newUser = {
-      id: `USR-${Date.now()}`,
-      name: email.split("@")[0].replace(/[._-]/g, " "),
-      email,
-      role: "Student",
-      status: "Pending",
-      storageUsed: 0,
-      quota: 50,
-      lastActive: "Invite sent",
-      avatarText: email.slice(0, 2).toUpperCase(),
-      department: "Pending assignment",
-    };
-
-    setUsers((currentUsers) => [newUser, ...currentUsers]);
     setInviteEmail("");
-    setNotice(`Invite sent to ${email}.`);
+    setNotice(`Invite endpoint is not implemented yet. No database record was created for ${email}.`);
   }
 
   const confirmationContent = {
@@ -184,7 +178,7 @@ function UserManagementPage() {
     resetQuota: {
       title: "Reset storage quota?",
       message:
-        "This will reset the user's used storage to 0 GB and restore the quota to 50 GB.",
+        "This will reset the displayed used storage to 0 GB. A backend quota reset endpoint is still needed for persistence.",
       button: "Reset quota",
     },
   };
@@ -205,7 +199,7 @@ function UserManagementPage() {
             <div>
               <span>Quick invite</span>
               <h2>Add a user</h2>
-              <p>Send an invite with a default student role. You can adjust permissions later.</p>
+              <p>Invite persistence is not wired to a backend endpoint yet.</p>
             </div>
 
             <label>
@@ -225,6 +219,8 @@ function UserManagementPage() {
           </form>
         </header>
 
+        {isLoading && <div className="user-management-page__notice">Loading users...</div>}
+        {error && <div className="user-management-page__notice">{error}</div>}
         {notice && (
           <div className="user-management-page__notice" role="status">
             <span>{notice}</span>
@@ -271,7 +267,7 @@ function UserManagementPage() {
                 type="text"
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
-                placeholder="Search by name, email, role, or department"
+                placeholder="Search by name, email, role, or username"
               />
             </div>
           </div>
@@ -281,7 +277,6 @@ function UserManagementPage() {
               ["all", "All users"],
               ["active", "Active"],
               ["disabled", "Disabled"],
-              ["pending", "Pending"],
             ].map(([value, label]) => (
               <button
                 type="button"
@@ -316,11 +311,7 @@ function UserManagementPage() {
                     <tr key={user.id}>
                       <td>
                         <div className="user-management-page__identity">
-                          {user.avatar ? (
-                            <img src={user.avatar} alt={user.name} />
-                          ) : (
-                            <span>{user.avatarText}</span>
-                          )}
+                          <span>{user.avatarText}</span>
 
                           <div>
                             <strong>{user.name}</strong>

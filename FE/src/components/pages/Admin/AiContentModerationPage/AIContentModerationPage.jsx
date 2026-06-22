@@ -1,121 +1,92 @@
-
-import { useMemo, useState } from "react";
-
+import { useEffect, useMemo, useState } from "react";
+import { getModerationDocuments, reviewDocument } from "../../../../utils/adminApi";
 import "./AIContentModerationPage.css";
 
-const INITIAL_CASES = [
-  {
-    id: "MOD-2401",
-    documentName: "Quantum_Mechanics_Draft.pdf",
-    documentType: "PDF",
-    size: "2.4 MB",
-    uploadedAt: "2026-06-16 09:42",
-    library: "Physics Research",
-    workspace: "Science Group A",
-    uploader: {
-      name: "Dr. Aris Thorne",
-      email: "aris.thorne@studyhub.edu",
-      role: "Teacher",
-    },
-    flagType: "AI-generated",
-    severity: "Medium",
-    confidence: 85,
-    status: "Pending review",
-    aiReason:
-      "The text has repeated sentence patterns, low citation density, and a generated-style summary block near the conclusion.",
-    suspiciousContent:
-      "The conclusion contains broad claims without source references and repeats the same technical phrasing across multiple paragraphs.",
-  },
-  {
-    id: "MOD-2402",
-    documentName: "Medical_Ethics_Case_Study.docx",
-    documentType: "DOCX",
-    size: "1.1 MB",
-    uploadedAt: "2026-06-16 10:18",
-    library: "Healthcare Ethics",
-    workspace: "Bioethics Review",
-    uploader: {
-      name: "Elena Rossi",
-      email: "elena.rossi@studyhub.edu",
-      role: "Student",
-    },
-    flagType: "Restricted keywords",
-    severity: "High",
-    confidence: 98,
-    status: "Flagged",
-    aiReason:
-      "The file contains restricted medical terms and multiple instruction-like paragraphs that require manual review.",
-    suspiciousContent:
-      "Several paragraphs include sensitive clinical wording and should be checked before the document is shared with other users.",
-  },
-  {
-    id: "MOD-2403",
-    documentName: "Internal_Research_Archive.zip",
-    documentType: "ZIP",
-    size: "18.7 MB",
-    uploadedAt: "2026-06-16 11:07",
-    library: "Research Archive",
-    workspace: "Private Research Hub",
-    uploader: {
-      name: "Anonymous User",
-      email: "hidden.account@studyhub.edu",
-      role: "Member",
-    },
-    flagType: "Copyright risk",
-    severity: "Medium",
-    confidence: 72,
-    status: "Pending review",
-    aiReason:
-      "The archive includes documents with publisher-style naming and missing uploader ownership metadata.",
-    suspiciousContent:
-      "The file list contains scanned chapter names and bundled source materials that may not belong to the uploader.",
-  },
-  {
-    id: "MOD-2404",
-    documentName: "Assignment_Solution_Set_Final.pdf",
-    documentType: "PDF",
-    size: "920 KB",
-    uploadedAt: "2026-06-16 12:21",
-    library: "Math Practice",
-    workspace: "Calculus Batch 02",
-    uploader: {
-      name: "Mina Park",
-      email: "mina.park@studyhub.edu",
-      role: "Student",
-    },
-    flagType: "Answer leakage",
-    severity: "High",
-    confidence: 91,
-    status: "Flagged",
-    aiReason:
-      "The document resembles an answer key and contains final answers without supporting explanation or author notes.",
-    suspiciousContent:
-      "The file title and content suggest it may reveal assignment answers before the class deadline.",
-  },
-];
-
 const FILTERS = ["All", "Pending review", "Flagged", "Approved", "Quarantined"];
+
+function formatBytes(bytes) {
+  const value = Number(bytes || 0);
+  if (value < 1024) return `${value} B`;
+  if (value < 1024 * 1024) return `${(value / 1024).toFixed(1)} KB`;
+  return `${(value / 1024 / 1024).toFixed(1)} MB`;
+}
+
+function formatDate(value) {
+  if (!value) return "No date";
+  return new Date(value).toLocaleString();
+}
+
+function getDisplayName(user) {
+  return user?.full_name || user?.username || user?.email || "Unknown user";
+}
+
+function getInitials(name = "") {
+  return (
+    name
+      .split(" ")
+      .filter(Boolean)
+      .map((part) => part[0])
+      .join("")
+      .slice(0, 2)
+      .toUpperCase() || "U"
+  );
+}
+
+function getReason(document) {
+  const reason = document.ai_reject_reason;
+  if (!reason) return "No AI reason was stored for this document.";
+  if (typeof reason === "string") return reason;
+  return reason.reason || reason.error || JSON.stringify(reason);
+}
+
+function getSuspiciousContent(document) {
+  const reason = document.ai_reject_reason;
+  if (reason?.suspicious_text?.length) return reason.suspicious_text.join("\n");
+  return document.admin_review_reason || "No suspicious text excerpt was stored.";
+}
+
+function getStatusLabel(status) {
+  if (status === "APPROVED") return "Approved";
+  if (status === "FLAGGED") return "Flagged";
+  return "Pending review";
+}
+
+function getSeverity(status) {
+  if (status === "FLAGGED" || status === "REJECTED") return "High";
+  return "Medium";
+}
 
 function getSeverityClass(severity) {
   return severity.toLowerCase();
 }
 
-function getInitials(name) {
-  return name
-    .split(" ")
-    .map((part) => part[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase();
-}
-
 function AIContentModerationPage() {
-  const [cases, setCases] = useState(INITIAL_CASES);
-  const [selectedCaseId, setSelectedCaseId] = useState(INITIAL_CASES[0]?.id);
+  const [cases, setCases] = useState([]);
+  const [selectedCaseId, setSelectedCaseId] = useState(null);
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
   const [severityFilter, setSeverityFilter] = useState("All");
   const [notice, setNotice] = useState("");
+  const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
+
+  async function loadCases() {
+    try {
+      setIsLoading(true);
+      setError("");
+      const data = await getModerationDocuments();
+      setCases(data || []);
+      setSelectedCaseId((data || [])[0]?.id || null);
+    } catch (err) {
+      setError(err.response?.data?.message || "Could not load moderation queue.");
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    loadCases();
+  }, []);
 
   const selectedCase =
     cases.find((item) => item.id === selectedCaseId) || cases[0] || null;
@@ -124,46 +95,51 @@ function AIContentModerationPage() {
     const normalizedQuery = query.trim().toLowerCase();
 
     return cases.filter((item) => {
+      const uploaderName = getDisplayName(item.uploader);
       const matchesQuery =
         !normalizedQuery ||
-        item.documentName.toLowerCase().includes(normalizedQuery) ||
-        item.uploader.name.toLowerCase().includes(normalizedQuery) ||
-        item.uploader.email.toLowerCase().includes(normalizedQuery) ||
-        item.flagType.toLowerCase().includes(normalizedQuery);
+        item.title?.toLowerCase().includes(normalizedQuery) ||
+        uploaderName.toLowerCase().includes(normalizedQuery) ||
+        item.uploader?.email?.toLowerCase().includes(normalizedQuery) ||
+        item.status?.toLowerCase().includes(normalizedQuery);
 
+      const statusLabel = getStatusLabel(item.status);
       const matchesStatus =
-        statusFilter === "All" || item.status === statusFilter;
+        statusFilter === "All" || statusLabel === statusFilter;
       const matchesSeverity =
-        severityFilter === "All" || item.severity === severityFilter;
+        severityFilter === "All" || getSeverity(item.status) === severityFilter;
 
       return matchesQuery && matchesStatus && matchesSeverity;
     });
   }, [cases, query, statusFilter, severityFilter]);
 
   const stats = useMemo(() => {
-    const flagged = cases.filter((item) => item.status === "Flagged").length;
-    const pending = cases.filter((item) => item.status === "Pending review").length;
-    const highRisk = cases.filter((item) => item.severity === "High").length;
-    const averageConfidence = Math.round(
-      cases.reduce((total, item) => total + item.confidence, 0) / cases.length
-    );
+    const flagged = cases.filter((item) => item.status === "FLAGGED").length;
+    const pending = cases.filter((item) => item.status !== "APPROVED").length;
+    const highRisk = cases.filter((item) => getSeverity(item.status) === "High").length;
 
     return [
       { label: "Flagged files", value: flagged, note: "Require admin action" },
       { label: "Pending review", value: pending, note: "Waiting for decision" },
       { label: "High risk", value: highRisk, note: "Prioritize these first" },
-      { label: "AI confidence", value: `${averageConfidence}%`, note: "Average detection score" },
+      { label: "AI confidence", value: "N/A", note: "Not stored in current schema" },
     ];
   }, [cases]);
 
-  function updateCaseStatus(id, nextStatus) {
-    setCases((currentCases) =>
-      currentCases.map((item) =>
-        item.id === id ? { ...item, status: nextStatus } : item
-      )
-    );
-    setSelectedCaseId(id);
-    setNotice(`Case ${id} marked as ${nextStatus.toLowerCase()}.`);
+  async function updateCaseStatus(id, nextStatus) {
+    const decision = nextStatus === "Approved" ? "APPROVE" : "KEEP_REJECTED";
+
+    try {
+      await reviewDocument(id, decision, `${nextStatus} from admin moderation page.`);
+      setCases((currentCases) => currentCases.filter((item) => item.id !== id));
+      setSelectedCaseId((currentId) => {
+        if (currentId !== id) return currentId;
+        return cases.find((item) => item.id !== id)?.id || null;
+      });
+      setNotice(`Case ${id} marked as ${nextStatus.toLowerCase()}.`);
+    } catch (err) {
+      setNotice(err.response?.data?.message || "Could not save moderation decision.");
+    }
   }
 
   return (
@@ -182,13 +158,15 @@ function AIContentModerationPage() {
           <span>Current queue</span>
           <strong>{cases.length} cases</strong>
           <p>{filteredCases.length} visible after filters</p>
-          <button type="button" onClick={() => setNotice("Moderation queue refreshed.")}> 
+          <button type="button" onClick={loadCases}>
             <i className="ti-reload"></i>
             Refresh queue
           </button>
         </div>
       </header>
 
+      {isLoading && <div className="ai-moderation-page__notice">Loading moderation queue...</div>}
+      {error && <div className="ai-moderation-page__notice">{error}</div>}
       {notice && (
         <div className="ai-moderation-page__notice">
           <i className="ti-check"></i>
@@ -221,7 +199,7 @@ function AIContentModerationPage() {
                 <input
                   value={query}
                   onChange={(event) => setQuery(event.target.value)}
-                  placeholder="Search document, uploader or flag..."
+                  placeholder="Search document, uploader or status..."
                 />
               </label>
 
@@ -247,37 +225,38 @@ function AIContentModerationPage() {
 
           <div className="ai-moderation-page__case-list">
             {filteredCases.length > 0 ? (
-              filteredCases.map((item) => (
-                <button
-                  type="button"
-                  key={item.id}
-                  className={`ai-moderation-page__case-row ${
-                    selectedCase?.id === item.id ? "is-selected" : ""
-                  }`}
-                  onClick={() => setSelectedCaseId(item.id)}
-                >
-                  <span className="ai-moderation-page__file-icon">
-                    <i className="ti-file"></i>
-                  </span>
+              filteredCases.map((item) => {
+                const severity = getSeverity(item.status);
+                return (
+                  <button
+                    type="button"
+                    key={item.id}
+                    className={`ai-moderation-page__case-row ${
+                      selectedCase?.id === item.id ? "is-selected" : ""
+                    }`}
+                    onClick={() => setSelectedCaseId(item.id)}
+                  >
+                    <span className="ai-moderation-page__file-icon">
+                      <i className="ti-file"></i>
+                    </span>
 
-                  <span className="ai-moderation-page__case-main">
-                    <strong>{item.documentName}</strong>
-                    <small>{item.uploader.name} · {item.uploadedAt}</small>
-                  </span>
+                    <span className="ai-moderation-page__case-main">
+                      <strong>{item.title}</strong>
+                      <small>{getDisplayName(item.uploader)} · {formatDate(item.created_at)}</small>
+                    </span>
 
-                  <span className={`ai-moderation-page__severity ${getSeverityClass(item.severity)}`}>
-                    {item.severity}
-                  </span>
+                    <span className={`ai-moderation-page__severity ${getSeverityClass(severity)}`}>
+                      {severity}
+                    </span>
 
-                  <span className="ai-moderation-page__confidence">
-                    {item.confidence}%
-                  </span>
+                    <span className="ai-moderation-page__confidence">N/A</span>
 
-                  <span className="ai-moderation-page__status-pill">
-                    {item.status}
-                  </span>
-                </button>
-              ))
+                    <span className="ai-moderation-page__status-pill">
+                      {getStatusLabel(item.status)}
+                    </span>
+                  </button>
+                );
+              })
             ) : (
               <div className="ai-moderation-page__empty-state">
                 <i className="ti-shield"></i>
@@ -294,31 +273,31 @@ function AIContentModerationPage() {
               <div className="ai-moderation-page__detail-top">
                 <div>
                   <span>{selectedCase.id}</span>
-                  <h2>{selectedCase.documentName}</h2>
+                  <h2>{selectedCase.title}</h2>
                 </div>
-                <span className={`ai-moderation-page__severity ${getSeverityClass(selectedCase.severity)}`}>
-                  {selectedCase.severity}
+                <span className={`ai-moderation-page__severity ${getSeverityClass(getSeverity(selectedCase.status))}`}>
+                  {getSeverity(selectedCase.status)}
                 </span>
               </div>
 
               <section className="ai-moderation-page__reason-card">
                 <h3>AI reason</h3>
-                <p>{selectedCase.aiReason}</p>
+                <p>{getReason(selectedCase)}</p>
               </section>
 
               <section className="ai-moderation-page__reason-card warning">
                 <h3>Suspicious content</h3>
-                <p>{selectedCase.suspiciousContent}</p>
+                <p>{getSuspiciousContent(selectedCase)}</p>
               </section>
 
               <section className="ai-moderation-page__metadata-card">
                 <h3>Uploader</h3>
                 <div className="ai-moderation-page__uploader-card">
-                  <span>{getInitials(selectedCase.uploader.name)}</span>
+                  <span>{getInitials(getDisplayName(selectedCase.uploader))}</span>
                   <div>
-                    <strong>{selectedCase.uploader.name}</strong>
-                    <p>{selectedCase.uploader.email}</p>
-                    <small>{selectedCase.uploader.role}</small>
+                    <strong>{getDisplayName(selectedCase.uploader)}</strong>
+                    <p>{selectedCase.uploader?.email || "No email"}</p>
+                    <small>{selectedCase.uploader?.username || "No username"}</small>
                   </div>
                 </div>
               </section>
@@ -328,27 +307,27 @@ function AIContentModerationPage() {
                 <div className="ai-moderation-page__meta-grid">
                   <div>
                     <span>Type</span>
-                    <strong>{selectedCase.documentType}</strong>
+                    <strong>{selectedCase.title?.split(".").pop()?.toUpperCase() || "File"}</strong>
                   </div>
                   <div>
                     <span>Size</span>
-                    <strong>{selectedCase.size}</strong>
+                    <strong>{formatBytes(selectedCase.file_size_bytes)}</strong>
                   </div>
                   <div>
-                    <span>Library</span>
-                    <strong>{selectedCase.library}</strong>
+                    <span>Public</span>
+                    <strong>{selectedCase.is_public ? "Yes" : "No"}</strong>
                   </div>
                   <div>
-                    <span>Workspace</span>
-                    <strong>{selectedCase.workspace}</strong>
+                    <span>Status</span>
+                    <strong>{selectedCase.status}</strong>
                   </div>
                   <div>
                     <span>Uploaded</span>
-                    <strong>{selectedCase.uploadedAt}</strong>
+                    <strong>{formatDate(selectedCase.created_at)}</strong>
                   </div>
                   <div>
                     <span>Confidence</span>
-                    <strong>{selectedCase.confidence}%</strong>
+                    <strong>N/A</strong>
                   </div>
                 </div>
               </section>
@@ -360,13 +339,6 @@ function AIContentModerationPage() {
                   onClick={() => updateCaseStatus(selectedCase.id, "Approved")}
                 >
                   Approve
-                </button>
-                <button
-                  type="button"
-                  className="quarantine"
-                  onClick={() => updateCaseStatus(selectedCase.id, "Quarantined")}
-                >
-                  Quarantine
                 </button>
                 <button
                   type="button"
