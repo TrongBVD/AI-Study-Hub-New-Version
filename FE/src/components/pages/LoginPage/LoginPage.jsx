@@ -1,5 +1,4 @@
-import { useState } from "react";
-import { useEffect } from "react";
+import { useState, useEffect } from "react";
 import FormInput from "../../common/FormInput/FormInput.jsx";
 import { GoogleLogin, GoogleOAuthProvider } from "@react-oauth/google";
 import api from "../../../utils/api.js";
@@ -77,6 +76,30 @@ function LoginPage() {
 
     return user || {};
   }
+
+  // --- HÀM XỬ LÝ ĐĂNG NHẬP CHO GUEST ---
+  const handleGuestLogin = () => {
+    // Tạo 1 Fake JWT Token để qua mặt hàm isTokenValid() trong authToken.js
+    // Payload decode ra sẽ là {"exp": 9999999999} (Sống tới năm 2286)
+    const fakeGuestToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjk5OTk5OTk5OTl9.guest_signature_bypass";
+    
+    // Tạo Profile Ảo
+    const guestUser = {
+      _id: "guest_" + Date.now(),
+      role: "GUEST", // Phân biệt role để chặn quyền phía sau
+      username: "GuestUser",
+      display_name: "Khách (Guest)",
+      email: "guest@studyhub.local",
+    };
+
+    // Lưu vào LocalStorage
+    localStorage.setItem("accessToken", fakeGuestToken);
+    localStorage.setItem("user", JSON.stringify(guestUser));
+    localStorage.setItem("aiStudyHubProfileName", guestUser.display_name);
+
+    // Chuyển hướng vào trang chủ
+    navigate("/dashboard/home", { replace: true });
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -203,6 +226,27 @@ function LoginPage() {
 
         <button className="login_submit" type="submit">
           Submit
+        </button>
+
+        {/* --- NÚT GUEST LOGIN --- */}
+        <button 
+          className="guest_login_btn" 
+          type="button" 
+          onClick={handleGuestLogin}
+          style={{
+            marginTop: "10px",
+            width: "100%",
+            padding: "12px",
+            backgroundColor: "#f1f3f5",
+            color: "#495057",
+            border: "1px solid #ced4da",
+            borderRadius: "6px",
+            cursor: "pointer",
+            fontWeight: "600",
+            transition: "0.2s"
+          }}
+        >
+          Log in as Guest
         </button>
 
         <p className="login_message">

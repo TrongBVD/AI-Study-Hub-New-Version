@@ -14,22 +14,28 @@ function getStoredUserRole() {
 
 function Sidebar({ isOpen, onClose }) {
   const navigate = useNavigate();
-  const isSystemAdmin = getStoredUserRole() === "SYSTEM_ADMIN";
+  const userRole = getStoredUserRole();
+  const isSystemAdmin = userRole === "SYSTEM_ADMIN";
+  const isGuest = userRole === "GUEST"; // Nhận diện Guest
 
+  // Thêm thuộc tính hideForGuest để ẩn menu với Guest
   const menuItems = [
-    { icon: "ti-home", label: "Home", path: "/dashboard/home" },
-    { icon: "ti-folder", label: "My libraries", path: "/dashboard/libraries" },
-    { icon: "ti-layout-grid2", label: "My workspaces", path: "/dashboard/workspaces" },
-
-    // Đã thay đổi AI Chat thành Search User ở đây
-    { icon: "ti-search", label: "Search User", path: "/dashboard/search-user"},
-
-    { icon: "ti-settings", label: "Settings", path: "/dashboard/settings" },
+    { icon: "ti-home", label: "Home", path: "/dashboard/home", hideForGuest: false },
+    { icon: "ti-folder", label: "My libraries", path: "/dashboard/libraries", hideForGuest: true },
+    { icon: "ti-layout-grid2", label: "My workspaces", path: "/dashboard/workspaces", hideForGuest: true },
+    { icon: "ti-search", label: "Search User", path: "/dashboard/search-user", hideForGuest: false },
+    { icon: "ti-settings", label: "Settings", path: "/dashboard/settings", hideForGuest: true },
   ];
+
+  // Lọc bỏ những chức năng không dành cho Guest
+  const visibleMenuItems = menuItems.filter(item => !(isGuest && item.hideForGuest));
 
   async function handleLogout() {
     try {
-      await api.post("/auth/logout");
+      // Nếu không phải là Guest thì mới gọi API logout
+      if (!isGuest) {
+        await api.post("/auth/logout");
+      }
     } catch (error) {
       console.error("Logout request failed:", error);
     } finally {
@@ -62,7 +68,7 @@ function Sidebar({ isOpen, onClose }) {
           </div>
 
           <nav className="sidebar_nav">
-            {menuItems.map((item) => (
+            {visibleMenuItems.map((item) => (
               <NavLink
                 to={item.path}
                 className={({ isActive }) =>
