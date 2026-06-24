@@ -174,7 +174,7 @@ async function processDocumentWithAI(file, documentId) {
 
 exports.listMyDocuments = async (req, res) => {
   try {
-    const userID = req.user.id;
+    const userID = req.user.userId;
 
     const { data, error } = await supabase
       .from("documents")
@@ -216,7 +216,7 @@ exports.listMyDocuments = async (req, res) => {
 
 exports.uploadDocuments = async (req, res) => {
   try {
-    const userID = req.user.id;
+    const userID = req.user.userId;
     const files = req.files || [];
     const workspaceId = req.body?.workspaceId || null;
     const libraryId = req.body?.libraryId || null; // Hỗ trợ up lên Library
@@ -288,7 +288,7 @@ exports.uploadDocuments = async (req, res) => {
 
 exports.downloadDocument = async (req, res) => {
   try {
-    const userID = req.user.id;
+    const userID = req.user.userId;
     const { documentId } = req.params;
 
     const { data: document, error: documentError } = await supabase
@@ -348,7 +348,7 @@ exports.downloadDocument = async (req, res) => {
 
 exports.deleteDocument = async (req, res) => {
   try {
-    const userID = req.user.id;
+    const userID = req.user.userId;
     const { documentId } = req.params;
 
     const { data: document, error: documentError } = await supabase
@@ -401,5 +401,50 @@ exports.deleteDocument = async (req, res) => {
       message: "Không thể xóa tài liệu.",
       error: error.message,
     });
+  }
+};
+
+// Hàm API tạo thư viện mới vào Supabase
+exports.createLibrary = async (req, res) => {
+  try {
+    // Đã thêm biến share_on_profile vào đây
+    const { name, description, is_public, share_on_profile } = req.body;
+    const userID = req.user.userId; 
+    
+    const { data, error } = await supabase
+      .from("libraries")
+      .insert({ 
+        user_id: userId, 
+        name, 
+        description, 
+        is_public,
+        share_on_profile 
+      })
+      .select().single();
+      
+    if (error) throw error;
+    return res.status(201).json({ status: "success", data });
+  } catch (error) {
+    return res.status(500).json({ status: "error", message: error.message });
+  }
+};
+
+// Hàm API cập nhật trạng thái của thư viện
+exports.updateLibrary = async (req, res) => {
+  try {
+    const { id } = req.params;
+    // Đã thêm biến share_on_profile
+    const { name, description, is_public, share_on_profile } = req.body;
+    
+    const { data, error } = await supabase
+      .from("libraries")
+      .update({ name, description, is_public, share_on_profile })
+      .eq("id", id)
+      .select().single();
+      
+    if (error) throw error;
+    return res.status(200).json({ status: "success", data });
+  } catch (error) {
+    return res.status(500).json({ status: "error", message: error.message });
   }
 };

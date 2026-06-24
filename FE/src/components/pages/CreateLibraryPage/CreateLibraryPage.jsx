@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import "./CreateLibraryPage.css";
+import api from "../../../utils/api.js";
 
 const PROFILE_NAME_KEY = "aiStudyHubProfileName";
 const PROFILE_AVATAR_KEY = "aiStudyHubProfileAvatar";
@@ -73,7 +74,7 @@ function CreateLibraryPage() {
     navigate(returnPath);
   }
 
-  function handleCreateLibrary(e) {
+  async function handleCreateLibrary(e) {
     e.preventDefault();
 
     if (trimmedLibraryName === "") {
@@ -96,31 +97,50 @@ function CreateLibraryPage() {
       return;
     }
 
-    const newLibrary = {
-      id: `library-${Date.now()}`,
-      owner: ownerName,
-      ownerAvatar,
-      name: trimmedLibraryName,
-      description: previewDescription,
-      visibility,
-      documents: 0,
-      updatedAt: "Updated just now",
-      icon: "ti-archive",
-      highlight: false,
-      createdAt: new Date().toISOString(),
-    };
+    try {
+      const isPublic = visibility === "public";
 
-    localStorage.setItem(
-      "aiStudyHubLibraries",
-      JSON.stringify([newLibrary, ...savedLibraries])
-    );
+      // 1. GỌI API ĐẨY DỮ LIỆU LÊN SUPABASE
+      // Cung cấp cả 2 biến is_public và share_on_profile độc lập theo logic của anh/chị
+      const response = await api.post("/documents/libraries", {
+        name: trimmedLibraryName,
+        description: previewDescription,
+        is_public: isPublic,
+        share_on_profile: isPublic // Mặc định khi tạo mới: nếu public thì share lên profile luôn
+      });
 
-    navigate(`/dashboard/libraries/${newLibrary.id}`, {
-      state: {
-        library: newLibrary,
-        from: "/dashboard/create-library",
-      },
-    });
+      // Lấy ID chuẩn do Supabase tạo ra
+      const dbLibraryId = response.data.data.id;
+
+      // 2. LƯU VÀO LOCALSTORAGE NHƯ CŨ (Nhưng dùng ID của Database)
+      const newLibrary = {
+        id: dbLibraryId, 
+        owner: ownerName,
+        ownerAvatar,
+        name: trimmedLibraryName,
+        description: previewDescription,
+        visibility,
+        shareOnProfile: isPublic,
+        documents: 0,
+        updatedAt: "Updated just now",
+        icon: "ti-archive",
+        highlight: false,
+        createdAt: new Date().toISOString(),
+      };
+
+      const savedLibraries = JSON.parse(localStorage.getItem("aiStudyHubLibraries") || "[]");
+      localStorage.setItem("aiStudyHubLibraries", JSON.stringify([newLibrary, ...savedLibraries]));
+
+      navigate(`/dashboard/libraries/${newLibrary.id}`, {
+        state: {
+          library: newLibrary,
+          from: "/dashboard/create-library",
+        },
+      });
+    } catch (error) {
+      console.error("Lỗi tạo thư viện:", error);
+      alert("Lỗi kết nối với máy chủ. Thư viện chưa được lưu vào Database.");
+    }
   }
 
   return (

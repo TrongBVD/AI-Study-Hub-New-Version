@@ -5,7 +5,8 @@ export async function getMyDocuments() {
   return response.data.data;
 }
 
-export async function uploadDocuments(files, workspaceId) {
+// Đã bổ sung thêm tham số libraryId
+export async function uploadDocuments(files, workspaceId = null, libraryId = null) {
   const formData = new FormData();
 
   files.forEach((file) => {
@@ -14,6 +15,10 @@ export async function uploadDocuments(files, workspaceId) {
 
   if (workspaceId) {
     formData.append("workspaceId", workspaceId);
+  }
+  
+  if (libraryId) {
+    formData.append("libraryId", libraryId);
   }
 
   const response = await api.post("/documents/upload", formData);

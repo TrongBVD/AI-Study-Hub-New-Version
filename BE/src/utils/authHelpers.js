@@ -4,7 +4,7 @@ const jwt = require("jsonwebtoken");
 
 const GOOGLE_SSO_NO_PASSWORD = "GOOGLE_SSO_NO_PASSWORD";
 const OTP_EXPIRY_MINUTES = 10;
-const ACCESS_TOKEN_EXPIRY = "24h";
+const ACCESS_TOKEN_EXPIRY = "30m";
 const SETUP_TOKEN_EXPIRY = "15m";
 const PASSWORD_RESET_TOKEN_EXPIRY = "15m";
 

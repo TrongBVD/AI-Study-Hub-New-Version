@@ -573,6 +573,7 @@ exports.getUserProfileById = async (req, res) => {
       .from("libraries")
       .select("id, name, description, created_at")
       .eq("user_id", id)
+      .eq("share_on_profile", true)
       .eq("is_public", true);
 
     if (libError) {
