@@ -47,27 +47,6 @@ function HomePage() {
     },
   ];
 
-  const quickActions = [
-    {
-      title: "Create workspace",
-      description: "Open a private room for topics, files and team discussion.",
-      icon: "ti-briefcase",
-      to: "/dashboard/create-workspace",
-      primary: true,
-    },
-    {
-      title: "Create library",
-      description: "Build a clean collection for documents and study materials.",
-      icon: "ti-folder",
-      to: "/dashboard/create-library",
-    },
-    {
-      title: "Open AI Chat",
-      description: "Ask questions and continue your learning flow.",
-      icon: "ti-comments",
-      to: "/dashboard/ai-chat",
-    },
-  ];
 
   const latestLibrary = recentLibraries[0];
   const latestWorkspace = recentWorkspaces[0];
@@ -278,7 +257,7 @@ function HomePage() {
           </aside>
         </section>
 
-        <section className="home_action_grid" aria-label="Quick actions">
+        {/* <section className="home_action_grid" aria-label="Quick actions">
           {quickActions.map((action) => (
             <Link
               to={action.to}
@@ -300,7 +279,7 @@ function HomePage() {
               </span>
             </Link>
           ))}
-        </section>
+        </section> */}
       </section>
     </main>
   );
