@@ -174,7 +174,14 @@ async function processDocumentWithAI(file, documentId) {
 
 exports.listMyDocuments = async (req, res) => {
   try {
-    const userID = req.user.userId;
+    const userID = req.user.id; 
+
+    if (!userID) {
+      return res.status(401).json({
+        status: "error",
+        message: "Authenticated user id is missing.",
+      });
+    }
 
     const { data, error } = await supabase
       .from("documents")
@@ -216,7 +223,7 @@ exports.listMyDocuments = async (req, res) => {
 
 exports.uploadDocuments = async (req, res) => {
   try {
-    const userID = req.user.userId;
+    const userID = req.user.id; 
     const files = req.files || [];
     const workspaceId = req.body?.workspaceId || null;
     const libraryId = req.body?.libraryId || null; // Hỗ trợ up lên Library
@@ -288,7 +295,7 @@ exports.uploadDocuments = async (req, res) => {
 
 exports.downloadDocument = async (req, res) => {
   try {
-    const userID = req.user.userId;
+    const userID = req.user.id;
     const { documentId } = req.params;
 
     const { data: document, error: documentError } = await supabase
@@ -348,7 +355,7 @@ exports.downloadDocument = async (req, res) => {
 
 exports.deleteDocument = async (req, res) => {
   try {
-    const userID = req.user.userId;
+    const userID = req.user.id;
     const { documentId } = req.params;
 
     const { data: document, error: documentError } = await supabase
@@ -409,12 +416,19 @@ exports.createLibrary = async (req, res) => {
   try {
     // Đã thêm biến share_on_profile vào đây
     const { name, description, is_public, share_on_profile } = req.body;
-    const userID = req.user.userId; 
+    const userID = req.user.id; 
+
+    if (!userID) {
+      return res.status(401).json({
+        status: "error",
+        message: "Authenticated user id is missing.",
+      });
+    }
     
     const { data, error } = await supabase
       .from("libraries")
       .insert({ 
-        user_id: userId, 
+        user_id: userID, 
         name, 
         description, 
         is_public,
@@ -425,6 +439,7 @@ exports.createLibrary = async (req, res) => {
     if (error) throw error;
     return res.status(201).json({ status: "success", data });
   } catch (error) {
+    console.error("Create library error:", error);
     return res.status(500).json({ status: "error", message: error.message });
   }
 };
