@@ -11,6 +11,6 @@ export const searchUsers = (query) => {
   }
 
   return api
-    .get("/users/search", { params: { q: normalizedQuery } })
-    .then((response) => response.data.data);
+    .get("/auth/search", { params: { q: normalizedQuery } })
+    .then((response) => response.data?.data || []);
 };
