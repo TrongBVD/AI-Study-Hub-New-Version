@@ -168,14 +168,12 @@ function LibraryPage() {
   }, [
     libraryData?.id,
     libraryData?.name,
-    libraryData?.description,
     libraryData?.documents,
     libraryData?.icon,
     libraryData?.updatedAt,
     libraryData?.stars,
     libraryData?.isStarred,
     libraryName,
-    libraryDescription,
     isGuest,
   ]);
   const [libraryVisibility, setLibraryVisibility] = useState(
@@ -584,7 +582,7 @@ function LibraryPage() {
         return;
       }
 
-      const backendDocuments = await getMyDocuments(activeLibraryId);
+      const backendDocuments = await getMyDocuments(libraryData.id || libraryId);
 
       setLibraryItems((currentItems) => {
         const savedBackendItems = new Map(
