@@ -20,11 +20,10 @@ function Sidebar({ isOpen, onClose }) {
 
   // Thêm thuộc tính hideForGuest để ẩn menu với Guest
   const menuItems = [
-    { icon: "ti-home", label: "Home", path: "/dashboard/home", hideForGuest: false },
-    { icon: "ti-folder", label: "My libraries", path: "/dashboard/libraries", hideForGuest: true },
-    { icon: "ti-layout-grid2", label: "My workspaces", path: "/dashboard/workspaces", hideForGuest: true },
-    { icon: "ti-search", label: "Search User", path: "/dashboard/search-user", hideForGuest: false },
-    { icon: "ti-settings", label: "Settings", path: "/dashboard/settings", hideForGuest: true },
+    { icon: "ti-home", label: "Home", path: "/dashboard/home" },
+    { icon: "ti-folder", label: "My libraries", path: "/dashboard/libraries" },
+    { icon: "ti-layout-grid2", label: "My workspaces", path: "/dashboard/workspaces" },
+    { icon: "ti-settings", label: "Settings", path: "/dashboard/settings" },
   ];
 
   // Lọc bỏ những chức năng không dành cho Guest

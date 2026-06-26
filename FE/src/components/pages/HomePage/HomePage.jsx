@@ -12,6 +12,61 @@ function readStorageList(key) {
   }
 }
 
+function getWorkspaceId(workspace) {
+  return workspace?.id || workspace?._id || workspace?.workspaceId || "";
+}
+
+function normalizeWorkspace(workspace, recentWorkspace = {}) {
+  const id = getWorkspaceId(workspace) || getWorkspaceId(recentWorkspace);
+
+  if (!id) return null;
+
+  return {
+    ...recentWorkspace,
+    ...workspace,
+    id,
+    name:
+      workspace?.name ||
+      workspace?.workspaceName ||
+      recentWorkspace?.name ||
+      recentWorkspace?.workspaceName ||
+      "Untitled Workspace",
+    description:
+      workspace?.description ||
+      recentWorkspace?.description ||
+      "Continue the discussion from this workspace.",
+    icon: workspace?.icon || recentWorkspace?.icon || "ti-layout-grid2",
+    visitedAt:
+      Number(recentWorkspace?.visitedAt) ||
+      Number(workspace?.visitedAt) ||
+      0,
+  };
+}
+
+function getSyncedRecentWorkspaces(workspaces, storedRecentWorkspaces) {
+  const workspaceMap = new Map(
+    workspaces
+      .map((workspace) => [getWorkspaceId(workspace), workspace])
+      .filter(([id]) => Boolean(id))
+  );
+
+  const syncedRecentWorkspaces = storedRecentWorkspaces
+    .map((recentWorkspace) => {
+      const workspace = workspaceMap.get(getWorkspaceId(recentWorkspace));
+      return workspace ? normalizeWorkspace(workspace, recentWorkspace) : null;
+    })
+    .filter(Boolean)
+    .sort((a, b) => Number(b.visitedAt || 0) - Number(a.visitedAt || 0));
+
+  if (syncedRecentWorkspaces.length > 0) {
+    return syncedRecentWorkspaces;
+  }
+
+  return workspaces
+    .map((workspace) => normalizeWorkspace(workspace))
+    .filter(Boolean);
+}
+    
 function getStoredUserRole() {
   try {
     const user = JSON.parse(localStorage.getItem("user") || "null");
@@ -65,6 +120,21 @@ function HomePage() {
     },
   ];
 
+  const quickActions = [
+    {
+      title: "Create workspace",
+      description: "Open a private room for topics, files and team discussion.",
+      icon: "ti-briefcase",
+      to: "/dashboard/create-workspace",
+      primary: true,
+    },
+    {
+      title: "Create library",
+      description: "Build a clean collection for documents and study materials.",
+      icon: "ti-folder",
+      to: "/dashboard/create-library",
+    },
+  ];
 
   const latestLibrary = recentLibraries[0];
   const latestWorkspace = recentWorkspaces[0];
@@ -90,48 +160,66 @@ function HomePage() {
             </div>
 
             <div className="home_primary_actions">
-              {isGuest ? (
-                <>
-                  <button
-                    type="button"
-                    onClick={notifyGuestRegistrationRequired}
-                    className="home_btn home_btn_primary"
-                  >
-                    <i className="ti-briefcase"></i>
-                    Create workspace
-                  </button>
+  {isGuest ? (
+    <>
+      <button
+        type="button"
+        onClick={notifyGuestRegistrationRequired}
+        className="home_btn home_btn_primary"
+      >
+        <i className="ti-briefcase"></i>
+        Create workspace
+      </button>
 
-                  <button
-                    type="button"
-                    onClick={notifyGuestRegistrationRequired}
-                    className="home_btn home_btn_secondary"
-                  >
-                    <i className="ti-folder"></i>
-                    Create library
-                  </button>
-                </>
-              ) : (
-                <>
-                  <Link
-                    to="/dashboard/create-workspace"
-                    state={{ from: "/dashboard/home" }}
-                    className="home_btn home_btn_primary"
-                  >
-                    <i className="ti-briefcase"></i>
-                    Create workspace
-                  </Link>
+      <button
+        type="button"
+        onClick={notifyGuestRegistrationRequired}
+        className="home_btn home_btn_secondary"
+      >
+        <i className="ti-folder"></i>
+        Create library
+      </button>
 
-                  <Link
-                    to="/dashboard/create-library"
-                    state={{ from: "/dashboard/home" }}
-                    className="home_btn home_btn_secondary"
-                  >
-                    <i className="ti-folder"></i>
-                    Create library
-                  </Link>
-                </>
-              )}
-            </div>
+      <Link
+        to="/dashboard/import-library"
+        state={{ from: "/dashboard/home" }}
+        className="home_btn home_btn_secondary"
+      >
+        <i className="ti-import"></i>
+        Import library
+      </Link>
+    </>
+  ) : (
+    <>
+      <Link
+        to="/dashboard/create-workspace"
+        state={{ from: "/dashboard/home" }}
+        className="home_btn home_btn_primary"
+      >
+        <i className="ti-briefcase"></i>
+        Create workspace
+      </Link>
+
+      <Link
+        to="/dashboard/create-library"
+        state={{ from: "/dashboard/home" }}
+        className="home_btn home_btn_secondary"
+      >
+        <i className="ti-folder"></i>
+        Create library
+      </Link>
+
+      <Link
+        to="/dashboard/import-library"
+        state={{ from: "/dashboard/home" }}
+        className="home_btn home_btn_secondary"
+      >
+        <i className="ti-import"></i>
+        Import library
+      </Link>
+    </>
+  )}
+</div>
           </div>
 
           <aside className="home_focus_panel" aria-label="Latest activity preview">
@@ -172,7 +260,7 @@ function HomePage() {
               <h2>{latestWorkspace?.name || "No workspace opened yet"}</h2>
               <p>
                 {latestWorkspace
-                  ? "Continue the discussion from this workspace."
+                  ? latestWorkspace.description
                   : "Your recent collaboration room will appear here."}
               </p>
               {!isGuest && (

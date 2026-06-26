@@ -1,5 +1,6 @@
 const express = require("express");
 const multer = require("multer");
+const path = require("path");
 
 const authMiddleware = require("../middleware/authMiddleware");
 
@@ -18,6 +19,7 @@ const allowedMimeTypes = new Set([
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
     "text/plain",
 ]);
+const allowedExtensions = new Set([".pdf", ".docx", ".txt"]);
 
 const upload = multer({
     storage: multer.memoryStorage(),
@@ -26,7 +28,12 @@ const upload = multer({
         files: 10,
     },
     fileFilter: (req, file, cb) => {
-        if (!allowedMimeTypes.has(file.mimetype)) {
+        const extension = path.extname(file.originalname || "").toLowerCase();
+
+        if (
+            !allowedMimeTypes.has(file.mimetype) ||
+            !allowedExtensions.has(extension)
+        ) {
             return cb(new Error("Only PDF, DOCX, and TXT files are allowed."));
         }
 

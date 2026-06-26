@@ -192,7 +192,9 @@ exports.searchUsers = async (req, res) => {
   try {
     const q = String(req.query.q || "")
       .trim()
-      .replace(/[,%]/g, "");
+      .replace(/^@+/, "")
+      .replace(/[,%]/g, "")
+      .trim();
 
     if (q.length < 2) {
       return res
@@ -229,16 +231,21 @@ exports.searchUsers = async (req, res) => {
 
     const { data: users, error: userError } = await supabase
       .from("profiles")
-      .select("id, username, full_name, status")
+      .select("id, username, full_name, email, role, status")
       .neq("status", "DISABLED")
-      .or(`username.ilike.%${q}%,full_name.ilike.%${q}%`)
+      .or(
+        `username.ilike.%${q}%,full_name.ilike.%${q}%,email.ilike.%${q}%`,
+      )
       .limit(20);
 
     if (userError) throw userError;
 
     return res.status(200).json({
       status: "success",
-      data: (users || []).filter((user) => !existingIds.has(String(user.id))),
+      data: (users || []).map((user) => ({
+        ...user,
+        isWorkspaceMember: existingIds.has(String(user.id)),
+      })),
     });
   } catch (error) {
     return res

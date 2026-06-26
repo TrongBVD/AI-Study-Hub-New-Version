@@ -78,24 +78,21 @@ function MyLibraryPage() {
     safeCurrentPage * ITEMS_PER_PAGE,
   );
 
-  const libraryStats = useMemo(() => {
-    const totalDocuments = libraries.reduce(
-      (total, library) => total + (Number(library.documents) || 0),
-      0,
-    );
-
-    const visibleLibraries = libraries.filter(
-      (library) => library.visibility === "public" || library.profileVisible,
-    ).length;
-
-    const latestLibrary = libraries[0];
-
-    return {
-      totalDocuments,
-      visibleLibraries,
-      latestLibraryName: latestLibrary ? getLibraryName(latestLibrary) : "No library yet",
-    };
-  }, [libraries]);
+  const totalDocuments = libraries.reduce(
+    (total, library) => total + (Number(library.documents) || 0),
+    0,
+  );
+  const visibleLibraries = libraries.filter(
+    (library) => library.visibility === "public" || library.profileVisible,
+  ).length;
+  const latestLibrary = libraries[0];
+  const libraryStats = {
+    totalDocuments,
+    visibleLibraries,
+    latestLibraryName: latestLibrary
+      ? getLibraryName(latestLibrary)
+      : "No library yet",
+  };
 
   return (
     <main className="my_library_page">

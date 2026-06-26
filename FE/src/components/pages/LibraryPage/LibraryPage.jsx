@@ -27,7 +27,10 @@ function getStoredUserRole() {
 
 function LibraryPage() {
   const LIBRARY_NAME_MAX_LENGTH = 20;
-const LIBRARY_STORAGE_LIMIT_BYTES = 50 * 1024 * 1024;
+  const LIBRARY_STORAGE_LIMIT_BYTES = 50 * 1024 * 1024;
+  const ALLOWED_UPLOAD_EXTENSIONS = [".pdf", ".docx", ".txt"];
+  const ALLOWED_UPLOAD_ACCEPT =
+    ".pdf,.docx,.txt,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain";
   const [libraryNameMessage, setLibraryNameMessage] = useState("");
   const [isStorageLimitPopupOpen, setIsStorageLimitPopupOpen] = useState(false);
   const { libraryId } = useParams();
@@ -78,31 +81,31 @@ const LIBRARY_STORAGE_LIMIT_BYTES = 50 * 1024 * 1024;
     localStorage.getItem("aiStudyHubLibraries") || "[]",
   );
 
-  const matchedLibrary = savedLibraries.find(
-    (library) => library.id === libraryId,
-  );
+    const matchedLibrary = savedLibraries.find(
+      (library) => library.id === libraryId,
+    );
 
-  if (matchedLibrary) {
+    if (matchedLibrary) {
+      return {
+        ...matchedLibrary,
+        stars: Number(matchedLibrary.stars) || 0,
+        isStarred: Boolean(matchedLibrary.isStarred),
+      };
+    }
+
     return {
-      ...matchedLibrary,
-      stars: Number(matchedLibrary.stars) || 0,
-      isStarred: Boolean(matchedLibrary.isStarred),
+      id: libraryId || "default-library",
+      name: "AI-student-hub",
+      description:
+        "A learning library for storing study materials, organizing subjects, and using AI to review documents.",
+      visibility: "public",
+      documents: 0,
+      updatedAt: "Updated just now",
+      icon: "ti-archive",
+      stars: 0,
+      isStarred: false,
     };
   }
-
-  return {
-    id: libraryId || "default-library",
-    name: "AI-student-hub",
-    description:
-      "A learning library for storing study materials, organizing subjects, and using AI to review documents.",
-    visibility: "public",
-    documents: 0,
-    updatedAt: "Updated just now",
-    icon: "ti-archive",
-    stars: 0,
-    isStarred: false,
-  };
-}
 
   function formatVisibility(value) {
     return value === "private" ? "Private" : "Public";
@@ -114,9 +117,9 @@ const LIBRARY_STORAGE_LIMIT_BYTES = 50 * 1024 * 1024;
   const [libraryData, setLibraryData] = useState(getInitialLibraryData);
   const [stars, setStars] = useState(() => Number(getInitialLibraryData().stars) || 0);
 
-const [isStarred, setIsStarred] = useState(
-  () => Boolean(getInitialLibraryData().isStarred)
-);
+  const [isStarred, setIsStarred] = useState(
+    () => Boolean(getInitialLibraryData().isStarred)
+  );
   const [activeTab, setActiveTab] = useState("documents");
   const [documentSearch, setDocumentSearch] = useState("");
   const [currentFolder, setCurrentFolder] = useState(null);
@@ -125,28 +128,35 @@ const [isStarred, setIsStarred] = useState(
   const [libraryName, setLibraryName] = useState(
     () => getInitialLibraryData().name,
   );
-  useEffect(() => {
-  if (!libraryData?.id) return;
-
-  const currentRecentLibraries = JSON.parse(
-    localStorage.getItem("aiStudyHubRecentLibraries") || "[]"
+  const [libraryDescription, setLibraryDescription] = useState(
+    () => getInitialLibraryData().description || "",
   );
+  useEffect(() => {
+    if (!libraryData?.id) return;
 
-const recentLibrary = {
-  id: libraryData.id,
-  name: libraryName || libraryData.name || "Untitled Library",
-  documents: Number(libraryData.documents) || 0,
-  icon: libraryData.icon || "ti-archive",
-  updatedAt: libraryData.updatedAt || "Updated just now",
-  stars: Number(libraryData.stars) || 0,
-  isStarred: Boolean(libraryData.isStarred),
-  visitedAt: Date.now(),
-};
+    const currentRecentLibraries = JSON.parse(
+      localStorage.getItem("aiStudyHubRecentLibraries") || "[]"
+    );
 
-  const nextRecentLibraries = [
-    recentLibrary,
-    ...currentRecentLibraries.filter((item) => item.id !== libraryData.id),
-  ].slice(0, 2);
+    const recentLibrary = {
+      id: libraryData.id,
+      name: libraryName || libraryData.name || "Untitled Library",
+      description:
+        libraryDescription ||
+        libraryData.description ||
+        "This library helps students manage learning resources, upload documents, and use AI to summarize or ask questions from files.",
+      documents: Number(libraryData.documents) || 0,
+      icon: libraryData.icon || "ti-archive",
+      updatedAt: libraryData.updatedAt || "Updated just now",
+      stars: Number(libraryData.stars) || 0,
+      isStarred: Boolean(libraryData.isStarred),
+      visitedAt: Date.now(),
+    };
+
+    const nextRecentLibraries = [
+      recentLibrary,
+      ...currentRecentLibraries.filter((item) => item.id !== libraryData.id),
+    ].slice(0, 2);
 
   if (isGuest) return;
 
@@ -174,12 +184,13 @@ libraryData?.isStarred,
   const [isTagModalOpen, setIsTagModalOpen] = useState(false);
   const [hashtags, setHashtags] = useState(["", "", ""]);
 
+  const libraryItemsStorageKey = `aiStudyHubImportedLibraryItems:${libraryId}`;
   const [libraryItems, setLibraryItems] = useState(() => {
     if (isGuest) return [];
 
     try {
       const importedItems = JSON.parse(
-        localStorage.getItem(`aiStudyHubImportedLibraryItems:${libraryId}`) || "[]",
+        localStorage.getItem(libraryItemsStorageKey) || "[]",
       );
       return Array.isArray(importedItems) ? importedItems : [];
     } catch {
@@ -193,6 +204,13 @@ libraryData?.isStarred,
   const [shareOnProfile, setShareOnProfile] = useState(
     () => getInitialLibraryData().shareOnProfile ?? false
   );
+
+  useEffect(() => {
+    localStorage.setItem(
+      libraryItemsStorageKey,
+      JSON.stringify(libraryItems),
+    );
+  }, [libraryItems, libraryItemsStorageKey]);
 
   function sanitizeArchiveName(value, fallback = "file") {
     const safeValue = String(value || fallback)
@@ -211,6 +229,7 @@ libraryData?.isStarred,
       library: {
         ...libraryData,
         name: libraryName.trim() || libraryData.name,
+        description: libraryDescription.trim() || libraryData.description,
         visibility: libraryVisibility,
         shareOnProfile,
         stars,
@@ -228,21 +247,67 @@ libraryData?.isStarred,
       const zip = new JSZip();
       const filesFolder = zip.folder("files");
       const failedFiles = [];
-      const foldersById = new Map(
-        libraryItems
-          .filter((item) => item.type === "folder")
-          .map((folder) => [folder.id, sanitizeArchiveName(folder.name, "folder")]),
+      const folderItems = libraryItems.filter(
+        (item) => item.type === "folder",
       );
+      const foldersById = new Map(
+        folderItems.map((folder) => [String(getFolderKey(folder)), folder]),
+      );
+      const folderPathCache = new Map();
+
+      function getArchiveFolderPath(folderId) {
+        if (folderId === null || folderId === undefined || folderId === "") {
+          return "";
+        }
+
+        const normalizedFolderId = String(folderId);
+
+        if (folderPathCache.has(normalizedFolderId)) {
+          return folderPathCache.get(normalizedFolderId);
+        }
+
+        const pathParts = [];
+        const visitedFolderIds = new Set();
+        let selectedFolder = foldersById.get(normalizedFolderId);
+
+        while (selectedFolder) {
+          const selectedFolderId = String(getFolderKey(selectedFolder));
+
+          if (visitedFolderIds.has(selectedFolderId)) break;
+          visitedFolderIds.add(selectedFolderId);
+          pathParts.unshift(
+            sanitizeArchiveName(selectedFolder.name, "folder"),
+          );
+
+          const parentFolderId = selectedFolder.folderId;
+          selectedFolder =
+            parentFolderId === null ||
+              parentFolderId === undefined ||
+              parentFolderId === ""
+              ? null
+              : foldersById.get(String(parentFolderId));
+        }
+
+        const folderPath = pathParts.join("/");
+        folderPathCache.set(normalizedFolderId, folderPath);
+        return folderPath;
+      }
 
       zip.file("library.json", JSON.stringify(libraryPackage, null, 2));
 
+      folderItems.forEach((folder) => {
+        const folderPath = getArchiveFolderPath(getFolderKey(folder));
+
+        if (folderPath) {
+          filesFolder.folder(folderPath);
+        }
+      });
+
       for (const item of libraryItems.filter((entry) => entry.type !== "folder")) {
         const fileName = sanitizeArchiveName(item.name, "document");
-        const folderName = item.folderId
-          ? foldersById.get(item.folderId)
-          : null;
-        const targetFolder = folderName
-          ? filesFolder.folder(folderName)
+        const folderPath = getArchiveFolderPath(item.folderId);
+        const targetFolder = folderPath
+          ? filesFolder.folder(folderPath)
           : filesFolder;
 
         if (!item.isBackendFile || !item.id) {
@@ -319,58 +384,58 @@ libraryData?.isStarred,
     }
   }
 
-function handleToggleStar() {
-  const nextIsStarred = !isStarred;
-  const nextStars = nextIsStarred ? stars + 1 : Math.max(stars - 1, 0);
+  function handleToggleStar() {
+    const nextIsStarred = !isStarred;
+    const nextStars = nextIsStarred ? stars + 1 : Math.max(stars - 1, 0);
 
-  const updatedLibrary = {
-    ...libraryData,
-    stars: nextStars,
-    isStarred: nextIsStarred,
-  };
+    const updatedLibrary = {
+      ...libraryData,
+      stars: nextStars,
+      isStarred: nextIsStarred,
+    };
 
-  const savedLibraries = JSON.parse(
-    localStorage.getItem("aiStudyHubLibraries") || "[]"
-  );
+    const savedLibraries = JSON.parse(
+      localStorage.getItem("aiStudyHubLibraries") || "[]"
+    );
 
-  const hasCurrentLibrary = savedLibraries.some(
-    (library) => library.id === updatedLibrary.id
-  );
+    const hasCurrentLibrary = savedLibraries.some(
+      (library) => library.id === updatedLibrary.id
+    );
 
-  const updatedLibraries = hasCurrentLibrary
-    ? savedLibraries.map((library) =>
+    const updatedLibraries = hasCurrentLibrary
+      ? savedLibraries.map((library) =>
         library.id === updatedLibrary.id ? updatedLibrary : library
       )
-    : [updatedLibrary, ...savedLibraries];
+      : [updatedLibrary, ...savedLibraries];
 
-  localStorage.setItem(
-    "aiStudyHubLibraries",
-    JSON.stringify(updatedLibraries)
-  );
+    localStorage.setItem(
+      "aiStudyHubLibraries",
+      JSON.stringify(updatedLibraries)
+    );
 
-  const recentLibraries = JSON.parse(
-    localStorage.getItem("aiStudyHubRecentLibraries") || "[]"
-  );
+    const recentLibraries = JSON.parse(
+      localStorage.getItem("aiStudyHubRecentLibraries") || "[]"
+    );
 
-  const updatedRecentLibraries = recentLibraries.map((library) =>
-    library.id === updatedLibrary.id
-      ? {
+    const updatedRecentLibraries = recentLibraries.map((library) =>
+      library.id === updatedLibrary.id
+        ? {
           ...library,
           stars: nextStars,
           isStarred: nextIsStarred,
         }
-      : library
-  );
+        : library
+    );
 
-  localStorage.setItem(
-    "aiStudyHubRecentLibraries",
-    JSON.stringify(updatedRecentLibraries)
-  );
+    localStorage.setItem(
+      "aiStudyHubRecentLibraries",
+      JSON.stringify(updatedRecentLibraries)
+    );
 
-  setStars(nextStars);
-  setIsStarred(nextIsStarred);
-  setLibraryData(updatedLibrary);
-}
+    setStars(nextStars);
+    setIsStarred(nextIsStarred);
+    setLibraryData(updatedLibrary);
+  }
   function countUploadedFiles(items) {
     return items.filter((item) => item.type !== "folder").length;
   }
@@ -381,6 +446,7 @@ function handleToggleStar() {
     const updatedLibrary = {
       ...libraryData,
       name: libraryName.trim() || libraryData.name,
+      description: libraryDescription.trim() || libraryData.description,
       visibility: libraryVisibility,
       shareOnProfile: shareOnProfile,
       documents: nextDocumentCount,
@@ -413,6 +479,26 @@ function handleToggleStar() {
     return folder.id || folder.name;
   }
 
+  function normalizeFolderName(folderName) {
+    return String(folderName || "").trim().toLowerCase();
+  }
+
+  function hasFolderWithSameName(folderName, parentFolderId, ignoredFolderKey) {
+    const normalizedName = normalizeFolderName(folderName);
+
+    return libraryItems.some((item) => {
+      if (item.type !== "folder") return false;
+      if (ignoredFolderKey && getFolderKey(item) === ignoredFolderKey) {
+        return false;
+      }
+
+      return (
+        (item.folderId ?? null) === parentFolderId &&
+        normalizeFolderName(item.name) === normalizedName
+      );
+    });
+  }
+
   function getFileIcon(fileName) {
     const name = String(fileName || "").toLowerCase();
 
@@ -435,11 +521,11 @@ function handleToggleStar() {
     return `${(safeSize / 1024 / 1024).toFixed(1)} MB`;
   }
 
-function countUsedStorageBytes(items) {
-  return items
-    .filter((item) => item.type !== "folder")
-    .reduce((total, item) => total + (Number(item.sizeBytes) || 0), 0);
-}
+  function countUsedStorageBytes(items) {
+    return items
+      .filter((item) => item.type !== "folder")
+      .reduce((total, item) => total + (Number(item.sizeBytes) || 0), 0);
+  }
 
   function mapBackendDocumentToLibraryItem(document) {
     return {
@@ -490,11 +576,24 @@ function countUsedStorageBytes(items) {
 
       const backendDocuments = await getMyDocuments();
 
-      const backendItems = (backendDocuments || []).map(
-        mapBackendDocumentToLibraryItem,
-      );
-
       setLibraryItems((currentItems) => {
+        const savedBackendItems = new Map(
+          currentItems
+            .filter((item) => item.isBackendFile && item.id)
+            .map((item) => [String(item.id), item]),
+        );
+        const backendItems = (backendDocuments || []).map((document) => {
+          const mappedItem = mapBackendDocumentToLibraryItem(document);
+          const savedItem = savedBackendItems.get(String(document.id));
+
+          return savedItem
+            ? {
+              ...mappedItem,
+              folderId: savedItem.folderId ?? null,
+              hashtags: savedItem.hashtags || [],
+            }
+            : mappedItem;
+        });
         const localItems = currentItems.filter(
           (item) => !item.isBackendFile,
         );
@@ -532,14 +631,30 @@ function countUsedStorageBytes(items) {
     const MAX_SIZE = 50 * 1024 * 1024;
     const validFiles = [];
     const tooLargeFiles = [];
+    const unsupportedFiles = [];
 
     files.forEach((file) => {
-      if (file.size > MAX_SIZE) {
+      const fileName = String(file.name || "").toLowerCase();
+      const isAllowedFile = ALLOWED_UPLOAD_EXTENSIONS.some((extension) =>
+        fileName.endsWith(extension),
+      );
+
+      if (!isAllowedFile) {
+        unsupportedFiles.push(file.name);
+      } else if (file.size > MAX_SIZE) {
         tooLargeFiles.push(file.name);
       } else {
         validFiles.push(file);
       }
     });
+
+    if (unsupportedFiles.length > 0) {
+      alert(
+        `Only PDF, DOCX, and TXT files are allowed:\n- ${unsupportedFiles.join(
+          "\n- ",
+        )}\n\nPlease convert old DOC files to DOCX before uploading.`,
+      );
+    }
 
     if (tooLargeFiles.length > 0) {
       alert(`These files exceed 50MB limit:\n- ${tooLargeFiles.join("\n- ")}`);
@@ -607,21 +722,21 @@ function countUsedStorageBytes(items) {
       const workspaceId = libraryData?.workspaceId || libraryData?.workspace_id;
       const uploadedDocuments = await uploadDocuments(pendingFiles, workspaceId);
 
-const uploadedItems = (uploadedDocuments || []).map((document, index) => ({
-  ...mapBackendDocumentToLibraryItem(document),
-  sizeBytes:
-    Number(document.file_size_bytes) ||
-    Number(pendingFiles[index]?.size) ||
-    0,
-  size:
-    formatFileSize(
-      Number(document.file_size_bytes) ||
-      Number(pendingFiles[index]?.size) ||
-      0
-    ),
-  folderId: pendingFolderId,
-  hashtags: validHashtags,
-}));
+      const uploadedItems = (uploadedDocuments || []).map((document, index) => ({
+        ...mapBackendDocumentToLibraryItem(document),
+        sizeBytes:
+          Number(document.file_size_bytes) ||
+          Number(pendingFiles[index]?.size) ||
+          0,
+        size:
+          formatFileSize(
+            Number(document.file_size_bytes) ||
+            Number(pendingFiles[index]?.size) ||
+            0
+          ),
+        folderId: pendingFolderId,
+        hashtags: validHashtags,
+      }));
 
       setLibraryItems((currentItems) => {
         const nextItems = [...uploadedItems, ...currentItems];
@@ -645,13 +760,24 @@ const uploadedItems = (uploadedDocuments || []).map((document, index) => ({
 
     if (!folderName || folderName.trim() === "") return;
 
+    const trimmedFolderName = folderName.trim();
+    const parentFolderId = currentFolder ? getFolderKey(currentFolder) : null;
+
+    if (hasFolderWithSameName(trimmedFolderName, parentFolderId)) {
+      alert("A folder with this name already exists in the same location.");
+      return;
+    }
+
     const newFolder = {
-      id: `folder-${folderIdRef.current++}`,
+      id:
+        typeof crypto !== "undefined" && crypto.randomUUID
+          ? `folder-${crypto.randomUUID()}`
+          : `folder-${libraryId || "local"}-${folderIdRef.current++}`,
       type: "folder",
-      name: folderName.trim(),
+      name: trimmedFolderName,
       note: "0 files · Created just now",
       icon: "ti-folder",
-      folderId: currentFolder ? getFolderKey(currentFolder) : null,
+      folderId: parentFolderId,
     };
 
     setLibraryItems((currentItems) => [newFolder, ...currentItems]);
@@ -664,6 +790,36 @@ const uploadedItems = (uploadedDocuments || []).map((document, index) => ({
 
   function handleBackToLibrary() {
     setCurrentFolder(null);
+    setDocumentSearch("");
+  }
+
+  function getFolderPath(folder) {
+    const path = [];
+    const visitedFolderIds = new Set();
+    let selectedFolder = folder;
+
+    while (selectedFolder) {
+      const selectedFolderId = getFolderKey(selectedFolder);
+
+      if (visitedFolderIds.has(selectedFolderId)) break;
+      visitedFolderIds.add(selectedFolderId);
+      path.unshift(selectedFolder);
+
+      const parentFolderId = selectedFolder.folderId ?? null;
+      if (!parentFolderId) break;
+
+      selectedFolder = libraryItems.find(
+        (item) =>
+          item.type === "folder" &&
+          getFolderKey(item) === parentFolderId,
+      );
+    }
+
+    return path;
+  }
+
+  function handleOpenBreadcrumbFolder(folder) {
+    setCurrentFolder(folder);
     setDocumentSearch("");
   }
 
@@ -740,6 +896,7 @@ const uploadedItems = (uploadedDocuments || []).map((document, index) => ({
     const updatedLibrary = {
       ...libraryData,
       name: trimmedLibraryName,
+      description: libraryDescription.trim(),
       visibility: libraryVisibility,
       shareOnProfile: shareOnProfile,
       documents: countUploadedFiles(libraryItems),
@@ -767,43 +924,94 @@ const uploadedItems = (uploadedDocuments || []).map((document, index) => ({
 
     setLibraryData(updatedLibrary);
     setLibraryName(trimmedLibraryName);
+    setLibraryDescription(updatedLibrary.description);
     setLibraryNameMessage("Library settings saved successfully.");
   }
-function handleDeleteLibrary() {
-  const confirmed = window.confirm(
-    "Are you sure you want to delete this library? This action cannot be undone."
-  );
+  function handleDeleteLibrary() {
+    const confirmed = window.confirm(
+      "Are you sure you want to delete this library? This action cannot be undone."
+    );
 
-  if (!confirmed) return;
+    if (!confirmed) return;
 
-  const savedLibraries = JSON.parse(
-    localStorage.getItem("aiStudyHubLibraries") || "[]"
-  );
+    const savedLibraries = JSON.parse(
+      localStorage.getItem("aiStudyHubLibraries") || "[]"
+    );
 
-  const updatedLibraries = savedLibraries.filter(
-    (library) => library.id !== libraryId
-  );
+    const updatedLibraries = savedLibraries.filter(
+      (library) => library.id !== libraryId
+    );
 
-  localStorage.setItem(
-    "aiStudyHubLibraries",
-    JSON.stringify(updatedLibraries)
-  );
+    localStorage.setItem(
+      "aiStudyHubLibraries",
+      JSON.stringify(updatedLibraries)
+    );
 
-  const recentLibraries = JSON.parse(
-    localStorage.getItem("aiStudyHubRecentLibraries") || "[]"
-  );
+    const recentLibraries = JSON.parse(
+      localStorage.getItem("aiStudyHubRecentLibraries") || "[]"
+    );
 
-  const updatedRecentLibraries = recentLibraries.filter(
-    (library) => library.id !== libraryId
-  );
+    const updatedRecentLibraries = recentLibraries.filter(
+      (library) => library.id !== libraryId
+    );
 
-  localStorage.setItem(
-    "aiStudyHubRecentLibraries",
-    JSON.stringify(updatedRecentLibraries)
-  );
+    localStorage.setItem(
+      "aiStudyHubRecentLibraries",
+      JSON.stringify(updatedRecentLibraries)
+    );
 
-  navigate("/dashboard/libraries", { replace: true });
-}
+    navigate("/dashboard/libraries", { replace: true });
+  }
+
+  function handleRenameFolder(folder, event) {
+    event?.stopPropagation();
+
+    const oldName = folder.name || "";
+    const newName = window.prompt("Enter new folder name:", oldName);
+
+    if (newName === null) return;
+
+    const trimmedName = newName.trim();
+
+    if (trimmedName === "") {
+      alert("Folder name cannot be empty.");
+      return;
+    }
+
+    if (normalizeFolderName(trimmedName) === normalizeFolderName(oldName)) {
+      return;
+    }
+
+    const folderKey = getFolderKey(folder);
+    const parentFolderId = folder.folderId ?? null;
+
+    if (hasFolderWithSameName(trimmedName, parentFolderId, folderKey)) {
+      alert("A folder with this name already exists in the same location.");
+      return;
+    }
+
+    setLibraryItems((currentItems) =>
+      currentItems.map((item) => {
+        if (item.type === "folder" && getFolderKey(item) === folderKey) {
+          return {
+            ...item,
+            name: trimmedName,
+            note: "Renamed just now",
+          };
+        }
+
+        return item;
+      })
+    );
+
+    if (currentFolder && getFolderKey(currentFolder) === folderKey) {
+      setCurrentFolder((currentValue) => ({
+        ...currentValue,
+        name: trimmedName,
+        note: "Renamed just now",
+      }));
+    }
+  }
 
   function handleDeleteFolder(folder, event) {
     event.stopPropagation();
@@ -882,19 +1090,20 @@ function handleDeleteLibrary() {
 
   const uploadedFileCount = countUploadedFiles(libraryItems) || Number(libraryData.documents) || 0;
 
-    const usedStorageBytes = countUsedStorageBytes(libraryItems);
+  const usedStorageBytes = countUsedStorageBytes(libraryItems);
 
-const usedStoragePercent = Math.min(
-  (usedStorageBytes / LIBRARY_STORAGE_LIMIT_BYTES) * 100,
-  100
-);
+  const usedStoragePercent = Math.min(
+    (usedStorageBytes / LIBRARY_STORAGE_LIMIT_BYTES) * 100,
+    100
+  );
 
-const remainingStorageBytes = Math.max(
-  LIBRARY_STORAGE_LIMIT_BYTES - usedStorageBytes,
-  0
-);
+  const remainingStorageBytes = Math.max(
+    LIBRARY_STORAGE_LIMIT_BYTES - usedStorageBytes,
+    0
+  );
 
   const currentLocationLabel = currentFolder ? currentFolder.name : "All subjects";
+  const currentFolderPath = currentFolder ? getFolderPath(currentFolder) : [];
   const statusText = isLoadingDocuments
     ? "Syncing documents"
     : `${uploadedFileCount} files ready`;
@@ -940,12 +1149,17 @@ const remainingStorageBytes = Math.max(
                   {stars > 0 && <span className="star_count">{stars}</span>}
                 </button>
 
-                <label className="upload_btn">
-                  <i className="ti-upload"></i>
-                  Upload
-                  <input type="file" multiple onChange={handleUploadFile} />
-                </label>
-              </div>
+              <label className="upload_btn">
+                <i className="ti-upload"></i>
+                Upload
+                <input
+                  type="file"
+                  multiple
+                  accept={ALLOWED_UPLOAD_ACCEPT}
+                  onChange={handleUploadFile}
+                />
+              </label>
+            </div>
             )}
           </div>
         </section>
@@ -1004,15 +1218,61 @@ const remainingStorageBytes = Math.max(
                           New folder
                         </button>
 
-                        <label className="documents_upload_btn">
-                          <i className="ti-upload"></i>
-                          Upload file
-                          <input type="file" multiple onChange={handleUploadFile} />
-                        </label>
-                      </div>
+                      <label className="documents_upload_btn">
+                        <i className="ti-upload"></i>
+                        Upload file
+                        <input
+                          type="file"
+                          multiple
+                          accept={ALLOWED_UPLOAD_ACCEPT}
+                          onChange={handleUploadFile}
+                        />
+                      </label>
+                    </div>
                     )}
                   </div>
                 </div>
+
+                <nav
+                  className="documents_breadcrumb"
+                  aria-label="Current folder path"
+                >
+                  <button
+                    type="button"
+                    className={!currentFolder ? "active" : ""}
+                    onClick={handleBackToLibrary}
+                  >
+                    <i className="ti-archive"></i>
+                    {libraryName || libraryData.name || "Library"}
+                  </button>
+
+                  {currentFolderPath.map((folder, index) => {
+                    const isCurrentFolder =
+                      index === currentFolderPath.length - 1;
+
+                    return (
+                      <span
+                        className="breadcrumb_item"
+                        key={getFolderKey(folder)}
+                      >
+                        <i className="ti-angle-right" aria-hidden="true"></i>
+                        {isCurrentFolder ? (
+                          <strong aria-current="page">{folder.name}</strong>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              handleOpenBreadcrumbFolder(folder)
+                            }
+                          >
+                            <i className="ti-folder"></i>
+                            {folder.name}
+                          </button>
+                        )}
+                      </span>
+                    );
+                  })}
+                </nav>
 
                 {isLoadingDocuments ? (
                   <div className="empty_state_card loading_state_card">
@@ -1027,19 +1287,18 @@ const remainingStorageBytes = Math.max(
                     <div className="empty_state_icon">
                       <i className="ti-folder"></i>
                     </div>
-                    <h3>{currentFolder ? "This folder is empty" : isGuest ? "No public files yet" : "Your library is empty"}</h3>
-                    <p>
-                      {isGuest
-                        ? "This public library does not have shared files available."
-                        : "Add your first document to start building this study library."}
-                    </p>
-                    {!isGuest && (
-                      <label className="empty_state_action">
-                        <i className="ti-upload"></i>
-                        Upload document
-                        <input type="file" multiple onChange={handleUploadFile} />
-                      </label>
-                    )}
+                    <h3>{currentFolder ? "This folder is empty" : "Your library is empty"}</h3>
+                    <p>Add your first document to start building this study library.</p>
+                    <label className="empty_state_action">
+                      <i className="ti-upload"></i>
+                      Upload document
+                      <input
+                        type="file"
+                        multiple
+                        accept={ALLOWED_UPLOAD_ACCEPT}
+                        onChange={handleUploadFile}
+                      />
+                    </label>
                   </div>
                 ) : documentSearch && filteredStorageItemsCount === 0 ? (
                   <div className="empty_state_card">
@@ -1047,18 +1306,17 @@ const remainingStorageBytes = Math.max(
                       <i className="ti-search"></i>
                     </div>
                     <h3>No documents found</h3>
-                    <p>
-                      {isGuest
-                        ? "Try another keyword."
-                        : "Try another keyword or upload a new document."}
-                    </p>
-                    {!isGuest && (
-                      <label className="empty_state_action">
-                        <i className="ti-upload"></i>
-                        Upload document
-                        <input type="file" multiple onChange={handleUploadFile} />
-                      </label>
-                    )}
+                    <p>Try another keyword or upload a new document.</p>
+                    <label className="empty_state_action">
+                      <i className="ti-upload"></i>
+                      Upload document
+                      <input
+                        type="file"
+                        multiple
+                        accept={ALLOWED_UPLOAD_ACCEPT}
+                        onChange={handleUploadFile}
+                      />
+                    </label>
                   </div>
                 ) : filteredStorageItemsCount > 0 ? (
                   <section className="documents_table_card storage_table_card">
@@ -1131,80 +1389,85 @@ const remainingStorageBytes = Math.max(
                             >
                               <i className="ti-folder"></i>
                             </button>
-                            {!isGuest && (
-                              <button
-                                type="button"
-                                className="delete_document_btn"
-                                title="Delete folder"
-                                onClick={(event) =>
-                                  handleDeleteFolder(folder, event)
-                                }
-                              >
-                                <i className="ti-trash"></i>
-                              </button>
-                            )}
+
+                            <button
+                              type="button"
+                              title="Rename folder"
+                              onClick={(event) => handleRenameFolder(folder, event)}
+                            >
+                              <i className="ti-pencil-alt"></i>
+                            </button>
+
+                            <button
+                              type="button"
+                              className="delete_document_btn"
+                              title="Delete folder"
+                              onClick={(event) => handleDeleteFolder(folder, event)}
+                            >
+                              <i className="ti-trash"></i>
+                            </button>
                           </div>
                         </div>
                       ))}
 
-                        {filteredDocuments.map((document) => (
-                          <div
-                            className="documents_table_row"
-                            key={document.id || `${document.name}-${document.uploadedTime || ""}`}
-                          >
-                            <div className="document_file_name">
-                              <div className="document_icon_shell">
-                                <i className={getFileIcon(document.name)}></i>
-                              </div>
+                      {filteredDocuments.map((document) => (
+  <div
+    className="documents_table_row"
+    key={document.id || `${document.name}-${document.uploadedTime || ""}`}
+  >
+    <div className="document_file_name">
+      <div className="document_icon_shell">
+        <i className={getFileIcon(document.name)}></i>
+      </div>
 
-                              <div className="document_name_with_tags">
-                                <span>{document.name}</span>
+      <div className="document_name_with_tags">
+        <span>{document.name}</span>
 
-                                {document.hashtags && document.hashtags.length > 0 && (
-                                  <div className="document_hashtags">
-                                    {document.hashtags.map((tag) => (
-                                      <small key={tag}>{tag}</small>
-                                    ))}
-                                  </div>
-                                )}
-                              </div>
-                            </div>
+        {document.hashtags?.length > 0 && (
+          <div className="document_tags">
+            {document.hashtags.map((tag) => (
+              <small key={tag}>{tag}</small>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
 
-                            <div className="document_size">
-                              {document.size || document.note.split("·")[0].trim()}
-                            </div>
+    <div className="document_size">
+      {document.size || document.note?.split("·")[0]?.trim() || "Unknown"}
+    </div>
 
-                            <div className="document_uploaded">
-                              <strong>
-                                {document.uploadedTime ||
-                                  document.note.split("·")[1]?.trim() ||
-                                  "Recently"}
-                              </strong>
-                              <span>by {document.uploadedBy || "dangkhoabi456"}</span>
-                            </div>
+    <div className="document_uploaded">
+      <strong>
+        {document.uploadedTime ||
+          document.note?.split("·")[1]?.trim() ||
+          "Recently"}
+      </strong>
+      <span>by {document.uploadedBy || "dangkhoabi456"}</span>
+    </div>
 
-                            <div className="document_actions">
-                              <button
-                                type="button"
-                                title="Download"
-                                onClick={() => handleDownloadDocument(document)}
-                              >
-                                <i className="ti-download"></i>
-                              </button>
+    <div className="document_actions">
+      <button
+        type="button"
+        title="Download"
+        onClick={() => handleDownloadDocument(document)}
+      >
+        <i className="ti-download"></i>
+      </button>
 
-                              {!isGuest && (
-                                <button
-                                  type="button"
-                                  className="delete_document_btn"
-                                  title="Delete"
-                                  onClick={() => handleDeleteDocument(document)}
-                                >
-                                  <i className="ti-trash"></i>
-                                </button>
-                              )}
-                            </div>
-                          </div>
-                        ))}
+      {!isGuest && (
+        <button
+          type="button"
+          className="delete_document_btn"
+          title="Delete"
+          onClick={() => handleDeleteDocument(document)}
+        >
+          <i className="ti-trash"></i>
+        </button>
+      )}
+    </div>
+  </div>
+))}
                     </div>
                   </section>
                 ) : (
@@ -1458,16 +1721,24 @@ const remainingStorageBytes = Math.max(
             <header className="library_readme_header">
               <div>
                 <i className="ti-book"></i>
-                <strong>Title Description</strong>
+                <strong>Description</strong>
               </div>
             </header>
 
             <div className="library_readme_content">
-              <h2>{libraryData.name}</h2>
-              <p>
-                {libraryData.description ||
-                  "This library helps students manage learning resources, upload documents, and use AI to summarize or ask questions from files."}
-              </p>
+              <textarea
+                value={libraryDescription}
+                onChange={(event) => setLibraryDescription(event.target.value)}
+                placeholder="Write a short description for this library..."
+                aria-label="Library description"
+              />
+
+              <div className="library_description_actions">
+                <small>{libraryDescription.length} characters</small>
+                <button type="button" onClick={handleSaveSettings}>
+                  Save description
+                </button>
+              </div>
             </div>
           </section>
         )}

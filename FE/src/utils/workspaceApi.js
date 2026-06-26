@@ -13,7 +13,9 @@ export const getWorkspaceMembers = (workspaceId) =>
   api.get(`/workspaces/${workspaceId}/members`).then((res) => res.data.data);
 
 export const searchWorkspaceUsers = (workspaceId, q) =>
-  api.get(`/workspaces/${workspaceId}/users/search`, { params: { q } })
+  api.get(`/workspaces/${workspaceId}/users/search`, {
+    params: { q: String(q || "").trim().replace(/^@+/, "") },
+  })
     .then((res) => res.data.data);
 
 export const addWorkspaceMember = (workspaceId, payload) =>
