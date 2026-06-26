@@ -78,7 +78,7 @@ function SearchResultPage() {
         setWorkspaces(readSavedWorkspaces());
         setError(
           requestError.response?.data?.message ||
-            "Some search results could not be loaded.",
+          "Some search results could not be loaded.",
         );
       } finally {
         if (isMounted) setIsLoading(false);
@@ -105,6 +105,8 @@ function SearchResultPage() {
       badge: user.role || "USER",
       iconText: getInitials(getUserName(user)),
       data: user,
+      to: `/dashboard/profile/${user.id}`, 
+      state: { from: `/dashboard/search?q=${query}` },
     }));
 
     const libraryResults = readSavedLibraries()

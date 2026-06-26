@@ -66,20 +66,20 @@ function LibraryPage() {
     setLibraryNameMessage("");
   }
   function getInitialLibraryData() {
-  const routeLibrary = location.state?.library;
+    const routeLibrary = location.state?.library;
 
-  if (routeLibrary?.id) {
-    return {
-      ...routeLibrary,
-      visibility: routeLibrary.visibility || "public",
-      stars: Number(routeLibrary.stars) || 0,
-      isStarred: Boolean(routeLibrary.isStarred),
-    };
-  }
+    if (routeLibrary?.id) {
+      return {
+        ...routeLibrary,
+        visibility: routeLibrary.visibility || "public",
+        stars: Number(routeLibrary.stars) || 0,
+        isStarred: Boolean(routeLibrary.isStarred),
+      };
+    }
 
-  const savedLibraries = JSON.parse(
-    localStorage.getItem("aiStudyHubLibraries") || "[]",
-  );
+    const savedLibraries = JSON.parse(
+      localStorage.getItem("aiStudyHubLibraries") || "[]",
+    );
 
     const matchedLibrary = savedLibraries.find(
       (library) => library.id === libraryId,
@@ -158,23 +158,23 @@ function LibraryPage() {
       ...currentRecentLibraries.filter((item) => item.id !== libraryData.id),
     ].slice(0, 2);
 
-  if (isGuest) return;
+    if (isGuest) return;
 
-  localStorage.setItem(
-    "aiStudyHubRecentLibraries",
-    JSON.stringify(nextRecentLibraries)
-  );
-}, [
-  libraryData?.id,
-  libraryData?.name,
-  libraryData?.documents,
-  libraryData?.icon,
-  libraryData?.updatedAt,
-  libraryData?.stars,
-libraryData?.isStarred,
-  libraryName,
-  isGuest,
-]);
+    localStorage.setItem(
+      "aiStudyHubRecentLibraries",
+      JSON.stringify(nextRecentLibraries)
+    );
+  }, [
+    libraryData?.id,
+    libraryData?.name,
+    libraryData?.documents,
+    libraryData?.icon,
+    libraryData?.updatedAt,
+    libraryData?.stars,
+    libraryData?.isStarred,
+    libraryName,
+    isGuest,
+  ]);
   const [libraryVisibility, setLibraryVisibility] = useState(
     () => getInitialLibraryData().visibility || "public",
   );
@@ -573,8 +573,7 @@ libraryData?.isStarred,
         );
         return;
       }
-
-      const backendDocuments = await getMyDocuments();
+      const backendDocuments = await getMyDocuments(libraryData.id || libraryId);
 
       setLibraryItems((currentItems) => {
         const savedBackendItems = new Map(
@@ -720,8 +719,8 @@ libraryData?.isStarred,
       setIsUploadingDocuments(true);
 
       const workspaceId = libraryData?.workspaceId || libraryData?.workspace_id;
-      const uploadedDocuments = await uploadDocuments(pendingFiles, workspaceId);
-
+      const uploadedDocuments = await uploadDocuments(pendingFiles, workspaceId, libraryData.id || libraryId);
+      
       const uploadedItems = (uploadedDocuments || []).map((document, index) => ({
         ...mapBackendDocumentToLibraryItem(document),
         sizeBytes:
@@ -1149,17 +1148,17 @@ libraryData?.isStarred,
                   {stars > 0 && <span className="star_count">{stars}</span>}
                 </button>
 
-              <label className="upload_btn">
-                <i className="ti-upload"></i>
-                Upload
-                <input
-                  type="file"
-                  multiple
-                  accept={ALLOWED_UPLOAD_ACCEPT}
-                  onChange={handleUploadFile}
-                />
-              </label>
-            </div>
+                <label className="upload_btn">
+                  <i className="ti-upload"></i>
+                  Upload
+                  <input
+                    type="file"
+                    multiple
+                    accept={ALLOWED_UPLOAD_ACCEPT}
+                    onChange={handleUploadFile}
+                  />
+                </label>
+              </div>
             )}
           </div>
         </section>
@@ -1218,17 +1217,17 @@ libraryData?.isStarred,
                           New folder
                         </button>
 
-                      <label className="documents_upload_btn">
-                        <i className="ti-upload"></i>
-                        Upload file
-                        <input
-                          type="file"
-                          multiple
-                          accept={ALLOWED_UPLOAD_ACCEPT}
-                          onChange={handleUploadFile}
-                        />
-                      </label>
-                    </div>
+                        <label className="documents_upload_btn">
+                          <i className="ti-upload"></i>
+                          Upload file
+                          <input
+                            type="file"
+                            multiple
+                            accept={ALLOWED_UPLOAD_ACCEPT}
+                            onChange={handleUploadFile}
+                          />
+                        </label>
+                      </div>
                     )}
                   </div>
                 </div>
@@ -1411,63 +1410,63 @@ libraryData?.isStarred,
                       ))}
 
                       {filteredDocuments.map((document) => (
-  <div
-    className="documents_table_row"
-    key={document.id || `${document.name}-${document.uploadedTime || ""}`}
-  >
-    <div className="document_file_name">
-      <div className="document_icon_shell">
-        <i className={getFileIcon(document.name)}></i>
-      </div>
+                        <div
+                          className="documents_table_row"
+                          key={document.id || `${document.name}-${document.uploadedTime || ""}`}
+                        >
+                          <div className="document_file_name">
+                            <div className="document_icon_shell">
+                              <i className={getFileIcon(document.name)}></i>
+                            </div>
 
-      <div className="document_name_with_tags">
-        <span>{document.name}</span>
+                            <div className="document_name_with_tags">
+                              <span>{document.name}</span>
 
-        {document.hashtags?.length > 0 && (
-          <div className="document_tags">
-            {document.hashtags.map((tag) => (
-              <small key={tag}>{tag}</small>
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
+                              {document.hashtags?.length > 0 && (
+                                <div className="document_tags">
+                                  {document.hashtags.map((tag) => (
+                                    <small key={tag}>{tag}</small>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          </div>
 
-    <div className="document_size">
-      {document.size || document.note?.split("·")[0]?.trim() || "Unknown"}
-    </div>
+                          <div className="document_size">
+                            {document.size || document.note?.split("·")[0]?.trim() || "Unknown"}
+                          </div>
 
-    <div className="document_uploaded">
-      <strong>
-        {document.uploadedTime ||
-          document.note?.split("·")[1]?.trim() ||
-          "Recently"}
-      </strong>
-      <span>by {document.uploadedBy || "dangkhoabi456"}</span>
-    </div>
+                          <div className="document_uploaded">
+                            <strong>
+                              {document.uploadedTime ||
+                                document.note?.split("·")[1]?.trim() ||
+                                "Recently"}
+                            </strong>
+                            <span>by {document.uploadedBy || "dangkhoabi456"}</span>
+                          </div>
 
-    <div className="document_actions">
-      <button
-        type="button"
-        title="Download"
-        onClick={() => handleDownloadDocument(document)}
-      >
-        <i className="ti-download"></i>
-      </button>
+                          <div className="document_actions">
+                            <button
+                              type="button"
+                              title="Download"
+                              onClick={() => handleDownloadDocument(document)}
+                            >
+                              <i className="ti-download"></i>
+                            </button>
 
-      {!isGuest && (
-        <button
-          type="button"
-          className="delete_document_btn"
-          title="Delete"
-          onClick={() => handleDeleteDocument(document)}
-        >
-          <i className="ti-trash"></i>
-        </button>
-      )}
-    </div>
-  </div>
-))}
+                            {!isGuest && (
+                              <button
+                                type="button"
+                                className="delete_document_btn"
+                                title="Delete"
+                                onClick={() => handleDeleteDocument(document)}
+                              >
+                                <i className="ti-trash"></i>
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   </section>
                 ) : (

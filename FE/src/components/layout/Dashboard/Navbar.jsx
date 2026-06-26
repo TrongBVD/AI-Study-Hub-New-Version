@@ -265,9 +265,7 @@ function Navbar({
     }
 
     if (result.type === "user") {
-      navigate(
-        `/dashboard/search?q=${encodeURIComponent(searchValue.trim())}&type=user`,
-      );
+      navigate(`/dashboard/profile/${result.id}`);
     }
 
     setSearchValue("");
@@ -438,9 +436,8 @@ function Navbar({
                   <button
                     type="button"
                     key={notification.id}
-                    className={`notification_item ${
-                      notification.isRead ? "" : "unread"
-                    }`}
+                    className={`notification_item ${notification.isRead ? "" : "unread"
+                      }`}
                     onClick={() => {
                       if (notification.link) {
                         navigate(notification.link);
