@@ -303,6 +303,7 @@ function Navbar({
           placeholder={searchPlaceholder}
           onChange={(e) => setSearchValue(e.target.value)}
           onFocus={() => setIsSearchFocused(true)}
+          onBlur={() => setIsSearchFocused(false)}
         />
 
         {shouldShowSearchPanel && (
