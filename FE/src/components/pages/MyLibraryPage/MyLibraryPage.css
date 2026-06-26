@@ -115,6 +115,7 @@
 }
 
 .create_library_btn,
+.my_library_import_btn,
 .empty_library_action {
   min-height: 40px;
   border-radius: 12px;
@@ -134,7 +135,15 @@
   transition: transform 220ms ease, background 220ms ease, border-color 220ms ease, box-shadow 220ms ease;
 }
 
+.my_library_import_btn {
+  border-color: rgba(255, 250, 240, 0.32);
+  background: rgba(255, 250, 240, 0.12);
+  color: #fffaf0;
+  box-shadow: none;
+}
+
 .create_library_btn:hover,
+.my_library_import_btn:hover,
 .empty_library_action:hover {
   background: #923f12;
   border-color: #923f12;
@@ -272,6 +281,11 @@
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 18px;
+}
+
+.my_library_import_btn:hover {
+  border-color: rgba(255, 250, 240, 0.5);
+  background: rgba(255, 250, 240, 0.22);
 }
 
 .collection_card {

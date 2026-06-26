@@ -12,6 +12,61 @@ function readStorageList(key) {
   }
 }
 
+function getWorkspaceId(workspace) {
+  return workspace?.id || workspace?._id || workspace?.workspaceId || "";
+}
+
+function normalizeWorkspace(workspace, recentWorkspace = {}) {
+  const id = getWorkspaceId(workspace) || getWorkspaceId(recentWorkspace);
+
+  if (!id) return null;
+
+  return {
+    ...recentWorkspace,
+    ...workspace,
+    id,
+    name:
+      workspace?.name ||
+      workspace?.workspaceName ||
+      recentWorkspace?.name ||
+      recentWorkspace?.workspaceName ||
+      "Untitled Workspace",
+    description:
+      workspace?.description ||
+      recentWorkspace?.description ||
+      "Continue the discussion from this workspace.",
+    icon: workspace?.icon || recentWorkspace?.icon || "ti-layout-grid2",
+    visitedAt:
+      Number(recentWorkspace?.visitedAt) ||
+      Number(workspace?.visitedAt) ||
+      0,
+  };
+}
+
+function getSyncedRecentWorkspaces(workspaces, storedRecentWorkspaces) {
+  const workspaceMap = new Map(
+    workspaces
+      .map((workspace) => [getWorkspaceId(workspace), workspace])
+      .filter(([id]) => Boolean(id))
+  );
+
+  const syncedRecentWorkspaces = storedRecentWorkspaces
+    .map((recentWorkspace) => {
+      const workspace = workspaceMap.get(getWorkspaceId(recentWorkspace));
+      return workspace ? normalizeWorkspace(workspace, recentWorkspace) : null;
+    })
+    .filter(Boolean)
+    .sort((a, b) => Number(b.visitedAt || 0) - Number(a.visitedAt || 0));
+
+  if (syncedRecentWorkspaces.length > 0) {
+    return syncedRecentWorkspaces;
+  }
+
+  return workspaces
+    .map((workspace) => normalizeWorkspace(workspace))
+    .filter(Boolean);
+}
+
 function HomePage() {
   const profileName =
     localStorage.getItem("aiStudyHubProfileName") || "dangkhoabi456";
@@ -19,7 +74,10 @@ function HomePage() {
   const libraries = readStorageList("aiStudyHubLibraries");
   const workspaces = readStorageList("aiStudyHubWorkspaces");
   const recentLibraries = readStorageList("aiStudyHubRecentLibraries").slice(0, 2);
-  const recentWorkspaces = readStorageList("aiStudyHubRecentWorkspaces").slice(0, 4);
+  const recentWorkspaces = getSyncedRecentWorkspaces(
+    workspaces,
+    readStorageList("aiStudyHubRecentWorkspaces")
+  ).slice(0, 4);
 
   const totalDocuments = libraries.reduce(
     (total, library) => total + Number(library.documents || 0),
@@ -60,12 +118,6 @@ function HomePage() {
       description: "Build a clean collection for documents and study materials.",
       icon: "ti-folder",
       to: "/dashboard/create-library",
-    },
-    {
-      title: "Open AI Chat",
-      description: "Ask questions and continue your learning flow.",
-      icon: "ti-comments",
-      to: "/dashboard/ai-chat",
     },
   ];
 
@@ -110,6 +162,15 @@ function HomePage() {
                 <i className="ti-folder"></i>
                 Create library
               </Link>
+
+              <Link
+                to="/dashboard/import-library"
+                state={{ from: "/dashboard/home" }}
+                className="home_btn home_btn_secondary"
+              >
+                <i className="ti-import"></i>
+                Import library
+              </Link>
             </div>
           </div>
 
@@ -147,7 +208,7 @@ function HomePage() {
               <h2>{latestWorkspace?.name || "No workspace opened yet"}</h2>
               <p>
                 {latestWorkspace
-                  ? "Continue the discussion from this workspace."
+                  ? latestWorkspace.description
                   : "Your recent collaboration room will appear here."}
               </p>
               <Link

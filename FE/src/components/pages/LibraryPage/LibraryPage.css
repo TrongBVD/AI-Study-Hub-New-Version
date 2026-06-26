@@ -3751,6 +3751,54 @@
   flex: 0 0 auto;
 }
 
+.documents_tab_panel > .documents_breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 48px;
+  margin: 14px 0 18px;
+  padding: 10px 14px;
+  border: 1px solid #e1cfb5;
+  border-radius: 14px;
+  background: rgba(255, 250, 240, 0.86);
+  box-shadow: 0 8px 22px rgba(74, 45, 24, 0.05);
+}
+
+.documents_tab_panel > .documents_breadcrumb button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 30px;
+  padding: 5px 8px;
+  border-radius: 8px;
+  color: #8f4319;
+  transition: background 160ms ease, color 160ms ease;
+}
+
+.documents_tab_panel > .documents_breadcrumb button:hover {
+  background: #f0dcc0;
+  color: #b64a0d;
+}
+
+.documents_tab_panel > .documents_breadcrumb button.active {
+  color: #2f2015;
+  cursor: default;
+}
+
+.documents_tab_panel > .documents_breadcrumb .breadcrumb_item > i {
+  color: #a58d77;
+}
+
+.documents_tab_panel > .documents_breadcrumb strong {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  padding: 5px 8px;
+  border-radius: 8px;
+  background: #3b2718;
+  color: #fff8ed;
+}
+
 /* Empty and sidebar */
 
 .empty_state_card {
@@ -4173,6 +4221,11 @@
   gap: 24px;
 }
 
+.settings_profile_visibility > div {
+  min-width: 0;
+  flex: 1;
+}
+
 .settings_profile_visibility label {
   display: block;
   color: #3b2618;
@@ -4185,35 +4238,42 @@
   color: #3b2618;
 }
 
-.settings_toggle_btn {
+.settings_profile_visibility .settings_toggle_btn {
   width: 56px;
+  min-width: 56px;
   height: 32px;
+  box-sizing: border-box;
   border: none;
   border-radius: 999px;
   background: #d8c8ad;
-  padding: 4px;
+  padding: 0;
+  margin-right: 12px;
   cursor: pointer;
   flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
+  position: relative;
+  overflow: hidden;
 }
 
-.settings_toggle_btn span {
+.settings_profile_visibility .settings_toggle_btn span {
+  position: absolute;
+  top: 4px;
+  left: 4px;
   width: 24px;
   height: 24px;
+  display: block;
   border-radius: 50%;
   background: #ffffff;
   box-shadow: 0 2px 8px rgba(47, 32, 21, 0.22);
-  transition: transform 220ms ease;
+  transition: left 220ms ease;
 }
 
-.settings_toggle_btn.active {
+.settings_profile_visibility .settings_toggle_btn.active {
   background: #b4531a;
 }
 
-.settings_toggle_btn.active span {
-  transform: translateX(24px);
+.settings_profile_visibility .settings_toggle_btn.active span {
+  left: 28px;
+  transform: none;
 }
 
 .settings_save_bar {
@@ -4936,3 +4996,14 @@ input:focus-visible {
     width: 100%;
   }
 }
+
+.document_actions button[title="Rename folder"] {
+  color: #735f4c;
+}
+
+.document_actions button[title="Rename folder"]:hover {
+  color: #b4531a;
+  background: #ead7bd;
+}
+
+

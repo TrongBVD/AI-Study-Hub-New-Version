@@ -681,6 +681,16 @@
   font-size: 16px;
 }
 
+.workspace_invite_error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 9px 2px 0;
+  color: #b42318;
+  font-size: 13px;
+  font-weight: 700;
+}
+
 .workspace_invite_result_title {
   padding: 32px 34px 0;
   color: #2f2015;
@@ -697,24 +707,52 @@
 }
 
 .workspace_invite_result {
-  min-height: 210px;
+  max-height: 260px;
   background: #eee5cf;
   border: 1px solid #e2d8c5;
-  border-radius: 26px;
-  padding: 30px 18px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 18px;
+  border-radius: 18px;
+  padding: 10px;
+  display: grid;
+  gap: 8px;
+  overflow-y: auto;
 }
 
 .workspace_invite_candidate {
   display: flex;
   align-items: center;
   gap: 16px;
+  padding: 13px;
+  border: 1px solid transparent;
+  border-radius: 13px;
+  background: rgba(255, 250, 240, 0.58);
+  cursor: pointer;
+}
+
+.workspace_invite_candidate:hover,
+.workspace_invite_candidate.is-selected {
+  border-color: #c4510c;
+  background: #fffaf0;
+}
+
+.workspace_invite_candidate.is-existing-member {
+  cursor: not-allowed;
+  opacity: 0.82;
+}
+
+.workspace_invite_candidate.is-existing-member:hover {
+  border-color: transparent;
+  background: transparent;
+}
+
+.workspace_invite_candidate input {
+  accent-color: #c4510c;
 }
 
 .workspace_invite_candidate h3 {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
   margin: 0 0 6px;
   color: #2f2015;
   font-size: 18px;
@@ -724,6 +762,23 @@
   margin: 0;
   color: #3b2a1a;
   font-size: 14px;
+}
+
+.workspace_invite_existing_badge {
+  border-radius: 999px;
+  background: #ead7bd;
+  color: #6f4b2e;
+  padding: 5px 10px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+}
+
+.workspace_invite_candidate .workspace_invite_existing_note {
+  margin-top: 5px;
+  color: #9a6a45;
+  font-size: 13px;
 }
 
 .workspace_invite_result button {
@@ -760,6 +815,16 @@
 
 .workspace_invite_empty_result p {
   margin: 0;
+}
+
+.workspace_invite_spinner {
+  animation: workspace-invite-spin 0.8s linear infinite;
+}
+
+@keyframes workspace-invite-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .workspace_invite_no_result {

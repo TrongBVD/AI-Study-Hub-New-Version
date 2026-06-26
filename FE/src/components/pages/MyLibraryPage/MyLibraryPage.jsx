@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import "./MyLibraryPage.css";
 import "../../../assets/icons/themify-icons-font/themify-icons/themify-icons.css";
@@ -29,24 +29,21 @@ function MyLibraryPage() {
     safeCurrentPage * ITEMS_PER_PAGE,
   );
 
-  const libraryStats = useMemo(() => {
-    const totalDocuments = libraries.reduce(
-      (total, library) => total + (Number(library.documents) || 0),
-      0,
-    );
-
-    const visibleLibraries = libraries.filter(
-      (library) => library.visibility === "public" || library.profileVisible,
-    ).length;
-
-    const latestLibrary = libraries[0];
-
-    return {
-      totalDocuments,
-      visibleLibraries,
-      latestLibraryName: latestLibrary ? getLibraryName(latestLibrary) : "No library yet",
-    };
-  }, [libraries]);
+  const totalDocuments = libraries.reduce(
+    (total, library) => total + (Number(library.documents) || 0),
+    0,
+  );
+  const visibleLibraries = libraries.filter(
+    (library) => library.visibility === "public" || library.profileVisible,
+  ).length;
+  const latestLibrary = libraries[0];
+  const libraryStats = {
+    totalDocuments,
+    visibleLibraries,
+    latestLibraryName: latestLibrary
+      ? getLibraryName(latestLibrary)
+      : "No library yet",
+  };
 
   return (
     <main className="my_library_page">
@@ -69,7 +66,16 @@ function MyLibraryPage() {
                 className="create_library_btn"
               >
                 <i className="ti-folder"></i>
-                Create or import library
+                Create library
+              </Link>
+
+              <Link
+                to="/dashboard/import-library"
+                state={{ from: "/dashboard/libraries" }}
+                className="my_library_import_btn"
+              >
+                <i className="ti-import"></i>
+                Import library
               </Link>
             </div>
           </div>

@@ -9,6 +9,21 @@ import {
 import "./WorkSpacePage.css";
 import "../../../assets/icons/themify-icons-font/themify-icons/themify-icons.css";
 
+function getInviteErrorMessage(error) {
+  const status = error.response?.status;
+  const backendMessage = error.response?.data?.message;
+
+  if (status === 401) {
+    return "Your login session is not valid anymore. Please log in again, then search users.";
+  }
+
+  if (status === 403) {
+    return backendMessage || "Only workspace admins can add members.";
+  }
+
+  return backendMessage || "Cannot search users right now.";
+}
+
 function WorkSpacePage() {
   const WORKSPACE_NAME_MAX_LENGTH = 20;
 
@@ -43,6 +58,9 @@ const [isSubtaskPriorityOpen, setIsSubtaskPriorityOpen] = useState(false);
   const [inviteQuery, setInviteQuery] = useState("");
   const [inviteRole, setInviteRole] = useState("Viewer");
   const [inviteStatus, setInviteStatus] = useState("idle");
+  const [inviteError, setInviteError] = useState("");
+  const [isInviteSearching, setIsInviteSearching] = useState(false);
+  const [isAddingMember, setIsAddingMember] = useState(false);
   const [backendMembers, setBackendMembers] = useState([]);
   const [candidateUsers, setCandidateUsers] = useState([]);
   const [selectedUserId, setSelectedUserId] = useState("");
@@ -62,7 +80,7 @@ const [isSubtaskPriorityOpen, setIsSubtaskPriorityOpen] = useState(false);
 
     setWorkspaceSettingMessage("");
   }
-  const [pendingInvitations, setPendingInvitations] = useState([
+  const [pendingInvitations] = useState([
     {
       email: "alex.proctor@edu.com",
       invitedBy: "TrongBVD",
@@ -344,6 +362,7 @@ const workspaceStorageUsedBytes = discussionStorageUsedBytes;
     studySets[0];
   const currentStudyCard =
     selectedStudySet.cards[currentStudyCardIndex] || selectedStudySet.cards[0];
+
   function formatMessageFileSize(size) {
     if (!size) return "0 KB";
 
@@ -712,6 +731,9 @@ function getSubtaskPriorityIcon(priority) {
     setInviteStatus("idle");
     setCandidateUsers([]);
     setSelectedUserId("");
+    setInviteError("");
+    setIsInviteSearching(false);
+    setIsAddingMember(false);
   }
 
   function handleInviteQueryChange(e) {
@@ -719,21 +741,34 @@ function getSubtaskPriorityIcon(priority) {
     setInviteStatus("idle");
     setCandidateUsers([]);
     setSelectedUserId("");
+    setInviteError("");
   }
 
   async function handleSearchInviteMember() {
-    if (inviteQuery.trim() === "") return;
+    const query = inviteQuery.trim().replace(/^@+/, "");
+
+    if (query.length < 2) {
+      setInviteError("Enter at least 2 characters to search.");
+      return;
+    }
 
     try {
-      const users = await searchWorkspaceUsers(workspaceId, inviteQuery.trim());
+      setIsInviteSearching(true);
+      setInviteError("");
+      const users = await searchWorkspaceUsers(workspaceId, query);
+      const firstAvailableUser = users?.find((user) => !user.isWorkspaceMember);
+
       setCandidateUsers(users || []);
-      setSelectedUserId(users?.[0]?.id || "");
+      setSelectedUserId(firstAvailableUser?.id || "");
       setInviteStatus(users?.length ? "found" : "not-found");
     } catch (error) {
       console.error("Cannot search workspace users:", error);
       setCandidateUsers([]);
       setSelectedUserId("");
-      setInviteStatus("not-found");
+      setInviteStatus("error");
+      setInviteError(getInviteErrorMessage(error));
+    } finally {
+      setIsInviteSearching(false);
     }
   }
 
@@ -741,6 +776,8 @@ function getSubtaskPriorityIcon(priority) {
     if (inviteStatus !== "found" || !selectedUserId) return;
 
     try {
+      setIsAddingMember(true);
+      setInviteError("");
       await addWorkspaceMember(workspaceId, {
         userId: selectedUserId,
         role: inviteRole,
@@ -749,9 +786,12 @@ function getSubtaskPriorityIcon(priority) {
       const refreshedMembers = await getWorkspaceMembers(workspaceId);
       setBackendMembers(refreshedMembers || []);
       handleCloseInviteModal();
+      alert("Member added to workspace successfully.");
     } catch (error) {
       console.error("Cannot add workspace member:", error);
-      alert("Cannot add member to this workspace.");
+      setInviteError(getInviteErrorMessage(error));
+    } finally {
+      setIsAddingMember(false);
     }
   }
 
@@ -2563,9 +2603,22 @@ const filteredDiscussionTopics = discussionTopics.filter((topic) => {
                 type="text"
                 value={inviteQuery}
                 onChange={handleInviteQueryChange}
-                placeholder="username or full name"
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") {
+                    event.preventDefault();
+                    handleSearchInviteMember();
+                  }
+                }}
+                placeholder="Username, full name or email"
+                autoFocus
               />
             </div>
+            {inviteError && (
+              <p className="workspace_invite_error" role="alert">
+                <i className="ti-alert" />
+                {inviteError}
+              </p>
+            )}
           </div>
 
           <div className="workspace_invite_result_title">
@@ -2575,11 +2628,17 @@ const filteredDiscussionTopics = discussionTopics.filter((topic) => {
           {inviteStatus === "found" && (
             <section className="workspace_invite_result">
               {candidateUsers.map((user) => (
-                <label className="workspace_invite_candidate" key={user.id}>
+                <label
+                  className={`workspace_invite_candidate ${
+                    selectedUserId === user.id ? "is-selected" : ""
+                  } ${user.isWorkspaceMember ? "is-existing-member" : ""}`}
+                  key={user.id}
+                >
                   <input
                     type="radio"
                     name="workspace-user"
                     checked={selectedUserId === user.id}
+                    disabled={user.isWorkspaceMember}
                     onChange={() => setSelectedUserId(user.id)}
                   />
 
@@ -2588,37 +2647,67 @@ const filteredDiscussionTopics = discussionTopics.filter((topic) => {
                   </div>
 
                   <div>
-                    <h3>{user.full_name || user.username || "Unnamed user"}</h3>
-                    <p>@{user.username || "no-username"}</p>
+                    <h3>
+                      {user.full_name || user.username || "Unnamed user"}
+                      {user.isWorkspaceMember && (
+                        <span className="workspace_invite_existing_badge">
+                          Already in workspace
+                        </span>
+                      )}
+                    </h3>
+                    <p>
+                      {user.username ? `@${user.username}` : user.email}
+                      {user.role ? ` · ${user.role}` : ""}
+                    </p>
+                    {user.isWorkspaceMember && (
+                      <p className="workspace_invite_existing_note">
+                        This user is already a member of this workspace.
+                      </p>
+                    )}
                   </div>
                 </label>
               ))}
+            </section>
+          )}
 
-              <div className="workspace_invite_candidate" style={{ display: "none" }}>
-                <div className="workspace_invite_avatar">
-                  <img
-                    src="https://i.pravatar.cc/80?img=12"
-                    alt="Nguyễn Văn A"
-                  />
-                  <span></span>
-                </div>
+          {isInviteSearching && (
+            <section className="workspace_invite_empty_result">
+              <i className="ti-reload workspace_invite_spinner"></i>
+              <p>Searching users...</p>
+            </section>
+          )}
 
-                <div>
-                  <h3>Nguyễn Văn A</h3>
-                  <p>@nva_academic · Research Lead</p>
-                </div>
+          {inviteStatus === "idle" && !isInviteSearching && (
+            <section className="workspace_invite_empty_result">
+              <i className="ti-search"></i>
+              <p>Enter a username, full name or email, then press Enter.</p>
+            </section>
+          )}
+
+          {inviteStatus === "error" && !isInviteSearching && (
+            <section className="workspace_invite_no_result">
+              <div className="workspace_invite_no_result_icon">
+                <i className="ti-alert"></i>
+              </div>
+
+              <h3>Cannot search users</h3>
+              <p>{inviteError}</p>
+
+              <div className="workspace_invite_no_result_actions">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setInviteStatus("idle");
+                    setInviteError("");
+                  }}
+                >
+                  Try Again
+                </button>
               </div>
             </section>
           )}
 
-          {inviteStatus === "idle" && (
-            <section className="workspace_invite_empty_result">
-              <i className="ti-search"></i>
-              <p>Enter a username or full name, then press Search.</p>
-            </section>
-          )}
-
-          {inviteStatus === "not-found" && (
+          {inviteStatus === "not-found" && !isInviteSearching && (
             <section className="workspace_invite_no_result">
               <div className="workspace_invite_no_result_icon">
                 <i className="ti-search"></i>
@@ -2627,7 +2716,7 @@ const filteredDiscussionTopics = discussionTopics.filter((topic) => {
               <h3>No user found</h3>
               <p>
                 We couldn't find any student or researcher matching "
-                {inviteQuery}". Search only checks username and full name.
+                {inviteQuery}".
               </p>
 
               <div className="workspace_invite_no_result_actions">
@@ -2680,16 +2769,24 @@ const filteredDiscussionTopics = discussionTopics.filter((topic) => {
                 type="button"
                 className="workspace_send_invite_btn"
                 disabled={
-                  inviteQuery.trim() === "" ||
+                  isInviteSearching ||
+                  isAddingMember ||
+                  inviteQuery.trim().replace(/^@+/, "").length < 2 ||
                   (inviteStatus === "found" && !selectedUserId)
                 }
                 onClick={
-                  inviteStatus === "idle"
-                    ? handleSearchInviteMember
-                    : handleSendInvite
+                  inviteStatus === "found"
+                    ? handleSendInvite
+                    : handleSearchInviteMember
                 }
               >
-                {inviteStatus === "idle" ? "Search" : "Done"}
+                {isInviteSearching
+                  ? "Searching..."
+                  : isAddingMember
+                    ? "Adding..."
+                    : inviteStatus === "found"
+                      ? "Add member"
+                      : "Search"}
               </button>
             </div>
           </footer>

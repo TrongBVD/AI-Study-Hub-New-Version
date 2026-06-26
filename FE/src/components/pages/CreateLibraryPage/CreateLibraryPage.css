@@ -469,6 +469,7 @@
 }
 
 .return_library_btn,
+.create_form_import_btn,
 .create_library_btn {
   min-height: 38px;
   border-radius: 12px;
@@ -492,6 +493,18 @@
 
 .return_library_btn:hover {
   background: #ead7bd;
+  transform: translateY(-2px);
+}
+
+.create_form_import_btn {
+  border: 1px solid #c99e70;
+  background: #f4e1c7;
+  color: #6b3718;
+}
+
+.create_form_import_btn:hover {
+  border-color: #b4531a;
+  background: #ead0ad;
   transform: translateY(-2px);
 }
 
