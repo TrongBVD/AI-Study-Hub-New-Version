@@ -175,6 +175,7 @@ async function processDocumentWithAI(file, documentId) {
 exports.listMyDocuments = async (req, res) => {
   try {
     const userID = req.user.id; 
+    const { libraryId, workspaceId } = req.query;
 
     if (!userID) {
       return res.status(401).json({
@@ -183,13 +184,14 @@ exports.listMyDocuments = async (req, res) => {
       });
     }
 
-    const { data, error } = await supabase
+    let query = supabase
       .from("documents")
       .select(
         `
         id,
         uploader_id,
         workspace_id,
+        library_id,
         title,
         file_size_bytes,
         is_public,
@@ -199,8 +201,17 @@ exports.listMyDocuments = async (req, res) => {
       `
       )
       .eq("uploader_id", userID)
-      .is("deleted_at", null)
-      .order("created_at", { ascending: false });
+      .is("deleted_at", null);
+
+    if (libraryId) {
+      query = query.eq("library_id", libraryId);
+    }
+
+    if (workspaceId) {
+      query = query.eq("workspace_id", workspaceId);
+    }
+
+    const { data, error } = await query.order("created_at", { ascending: false });
 
     if (error) {
       throw error;
