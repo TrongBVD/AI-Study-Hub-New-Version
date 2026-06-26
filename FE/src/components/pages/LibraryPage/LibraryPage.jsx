@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import JSZip from "jszip";
 
 import {
@@ -8,9 +8,22 @@ import {
   downloadDocument,
   deleteDocument,
 } from "../../../utils/documentApi";
+import {
+  downloadPublicDocument,
+  getPublicLibrary,
+} from "../../../utils/publicApi";
 
 import "./LibraryPage.css";
 import "../../../assets/icons/themify-icons-font/themify-icons/themify-icons.css";
+
+function getStoredUserRole() {
+  try {
+    const user = JSON.parse(localStorage.getItem("user") || "null");
+    return String(user?.role || "").toUpperCase();
+  } catch {
+    return "";
+  }
+}
 
 function LibraryPage() {
   const LIBRARY_NAME_MAX_LENGTH = 20;
@@ -19,6 +32,8 @@ const LIBRARY_STORAGE_LIMIT_BYTES = 50 * 1024 * 1024;
   const [isStorageLimitPopupOpen, setIsStorageLimitPopupOpen] = useState(false);
   const { libraryId } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
+  const isGuest = getStoredUserRole() === "GUEST";
 
   function handleToggleShareOnProfile() {
     if (libraryVisibility === "private") {
@@ -48,6 +63,17 @@ const LIBRARY_STORAGE_LIMIT_BYTES = 50 * 1024 * 1024;
     setLibraryNameMessage("");
   }
   function getInitialLibraryData() {
+  const routeLibrary = location.state?.library;
+
+  if (routeLibrary?.id) {
+    return {
+      ...routeLibrary,
+      visibility: routeLibrary.visibility || "public",
+      stars: Number(routeLibrary.stars) || 0,
+      isStarred: Boolean(routeLibrary.isStarred),
+    };
+  }
+
   const savedLibraries = JSON.parse(
     localStorage.getItem("aiStudyHubLibraries") || "[]",
   );
@@ -122,6 +148,8 @@ const recentLibrary = {
     ...currentRecentLibraries.filter((item) => item.id !== libraryData.id),
   ].slice(0, 2);
 
+  if (isGuest) return;
+
   localStorage.setItem(
     "aiStudyHubRecentLibraries",
     JSON.stringify(nextRecentLibraries)
@@ -135,6 +163,7 @@ const recentLibrary = {
   libraryData?.stars,
 libraryData?.isStarred,
   libraryName,
+  isGuest,
 ]);
   const [libraryVisibility, setLibraryVisibility] = useState(
     () => getInitialLibraryData().visibility || "public",
@@ -146,6 +175,8 @@ libraryData?.isStarred,
   const [hashtags, setHashtags] = useState(["", "", ""]);
 
   const [libraryItems, setLibraryItems] = useState(() => {
+    if (isGuest) return [];
+
     try {
       const importedItems = JSON.parse(
         localStorage.getItem(`aiStudyHubImportedLibraryItems:${libraryId}`) || "[]",
@@ -433,6 +464,30 @@ function countUsedStorageBytes(items) {
     try {
       setIsLoadingDocuments(true);
 
+      if (isGuest) {
+        const publicLibrary = await getPublicLibrary(libraryId);
+        const nextLibraryData = {
+          ...publicLibrary.library,
+          isPublicView: true,
+          visibility: "public",
+          updatedAt: publicLibrary.library.created_at
+            ? new Date(publicLibrary.library.created_at).toLocaleString()
+            : "Updated just now",
+        };
+
+        setLibraryData(nextLibraryData);
+        setLibraryName(nextLibraryData.name || "Public Library");
+        setLibraryVisibility("public");
+        setShareOnProfile(false);
+        setLibraryItems(
+          (publicLibrary.documents || []).map((document) => ({
+            ...mapBackendDocumentToLibraryItem(document),
+            isPublicFile: true,
+          })),
+        );
+        return;
+      }
+
       const backendDocuments = await getMyDocuments();
 
       const backendItems = (backendDocuments || []).map(
@@ -451,7 +506,11 @@ function countUsedStorageBytes(items) {
       });
     } catch (error) {
       console.error("Cannot load documents:", error);
-      alert("Cannot load documents. Please login again.");
+      alert(
+        isGuest
+          ? "Cannot load this public library."
+          : "Cannot load documents. Please login again.",
+      );
     } finally {
       setIsLoadingDocuments(false);
     }
@@ -464,6 +523,7 @@ function countUsedStorageBytes(items) {
     fetchDocuments();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
   function handleUploadFile(e) {
     const files = Array.from(e.target.files || []);
 
@@ -641,7 +701,9 @@ const uploadedItems = (uploadedDocuments || []).map((document, index) => ({
         return;
       }
 
-      const data = await downloadDocument(fileItem.id);
+      const data = isGuest
+        ? await downloadPublicDocument(fileItem.id)
+        : await downloadDocument(fileItem.id);
 
       if (!data.downloadUrl) {
         alert("Download URL not found.");
@@ -866,23 +928,25 @@ const remainingStorageBytes = Math.max(
               <p>{statusText}</p>
             </div>
 
-            <div className="library_hero_actions">
-              <button
-                className={`star_btn ${isStarred ? "active" : ""}`}
-                type="button"
-                onClick={handleToggleStar}
-              >
-                <i className="ti-star"></i>
-                {isStarred ? "Starred" : "Star"}
-                {stars > 0 && <span className="star_count">{stars}</span>}
-              </button>
+            {!isGuest && (
+              <div className="library_hero_actions">
+                <button
+                  className={`star_btn ${isStarred ? "active" : ""}`}
+                  type="button"
+                  onClick={handleToggleStar}
+                >
+                  <i className="ti-star"></i>
+                  {isStarred ? "Starred" : "Star"}
+                  {stars > 0 && <span className="star_count">{stars}</span>}
+                </button>
 
-              <label className="upload_btn">
-                <i className="ti-upload"></i>
-                Upload
-                <input type="file" multiple onChange={handleUploadFile} />
-              </label>
-            </div>
+                <label className="upload_btn">
+                  <i className="ti-upload"></i>
+                  Upload
+                  <input type="file" multiple onChange={handleUploadFile} />
+                </label>
+              </div>
+            )}
           </div>
         </section>
 
@@ -896,14 +960,16 @@ const remainingStorageBytes = Math.max(
             Documents
           </button>
 
-          <button
-            type="button"
-            className={activeTab === "settings" ? "active" : ""}
-            onClick={() => setActiveTab("settings")}
-          >
-            <i className="ti-settings"></i>
-            Settings
-          </button>
+          {!isGuest && (
+            <button
+              type="button"
+              className={activeTab === "settings" ? "active" : ""}
+              onClick={() => setActiveTab("settings")}
+            >
+              <i className="ti-settings"></i>
+              Settings
+            </button>
+          )}
         </nav>
 
         <section className="library_body">
@@ -927,22 +993,24 @@ const remainingStorageBytes = Math.max(
                       />
                     </label>
 
-                    <div className="documents_tab_actions">
-                      <button
-                        type="button"
-                        className="documents_new_folder_btn"
-                        onClick={handleCreateFolder}
-                      >
-                        <i className="ti-folder"></i>
-                        New folder
-                      </button>
+                    {!isGuest && (
+                      <div className="documents_tab_actions">
+                        <button
+                          type="button"
+                          className="documents_new_folder_btn"
+                          onClick={handleCreateFolder}
+                        >
+                          <i className="ti-folder"></i>
+                          New folder
+                        </button>
 
-                      <label className="documents_upload_btn">
-                        <i className="ti-upload"></i>
-                        Upload file
-                        <input type="file" multiple onChange={handleUploadFile} />
-                      </label>
-                    </div>
+                        <label className="documents_upload_btn">
+                          <i className="ti-upload"></i>
+                          Upload file
+                          <input type="file" multiple onChange={handleUploadFile} />
+                        </label>
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -959,13 +1027,19 @@ const remainingStorageBytes = Math.max(
                     <div className="empty_state_icon">
                       <i className="ti-folder"></i>
                     </div>
-                    <h3>{currentFolder ? "This folder is empty" : "Your library is empty"}</h3>
-                    <p>Add your first document to start building this study library.</p>
-                    <label className="empty_state_action">
-                      <i className="ti-upload"></i>
-                      Upload document
-                      <input type="file" multiple onChange={handleUploadFile} />
-                    </label>
+                    <h3>{currentFolder ? "This folder is empty" : isGuest ? "No public files yet" : "Your library is empty"}</h3>
+                    <p>
+                      {isGuest
+                        ? "This public library does not have shared files available."
+                        : "Add your first document to start building this study library."}
+                    </p>
+                    {!isGuest && (
+                      <label className="empty_state_action">
+                        <i className="ti-upload"></i>
+                        Upload document
+                        <input type="file" multiple onChange={handleUploadFile} />
+                      </label>
+                    )}
                   </div>
                 ) : documentSearch && filteredStorageItemsCount === 0 ? (
                   <div className="empty_state_card">
@@ -973,12 +1047,18 @@ const remainingStorageBytes = Math.max(
                       <i className="ti-search"></i>
                     </div>
                     <h3>No documents found</h3>
-                    <p>Try another keyword or upload a new document.</p>
-                    <label className="empty_state_action">
-                      <i className="ti-upload"></i>
-                      Upload document
-                      <input type="file" multiple onChange={handleUploadFile} />
-                    </label>
+                    <p>
+                      {isGuest
+                        ? "Try another keyword."
+                        : "Try another keyword or upload a new document."}
+                    </p>
+                    {!isGuest && (
+                      <label className="empty_state_action">
+                        <i className="ti-upload"></i>
+                        Upload document
+                        <input type="file" multiple onChange={handleUploadFile} />
+                      </label>
+                    )}
                   </div>
                 ) : filteredStorageItemsCount > 0 ? (
                   <section className="documents_table_card storage_table_card">
@@ -1051,16 +1131,18 @@ const remainingStorageBytes = Math.max(
                             >
                               <i className="ti-folder"></i>
                             </button>
-                            <button
-                              type="button"
-                              className="delete_document_btn"
-                              title="Delete folder"
-                              onClick={(event) =>
-                                handleDeleteFolder(folder, event)
-                              }
-                            >
-                              <i className="ti-trash"></i>
-                            </button>
+                            {!isGuest && (
+                              <button
+                                type="button"
+                                className="delete_document_btn"
+                                title="Delete folder"
+                                onClick={(event) =>
+                                  handleDeleteFolder(folder, event)
+                                }
+                              >
+                                <i className="ti-trash"></i>
+                              </button>
+                            )}
                           </div>
                         </div>
                       ))}
@@ -1110,14 +1192,16 @@ const remainingStorageBytes = Math.max(
                                 <i className="ti-download"></i>
                               </button>
 
-                              <button
-                                type="button"
-                                className="delete_document_btn"
-                                title="Delete"
-                                onClick={() => handleDeleteDocument(document)}
-                              >
-                                <i className="ti-trash"></i>
-                              </button>
+                              {!isGuest && (
+                                <button
+                                  type="button"
+                                  className="delete_document_btn"
+                                  title="Delete"
+                                  onClick={() => handleDeleteDocument(document)}
+                                >
+                                  <i className="ti-trash"></i>
+                                </button>
+                              )}
                             </div>
                           </div>
                         ))}
@@ -1135,7 +1219,7 @@ const remainingStorageBytes = Math.max(
               </section>
             )}
 
-            {activeTab === "settings" && (
+            {!isGuest && activeTab === "settings" && (
               <section className="settings_tab_panel">
                 <div className="settings_header">
                   <h2>Library settings</h2>

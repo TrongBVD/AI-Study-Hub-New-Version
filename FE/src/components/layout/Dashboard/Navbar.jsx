@@ -27,6 +27,19 @@ function getSavedWorkspaces() {
   }
 }
 
+function getStoredUserRole() {
+  try {
+    const user = JSON.parse(localStorage.getItem("user") || "null");
+    return String(user?.role || "").toUpperCase();
+  } catch {
+    return "";
+  }
+}
+
+function notifyGuestRegistrationRequired() {
+  alert("Please register or log in with an account to create libraries and workspaces.");
+}
+
 function saveRecentLibrary(library) {
   const currentRecentLibraries = JSON.parse(
     localStorage.getItem("aiStudyHubRecentLibraries") || "[]"
@@ -82,6 +95,7 @@ function Navbar({
   searchPlaceholder = "Search library or workspace...",
 }) {
   const navigate = useNavigate();
+  const isGuest = getStoredUserRole() === "GUEST";
   const [searchValue, setSearchValue] = useState("");
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [matchedUsers, setMatchedUsers] = useState([]);
@@ -166,8 +180,8 @@ function Navbar({
     (notification) => !notification.isRead
   ).length;
 
-  const libraries = getSavedLibraries();
-  const workspaces = getSavedWorkspaces();
+  const libraries = useMemo(() => (isGuest ? [] : getSavedLibraries()), [isGuest]);
+  const workspaces = useMemo(() => (isGuest ? [] : getSavedWorkspaces()), [isGuest]);
 
   const searchResults = useMemo(() => {
     const keyword = searchValue.trim().toLowerCase();
@@ -230,7 +244,7 @@ function Navbar({
   }, [searchValue, libraries, workspaces, matchedUsers]);
 
   function handleOpenSearchResult(result) {
-    if (result.type === "library") {
+    if (result.type === "library" && !isGuest) {
       saveRecentLibrary(result.data);
       navigate(`/dashboard/libraries/${result.id}`, {
         state: {
@@ -240,7 +254,7 @@ function Navbar({
       });
     }
 
-    if (result.type === "workspace") {
+    if (result.type === "workspace" && !isGuest) {
       saveRecentWorkspace(result.data);
       navigate(`/dashboard/workspaces/${result.id}`, {
         state: {
@@ -266,7 +280,11 @@ function Navbar({
     const keyword = searchValue.trim();
     if (!keyword) return;
 
-    navigate(`/dashboard/search?q=${encodeURIComponent(keyword)}`);
+    if (isGuest) {
+      navigate("/dashboard/search-user");
+    } else {
+      navigate(`/dashboard/search?q=${encodeURIComponent(keyword)}`);
+    }
     setIsSearchFocused(false);
   }
 
@@ -337,23 +355,44 @@ function Navbar({
           </button>
 
           <div className="create_dropdown_menu">
-            <Link to="/dashboard/create-library">
-              <i className="ti-folder"></i>
-              Create library
-            </Link>
+            {isGuest ? (
+              <>
+                <button type="button" onClick={notifyGuestRegistrationRequired}>
+                  <i className="ti-folder"></i>
+                  Create library
+                </button>
 
-            <Link
-              to="/dashboard/import-library"
-              state={{ from: "/dashboard/home" }}
-            >
-              <i className="ti-import"></i>
-              Import library
-            </Link>
+                <button type="button" onClick={notifyGuestRegistrationRequired}>
+                  <i className="ti-import"></i>
+                  Import library
+                </button>
 
-            <Link to="/dashboard/create-workspace">
-              <i className="ti-layout-grid2"></i>
-              Create workspace
-            </Link>
+                <button type="button" onClick={notifyGuestRegistrationRequired}>
+                  <i className="ti-layout-grid2"></i>
+                  Create workspace
+                </button>
+              </>
+            ) : (
+              <>
+                <Link to="/dashboard/create-library">
+                  <i className="ti-folder"></i>
+                  Create library
+                </Link>
+
+                <Link
+                  to="/dashboard/import-library"
+                  state={{ from: "/dashboard/home" }}
+                >
+                  <i className="ti-import"></i>
+                  Import library
+                </Link>
+
+                <Link to="/dashboard/create-workspace">
+                  <i className="ti-layout-grid2"></i>
+                  Create workspace
+                </Link>
+              </>
+            )}
           </div>
         </div>
 

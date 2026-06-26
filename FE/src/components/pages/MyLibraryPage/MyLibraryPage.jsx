@@ -1,5 +1,6 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import { getPublicLibraries } from "../../../utils/publicApi";
 import "./MyLibraryPage.css";
 import "../../../assets/icons/themify-icons-font/themify-icons/themify-icons.css";
 
@@ -16,9 +17,57 @@ function getLibraryName(library) {
   return library.name || library.libraryName || "Untitled Library";
 }
 
+function getStoredUserRole() {
+  try {
+    const user = JSON.parse(localStorage.getItem("user") || "null");
+    return String(user?.role || "").toUpperCase();
+  } catch {
+    return "";
+  }
+}
+
+function notifyGuestRegistrationRequired() {
+  alert("Please register or log in with an account to create libraries and workspaces.");
+}
+
 function MyLibraryPage() {
   const [currentPage, setCurrentPage] = useState(1);
-  const libraries = getSavedLibraries();
+  const [publicLibraries, setPublicLibraries] = useState([]);
+  const [isLoadingPublicLibraries, setIsLoadingPublicLibraries] = useState(false);
+  const isGuest = getStoredUserRole() === "GUEST";
+  const savedLibraries = useMemo(() => getSavedLibraries(), []);
+  const libraries = isGuest ? publicLibraries : savedLibraries;
+
+  useEffect(() => {
+    if (!isGuest) return;
+
+    let isMounted = true;
+
+    async function loadPublicLibraries() {
+      try {
+        setIsLoadingPublicLibraries(true);
+        const data = await getPublicLibraries();
+        if (isMounted) {
+          setPublicLibraries(data || []);
+        }
+      } catch (error) {
+        console.error("Cannot load public libraries:", error);
+        if (isMounted) {
+          setPublicLibraries([]);
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoadingPublicLibraries(false);
+        }
+      }
+    }
+
+    loadPublicLibraries();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [isGuest]);
 
   const ITEMS_PER_PAGE = 6;
   const totalPages = Math.ceil(libraries.length / ITEMS_PER_PAGE);
@@ -53,24 +102,38 @@ function MyLibraryPage() {
       <section className="library_content">
         <header className="my_library_hero">
           <div className="my_library_hero_left">
-            <span className="library_overline">Library command center</span>
+            <span className="library_overline">
+              {isGuest ? "Public library catalog" : "Library command center"}
+            </span>
 
-            <h1>My academic collections</h1>
+            <h1>{isGuest ? "Public academic collections" : "My academic collections"}</h1>
 
             <p>
-              Keep your research folders, course documents and study material in one
-              organized place.
+              {isGuest
+                ? "Browse public study libraries and their shared files. Register to create your own private collections."
+                : "Keep your research folders, course documents and study material in one organized place."}
             </p>
 
             <div className="library_header_actions">
-              <Link
-                to="/dashboard/create-library"
-                state={{ from: "/dashboard/libraries" }}
-                className="create_library_btn"
-              >
-                <i className="ti-folder"></i>
-                Create or import library
-              </Link>
+              {isGuest ? (
+                <button
+                  type="button"
+                  onClick={notifyGuestRegistrationRequired}
+                  className="create_library_btn"
+                >
+                  <i className="ti-folder"></i>
+                  Create or import library
+                </button>
+              ) : (
+                <Link
+                  to="/dashboard/create-library"
+                  state={{ from: "/dashboard/libraries" }}
+                  className="create_library_btn"
+                >
+                  <i className="ti-folder"></i>
+                  Create or import library
+                </Link>
+              )}
             </div>
           </div>
 
@@ -80,19 +143,21 @@ function MyLibraryPage() {
             </div>
 
             <div>
-              <span>Latest collection</span>
+              <span>{isGuest ? "Newest public collection" : "Latest collection"}</span>
               <strong>{libraryStats.latestLibraryName}</strong>
             </div>
 
             <p>
-              Open a library to manage files, folders, tags, visibility and storage.
+              {isGuest
+                ? "Open a public library to view shared files."
+                : "Open a library to manage files, folders, tags, visibility and storage."}
             </p>
           </aside>
         </header>
 
         <section className="library_stats_grid" aria-label="Library statistics">
           <article>
-            <span>Total libraries</span>
+            <span>{isGuest ? "Public libraries" : "Total libraries"}</span>
             <strong>{libraries.length}</strong>
           </article>
 
@@ -102,18 +167,20 @@ function MyLibraryPage() {
           </article>
 
           <article>
-            <span>Visible libraries</span>
+            <span>{isGuest ? "Open access" : "Visible libraries"}</span>
             <strong>{libraryStats.visibleLibraries}</strong>
           </article>
         </section>
 
         <section className="library_board_header">
           <div>
-            <h2>Your library board</h2>
+            <h2>{isGuest ? "Public library board" : "Your library board"}</h2>
             <p>
-              {libraries.length === 0
+              {isLoadingPublicLibraries
+                ? "Loading public libraries..."
+                : libraries.length === 0
                 ? "Create your first library to start collecting documents."
-                : `${libraries.length} libraries saved in your study hub.`}
+                : `${libraries.length} libraries available in your study hub.`}
             </p>
           </div>
 
@@ -124,27 +191,49 @@ function MyLibraryPage() {
           )}
         </section>
 
-        {libraries.length === 0 ? (
+        {isLoadingPublicLibraries ? (
+          <section className="empty_library_state">
+            <div className="empty_library_icon">
+              <i className="ti-reload"></i>
+            </div>
+
+            <h2>Loading public libraries</h2>
+
+            <p>Please wait while StudyHub loads public study collections.</p>
+          </section>
+        ) : libraries.length === 0 ? (
           <section className="empty_library_state">
             <div className="empty_library_icon">
               <i className="ti-folder"></i>
             </div>
 
-            <h2>No libraries yet</h2>
+            <h2>{isGuest ? "No public libraries yet" : "No libraries yet"}</h2>
 
             <p>
-              Create a library to group documents by subject, project or research
-              topic.
+              {isGuest
+                ? "Public libraries will appear here when users share study materials."
+                : "Create a library to group documents by subject, project or research topic."}
             </p>
 
-            <Link
-              to="/dashboard/create-library"
-              state={{ from: "/dashboard/libraries" }}
-              className="empty_library_action"
-            >
-              <i className="ti-plus"></i>
-              Create first library
-            </Link>
+            {isGuest ? (
+              <button
+                type="button"
+                onClick={notifyGuestRegistrationRequired}
+                className="empty_library_action"
+              >
+                <i className="ti-plus"></i>
+                Create first library
+              </button>
+            ) : (
+              <Link
+                to="/dashboard/create-library"
+                state={{ from: "/dashboard/libraries" }}
+                className="empty_library_action"
+              >
+                <i className="ti-plus"></i>
+                Create first library
+              </Link>
+            )}
           </section>
         ) : (
           <section className="collection_grid">
@@ -155,7 +244,12 @@ function MyLibraryPage() {
               return (
                 <Link
                   to={`/dashboard/libraries/${library.id}`}
-                  state={{ library, from: "/dashboard/libraries" }}
+                  state={{
+                    library: isGuest
+                      ? { ...library, isPublicView: true, visibility: "public" }
+                      : library,
+                    from: "/dashboard/libraries",
+                  }}
                   className="collection_card collection_card_link"
                   key={library.id}
                 >
