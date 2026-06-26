@@ -12,14 +12,32 @@ function readStorageList(key) {
   }
 }
 
+function getStoredUserRole() {
+  try {
+    const user = JSON.parse(localStorage.getItem("user") || "null");
+    return String(user?.role || "").toUpperCase();
+  } catch {
+    return "";
+  }
+}
+
+function notifyGuestRegistrationRequired() {
+  alert("Please register or log in with an account to create libraries and workspaces.");
+}
+
 function HomePage() {
   const profileName =
     localStorage.getItem("aiStudyHubProfileName") || "dangkhoabi456";
+  const isGuest = getStoredUserRole() === "GUEST";
 
-  const libraries = readStorageList("aiStudyHubLibraries");
-  const workspaces = readStorageList("aiStudyHubWorkspaces");
-  const recentLibraries = readStorageList("aiStudyHubRecentLibraries").slice(0, 2);
-  const recentWorkspaces = readStorageList("aiStudyHubRecentWorkspaces").slice(0, 4);
+  const libraries = isGuest ? [] : readStorageList("aiStudyHubLibraries");
+  const workspaces = isGuest ? [] : readStorageList("aiStudyHubWorkspaces");
+  const recentLibraries = isGuest
+    ? []
+    : readStorageList("aiStudyHubRecentLibraries").slice(0, 2);
+  const recentWorkspaces = isGuest
+    ? []
+    : readStorageList("aiStudyHubRecentWorkspaces").slice(0, 4);
 
   const totalDocuments = libraries.reduce(
     (total, library) => total + Number(library.documents || 0),
@@ -72,23 +90,47 @@ function HomePage() {
             </div>
 
             <div className="home_primary_actions">
-              <Link
-                to="/dashboard/create-workspace"
-                state={{ from: "/dashboard/home" }}
-                className="home_btn home_btn_primary"
-              >
-                <i className="ti-briefcase"></i>
-                Create workspace
-              </Link>
+              {isGuest ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={notifyGuestRegistrationRequired}
+                    className="home_btn home_btn_primary"
+                  >
+                    <i className="ti-briefcase"></i>
+                    Create workspace
+                  </button>
 
-              <Link
-                to="/dashboard/create-library"
-                state={{ from: "/dashboard/home" }}
-                className="home_btn home_btn_secondary"
-              >
-                <i className="ti-folder"></i>
-                Create library
-              </Link>
+                  <button
+                    type="button"
+                    onClick={notifyGuestRegistrationRequired}
+                    className="home_btn home_btn_secondary"
+                  >
+                    <i className="ti-folder"></i>
+                    Create library
+                  </button>
+                </>
+              ) : (
+                <>
+                  <Link
+                    to="/dashboard/create-workspace"
+                    state={{ from: "/dashboard/home" }}
+                    className="home_btn home_btn_primary"
+                  >
+                    <i className="ti-briefcase"></i>
+                    Create workspace
+                  </Link>
+
+                  <Link
+                    to="/dashboard/create-library"
+                    state={{ from: "/dashboard/home" }}
+                    className="home_btn home_btn_secondary"
+                  >
+                    <i className="ti-folder"></i>
+                    Create library
+                  </Link>
+                </>
+              )}
             </div>
           </div>
 
@@ -110,15 +152,19 @@ function HomePage() {
                   ? `${latestLibrary.documents || 0} documents saved`
                   : "Open a library once to place it here."}
               </p>
-              <Link
-                to={
-                  latestLibrary?.id
-                    ? `/dashboard/libraries/${latestLibrary.id}`
-                    : "/dashboard/libraries"
-                }
-              >
-                {latestLibrary ? "Open library" : "Browse libraries"}
-              </Link>
+              {isGuest ? (
+                <Link to="/dashboard/libraries">Browse public libraries</Link>
+              ) : (
+                <Link
+                  to={
+                    latestLibrary?.id
+                      ? `/dashboard/libraries/${latestLibrary.id}`
+                      : "/dashboard/libraries"
+                  }
+                >
+                  {latestLibrary ? "Open library" : "Browse libraries"}
+                </Link>
+              )}
             </div>
 
             <div className="focus_card focus_card_light">
@@ -129,15 +175,17 @@ function HomePage() {
                   ? "Continue the discussion from this workspace."
                   : "Your recent collaboration room will appear here."}
               </p>
-              <Link
-                to={
-                  latestWorkspace?.id
-                    ? `/dashboard/workspaces/${latestWorkspace.id}`
-                    : "/dashboard/workspaces"
-                }
-              >
-                {latestWorkspace ? "Open workspace" : "Browse workspaces"}
-              </Link>
+              {!isGuest && (
+                <Link
+                  to={
+                    latestWorkspace?.id
+                      ? `/dashboard/workspaces/${latestWorkspace.id}`
+                      : "/dashboard/workspaces"
+                  }
+                >
+                  {latestWorkspace ? "Open workspace" : "Browse workspaces"}
+                </Link>
+              )}
             </div>
           </aside>
         </section>
@@ -165,10 +213,12 @@ function HomePage() {
                 <h2>Libraries you opened recently</h2>
               </div>
 
-              <Link to="/dashboard/libraries" className="home_text_link">
-                View all libraries
-                <i className="ti-arrow-right"></i>
-              </Link>
+              {!isGuest && (
+                <Link to="/dashboard/libraries" className="home_text_link">
+                  View all libraries
+                  <i className="ti-arrow-right"></i>
+                </Link>
+              )}
             </div>
 
             <div className="recent_library_grid">
@@ -179,7 +229,9 @@ function HomePage() {
                   </div>
                   <h3>No recent libraries yet</h3>
                   <p>Open or create a library to bring your latest study materials into this area.</p>
-                  <Link to="/dashboard/libraries">Browse libraries</Link>
+                  <Link to="/dashboard/libraries">
+                    {isGuest ? "Browse public libraries" : "Browse libraries"}
+                  </Link>
                 </div>
               ) : (
                 recentLibraries.map((library, index) => (
@@ -217,9 +269,11 @@ function HomePage() {
                 <h2>Workspaces</h2>
               </div>
 
-              <Link to="/dashboard/workspaces" className="home_text_link compact_link">
-                View all
-              </Link>
+              {!isGuest && (
+                <Link to="/dashboard/workspaces" className="home_text_link compact_link">
+                  View all
+                </Link>
+              )}
             </div>
 
             <div className="recent_workspace_list">
@@ -230,7 +284,7 @@ function HomePage() {
                   </div>
                   <h3>No recent workspaces</h3>
                   <p>Open a workspace once and it will be listed here.</p>
-                  <Link to="/dashboard/workspaces">Browse workspaces</Link>
+                  {!isGuest && <Link to="/dashboard/workspaces">Browse workspaces</Link>}
                 </div>
               ) : (
                 recentWorkspaces.map((workspace) => (

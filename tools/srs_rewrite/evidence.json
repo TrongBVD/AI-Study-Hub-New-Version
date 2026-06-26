@@ -1,0 +1,2163 @@
+{
+  "docx": {
+    "paragraph_count": 327,
+    "table_count": 12,
+    "first_paragraphs": [
+      {
+        "index": 3,
+        "style": "normal",
+        "text": "AI StudyHub SRS - Updated Version"
+      },
+      {
+        "index": 4,
+        "style": "Title",
+        "text": "SOFTWARE REQUIREMENTS SPECIFICATION (SRS)"
+      },
+      {
+        "index": 5,
+        "style": "normal",
+        "text": "Hệ thống Quản lý và Hỗ trợ Học tập bằng AI (AI StudyHub)"
+      },
+      {
+        "index": 6,
+        "style": "normal",
+        "text": "Mã dự án: SWP391_G1 Phiên bản cập nhật: Admin Role, FR/NFR, Workflow, Database & API"
+      },
+      {
+        "index": 7,
+        "style": "normal",
+        "text": "Nhóm thực hiện:"
+      },
+      {
+        "index": 8,
+        "style": "normal",
+        "text": "Bùi Võ Đức Trọng - SE204122"
+      },
+      {
+        "index": 9,
+        "style": "normal",
+        "text": "Hà Thúc Nhật Thành - SE204066"
+      },
+      {
+        "index": 10,
+        "style": "normal",
+        "text": "Võ Đăng Khoa - SE204298"
+      },
+      {
+        "index": 11,
+        "style": "normal",
+        "text": "Lê Minh Hoàng - SE204280"
+      },
+      {
+        "index": 13,
+        "style": "Heading 1",
+        "text": "Revision History"
+      },
+      {
+        "index": 39,
+        "style": "normal",
+        "text": "Contents"
+      },
+      {
+        "index": 47,
+        "style": "Heading 1",
+        "text": "CHƯƠNG 1: GIỚI THIỆU DỰ ÁN"
+      },
+      {
+        "index": 48,
+        "style": "Heading 2",
+        "text": "1.1. Giới thiệu tổng quan về dự án"
+      },
+      {
+        "index": 49,
+        "style": "normal",
+        "text": "Dự án AI StudyHub được xây dựng nhằm giải quyết bài toán quản lý tri thức trong môi trường đại học. Hiện nay, tài liệu học tập của sinh viên bị phân tán trên nhiều nền tảng như Messenger, Facebook Group, email và USB, dẫn đến việc thất lạc và khó tra cứu. AI StudyHub cung cấp một nền tảng tập trung, không chỉ lưu trữ tài liệu mà còn sử dụng trí tuệ nhân tạo (AI) để đọc hiểu, tóm tắt và hỗ trợ ôn tập dựa trên chính nội dung tài liệu người dùng tải lên."
+      },
+      {
+        "index": 50,
+        "style": "Heading 2",
+        "text": "1.2. Mục đích của tài liệu"
+      },
+      {
+        "index": 51,
+        "style": "normal",
+        "text": "Tài liệu này đặc tả các yêu cầu chức năng và phi chức năng cho hệ thống AI StudyHub. Tài liệu phục vụ như kim chỉ nam cho đội ngũ phát triển trong quá trình xây dựng mã nguồn, thiết kế cơ sở dữ liệu, triển khai hạ tầng, kiểm thử và nghiệm thu dự án."
+      },
+      {
+        "index": 52,
+        "style": "Heading 2",
+        "text": "1.3. Đối tượng sử dụng tài liệu"
+      },
+      {
+        "index": 53,
+        "style": "normal",
+        "text": "Nhóm phát triển: được sử dụng để triển khai code, thiết kế cơ sở dữ liệu và xây dựng API."
+      },
+      {
+        "index": 54,
+        "style": "normal",
+        "text": "Giảng viên hướng dẫn: được sử dụng để đánh giá phạm vi, tính khả thi và mức độ rõ ràng của yêu cầu."
+      },
+      {
+        "index": 55,
+        "style": "normal",
+        "text": "Người dùng thử nghiệm: được sử dụng để hiểu luồng vận hành và quyền hạn cơ bản của sản phẩm."
+      },
+      {
+        "index": 56,
+        "style": "Heading 2",
+        "text": "1.4. Phạm vi của dự án"
+      },
+      {
+        "index": 57,
+        "style": "normal",
+        "text": "Hệ thống tập trung vào quản lý tài liệu văn bản như PDF, Word và link Cloud. Dự án tích hợp các tính năng AI như kiểm duyệt nội dung tự động, gợi ý hashtag, tìm kiếm ngữ nghĩa, sinh Flashcards tự động và Chatbot RAG. Hệ thống áp dụng giới hạn tài nguyên như quota upload, download và số lượt sử dụng AI để tối ưu hóa chi phí vận hành."
+      },
+      {
+        "index": 58,
+        "style": "normal",
+        "text": "Trong phiên bản MVP, hệ thống tập trung vào quản lý tài khoản, upload/download tài liệu, hỗ trợ AI cơ bản, Flashcards, RAG Chatbot, Workspace sharing, quota control và module quản trị cơ bản cho System Admin. Các chức năng phân tích nâng cao, cá nhân hóa AI nâng cao và dashboard thống kê phức tạp có thể được phát triển ở phiên bản sau."
+      },
+      {
+        "index": 59,
+        "style": "Heading 2",
+        "text": "1.5. Các từ viết tắt"
+      },
+      {
+        "index": 66,
+        "style": "Heading 1",
+        "text": "CHƯƠNG 2: MÔ TẢ TỔNG QUAN"
+      },
+      {
+        "index": 67,
+        "style": "Heading 2",
+        "text": "2.1. Phân lớp người dùng"
+      },
+      {
+        "index": 68,
+        "style": "normal",
+        "text": "Sinh viên (User): Người dùng cuối của hệ thống. User có thể đăng ký, đăng nhập, tải tài liệu lên, tải tài liệu xuống, sử dụng AI Chatbot, tạo Flashcards, tìm kiếm tài liệu và tham gia Workspace học tập."
+      },
+      {
+        "index": 70,
+        "style": "normal",
+        "text": "Khách (Guest): Người"
+      },
+      {
+        "index": 72,
+        "style": "normal",
+        "text": "Quản trị viên hệ thống (System Admin): Người dùng có quyền quản trị toàn hệ thống. System Admin có thể xem Admin Dashboard, kiểm duyệt các tài liệu bị AI chặn nhầm, quản lý tài khoản người dùng, theo dõi quota sử dụng và kiểm tra Activity Logs để phục vụ bảo mật và vận hành hệ thống."
+      },
+      {
+        "index": 74,
+        "style": "normal",
+        "text": "Quản trị viên Workspace (Workspace Admin): Người dùng có quyền quản lý trong phạm vi một Workspace cụ thể. Workspace Admin có thể thêm/xóa thành viên, phân quyền thành viên và quản lý tài liệu trong Workspace đó. Vai trò này khác với System Admin."
+      },
+      {
+        "index": 76,
+        "style": "normal",
+        "text": "Hệ thống AI (AI Engine): Thành phần tự động xử lý tài liệu, kiểm duyệt nội dung, gợi ý hashtag, tạo tóm tắt, sinh Flashcards, hỗ trợ Semantic Search và trả lời câu hỏi bằng RAG Chatbot."
+      },
+      {
+        "index": 79,
+        "style": "Heading 2",
+        "text": "2.2. Permission Matrix"
+      },
+      {
+        "index": 81,
+        "style": "Heading 2",
+        "text": "2.3. Môi trường vận hành"
+      },
+      {
+        "index": 82,
+        "style": "normal",
+        "text": "Client: Trình duyệt web hiện đại hỗ trợ JavaScript như Chrome v90+ hoặc Firefox v88+."
+      },
+      {
+        "index": 83,
+        "style": "normal",
+        "text": "Server: Node.js trên cloud hosting như Render hoặc Railway."
+      },
+      {
+        "index": 84,
+        "style": "normal",
+        "text": "Database: PostgreSQL tích hợp pgvector trên Supabase."
+      },
+      {
+        "index": 85,
+        "style": "normal",
+        "text": "Storage: Supabase Storage hoặc cloud storage tương đương để lưu file vật lý."
+      },
+      {
+        "index": 86,
+        "style": "normal",
+        "text": "AI Service: Google Gemini API hoặc dịch vụ AI tương đương."
+      },
+      {
+        "index": 87,
+        "style": "Heading 2",
+        "text": "2.4. Ràng buộc thiết kế và triển khai"
+      },
+      {
+        "index": 88,
+        "style": "normal",
+        "text": "Hệ thống phải sử dụng kiến trúc phân lớp để tách biệt routing, controller, service, database và AI processing."
+      },
+      {
+        "index": 89,
+        "style": "normal",
+        "text": "Bảo mật dữ liệu phải được thực thi tại tầng database thông qua RLS khi phù hợp."
+      },
+      {
+        "index": 90,
+        "style": "normal",
+        "text": "Mật khẩu người dùng phải được băm bằng Bcrypt trước khi lưu trữ."
+      },
+      {
+        "index": 91,
+        "style": "normal",
+        "text": "Backend phải kiểm tra role trước khi xử lý Admin API; không được chỉ dựa vào frontend route protection."
+      },
+      {
+        "index": 92,
+        "style": "normal",
+        "text": "Các hành động quan trọng của Admin phải được ghi vào Activity_Logs."
+      },
+      {
+        "index": 93,
+        "style": "Heading 2",
+        "text": "2.5. Giả định và phụ thuộc"
+      },
+      {
+        "index": 94,
+        "style": "normal",
+        "text": "Hệ thống phụ thuộc vào tính ổn định của Google Gemini API hoặc AI provider được chọn."
+      },
+      {
+        "index": 95,
+        "style": "normal",
+        "text": "Người dùng có tài khoản Gmail hợp lệ để đăng ký và nhận OTP."
+      },
+      {
+        "index": 96,
+        "style": "normal",
+        "text": "File upload phải nằm trong giới hạn dung lượng được cấu hình."
+      },
+      {
+        "index": 97,
+        "style": "normal",
+        "text": "Admin account được tạo bởi seed data hoặc bởi đội phát triển trong quá trình triển khai ban đầu."
+      },
+      {
+        "index": 138,
+        "style": "Heading 1",
+        "text": "CHƯƠNG 3: CÁC YÊU CẦU CHỨC NĂNG"
+      },
+      {
+        "index": 139,
+        "style": "Heading 2",
+        "text": "3.1. User Stories"
+      },
+      {
+        "index": 140,
+        "style": "Heading 3",
+        "text": "US-01: Đăng ký tài khoản bằng Gmail"
+      },
+      {
+        "index": 141,
+        "style": "normal",
+        "text": "Mô tả: Người dùng tạo tài khoản mới bằng địa chỉ Gmail."
+      },
+      {
+        "index": 142,
+        "style": "normal",
+        "text": "Luồng thực thi:"
+      },
+      {
+        "index": 143,
+        "style": "normal",
+        "text": "1. Người dùng nhập Gmail, Username và Password."
+      },
+      {
+        "index": 144,
+        "style": "normal",
+        "text": "2. Hệ thống kiểm tra email có định dạng Gmail hợp lệ."
+      },
+      {
+        "index": 145,
+        "style": "normal",
+        "text": "3. Hệ thống kiểm tra email chưa tồn tại trong Profiles."
+      },
+      {
+        "index": 146,
+        "style": "normal",
+        "text": "4. Hệ thống kiểm tra độ mạnh mật khẩu: tối thiểu 8 ký tự, có chữ thường, số và ký tự đặc biệt."
+      },
+      {
+        "index": 147,
+        "style": "normal",
+        "text": "5. Hệ thống tạo tài khoản mới và yêu cầu xác thực nếu cần."
+      },
+      {
+        "index": 148,
+        "style": "normal",
+        "text": "Acceptance Criteria:"
+      },
+      {
+        "index": 149,
+        "style": "normal",
+        "text": "Email trùng phải bị từ chối."
+      },
+      {
+        "index": 150,
+        "style": "normal",
+        "text": "Mật khẩu yếu phải bị từ chối."
+      },
+      {
+        "index": 151,
+        "style": "normal",
+        "text": "Tài khoản hợp lệ được tạo với status ACTIVE hoặc trạng thái xác thực theo thiết kế."
+      },
+      {
+        "index": 152,
+        "style": "Heading 3",
+        "text": "US-02: Đăng nhập và Đăng xuất"
+      },
+      {
+        "index": 153,
+        "style": "normal",
+        "text": "Mô tả: Người dùng truy cập và rời khỏi hệ thống an toàn."
+      },
+      {
+        "index": 154,
+        "style": "normal",
+        "text": "Luồng thực thi:"
+      },
+      {
+        "index": 155,
+        "style": "normal",
+        "text": "6. Người dùng nhập Username/Email và Password."
+      },
+      {
+        "index": 156,
+        "style": "normal",
+        "text": "7. Hệ thống xác thực thông tin đăng nhập."
+      },
+      {
+        "index": 157,
+        "style": "normal",
+        "text": "8. Hệ thống phát hành JWT/session nếu hợp lệ."
+      },
+      {
+        "index": 158,
+        "style": "normal",
+        "text": "9. Khi đăng xuất, hệ thống xóa token/session phía client và xử lý token phía server nếu có."
+      },
+      {
+        "index": 159,
+        "style": "normal",
+        "text": "Acceptance Criteria:"
+      },
+      {
+        "index": 160,
+        "style": "normal",
+        "text": "Sai thông tin đăng nhập phải hiển thị lỗi."
+      },
+      {
+        "index": 161,
+        "style": "normal",
+        "text": "Token hết hạn không được truy cập vào tập tài nguyên bảo vệ."
+      },
+      {
+        "index": 162,
+        "style": "normal",
+        "text": "Logout phải xóa cache/token trên trình duyệt."
+      },
+      {
+        "index": 163,
+        "style": "Heading 3",
+        "text": "US-03: Quên mật khẩu và OTP"
+      },
+      {
+        "index": 164,
+        "style": "normal",
+        "text": "Mô tả: Người dùng khôi phục quyền truy cập khi quên mật khẩu."
+      },
+      {
+        "index": 165,
+        "style": "normal",
+        "text": "Luồng thực thi:"
+      },
+      {
+        "index": 166,
+        "style": "normal",
+        "text": "10. Người dùng nhập Gmail đã đăng ký."
+      },
+      {
+        "index": 167,
+        "style": "normal",
+        "text": "11. Hệ thống sinh OTP ngẫu nhiên 6 chữ số."
+      },
+      {
+        "index": 168,
+        "style": "normal",
+        "text": "12. Hệ thống gửi OTP qua email."
+      },
+      {
+        "index": 169,
+        "style": "normal",
+        "text": "13. Người dùng nhập OTP hợp lệ để đặt mật khẩu mới."
+      },
+      {
+        "index": 170,
+        "style": "normal",
+        "text": "Acceptance Criteria:"
+      },
+      {
+        "index": 171,
+        "style": "normal",
+        "text": "OTP phải hết hạn sau thời gian cấu hình."
+      },
+      {
+        "index": 172,
+        "style": "normal",
+        "text": "OTP không được tái sử dụng."
+      },
+      {
+        "index": 173,
+        "style": "normal",
+        "text": "Mật khẩu mới đáp ứng chính sách bảo mật."
+      },
+      {
+        "index": 174,
+        "style": "Heading 3",
+        "text": "US-04: Cài đặt hồ sơ"
+      },
+      {
+        "index": 175,
+        "style": "normal",
+        "text": "Mô tả: Người dùng quản lý thông tin cá nhân và quyền riêng tư."
+      },
+      {
+        "index": 176,
+        "style": "normal",
+        "text": "Luồng thực thi:"
+      },
+      {
+        "index": 177,
+        "style": "normal",
+        "text": "14. Người dùng chỉnh sửa tên hiển thị."
+      },
+      {
+        "index": 178,
+        "style": "normal",
+        "text": "15. Hệ thống kiểm tra giới hạn đổi tên 7 ngày/lần."
+      },
+      {
+        "index": 179,
+        "style": "normal",
+        "text": "16. Người dùng có thể ẩn/hiện ngày sinh nếu thông tin này được lưu trong hồ sơ."
+      },
+      {
+        "index": 180,
+        "style": "normal",
+        "text": "Acceptance Criteria:"
+      },
+      {
+        "index": 181,
+        "style": "normal",
+        "text": "Không được đổi tên nếu chưa đủ 7 ngày."
+      },
+      {
+        "index": 182,
+        "style": "normal",
+        "text": "Trạng thái is_dob_public phải được lưu chính xác."
+      },
+      {
+        "index": 183,
+        "style": "normal",
+        "text": "Thông tin nhạy cảm không được hiển thị nếu user chọn ẩn."
+      },
+      {
+        "index": 184,
+        "style": "Heading 3",
+        "text": "US-05: Upload tài liệu và AI Kiểm duyệt"
+      },
+      {
+        "index": 185,
+        "style": "normal",
+        "text": "Mô tả: Người dùng upload tài liệu và AI kiểm tra nội dung có phù hợp với mục đích học tập hay không."
+      },
+      {
+        "index": 186,
+        "style": "normal",
+        "text": "Luồng thực thi:"
+      },
+      {
+        "index": 187,
+        "style": "normal",
+        "text": "17. Người dùng chọn file PDF/Word hoặc link Cloud."
+      },
+      {
+        "index": 188,
+        "style": "normal",
+        "text": "18. Hệ thống kiểm tra file type và file size."
+      },
+      {
+        "index": 189,
+        "style": "normal",
+        "text": "19. Hệ thống tạo document metadata với trạng thái PENDING."
+      },
+      {
+        "index": 190,
+        "style": "normal",
+        "text": "20. AI Engine quét nội dung tài liệu."
+      },
+      {
+        "index": 191,
+        "style": "normal",
+        "text": "21. Nếu hợp lệ, trạng thái chuyển thành APPROVED; nếu vi phạm, chuyển thành REJECTED hoặc FLAGGED."
+      },
+      {
+        "index": 192,
+        "style": "normal",
+        "text": "Acceptance Criteria:"
+      },
+      {
+        "index": 193,
+        "style": "normal",
+        "text": "File quá dung lượng phải bị từ chối."
+      },
+      {
+        "index": 194,
+        "style": "normal",
+        "text": "File bị AI từ chối phải hiển thị lý do."
+      },
+      {
+        "index": 195,
+        "style": "normal",
+        "text": "Trường hợp AI lỗi phải được xử lý bằng PENDING_RETRY hoặc thông báo rõ ràng."
+      },
+      {
+        "index": 196,
+        "style": "Heading 3",
+        "text": "US-06: Hashtag thông minh và Sửa lỗi chính tả"
+      },
+      {
+        "index": 197,
+        "style": "normal",
+        "text": "Mô tả: AI hỗ trợ chọn hashtag và sửa lỗi chính tả khi mô tả tài liệu."
+      },
+      {
+        "index": 198,
+        "style": "normal",
+        "text": "Luồng thực thi:"
+      },
+      {
+        "index": 199,
+        "style": "normal",
+        "text": "22. Người dùng chọn hoặc nhập hashtag."
+      },
+      {
+        "index": 200,
+        "style": "normal",
+        "text": "23. AI kiểm tra mức độ phù hợp giữa hashtag và nội dung."
+      },
+      {
+        "index": 201,
+        "style": "normal",
+        "text": "24. AI gợi ý sửa lỗi chính tả nếu phát hiện sai sót."
+      },
+      {
+        "index": 202,
+        "style": "normal",
+        "text": "25. Người dùng có thể chấp nhận gợi ý hoặc giữ nguyên."
+      },
+      {
+        "index": 203,
+        "style": "normal",
+        "text": "Acceptance Criteria:"
+      },
+      {
+        "index": 204,
+        "style": "normal",
+        "text": "Hashtag không phù hợp phải hiển thị cảnh báo."
+      },
+      {
+        "index": 205,
+        "style": "normal",
+        "text": "Gợi ý chính tả không được tự ý thay đổi nếu user không xác nhận."
+      },
+      {
+        "index": 206,
+        "style": "normal",
+        "text": "Hashtag sau khi duyệt không được chỉnh sửa nếu chính sách yêu cầu."
+      },
+      {
+        "index": 207,
+        "style": "Heading 3",
+        "text": "US-07: Sinh Flashcards và Ôn tập tự động"
+      },
+      {
+        "index": 208,
+        "style": "normal",
+        "text": "Mô tả: AI tự động trích xuất kiến thức để tạo câu hỏi ôn tập."
+      },
+      {
+        "index": 209,
+        "style": "normal",
+        "text": "Luồng thực thi:"
+      },
+      {
+        "index": 210,
+        "style": "normal",
+        "text": "26. Người dùng mở tài liệu và chọn Tạo Flashcard."
+      },
+      {
+        "index": 211,
+        "style": "normal",
+        "text": "27. Backend lấy Document_Chunks gửi lên AI service."
+      },
+      {
+        "index": 212,
+        "style": "normal",
+        "text": "28. AI trả danh sách câu hỏi và đáp án dạng JSON."
+      },
+      {
+        "index": 213,
+        "style": "normal",
+        "text": "29. Hệ thống parse JSON và lưu vào bảng Flashcards."
+      },
+      {
+        "index": 214,
+        "style": "normal",
+        "text": "30. Giao diện hiển thị flashcards tương tác."
+      },
+      {
+        "index": 215,
+        "style": "normal",
+        "text": "Acceptance Criteria:"
+      },
+      {
+        "index": 216,
+        "style": "normal",
+        "text": "JSON không hợp lệ phải được xử lý an toàn."
+      },
+      {
+        "index": 217,
+        "style": "normal",
+        "text": "Flashcards phải liên kết đúng document_id."
+      },
+      {
+        "index": 218,
+        "style": "normal",
+        "text": "User chỉ tạo flashcards cho tài liệu mình có quyền xem."
+      },
+      {
+        "index": 219,
+        "style": "Heading 3",
+        "text": "US-08: Lưu trữ Link Cloud và Tải tài liệu"
+      },
+      {
+        "index": 220,
+        "style": "normal",
+        "text": "Mô tả: Người dùng quản lý tài liệu từ các nguồn bên ngoài và tải tài liệu khi có quyền."
+      },
+      {
+        "index": 221,
+        "style": "normal",
+        "text": "Luồng thực thi:"
+      },
+      {
+        "index": 222,
+        "style": "normal",
+        "text": "31. Người dùng lưu link Google Drive/OneDrive nếu được hỗ trợ."
+      },
+      {
+        "index": 223,
+        "style": "normal",
+        "text": "32. Hệ thống lập chỉ mục nội dung nếu có thể truy cập."
+      },
+      {
+        "index": 224,
+        "style": "normal",
+        "text": "33. Người dùng tải tài liệu trong giới hạn quota hằng ngày."
+      },
+      {
+        "index": 225,
+        "style": "normal",
+        "text": "Acceptance Criteria:"
+      },
+      {
+        "index": 226,
+        "style": "normal",
+        "text": "Download bị chặn nếu vượt quota."
+      },
+      {
+        "index": 227,
+        "style": "normal",
+        "text": "Private document chỉ cho người có quyền tải."
+      },
+      {
+        "index": 228,
+        "style": "normal",
+        "text": "Link không hợp lệ phải hiển thị lỗi rõ ràng."
+      }
+    ],
+    "heading_like": [
+      {
+        "index": 13,
+        "style": "Heading 1",
+        "text": "Revision History"
+      },
+      {
+        "index": 47,
+        "style": "Heading 1",
+        "text": "CHƯƠNG 1: GIỚI THIỆU DỰ ÁN"
+      },
+      {
+        "index": 48,
+        "style": "Heading 2",
+        "text": "1.1. Giới thiệu tổng quan về dự án"
+      },
+      {
+        "index": 50,
+        "style": "Heading 2",
+        "text": "1.2. Mục đích của tài liệu"
+      },
+      {
+        "index": 52,
+        "style": "Heading 2",
+        "text": "1.3. Đối tượng sử dụng tài liệu"
+      },
+      {
+        "index": 56,
+        "style": "Heading 2",
+        "text": "1.4. Phạm vi của dự án"
+      },
+      {
+        "index": 59,
+        "style": "Heading 2",
+        "text": "1.5. Các từ viết tắt"
+      },
+      {
+        "index": 66,
+        "style": "Heading 1",
+        "text": "CHƯƠNG 2: MÔ TẢ TỔNG QUAN"
+      },
+      {
+        "index": 67,
+        "style": "Heading 2",
+        "text": "2.1. Phân lớp người dùng"
+      },
+      {
+        "index": 79,
+        "style": "Heading 2",
+        "text": "2.2. Permission Matrix"
+      },
+      {
+        "index": 81,
+        "style": "Heading 2",
+        "text": "2.3. Môi trường vận hành"
+      },
+      {
+        "index": 87,
+        "style": "Heading 2",
+        "text": "2.4. Ràng buộc thiết kế và triển khai"
+      },
+      {
+        "index": 93,
+        "style": "Heading 2",
+        "text": "2.5. Giả định và phụ thuộc"
+      },
+      {
+        "index": 138,
+        "style": "Heading 1",
+        "text": "CHƯƠNG 3: CÁC YÊU CẦU CHỨC NĂNG"
+      },
+      {
+        "index": 139,
+        "style": "Heading 2",
+        "text": "3.1. User Stories"
+      },
+      {
+        "index": 140,
+        "style": "Heading 3",
+        "text": "US-01: Đăng ký tài khoản bằng Gmail"
+      },
+      {
+        "index": 152,
+        "style": "Heading 3",
+        "text": "US-02: Đăng nhập và Đăng xuất"
+      },
+      {
+        "index": 163,
+        "style": "Heading 3",
+        "text": "US-03: Quên mật khẩu và OTP"
+      },
+      {
+        "index": 174,
+        "style": "Heading 3",
+        "text": "US-04: Cài đặt hồ sơ"
+      },
+      {
+        "index": 184,
+        "style": "Heading 3",
+        "text": "US-05: Upload tài liệu và AI Kiểm duyệt"
+      },
+      {
+        "index": 196,
+        "style": "Heading 3",
+        "text": "US-06: Hashtag thông minh và Sửa lỗi chính tả"
+      },
+      {
+        "index": 207,
+        "style": "Heading 3",
+        "text": "US-07: Sinh Flashcards và Ôn tập tự động"
+      },
+      {
+        "index": 219,
+        "style": "Heading 3",
+        "text": "US-08: Lưu trữ Link Cloud và Tải tài liệu"
+      },
+      {
+        "index": 229,
+        "style": "Heading 3",
+        "text": "US-09: Tìm kiếm toàn cầu và Ranking"
+      },
+      {
+        "index": 239,
+        "style": "Heading 3",
+        "text": "US-10: AI Chatbot đọc hiểu tài liệu"
+      },
+      {
+        "index": 250,
+        "style": "Heading 3",
+        "text": "US-11: Quản lý Workspace nhóm"
+      },
+      {
+        "index": 261,
+        "style": "Heading 3",
+        "text": "US-12: Quản lý Repo và Xóa dữ liệu"
+      },
+      {
+        "index": 272,
+        "style": "Heading 3",
+        "text": "US-13: Giới hạn tài nguyên"
+      },
+      {
+        "index": 283,
+        "style": "Heading 3",
+        "text": "US-14: Admin Login and Admin Dashboard"
+      },
+      {
+        "index": 295,
+        "style": "Heading 3",
+        "text": "US-15: Admin Reviews AI-Blocked Documents"
+      },
+      {
+        "index": 308,
+        "style": "Heading 3",
+        "text": "US-16: Admin Manages User Accounts"
+      },
+      {
+        "index": 321,
+        "style": "Heading 3",
+        "text": "US-17: Admin Views Activity Logs"
+      },
+      {
+        "index": 333,
+        "style": "Heading 3",
+        "text": "US-18: Admin Monitors Quota and AI Usage"
+      },
+      {
+        "index": 345,
+        "style": "Heading 2",
+        "text": "3.2. Functional Requirements"
+      },
+      {
+        "index": 347,
+        "style": "Heading 2",
+        "text": "3.3. User Story to FR Mapping"
+      },
+      {
+        "index": 358,
+        "style": "Heading 1",
+        "text": "CHƯƠNG 4: CÁC YÊU CẦU PHI CHỨC NĂNG"
+      },
+      {
+        "index": 359,
+        "style": "Heading 2",
+        "text": "4.1. Hiệu năng (Performance)"
+      },
+      {
+        "index": 365,
+        "style": "Heading 2",
+        "text": "4.2. Security"
+      },
+      {
+        "index": 371,
+        "style": "Heading 2",
+        "text": "4.3. Resource Management"
+      },
+      {
+        "index": 375,
+        "style": "Heading 2",
+        "text": "4.4. Availability"
+      },
+      {
+        "index": 379,
+        "style": "Heading 2",
+        "text": "4.5. Authorization and Access Control"
+      },
+      {
+        "index": 384,
+        "style": "Heading 2",
+        "text": "4.6. Auditability"
+      },
+      {
+        "index": 388,
+        "style": "Heading 2",
+        "text": "4.7. Privacy and Data Protection"
+      },
+      {
+        "index": 393,
+        "style": "Heading 2",
+        "text": "4.8. Reliability and Error Handling"
+      },
+      {
+        "index": 398,
+        "style": "Heading 2",
+        "text": "4.9. Usability"
+      },
+      {
+        "index": 402,
+        "style": "Heading 2",
+        "text": "4.10. Security Controls"
+      },
+      {
+        "index": 440,
+        "style": "Heading 1",
+        "text": "CHƯƠNG 5: THIẾT KẾ CƠ SỞ DỮ LIỆU"
+      },
+      {
+        "index": 441,
+        "style": "Heading 2",
+        "text": "5.1. Mô tả ERD tổng quan"
+      },
+      {
+        "index": 443,
+        "style": "Heading 2",
+        "text": "5.2. Data Dictionary"
+      },
+      {
+        "index": 445,
+        "style": "Heading 2",
+        "text": "5.3. Document Status Lifecycle"
+      },
+      {
+        "index": 447,
+        "style": "Heading 1",
+        "text": "CHƯƠNG 6: PHỤ LỤC"
+      },
+      {
+        "index": 448,
+        "style": "Heading 2",
+        "text": "6.1. Thuật toán xếp hạng (Ranking Algorithm)"
+      },
+      {
+        "index": 450,
+        "style": "Heading 2",
+        "text": "6.2. Nhật ký sử dụng AI (AI Usage Logs)"
+      },
+      {
+        "index": 452,
+        "style": "Heading 2",
+        "text": "6.3. Document Workflow"
+      },
+      {
+        "index": 454,
+        "style": "Heading 2",
+        "text": "6.4. Admin Workflow"
+      },
+      {
+        "index": 456,
+        "style": "Heading 2",
+        "text": "6.5. API Endpoint Table"
+      },
+      {
+        "index": 458,
+        "style": "Heading 2",
+        "text": "6.6. Testing and Acceptance Plan"
+      },
+      {
+        "index": 460,
+        "style": "Heading 2",
+        "text": "6.7. Important Consistency Rules"
+      }
+    ],
+    "tables": [
+      {
+        "index": 1,
+        "rows": [
+          [
+            "Version",
+            "Date",
+            "Main Changes",
+            "Author/Team"
+          ],
+          [
+            "1.0",
+            "Original",
+            "Initial SRS draft with user stories, NFRs, and database dictionary.",
+            "SWP391_G1"
+          ],
+          [
+            "1.1",
+            "2026-06-12",
+            "Added System Admin clarification, Admin user stories, Admin FR/NFRs, role permission matrix, workflows, API endpoints, and database updates.",
+            "SWP391_G1"
+          ]
+        ]
+      },
+      {
+        "index": 2,
+        "rows": [
+          [
+            "Term",
+            "Meaning"
+          ],
+          [
+            "SRS",
+            "Software Requirements Specification"
+          ],
+          [
+            "RAG",
+            "Retrieval-Augmented Generation"
+          ],
+          [
+            "OTP",
+            "One-Time Password"
+          ],
+          [
+            "SSO",
+            "Single Sign-On"
+          ],
+          [
+            "RLS",
+            "Row Level Security"
+          ],
+          [
+            "RBAC",
+            "Role-Based Access Control"
+          ],
+          [
+            "MVP",
+            "Minimum Viable Product"
+          ]
+        ]
+      },
+      {
+        "index": 3,
+        "rows": [
+          [
+            "Clarification System Admin là vai trò quản trị cấp hệ thống. Workspace Admin chỉ là quyền trong một workspace cụ thể. Hai vai trò này không được dùng thay thế cho nhau trong thiết kế và kiểm thử."
+          ]
+        ]
+      },
+      {
+        "index": 4,
+        "rows": [
+          [
+            "Function",
+            "User",
+            "Workspace Admin",
+            "System Admin",
+            "AI Engine"
+          ],
+          [
+            "Register/Login",
+            "Yes",
+            "Yes",
+            "Yes",
+            "No"
+          ],
+          [
+            "Upload document",
+            "Yes",
+            "Yes",
+            "Optional",
+            "No"
+          ],
+          [
+            "Download the allowed document",
+            "Yes",
+            "Yes",
+            "Yes, for audit/moderation",
+            "No"
+          ],
+          [
+            "Use AI Chatbot",
+            "Yes",
+            "Yes",
+            "Optional",
+            "No"
+          ],
+          [
+            "Generate Flashcards",
+            "Yes",
+            "Yes",
+            "Optional",
+            "No"
+          ],
+          [
+            "Manage workspace members",
+            "No",
+            "Yes",
+            "No",
+            "No"
+          ],
+          [
+            "Review AI-blocked documents",
+            "No",
+            "No",
+            "Yes",
+            "No"
+          ],
+          [
+            "Manage user accounts",
+            "No",
+            "No",
+            "Yes",
+            "No"
+          ],
+          [
+            "Monitor quota and AI usage",
+            "No",
+            "No",
+            "Yes",
+            "No"
+          ],
+          [
+            "View system logs",
+            "No",
+            "No",
+            "Yes",
+            "No"
+          ],
+          [
+            "Automatic moderation/tagging",
+            "No",
+            "No",
+            "No",
+            "Yes"
+          ]
+        ]
+      },
+      {
+        "index": 5,
+        "rows": [
+          [
+            "FR ID",
+            "Requirement"
+          ],
+          [
+            "FR-AUTH-01",
+            "The system shall allow users to register using Gmail and a password."
+          ],
+          [
+            "FR-AUTH-02",
+            "The system shall allow users to log in and log out securely using JWT/session."
+          ],
+          [
+            "FR-AUTH-03",
+            "The system shall support password recovery using OTP."
+          ],
+          [
+            "FR-AUTH-04",
+            "The system shall store passwords as Bcrypt hashes and never expose them."
+          ],
+          [
+            "FR-DOC-01",
+            "The system shall allow users to upload PDF/Word documents within the configured file size limit."
+          ],
+          [
+            "FR-DOC-02",
+            "The system shall allow users to list, view, and download documents according to permission and quota."
+          ],
+          [
+            "FR-DOC-03",
+            "The system shall support soft delete and permanent deletion after 30 days."
+          ],
+          [
+            "FR-AI-01",
+            "The system shall perform AI moderation after document upload."
+          ],
+          [
+            "FR-AI-02",
+            "The system shall suggest hashtags and spell-check user input."
+          ],
+          [
+            "FR-AI-03",
+            "The system shall generate flashcards from document chunks."
+          ],
+          [
+            "FR-AI-04",
+            "The system shall support the RAG chatbot for document question answering."
+          ],
+          [
+            "FR-SEARCH-01",
+            "The system shall support global search over publicly approved documents."
+          ],
+          [
+            "FR-WS-01",
+            "The system shall allow users to create and manage Workspaces."
+          ],
+          [
+            "FR-WS-02",
+            "The system shall allow Workspace Admin to manage members and workspace-level roles."
+          ],
+          [
+            "FR-QUOTA-01",
+            "The system shall track daily upload, download, AI chat count, and token usage."
+          ],
+          [
+            "FR-ADM-01",
+            "The system shall allow only System Admin to access Admin pages and Admin APIs."
+          ],
+          [
+            "FR-ADM-02",
+            "The system shall provide an Admin Dashboard."
+          ],
+          [
+            "FR-ADM-03",
+            "The system shall allow Admin to review AI-blocked documents."
+          ],
+          [
+            "FR-ADM-04",
+            "The system shall allow Admin to approve or keep rejected moderated documents with a reason."
+          ],
+          [
+            "FR-ADM-05",
+            "The system shall allow Admin to manage user account status and reset quota."
+          ],
+          [
+            "FR-ADM-06",
+            "The system shall allow Admin to view Activity Logs."
+          ],
+          [
+            "FR-ADM-07",
+            "The system shall allow Admin to monitor quota and AI usage."
+          ],
+          [
+            "FR-ADM-08",
+            "The system shall record important Admin actions in Activity_Logs."
+          ]
+        ]
+      },
+      {
+        "index": 6,
+        "rows": [
+          [
+            "User Story",
+            "Related FRs"
+          ],
+          [
+            "US-01",
+            "FR-AUTH-01, FR-AUTH-04"
+          ],
+          [
+            "US-02",
+            "FR-AUTH-02"
+          ],
+          [
+            "US-03",
+            "FR-AUTH-03"
+          ],
+          [
+            "US-04",
+            "FR-AUTH-04"
+          ],
+          [
+            "US-05",
+            "FR-DOC-01, FR-AI-01"
+          ],
+          [
+            "US-06",
+            "FR-AI-02"
+          ],
+          [
+            "US-07",
+            "FR-AI-03"
+          ],
+          [
+            "US-08",
+            "FR-DOC-02, FR-QUOTA-01"
+          ],
+          [
+            "US-09",
+            "FR-SEARCH-01"
+          ],
+          [
+            "US-10",
+            "FR-AI-04, FR-QUOTA-01"
+          ],
+          [
+            "US-11",
+            "FR-WS-01, FR-WS-02"
+          ],
+          [
+            "US-12",
+            "FR-DOC-03"
+          ],
+          [
+            "US-13",
+            "FR-QUOTA-01"
+          ],
+          [
+            "US-14",
+            "FR-ADM-01, FR-ADM-02"
+          ],
+          [
+            "US-15",
+            "FR-ADM-03, FR-ADM-04, FR-ADM-08"
+          ],
+          [
+            "US-16",
+            "FR-ADM-05, FR-ADM-08"
+          ],
+          [
+            "US-17",
+            "FR-ADM-06"
+          ],
+          [
+            "US-18",
+            "FR-ADM-07, FR-ADM-08"
+          ]
+        ]
+      },
+      {
+        "index": 7,
+        "rows": [
+          [
+            "Table",
+            "Primary Columns / Important Fields",
+            "Description / Update"
+          ],
+          [
+            "Profiles",
+            "id, email, username, password_hash, full_name, role, status, last_name_change, date_of_birth, is_dob_public, created_at, updated_at, last_login_at",
+            "Lưu thông tin người dùng. Role gồm USER hoặc SYSTEM_ADMIN. Status gồm ACTIVE hoặc DISABLED."
+          ],
+          [
+            "OTP_Tokens",
+            "id, email, otp_code, expires_at, used_at",
+            "Lưu OTP dùng một lần cho forgot password. OTP phải hết hạn và không được tái sử dụng."
+          ],
+          [
+            "Workspaces",
+            "id, name, description, created_by, deleted_at, created_at, updated_at",
+            "Không gian học tập nhóm, hỗ trợ soft delete."
+          ],
+          [
+            "Workspace_Members",
+            "workspace_id, user_id, role, joined_at",
+            "Quản lý quyền trong workspace: WORKSPACE_ADMIN, EDITOR, VIEWER. Không dùng role này thay cho System Admin."
+          ],
+          [
+            "Folders",
+            "id, workspace_id, parent_id, name, deleted_at",
+            "Cấu trúc thư mục lồng nhau trong workspace."
+          ],
+          [
+            "Documents",
+            "id, uploader_id, workspace_id, title, file_url, file_size_bytes, is_public, moderation_status, ai_reject_reason, reviewed_by_admin_id, reviewed_at, admin_review_reason, deleted_at",
+            "Lưu metadata tài liệu. moderation_status gồm PENDING, APPROVED, REJECTED, FLAGGED, PENDING_RETRY, DELETED."
+          ],
+          [
+            "Tags",
+            "id, name",
+            "Danh mục hashtag được AI chuẩn hóa."
+          ],
+          [
+            "Document_Tags",
+            "document_id, tag_id, assigned_by",
+            "Bảng N-N liên kết documents và tags."
+          ],
+          [
+            "Document_Chunks",
+            "id, document_id, chunk_index, embedding VECTOR(768), content",
+            "Lưu text chunks và vector phục vụ Semantic Search/RAG."
+          ],
+          [
+            "AI_Summaries",
+            "id, document_id, summary_text, keywords, generated_at",
+            "Cache kết quả tóm tắt để giảm token usage."
+          ],
+          [
+            "Flashcards",
+            "id, document_id, question, answer, created_at",
+            "Lưu câu hỏi/đáp án được AI sinh từ tài liệu."
+          ],
+          [
+            "Activity_Logs",
+            "id, user_id, action_type, entity_id, old_data JSONB, new_data JSONB, created_at, ip_address, user_agent",
+            "Audit trail cho hoạt động quan trọng và Admin actions."
+          ],
+          [
+            "Daily_Quota_Usage",
+            "id, user_id, usage_date, bytes_uploaded, bytes_downloaded",
+            "Theo dõi quota upload/download 50 MB/ngày."
+          ],
+          [
+            "AI_Usage_Logs",
+            "id, user_id, usage_date, tokens_consumed, chat_count",
+            "Theo dõi số token và số câu hỏi AI chatbot/ngày."
+          ],
+          [
+            "Reviews",
+            "id, document_id, user_id, rating",
+            "Lưu rating 1-5 sao cho public documents phục vụ ranking."
+          ],
+          [
+            "Notifications",
+            "id, user_id, title, message, is_read, created_at",
+            "Thông báo moderation result, quota warning, workspace invitation và Admin decision cho người dùng."
+          ]
+        ]
+      },
+      {
+        "index": 8,
+        "rows": [
+          [
+            "Status",
+            "Meaning",
+            "Next Possible Status"
+          ],
+          [
+            "PENDING",
+            "Document uploaded and waiting for AI moderation.",
+            "APPROVED, REJECTED, FLAGGED, PENDING_RETRY"
+          ],
+          [
+            "APPROVED",
+            "Document is accepted and visible according to privacy/workspace rules.",
+            "DELETED"
+          ],
+          [
+            "REJECTED",
+            "Document is blocked by AI or Admin.",
+            "FLAGGED, APPROVED if Admin overturns"
+          ],
+          [
+            "FLAGGED",
+            "Document needs Admin review.",
+            "APPROVED, REJECTED"
+          ],
+          [
+            "PENDING_RETRY",
+            "AI processing failed and should be retried.",
+            "APPROVED, REJECTED, FLAGGED"
+          ],
+          [
+            "DELETED",
+            "Document is soft-deleted and hidden from the repo.",
+            "Permanent deletion after 30 days"
+          ]
+        ]
+      },
+      {
+        "index": 9,
+        "rows": [
+          [
+            "Step",
+            "Actor",
+            "Action",
+            "Result"
+          ],
+          [
+            "1",
+            "User",
+            "Upload a document or cloud link.",
+            "System validates type and size."
+          ],
+          [
+            "2",
+            "System",
+            "Creates document metadata.",
+            "moderation_status = PENDING."
+          ],
+          [
+            "3",
+            "AI Engine",
+            "Scans content and classifies the document.",
+            "Returns valid, invalid, uncertain, or error."
+          ],
+          [
+            "4A",
+            "AI Engine",
+            "Document is valid.",
+            "moderation_status = APPROVED."
+          ],
+          [
+            "4B",
+            "AI Engine",
+            "Document violates the rule.",
+            "moderation_status = REJECTED."
+          ],
+          [
+            "4C",
+            "AI Engine",
+            "The result is uncertain.",
+            "moderation_status = FLAGGED."
+          ],
+          [
+            "4D",
+            "AI Engine",
+            "AI call fails.",
+            "moderation_status = PENDING_RETRY."
+          ],
+          [
+            "5",
+            "System Admin",
+            "Reviews REJECTED/FLAGGED document if needed.",
+            "Admin approves or keeps rejecting with a reason."
+          ],
+          [
+            "6",
+            "System",
+            "Write the activity log and notify the user.",
+            "The final moderation result is visible to the uploader."
+          ],
+          [
+            "7",
+            "User/System",
+            "Soft delete and scheduled purge.",
+            "Document hidden immediately and purged after 30 days."
+          ]
+        ]
+      },
+      {
+        "index": 10,
+        "rows": [
+          [
+            "Step",
+            "Admin Action",
+            "System Response"
+          ],
+          [
+            "1",
+            "Admin logs in.",
+            "System validates credentials and checks role SYSTEM_ADMIN."
+          ],
+          [
+            "2",
+            "Admin opens the dashboard.",
+            "System displays users, documents, the moderation queue, quota, AI usage, and recent logs."
+          ],
+          [
+            "3",
+            "Admin reviews AI-blocked documents.",
+            "The system shows AI reason, suspicious content, uploader, and document metadata."
+          ],
+          [
+            "4",
+            "Admin approves or keeps rejecting.",
+            "System updates moderation_status and records reason in Activity_Logs."
+          ],
+          [
+            "5",
+            "Admin manages users.",
+            "The system allows disabling, reactivating, or quota resetting with confirmation."
+          ],
+          [
+            "6",
+            "Admin views logs.",
+            "The system allows filtering by user, action, document, workspace, and date range."
+          ],
+          [
+            "7",
+            "Admin monitors usage.",
+            "System highlights quota/AI usage and supports action against abuse."
+          ]
+        ]
+      },
+      {
+        "index": 11,
+        "rows": [
+          [
+            "API",
+            "Method",
+            "Purpose"
+          ],
+          [
+            "/api/auth/register",
+            "POST",
+            "Register a new user."
+          ],
+          [
+            "/api/auth/login",
+            "Log in",
+            ""
+          ],
+          [
+            "/api/auth/logout",
+            "POST",
+            "Logout and clear the session/token."
+          ],
+          [
+            "/api/auth/forgot-password",
+            "POST",
+            "Request OTP."
+          ],
+          [
+            "/api/auth/reset-password",
+            "POST",
+            "Reset password using OTP."
+          ],
+          [
+            "/api/documents/upload",
+            "POST",
+            "Upload document."
+          ],
+          [
+            "/api/documents",
+            "GET",
+            "List user documents."
+          ],
+          [
+            "/api/documents/{id}/download",
+            "GET",
+            "Download the document if allowed."
+          ],
+          [
+            "/api/ai/chat",
+            "POST",
+            "Ask the document in the chatbot."
+          ],
+          [
+            "/api/ai/documents/{id}/flashcards",
+            "POST",
+            "Generate flashcards."
+          ],
+          [
+            "/api/admin/dashboard",
+            "GET",
+            "Get Admin dashboard statistics."
+          ],
+          [
+            "/api/admin/moderation",
+            "GET",
+            "List flagged/rejected documents."
+          ],
+          [
+            "/api/admin/moderation/{id}",
+            "PATCH",
+            "Approve/reject the moderated document."
+          ],
+          [
+            "/api/admin/users",
+            "GET",
+            "List/search users."
+          ],
+          [
+            "/api/admin/users/{id}/status",
+            "PATCH",
+            "Disable/reactivate user."
+          ],
+          [
+            "/api/admin/users/{id}/quota",
+            "PATCH",
+            "Reset quota."
+          ],
+          [
+            "/api/admin/logs",
+            "GET",
+            "View activity logs."
+          ],
+          [
+            "/api/admin/usage",
+            "GET",
+            "View quota and AI usage."
+          ]
+        ]
+      },
+      {
+        "index": 12,
+        "rows": [
+          [
+            "Test Type",
+            "Main Focus"
+          ],
+          [
+            "Unit Test",
+            "Validation logic, quota calculation, password policy, OTP expiry, document status transitions."
+          ],
+          [
+            "Integration Test",
+            "Upload -> AI moderation -> status update -> notification/log."
+          ],
+          [
+            "API Test",
+            "Auth, document upload/download, AI chat, flashcards, admin endpoints."
+          ],
+          [
+            "Security Test",
+            "Non-admin cannot access admin pages/APIs; private documents cannot be accessed by unauthorized users."
+          ],
+          [
+            "Performance Test",
+            "Search under 2 seconds, Admin dashboard under 3 seconds, AI chatbot under 5 seconds."
+          ],
+          [
+            "Students",
+            ""
+          ]
+        ]
+      }
+    ]
+  },
+  "pdf": {
+    "pages_read": 12,
+    "pages": [
+      {
+        "page": 1,
+        "lines": [
+          "CAPSTONE PROJECT REPORT",
+          "Report 3 – Software Requirement Specification",
+          "– HoChiMinh, April 2026 –",
+          "1"
+        ]
+      },
+      {
+        "page": 2,
+        "lines": [
+          "Table of Contents",
+          "I. Record of Changes ............................................................................................................................... 3",
+          "II. Software Requirement Specification .................................................................................................. 4",
+          "1. Product Overview ........................................................................................................................... 4",
+          "2. User Requirements ......................................................................................................................... 5",
+          "2.1 Actors ........................................................................................................................................ 5",
+          "2.2 Use Cases .................................................................................................................................. 6",
+          "3. Functional Requirements .............................................................................................................. 10",
+          "3.1 System Functional Overview ................................................................................................... 10",
+          "3.2 Web Application ...................................................................................................................... 20",
+          "3.3 Mobile Application .................................................................................................................. 44",
+          "4. Non-Functional Requirements ...................................................................................................... 88",
+          "4.1 External Interfaces .................................................................................................................. 88",
+          "4.2 Quality Attributes .................................................................................................................... 88",
+          "5. Requirement Appendix ................................................................................................................. 89",
+          "5.1 Business Rules ......................................................................................................................... 89",
+          "5.2 Common Requirements .......................................................................................................... 91",
+          "5.3 Application Messages List ....................................................................................................... 92",
+          "5.4 Other Requirements… ............................................................................................................. 95",
+          "2"
+        ]
+      },
+      {
+        "page": 3,
+        "lines": [
+          "I. Record of Changes",
+          "Date A* In charge Change Description",
+          "M, D",
+          "5/4/2026 A Nguyễn Quốc Huy System Functional Overview, Web Application",
+          "5/4/2026 A Lê Minh Trọng Product Overview, Actors, System Functional Overview, Mobile",
+          "Application",
+          "5/4/2026 A Vũ Tiến Đạt Messages List, Common Requirements, Non-functional",
+          "Requirements",
+          "10/4/2026 A Nguyễn Phạm Use Cases",
+          "Minh Đăng",
+          "10/4/2026 A Trần Lạc Duy Business Rules",
+          "16/4/2026 M Nguyễn Quốc Huy Figure for Images",
+          "24/4/2026 M Lê Minh Trọng Mobile Application",
+          "*A - Added M - Modified D - Deleted",
+          "3"
+        ]
+      },
+      {
+        "page": 4,
+        "lines": [
+          "II. Software Requirement Specification",
+          "1. Product Overview",
+          "Intelligent Platform for Coffee Recipes and Ingredients is a smart digital solution designed to help",
+          "coffee shop owners create, manage, and optimize beverage recipes while seamlessly connecting with",
+          "ingredient suppliers. By integrating AI-driven recommendation systems, the platform suggests recipe",
+          "combinations and forecasts inventory needs based on sales data. It simplifies purchasing through listed",
+          "supplier prices and secure online payments, ensuring transparency and efficiency. Additionally, it",
+          "provides subscription-based access with financial tracking and performance insights. Through",
+          "automation and data analytics, the platform empowers coffee businesses to enhance consistency,",
+          "reduce waste, and improve profitability while maintaining full control over their recipes and supply",
+          "chain operations.",
+          "Figure 1: Context Diagram",
+          "4"
+        ]
+      },
+      {
+        "page": 5,
+        "lines": [
+          "2. User Requirements",
+          "2.1 Actors",
+          "Table 1: Actors",
+          "# Actor Description",
+          "The primary user who uses the mobile application to manage beverage",
+          "recipes, AI-generated recipe/menu ideas and feedback analysis, track",
+          "1 Shop Owner",
+          "inventory, place automated ingredient orders, manage subscriptions, and",
+          "publish personal recipes to the community.",
+          "The supplier who uses the web application to manage their ingredient",
+          "2 Supplier catalog, process incoming purchase orders, review sales trends and",
+          "customer feedback, and track their payout history and revenue.",
+          "The platform administrator is responsible for managing user accounts",
+          "(suspending or reactivating), configuring roles, moderating public recipes,",
+          "3 Admin",
+          "adjusting fee policies, and overseeing platform-wide statistics,",
+          "subscription plans, and financial records.",
+          "The operational user who uses the mobile application to view and update",
+          "4 Shop Staff ingredient stock, access menu and recipe specifications, generate",
+          "feedback QR codes for menu items, and record daily beverage sales data.",
+          "The third-party system offers services such as recipe tips based on flavor",
+          "5 AI Provider profiles, cost optimization analysis, and demand forecasting based on the",
+          "coffee shop's historical sales data.",
+          "The platform integrates a third-party shipping system. This actor receives",
+          "information from the supplier when an order is confirmed and updates",
+          "6 Delivery System",
+          "the shipping status in real time (preparing, delivering, or completed) so",
+          "that the coffee shop owner can track the progress of the materials.",
+          "Online payment gateways (payOs, ZaloPay) connect to the system. This",
+          "Payment actor is responsible for securely processing payment transactions for the",
+          "7",
+          "Gateway owner's service package subscription fees and ingredient purchase orders",
+          "between the owner and suppliers.",
+          "5"
+        ]
+      },
+      {
+        "page": 6,
+        "lines": [
+          "2.2 Use Cases",
+          "2.2.1 Diagram(s)",
+          "Figure 2: Use Case Diagram",
+          "2.2.2 Descriptions",
+          "Table 2: Use Case Description",
+          "ID Use Case Actors Use Case Description",
+          "UC_01 View Order Shop Owner The shop owner views order list and order",
+          "details.",
+          "6"
+        ]
+      },
+      {
+        "page": 7,
+        "lines": [
+          "UC_02 Create Order Shop Owner The shop owner creates a purchase order for",
+          "supplier products.",
+          "UC_03 Cancel Order Shop Owner The shop owner cancels an order under",
+          "allowed conditions.",
+          "UC_04 Feedback Order Shop Owner The shop owner submits feedback for an",
+          "order.",
+          "UC_05 Create Recipe By AI Shop Owner The shop owner asks AI to generate a recipe",
+          "draft.",
+          "UC_06 Create Recipe Manually Shop Owner The shop owner manually creates a recipe",
+          "with steps and ingredients.",
+          "UC_07 Create Unique Recipe Shop Owner The shop owner creates a unique recipe",
+          "variant.",
+          "UC_08 Create Normal Recipe Shop Owner The shop owner creates a normal recipe",
+          "variant.",
+          "UC_09 Save Public Recipe Shop Owner The shop owner saves a recipe for public",
+          "sharing.",
+          "UC_10 Public Recipe Shop Owner The shop owner publishes a recipe to the",
+          "public space.",
+          "UC_11 Provide Menu Feedback Shop Owner The shop owner provides feedback on menu",
+          "quality and performance.",
+          "UC_12 Create Menu By Analyze Shop Owner The shop owner creates a menu based on",
+          "Feedback analyzed feedback.",
+          "UC_13 Create Menu By AI Shop Owner The shop owner creates a menu with AI",
+          "recommendations.",
+          "UC_14 Update Menu Manually Shop Owner The shop owner manually updates menu",
+          "content and pricing.",
+          "UC_15 View Menu's Feedback Shop Owner The shop owner reviews menu feedback",
+          "records.",
+          "UC_16 View Menu Insights Shop Owner The shop owner reviews menu analytics and",
+          "insights.",
+          "UC_17 Create Beverage Shop Owner The shop owner creates a beverage item.",
+          "UC_18 Create Beverage Category Shop Owner The shop owner creates a beverage category.",
+          "UC_19 Buy Subscription Shop Owner The shop owner buys a subscription package.",
+          "7"
+        ]
+      },
+      {
+        "page": 8,
+        "lines": [
+          "UC_20 View Subscription Shop Owner The shop owner views subscription status and",
+          "details.",
+          "UC_21 Assign Staff Shop Owner The shop owner assigns staff to shop",
+          "operations.",
+          "UC_22 Configure Beverage Size Shop Owner The shop owner configures beverage size",
+          "settings.",
+          "UC_23 Top Up Wallet Shop Owner The shop owner tops up wallet balance.",
+          "UC_24 Update Address Shop Owner The shop owner updates shop address",
+          "information.",
+          "UC_25 Update Daily Sales Shop Staff Staff records or updates daily sales numbers.",
+          "UC_26 Collect Feedback Shop Staff Staff records customer feedback in the",
+          "system.",
+          "UC_27 Create Export Ticket Shop Staff Staff creates an inventory export ticket.",
+          "UC_28 Create Import Ticket Shop Staff Staff creates an inventory import ticket.",
+          "UC_29 Import Manually Shop Staff Staff manually imports inventory data.",
+          "UC_30 Import By Order Shop Staff Staff imports inventory based on purchase",
+          "orders.",
+          "UC_31 View Transaction History Shop Staff Staff views historical transactions.",
+          "UC_32 View Detail Order Supplier The supplier views full details of an order.",
+          "UC_33 Approve Order Supplier The supplier approves an order for",
+          "processing.",
+          "UC_34 Approve Delivery Order Supplier The supplier confirms an order for delivery",
+          "flow.",
+          "UC_35 Cancel Order Supplier The supplier cancels an order that cannot be",
+          "fulfilled.",
+          "UC_36 View Detail Product Supplier The supplier views product details.",
+          "UC_37 Delete Product Supplier The supplier deletes a product from the",
+          "catalog.",
+          "UC_38 Edit Product Supplier The supplier edits product information.",
+          "UC_39 Create Product Supplier The supplier creates a new product listing.",
+          "UC_40 View Buyer Feedback Supplier The supplier reviews feedback from buyers.",
+          "8"
+        ]
+      },
+      {
+        "page": 9,
+        "lines": [
+          "UC_41 View Financial Report Supplier The supplier views revenue and financial",
+          "reports.",
+          "UC_42 View Account Balance Supplier The supplier checks account balance.",
+          "UC_43 View Transaction History Supplier The supplier views transaction history.",
+          "UC_44 Export Report Supplier The supplier exports report data.",
+          "UC_45 Activate Account Admin The admin activates user accounts.",
+          "UC_46 Suspend Account Admin The admin suspends user accounts.",
+          "UC_47 View Platform Revenue Admin The admin monitors platform revenue",
+          "metrics.",
+          "UC_48 View Transaction Admin The admin reviews transaction records.",
+          "UC_49 Export Report Admin The admin exports platform reports.",
+          "UC_50 Approve Post Admin The admin approves post content.",
+          "UC_51 Cancel Post Admin The admin rejects or cancels post content.",
+          "UC_52 View Detail Post Admin The admin views full post details before",
+          "moderation action.",
+          "UC_53 Create Plan Admin The admin creates a subscription plan.",
+          "UC_54 View Plan Admin The admin views plan details.",
+          "UC_55 Edit Plan Admin The admin edits plan settings.",
+          "UC_56 Delete Plan Admin The admin deletes a subscription plan.",
+          "UC_57 Approve Withdrawal Admin The admin approves a withdrawal request.",
+          "UC_58 Cancel Withdrawal Admin The admin rejects or cancels a withdrawal",
+          "request.",
+          "UC_59 Accept Refund Order Admin The admin approves a refund order.",
+          "UC_60 Generate Recipe AI Provider AI generates recipe recommendations from",
+          "Recommendations available data.",
+          "UC_61 Generate Menu AI Provider AI generates menu recommendations for",
+          "Recommendations optimization.",
+          "UC_62 Improve Menu Version AI Provider AI proposes an improved version of a menu.",
+          "UC_63 Suggest Products AI Provider AI suggests suitable products for",
+          "procurement or menu goals.",
+          "9"
+        ]
+      },
+      {
+        "page": 10,
+        "lines": [
+          "UC_64 Forecast Ingredient AI Provider AI forecasts future ingredient demand.",
+          "Demand",
+          "UC_65 Send Delivery GHN GHN sends delivery acceptance/confirmation",
+          "Confirmation to the platform.",
+          "UC_66 Send Delivery Status GHN GHN sends delivery progress and completion",
+          "status.",
+          "UC_67 Payment Payment The payment gateway processes payment",
+          "Gateway transactions.",
+          "UC_68 Send Payment Status Payment The payment gateway sends payment result",
+          "Gateway status.",
+          "3. Functional Requirements",
+          "3.1 System Functional Overview",
+          "3.1.1 Screens Flow",
+          "Mobile Screen Flow",
+          "Figure 3: Mobile Screen Flow",
+          "10"
+        ]
+      },
+      {
+        "page": 11,
+        "lines": [
+          "Website Screen Flow",
+          "Figure 4: Website Screen Flow",
+          "3.1.2 Screen Descriptions",
+          "Mobile Screen Descriptions",
+          "Table 3: Mobile Screen Description",
+          "# Feature Screen Description",
+          "Allows users to enter email and password to access",
+          "1 Sign in Login",
+          "the system.",
+          "Allows users to create a new account by providing",
+          "2 Sign up Register",
+          "personal information.",
+          "Allows users to request a password reset via email",
+          "3 Forgot Forgot password",
+          "or OTP.",
+          "11"
+        ]
+      },
+      {
+        "page": 12,
+        "lines": [
+          "Used to verify OTP/email during registration or",
+          "4 Verify Verify Screen",
+          "password recovery.",
+          "Displays and allows editing of user profile",
+          "5 Profile Profile Screen",
+          "information.",
+          "Change Change Password",
+          "6 Allows users to update their current password.",
+          "password Screen",
+          "7 Subscription Subscription Screen Manages user subscription plans and services.",
+          "Staff",
+          "8 Staff Account Screen Allows managing staff accounts (add/edit/delete).",
+          "management",
+          "9 Transactions Transaction Screen Displays transaction and payment history.",
+          "10 Home Home Screen Main dashboard for navigating system features.",
+          "11 Menu Active Menu Screen Displays the currently active menu.",
+          "MenuItem Insight",
+          "12 Menu Insight Shows performance analytics of menu items.",
+          "Screen",
+          "Daily Sale Input",
+          "13 Daily sales Allows input and tracking of daily sales data.",
+          "Screen",
+          "Menu Version List",
+          "14 Menu version Displays a list of menu versions.",
+          "Screen",
+          "Recipe Details",
+          "15 Recipe details Shows detailed information of a recipe.",
+          "Screen",
+          "AI Menu",
+          "16 AI Menu Recommendation Provides menu suggestions using AI.",
+          "Screen",
+          "Menu Results",
+          "17 Menu result Displays AI-generated menu results.",
+          "Screen",
+          "AI Recipe",
+          "18 AI Recipe Recommendation Provides recipe suggestions using AI.",
+          "Screen",
+          "Recipe Results",
+          "19 Recipe result Displays AI-generated recipe results.",
+          "Screen",
+          "Feedback Insights",
+          "20 Feedback Shows analytics of customer feedback.",
+          "Screen",
+          "AI Menu AI Menu Version",
+          "21 Generates menu versions using AI.",
+          "version Screen",
+          "22 Order Order Screen Manages customer orders.",
+          "12"
+        ]
+      }
+    ]
+  },
+  "repo": {
+    "routes": {
+      "BE/src/routes/authRoutes.js": [
+        "router.post('/google', authController.googleLogin)",
+        "router.post('/verify-otp', authController.verifyOTP)",
+        "router.get('/check-username', authController.checkUsername)",
+        "router.post('/complete-setup', authController.completeSetup)",
+        "router.post('/login', authController.login)",
+        "router.post('/logout', authController.logout)",
+        "router.post('/forgot-password', authController.forgotPassword)",
+        "router.post('/verify-reset-otp', authController.verifyResetPasswordOTP)",
+        "router.post('/reset-password', authController.resetPassword)",
+        "router.get(\"/search\", authController.searchUsers)",
+        "router.get(\"/users/:id/profile\", authController.getUserProfileById)"
+      ],
+      "BE/src/routes/documentRoutes.js": [
+        "router.get(\"/\", authMiddleware, listMyDocuments)",
+        "router.post(\n    \"/upload\",\n    authMiddleware,\n    upload.array(\"files\", 10),\n    uploadDocuments\n)",
+        "router.get(\"/:documentId/download\", authMiddleware, downloadDocument)",
+        "router.delete(\"/:documentId\", authMiddleware, deleteDocument)"
+      ],
+      "BE/src/routes/workspaceRoutes.js": [
+        "router.get(\"/\", workspaceController.listMyWorkspaces)",
+        "router.post(\"/\", workspaceController.createWorkspace)",
+        "router.get(\"/:workspaceId\", workspaceController.getWorkspace)",
+        "router.get(\"/:workspaceId/members\", workspaceController.listMembers)",
+        "router.get(\"/:workspaceId/users/search\", workspaceController.searchUsers)",
+        "router.post(\"/:workspaceId/members\", workspaceController.addMember)"
+      ],
+      "BE/src/routes/aiRoutes.js": [
+        "router.post(\"/chat\", authMiddleware, chatWithDocument)",
+        "router.post(\"/documents/:documentId/flashcards\", authMiddleware, generateFlashcards)"
+      ],
+      "BE/src/routes/adminRoutes.js": [
+        "router.get(\"/dashboard\", adminController.getDashboardStats)",
+        "router.get(\"/moderation\", adminController.getModerationDocuments)",
+        "router.patch(\"/moderation/:documentId\", adminController.reviewDocument)",
+        "router.get(\"/users\", adminController.getUsers)",
+        "router.patch(\"/users/:userId/status\", adminController.updateUserStatus)",
+        "router.get(\"/logs\", adminController.getActivityLogs)",
+        "router.get(\"/usage\", adminController.getUsage)"
+      ]
+    },
+    "frontend_pages": [
+      "FE/src/components/pages/AIchatbot/ChatBot.jsx",
+      "FE/src/components/pages/Admin/ActivityLogPage/ActivityLogPage.jsx",
+      "FE/src/components/pages/Admin/AdminDashboardPage/AdminDashboardPage.jsx",
+      "FE/src/components/pages/Admin/AdminLayout/AdminLayout.jsx",
+      "FE/src/components/pages/Admin/AdminLayout/AdminSidebar.jsx",
+      "FE/src/components/pages/Admin/AdminUsagePage/AdminUsagePage.jsx",
+      "FE/src/components/pages/Admin/AiContentModerationPage/AIContentModerationPage.jsx",
+      "FE/src/components/pages/Admin/StorageManagementPage/StorageManagementPage.jsx",
+      "FE/src/components/pages/Admin/UserManagementPage/UserManagementPage.jsx",
+      "FE/src/components/pages/CreateLibraryPage/CreateLibraryPage.jsx",
+      "FE/src/components/pages/CreateWorkSpacePage/CreateWorkSpacePage.jsx",
+      "FE/src/components/pages/FileViewer/FileViewer.jsx",
+      "FE/src/components/pages/Flashcards/Flashcards.jsx",
+      "FE/src/components/pages/ForgotPasswordPages/EmailInputPage/EmailInput.jsx",
+      "FE/src/components/pages/HeroSection/HeroSection.jsx",
+      "FE/src/components/pages/HomePage/HomePage.jsx",
+      "FE/src/components/pages/ImportLibraryPage/ImportLibraryPage.jsx",
+      "FE/src/components/pages/LandingPage/LandingPage.jsx",
+      "FE/src/components/pages/LibraryPage/LibraryPage.jsx",
+      "FE/src/components/pages/LoginPage/ForgotPassword.jsx",
+      "FE/src/components/pages/LoginPage/LoginPage.jsx",
+      "FE/src/components/pages/LoginPage/ResetPassword.jsx",
+      "FE/src/components/pages/MyLibraryPage/MyLibraryPage.jsx",
+      "FE/src/components/pages/MyWorkSpace/MyWorkSpace.jsx",
+      "FE/src/components/pages/PersonalProfilePage/PersonalProfilePage.jsx",
+      "FE/src/components/pages/RegisterPage/CompleteProfile.jsx",
+      "FE/src/components/pages/RegisterPage/EnterUserNamePass.jsx",
+      "FE/src/components/pages/RegisterPage/OTPVerification.jsx",
+      "FE/src/components/pages/RegisterPage/RegisterGoogle.jsx",
+      "FE/src/components/pages/SearchResultPage/SearchResultPage.jsx",
+      "FE/src/components/pages/SearchUserPage/SearchUserPage.jsx",
+      "FE/src/components/pages/SettingPage/SettingPage.jsx",
+      "FE/src/components/pages/StudyPage/StudyPage.jsx",
+      "FE/src/components/pages/WorkSpacePage/WorkSpacePage.jsx"
+    ],
+    "files": {
+      "README.md": "# AI-student-hub",
+      "BE/server.js": "// Nạp biến môi trường từ file .env vào bộ nhớ RAM ngay dòng đầu tiên\nrequire('dotenv').config();\n\nconst express = require('express');\nconst cors = require('cors');\n\n// Import các tuyến đường (routes)\nconst authRoutes = require('./src/routes/authRoutes');\nconst documentRoutes = require(\"./src/routes/documentRoutes\");\nconst app = express();\nconst aiRoutes = require(\"./src/routes/aiRoutes\");\nconst adminRoutes = require(\"./src/routes/adminRoutes\");\nconst workspaceRoutes = require(\"./src/routes/workspaceRoutes\");\n// const userRoutes = require(\"./src/routes/userRoutes\");\n\n// 1. Cấu hình Middleware CORS để cho phép Frontend (Vite - 5173) gọi API\napp.use(cors({\n    origin: [\n        'http://localhost:5173',\n        'http://localhost:5174',\n        'http://127.0.0.1:5173',\n        'http://127.0.0.1:5174',\n    ], // Địa chỉ của Frontend\n    credentials: true // Cho phép gửi token/cookie nếu có\n}));\n\n// 2. Middleware phân tích cú pháp JSON từ body của request\napp.use(express.json());\n\n// 3. Gắn các tuyến đường (Mount Routes)\n// Tất cả các request bắt đầu bằng /api/auth sẽ được chuyển cho authRoutes xử lý\napp.use('/api/auth', authRoutes);\napp.use(\"/api/documents\", documentRoutes);\napp.use(\"/api/ai\", aiRoutes);\napp.use(\"/api/admin\", adminRoutes);\napp.use(\"/api/workspaces\", workspaceRoutes);\n// app.use(\"/api/users\", userRoutes);\n\n// Route test để kiểm tra xem server có sống không\napp.get('/', (req, res) => {\n    res.send('AI StudyHub Backend đang chạy!');\n});\n\n// 4. Khởi động Server và lắng nghe trên cổng 5000\nconst PORT = process.env.PORT || 5000;\napp.listen(PORT, () => {\n    console.log(`[🚀 Server] Đã khởi động thành công. Đang lắng nghe tại http://localhost:${PORT}`);\n});\n",
+      "BE/package.json": "{\n  \"dependencies\": {\n    \"@google/genai\": \"^2.8.0\",\n    \"@google/generative-ai\": \"^0.24.1\",\n    \"@supabase/ssr\": \"^0.10.3\",\n    \"@supabase/supabase-js\": \"^2.106.0\",\n    \"bcrypt\": \"^6.0.0\",\n    \"cors\": \"^2.8.6\",\n    \"dotenv\": \"^17.4.2\",\n    \"express\": \"^5.2.1\",\n    \"google-auth-library\": \"^10.6.2\",\n    \"jsonwebtoken\": \"^9.0.3\",\n    \"mammoth\": \"^1.12.0\",\n    \"multer\": \"^2.1.1\",\n    \"nodemailer\": \"^8.0.7\",\n    \"pdf-parse\": \"^1.1.4\"\n  }\n}\n",
+      "FE/package.json": "{\n  \"name\": \"frontend\",\n  \"private\": true,\n  \"version\": \"0.0.0\",\n  \"type\": \"module\",\n  \"scripts\": {\n    \"dev\": \"vite\",\n    \"build\": \"vite build\",\n    \"lint\": \"eslint .\",\n    \"preview\": \"vite preview\"\n  },\n  \"dependencies\": {\n    \"@react-oauth/google\": \"^0.13.5\",\n    \"@supabase/supabase-js\": \"^2.108.1\",\n    \"axios\": \"^1.16.1\",\n    \"jszip\": \"^3.10.1\",\n    \"react\": \"^19.2.6\",\n    \"react-dom\": \"^19.2.6\",\n    \"react-icons\": \"^5.6.0\",\n    \"react-router\": \"^7.15.1\",\n    \"react-router-dom\": \"^7.16.0\"\n  },\n  \"devDependencies\": {\n    \"@eslint/js\": \"^10.0.1\",\n    \"@types/react\": \"^19.2.14\",\n    \"@types/react-dom\": \"^19.2.3\",\n    \"@vitejs/plugin-react\": \"^6.0.1\",\n    \"eslint\": \"^10.3.0\",\n    \"eslint-plugin-react-hooks\": \"^7.1.1\",\n    \"eslint-plugin-react-refresh\": \"^0.5.2\",\n    \"globals\": \"^17.6.0\",\n    \"vite\": \"^8.0.12\"\n  }\n}\n",
+      "FE/src/App.jsx": "import { BrowserRouter, Routes, Route, Navigate } from \"react-router-dom\";\nimport SettingPage from \"./components/pages/SettingPage/SettingPage.jsx\";\n// ================= AUTH IMPORTS =================\nimport LandingPage from \"./components/pages/LandingPage/LandingPage.jsx\";\nimport LoginPage from \"./components/pages/LoginPage/LoginPage.jsx\";\nimport ForgotPassword from \"./components/pages/LoginPage/ForgotPassword.jsx\";\nimport ResetPassword from \"./components/pages/LoginPage/ResetPassword.jsx\";\n\nimport RegisterGoogle from \"./components/pages/RegisterPage/RegisterGoogle.jsx\";\nimport CompleteProfile from \"./components/pages/RegisterPage/CompleteProfile.jsx\";\nimport EnterUserNamePass from \"./components/pages/RegisterPage/EnterUserNamePass.jsx\";\nimport OTPVerification from \"./components/pages/RegisterPage/OTPVerification.jsx\";\n\n// ================= LAYOUT IMPORTS =================\nimport Dashboard from \"./components/layout/Dashboard/Dashboard.jsx\";\n\n// ================= USER PAGE IMPORTS =================\nimport HomePage from \"./components/pages/HomePage/HomePage.jsx\";\nimport MyLibraryPage from \"./components/pages/MyLibraryPage/MyLibraryPage.jsx\";\nimport CreateLibraryPage from \"./components/pages/CreateLibraryPage/CreateLibraryPage.jsx\";\nimport ImportLibraryPage from \"./components/pages/ImportLibraryPage/ImportLibraryPage.jsx\";\nimport LibraryPage from \"./components/pages/LibraryPage/LibraryPage.jsx\";\nimport MyWorkSpace from \"./components/pages/MyWorkSpace/MyWorkSpace.jsx\";\nimport WorkSpacePage from \"./components/pages/WorkSpacePage/WorkSpacePage.jsx\";\nimport PersonalProfilePage from \"./components/pages/PersonalProfilePage/PersonalProfilePage.jsx\";\nimport Flashcards from \"./components/pages/Flashcards/Flashcards.jsx\";\nimport CreateWorkSpacePage from \"./components/pages/CreateWorkSpacePage/CreateWorkSpacePage.jsx\";\nimport SearchUserPage from \"./components/pages/SearchUserPage/SearchUserPage\";\nimport SearchResultPage from \"./components/pages/SearchResultPage/SearchResultPage.jsx\";\n\n\n// ================= PROTECTED ROUTE =================\nimport ProtectedRoute from \"./components/common/ProtectedRoute/ProtectedRoute.jsx\";\n\n// ================= ADMIN IMPORTS =================\nimport AdminLayout from \"./components/pages/Admin/AdminLayout/AdminLayout.jsx\";\nimport AdminDashboardPage from \"./components/pages/Admin/AdminDashboardPage/AdminDashboardPage.jsx\";\nimport AdminModerationPage from \"./components/pages/Admin/AiContentModerationPage/AIContentModerationPage.jsx\";\nimport AdminUsersPage from \"./components/pages/Admin/UserManagementPage/UserManagementPage.jsx\";\nimport AdminLogsPage from \"./components/pages/Admin/ActivityLogPage/ActivityLogPage.jsx\";\nimport AdminUsagePage from \"./components/pages/Admin/AdminUsagePage/AdminUsagePage.jsx\";\n\nfunction App() {\n  return (\n    <BrowserRouter>\n      <Routes>\n        {/* DEFAULT: vào web sẽ về login */}\n        <Route path=\"/\" element={<LandingPage />} />\n\n        {/* AUTH ROUTES */}\n\n        <Route path=\"/login\" element={<LoginPage />} />\n        <Route path=\"/forgot-password\" element={<ForgotPassword />} />\n        <Route path=\"/reset-password\" element={<ResetPassword />} />\n        <Route path=\"/reset-password-otp\" element={<ResetPassword />} />\n\n        <Route path=\"/register\" element={<RegisterGoogle />} />\n        <Route path=\"/complete-profile\" element={<CompleteProfile />} />\n\n        <Route\n          path=\"/enter-username-password\"\n          element={<EnterUserNamePass />}\n        />\n\n        <Route path=\"/verify-otp\" element={<OTPVerification />} />\n        <Route path=\"/otp-verification\" element={<OTPVerification />} />\n\n        {/* USER ROUTES - CẦN ĐĂNG NHẬP */}\n        <Route\n          path=\"/dashboard\"\n          element={\n            <ProtectedRoute>\n              <Dashboard />\n            </ProtectedRoute>\n          }\n        >\n          <Route index element={<Navigate to=\"/dashboard/home\" replace />} />\n\n          <Route path=\"home\" element={<HomePage />} />\n\n          <Route path=\"libraries\" element={<MyLibraryPage />} />\n          <Route path=\"create-library\" element={<CreateLibraryPage />} />\n          <Route path=\"import-library\" element={<ImportLibraryPage />} />\n          <Route path=\"libraries/:libraryId\" element={<LibraryPage />} />\n          <Route path=\"settings\" element={<SettingPage />} />\n          <Route path=\"create-workspace\" element={<CreateWorkSpacePage />} />\n          <Route path=\"workspaces\" element={<MyWorkSpace />} />\n          <Route path=\"workspaces/:workspaceId\" element={<WorkSpacePage />} />\n\n          <Route path=\"profile\" element={<PersonalProfilePage />} />\n\n          <Route path=\"profile/:id\" element={<PersonalProfilePage />} />\n\n\n\n          <Route path=\"flashcards\" element={<Flashcards />} />\n          <Route path=\"search-user\" element={<SearchUserPage />} />\n          <Route path=\"search\" element={<SearchResultPage />} />\n        </Route>\n\n        {/* ADMIN ROUTES - CHỈ SYSTEM_ADMIN TRUY CẬP ĐƯỢC */}\n        <Route\n          path=\"/admin\"\n          element={\n            <ProtectedRoute allowedRoles={[\"SYSTEM_ADMIN\"]}>\n              <AdminLayout />\n            </ProtectedRoute>\n          }\n        >\n          <Route index element={<Navigate to=\"/admin/dashboard\" replace />} />\n          <Route path=\"dashboard\" element={<AdminDashboardPage />} />\n          <Route path=\"moderation\" element={<AdminModerationPage />} />\n          <Route path=\"users\" element={<AdminUsersPage />} />\n          <Route path=\"logs\" element={<AdminLogsPage />} />\n          <Route path=\"usage\" element={<AdminUsagePage />} />\n          <Route path=\"settings\" element={<SettingPage />} />\n          <Route path=\"profile\" element={<PersonalProfilePage />} />\n        </Route>\n\n        {/* NOT FOUND */}\n        <Route path=\"*\" element={<Navigate to=\"/\" replace />} />\n      </Routes>\n    </BrowserRouter>\n  );\n}\n\nexport default App;\n",
+      "BE/src/routes/authRoutes.js": "const express = require('express');\nconst router = express.Router();\nconst authController = require('../controllers/authController');\n\nrouter.post('/google', authController.googleLogin);\nrouter.post('/verify-otp', authController.verifyOTP);\nrouter.get('/check-username', authController.checkUsername);\nrouter.post('/complete-setup', authController.completeSetup);\nrouter.post('/login', authController.login);\nrouter.post('/logout', authController.logout);\nrouter.post('/forgot-password', authController.forgotPassword);\nrouter.post('/verify-reset-otp', authController.verifyResetPasswordOTP);\nrouter.post('/reset-password', authController.resetPassword);\nrouter.get(\"/search\", authController.searchUsers);\nrouter.get(\"/users/:id/profile\", authController.getUserProfileById);\n\nmodule.exports = router;\n",
+      "BE/src/routes/documentRoutes.js": "const express = require(\"express\");\nconst multer = require(\"multer\");\n\nconst authMiddleware = require(\"../middleware/authMiddleware\");\n\nconst {\n    listMyDocuments,\n    uploadDocuments,\n    downloadDocument,\n    deleteDocument,\n} = require(\"../controllers/documentController\");\n\nconst router = express.Router();\n\nconst allowedMimeTypes = new Set([\n    \"application/pdf\",\n    \"application/vnd.openxmlformats-officedocument.wordprocessingml.document\",\n    \"text/plain\",\n]);\n\nconst upload = multer({\n    storage: multer.memoryStorage(),\n    limits: {\n        fileSize: 20 * 1024 * 1024,\n        files: 10,\n    },\n    fileFilter: (req, file, cb) => {\n        if (!allowedMimeTypes.has(file.mimetype)) {\n            return cb(new Error(\"Only PDF, DOCX, and TXT files are allowed.\"));\n        }\n\n        cb(null, true);\n    },\n});\n\nrouter.get(\"/\", authMiddleware, listMyDocuments);\n\nrouter.post(\n    \"/upload\",\n    authMiddleware,\n    upload.array(\"files\", 10),\n    uploadDocuments\n);\n\nrouter.get(\"/:documentId/download\", authMiddleware, downloadDocument);\n\nrouter.delete(\"/:documentId\", authMiddleware, deleteDocument);\n\nmodule.exports = router;",
+      "BE/src/routes/workspaceRoutes.js": "const express = require(\"express\");\nconst authMiddleware = require(\"../middleware/authMiddleware\");\nconst workspaceController = require(\"../controllers/workspaceController\");\n\nconst router = express.Router();\n\nrouter.use(authMiddleware);\n\nrouter.get(\"/\", workspaceController.listMyWorkspaces);\nrouter.post(\"/\", workspaceController.createWorkspace);\nrouter.get(\"/:workspaceId\", workspaceController.getWorkspace);\nrouter.get(\"/:workspaceId/members\", workspaceController.listMembers);\nrouter.get(\"/:workspaceId/users/search\", workspaceController.searchUsers);\nrouter.post(\"/:workspaceId/members\", workspaceController.addMember);\n\nmodule.exports = router;\n",
+      "BE/src/routes/aiRoutes.js": "const express = require(\"express\");\nconst authMiddleware = require(\"../middleware/authMiddleware\");\n\nconst {\n  chatWithDocument,\n  generateFlashcards,\n} = require(\"../controllers/aiController\");\n\nconst router = express.Router();\n\nrouter.post(\"/chat\", authMiddleware, chatWithDocument);\nrouter.post(\"/documents/:documentId/flashcards\", authMiddleware, generateFlashcards);\n\nmodule.exports = router;",
+      "BE/src/routes/adminRoutes.js": "const express = require(\"express\");\nconst authMiddleware = require(\"../middleware/authMiddleware\");\nconst requireAdmin = require(\"../middleware/requireAdmin\");\nconst adminController = require(\"../controllers/adminController\");\n\nconst router = express.Router();\n\nrouter.use(authMiddleware);\nrouter.use(requireAdmin);\n\nrouter.get(\"/dashboard\", adminController.getDashboardStats);\nrouter.get(\"/moderation\", adminController.getModerationDocuments);\nrouter.patch(\"/moderation/:documentId\", adminController.reviewDocument);\n\nrouter.get(\"/users\", adminController.getUsers);\nrouter.patch(\"/users/:userId/status\", adminController.updateUserStatus);\n\nrouter.get(\"/logs\", adminController.getActivityLogs);\nrouter.get(\"/usage\", adminController.getUsage);\n\nmodule.exports = router;",
+      "BE/src/controllers/authController.js": "const authService = require('../services/authService');\nconst supabase = require('../config/supabase');\nconst bcrypt = require('bcrypt');\nconst jwt = require('jsonwebtoken');\nconst crypto = require('crypto');\n\nconst {\n    signAccessToken,\n    buildPublicUser,\n} = require(\"../utils/authHelpers\");\n\nexports.googleLogin = async (req, res) => {\n    try {\n        const { token } = req.body;\n        const result = await authService.verifyAndLoginGoogle(token);\n        res.status(200).json({ status: 'success', data: result });\n    } catch (error) {\n        // THÊM DÒNG NÀY ĐỂ BIẾT LỖI TẠI ĐÂU:\n        console.error(\"🔴 LỖI BACKEND GOOGLE LOGIN:\", error);\n        res.status(401).json({ status: 'error', message: 'Token Google không hợp lệ', error: error.message });\n    }\n};\n\nexports.verifyOTP = async (req, res) => {\n    try {\n        const { email, otp } = req.body;\n\n        // ======================================================\n        // 1. CHUẨN HÓA EMAIL VÀ OTP\n        // ======================================================\n        const cleanEmail = email.toLowerCase().trim();\n        const cleanOtp = String(otp || \"\").trim();\n\n        console.log(`[DRY RUN] Đang kiểm tra: Email=\"${cleanEmail}\", OTP=\"${cleanOtp}\"`);\n\n        // ======================================================\n        // 2. KIỂM TRA TÀI KHOẢN CÓ ĐANG CHỜ COMPLETE PROFILE KHÔNG\n        // ======================================================\n        const { data: user, error: userError } = await supabase\n            .from('profiles')\n            .select('id, email, password_hash')\n            .eq('email', cleanEmail)\n            .maybeSingle();\n\n        if (userError) {\n            throw userError;\n        }\n\n        if (!user || user.password_hash !== 'GOOGLE_SSO_NO_PASSWORD') {\n            return res.status(400).json({\n                status: 'error',\n                message: 'Tài khoản không ở trạng thái chờ hoàn tất hồ sơ.'\n            });\n        }\n\n        // ======================================================\n        // 3. KIỂM TRA OTP CÓ ĐÚNG VÀ CÒN HẠN KHÔNG\n        // ======================================================\n        const { data: otpRecord, error } = await supabase\n            .from('otp_tokens')\n            .select('*')\n            .eq('email', cleanEmail)\n            .eq('otp_code', cleanOtp)\n            .gte('expires_at', new Date().toISOString())\n            .order('created_at', { ascending: false })\n            .limit(1)\n            .maybeSingle();\n\n        if (error) {\n            console.error(\"🔴 Lỗi truy vấn Supabase:\", error);\n            throw error;\n        }\n\n        console.log(`[DRY RUN] Record tìm thấy:`, otpRecord);\n\n        if (!otpRecord) {\n            return res.status(400).json({\n                status: 'error',\n                message: 'Mã OTP không hợp lệ hoặc đã hết hạn.'\n            });\n        }\n\n        // ======================================================\n        // 4. XÓA OTP SAU KHI DÙNG\n        // ======================================================\n        await supabase\n            .from('otp_tokens')\n            .delete()\n            .eq('id', otpRecord.id);\n\n        // ======================================================\n        // 5. TẠO SETUP TOKEN SAU KHI OTP ĐÚNG\n        // ======================================================\n        const setupToken = jwt.sign(\n            {\n                email: cleanEmail,\n                type: 'complete_setup'\n            },\n            process.env.JWT_SECRET,\n            {\n                expiresIn: '15m'\n            }\n        );\n\n        // ======================================================\n        // 6. TRẢ SETUP TOKEN VỀ FRONTEND\n        // ======================================================\n        res.status(200).json({\n            status: 'success',\n            data: {\n                email: cleanEmail,\n                requiresSetup: true,\n                setupToken: setupToken\n            }\n        });\n    } catch (error) {\n        console.error(\"🔴 Lỗi hệ thống verifyOTP:\", error);\n        res.status(500).json({\n            status: 'error',\n            message: error.message\n        });\n    }\n};\nexports.checkUsername = async (req, res) => {\n    try {\n        const { username } = req.query;\n        if (!username) return res.status(400).json({ error: 'Missing username' });\n\n        const { data: existingUser } = await supabase\n            .from('profiles')\n            .select('id')\n            .eq('username', username)\n            .single();\n\n        return res.status(200).json({ exists: !!existingUser });\n    } catch (error) {\n        res.status(500).json({ error: 'Database check failed' });\n    }\n};\n\nexports.completeSetup = async (req, res) => {\n    try {\n        const { email, username, password, setupToken } = req.body;\n\n        // ======================================================\n        // 1. CHUẨN HÓA EMAIL\n        // ======================================================\n        const cleanEmail = email.toLowerCase().trim();\n        const cleanUsername = username.trim();\n\n        // ======================================================\n        // 2. KIỂM TRA SETUP TOKEN\n        // ======================================================\n        // Token này chỉ có sau khi user nhập OTP đúng.\n        // Nếu không có token này thì không cho complete profile.\n        let payload;\n\n        try {\n            payload = jwt.verify(setupToken, process.env.JWT_SECRET);\n        } catch (tokenError) {\n            return res.status(401).json({\n                status: \"error\",\n                message: \"Phiên xác minh OTP không hợp lệ hoặc đã hết hạn.\"\n            });\n        }\n\n        if (payload.type !== \"complete_setup\" || payload.email !== cleanEmail) {\n            return res.status(401).json({\n                status: \"error\",\n                message: \"Phiên xác minh OTP không hợp lệ hoặc đã hết hạn.\"\n            });\n        }\n\n        // ======================================================\n        // 3. KIỂM TRA USERNAME\n        // ======================================================\n        if (!cleanUsername || cleanUsername.length < 3) {\n            return res.status(400).json({\n                status: \"error\",\n                message: \"Username phải có ít nhất 3 ký tự.\"\n            });\n        }\n\n        const { data: existingUser, error: existingError } = await supabase\n            .from('profiles')\n            .select('id')\n            .eq('username', cleanUsername)\n            .neq('email', cleanEmail)\n            .maybeSingle();\n\n        if (existingError) {\n            throw existingError;\n        }\n\n        if (existingUser) {\n            return res.status(400).json({\n                status: 'error',\n                message: 'Username đã được sử dụng.'\n            });\n        }\n\n        // ======================================================\n        // 4. KIỂM TRA PASSWORD\n        // ======================================================\n        if (!password || password.trim() === \"\") {\n            return res.status(400).json({\n                status: 'error',\n                message: 'Mật khẩu là thông tin bắt buộc.'\n            });\n        }\n\n        const regex = /^(?=.*[a-z])(?=.*\\d)(?=.*[^A-Za-z0-9])\\S{8,}$/;\n\n        if (!regex.test(password)) {\n            return res.status(400).json({\n                status: 'error',\n                message: 'Mật khẩu không đạt yêu cầu bảo mật.'\n            });\n        }\n\n        // ======================================================\n        // 5. HASH PASSWORD\n        // ======================================================\n        const salt = await bcrypt.genSalt(10);\n        const passwordHash = await bcrypt.hash(password, salt);\n\n        // ======================================================\n        // 6. UPDATE PROFILE\n        // ======================================================\n        // Chỉ update account đang có password_hash = GOOGLE_SSO_NO_PASSWORD.\n        // Như vậy account đã setup rồi sẽ không bị ghi đè.\n        const { data: updatedUser, error: updateError } = await supabase\n            .from('profiles')\n            .update({\n                username: cleanUsername,\n                password_hash: passwordHash\n            })\n            .eq('email', cleanEmail)\n            .eq('password_hash', 'GOOGLE_SSO_NO_PASSWORD')\n            .select('id, email, username, full_name, role, status')\n            .maybeSingle();\n\n        if (updateError) {\n            throw updateError;\n        }\n\n        if (!updatedUser) {\n            return res.status(400).json({\n                status: \"error\",\n                message: \"Không thể hoàn tất hồ sơ. Tài khoản có thể đã được thiết lập trước đó.\"\n            });\n        }\n\n        // ======================================================\n        // 7. TẠO ACCESS TOKEN ĐỂ FRONTEND VÀO DASHBOARD\n        // ======================================================\n        const accessToken = signAccessToken(updatedUser);\n\n        res.status(200).json({\n            status: 'success',\n            message: 'Cập nhật thành công',\n            data: {\n                accessToken,\n                user: buildPublicUser(updatedUser),\n            }\n        });\n    } catch (error) {\n        console.error(\"🔴 Lỗi completeSetup:\", error);\n        res.status(500).json({\n            status: 'error',\n            message: error.message\n        });\n    }\n};\n\nexports.login = async (req, res) => {\n    try {\n        const { username, password } = req.body;\n\n        // 1. Phân giải truy vấn: Tìm kiếm linh hoạt theo Username HOẶC Email\n        const { data: user, error } = await supabase\n            .from('profiles')\n            .select('*')\n            .or(`username.eq.${username},email.eq.${username}`)\n            .maybeSingle();\n\n        if (error) throw error;\n\n        // Trạng thái: Không tìm thấy con trỏ user\n        if (!user) {\n            return res.status(401).json({ status: 'error', message: 'Tài khoản không tồn tại.' });\n        }\n\n        // Trạng thái: Chặn tài khoản chưa setup pass (chỉ mới login Google 1 nửa)\n        if (user.password_hash === 'GOOGLE_SSO_NO_PASSWORD') {\n            return res.status(401).json({ \n                status: 'error', \n                message: 'Tài khoản này chưa hoàn tất thiết lập mật khẩu. Vui lòng đăng nhập qua Google.' });\n        }\n        if (user.status === \"DISABLED\") {\n            return res.status(403).json({\n                status: \"error\",\n                message: \"Tài khoản của bạn đã bị vô hiệu hóa. Vui lòng liên hệ quản trị viên.\"\n            });\n        }\n\n        // 2. Phân tích vùng nhớ Password\n        // Nạp chuỗi thô (password) và chuỗi hash từ DB (user.password_hash) vào thuật toán bcrypt\n        const isMatch = await bcrypt.compare(password, user.password_hash);\n\n        if (!isMatch) {\n            return res.status(401).json({ status: 'error', message: 'Mật khẩu không chính xác.' });\n        }\n\n        // 3. Tạo session_id ngẫu nhiên\n        const currentSessionId = crypto.randomUUID();\n        \n        // 4. Gán session_id vào object user để đưa vào payload của Token\n        user.session_id = currentSessionId;\n\n        // 5. Cấp phát Token\n        const accessToken = signAccessToken(user);\n\n        await supabase\n            .from(\"profiles\")\n            .update({\n                last_login_at: new Date().toISOString(),\n                updated_at: new Date().toISOString(),\n                session_id: currentSessionId\n            })\n            .eq(\"id\", user.id);\n            \n        res.status(200).json({\n            status: \"success\",\n            data:{\n                accessToken,\n                user: buildPublicUser(user),\n            },\n        });\n    } catch (error) {\n        console.error(\"🔴 Lỗi hệ thống Login:\", error);\n        res.status(500).json({ status: 'error', message: error.message });\n    }\n};\n\nexports.forgotPassword = async (req, res) => {\n    try {\n        const { email } = req.body;\n        const cleanEmail = email.toLowerCase().trim();\n\n        // 1. Truy xuất con trỏ User trong bộ nhớ DB\n        const { data: user } = await supabase\n            .from('profiles')\n            .select('id, email, password_hash')\n            .eq('email', cleanEmail)\n            .maybeSingle();\n\n        if (!user) {\n            return res.status(404).json({ status: 'error', message: 'Email này chưa được đăng ký trong hệ thống.' });\n        }\n        if (user.password_hash === 'GOOGLE_SSO_NO_PASSWORD') {\n            return res.status(400).json({ status: 'error', message: 'Tài khoản này đăng nhập bằng Google. Không thể đổi mật khẩu.' });\n        }\n\n        // 2. Cấp phát OTP vào bảng otp_tokens\n        const otpCode = Math.floor(100000 + Math.random() * 900000).toString();\n        const expiresAt = new Date(Date.now() + 10 * 60000); // 10 phút\n\n        await supabase.from('otp_tokens').insert([{\n            email: cleanEmail,\n            otp_code: otpCode,\n            expires_at: expiresAt.toISOString()\n        }]);\n\n        // 3. Khởi tạo cấu trúc gửi Mail (Tái sử dụng config hiện có)\n        const transporter = require('nodemailer').createTransport({\n            host: process.env.EMAIL_HOST,\n            port: parseInt(process.env.EMAIL_PORT) || 2525,\n            auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS }\n        });\n\n        await transporter.sendMail({\n            from: process.env.EMAIL_USER,\n            to: cleanEmail,\n            subject: 'AI StudyHub - Password Reset Code',\n            text: `Mã OTP khôi phục mật khẩu của bạn là: ${otpCode}. Mã hết hạn sau 10 phút.`\n        });\n\n        res.status(200).json({ status: 'success', message: 'Mã OTP đã được gửi đến email.' });\n    } catch (error) {\n        console.error(\"🔴 Lỗi forgotPassword:\", error);\n        res.status(500).json({ status: 'error', message: error.message });\n    }\n};\n\nexports.verifyResetPasswordOTP = async (req, res) => {\n    try {\n        const { email, otp } = req.body;\n        const cleanEmail = email.toLowerCase().trim();\n        const cleanOtp = String(otp || \"\").trim();\n\n        const { data: user, error: userError } = await supabase\n            .from(\"profiles\")\n            .select(\"id, email, password_hash\")\n            .eq(\"email\", cleanEmail)\n            .maybeSingle();\n\n        if (userError) throw userError;\n\n        if (!user || user.password_hash === \"GOOGLE_SSO_NO_PASSWORD\") {\n            return res.status(400).json({\n                status: \"error\",\n                message: \"Thông tin khôi phục không hợp lệ hoặc tài khoản không hỗ trợ đặt lại mật khẩu.\"\n            });\n        }\n\n        const { data: otpRecord, error: otpError } = await supabase\n            .from(\"otp_tokens\")\n            .select(\"*\")\n            .eq(\"email\", cleanEmail)\n            .eq(\"otp_code\", cleanOtp)\n            .gte(\"expires_at\", new Date().toISOString())\n            .order(\"created_at\", { ascending: false })\n            .limit(1)\n            .maybeSingle();\n\n        if (otpError) throw otpError;\n\n        if (!otpRecord) {\n            return res.status(400).json({\n                status: \"error\",\n                message: \"Mã OTP không hợp lệ hoặc đã hết hạn.\"\n            });\n        }\n\n        await supabase\n            .from(\"otp_tokens\")\n            .delete()\n            .eq(\"id\", otpRecord.id);\n\n        const { signPasswordResetToken } = require(\"../utils/authHelpers\");\n        const resetToken = signPasswordResetToken(cleanEmail);\n\n        return res.status(200).json({\n            status: \"success\",\n            message: \"Xác minh OTP thành công.\",\n            data: {\n                email: cleanEmail,\n                resetToken\n            }\n        });\n    } catch (error) {\n        console.error(\"🔴 Lỗi verifyResetPasswordOTP:\", error);\n        return res.status(500).json({\n            status: \"error\",\n            message: error.message\n        });\n    }\n};\n\nexports.resetPassword = async (req, res) => {\n    try {\n        const { email, resetToken, newPassword } = req.body;\n\n        const cleanEmail = email.toLowerCase().trim();\n\n        const { verifyPasswordResetToken } = require(\"../utils/authHelpers\");\n\n        try {\n            verifyPasswordResetToken(resetToken, cleanEmail);\n        } catch {\n            return res.status(401).json({\n                status: \"error\",\n                message: \"Phiên đặt lại mật khẩu không hợp lệ hoặc đã hết hạn.\"\n            });\n        }\n\n        const passwordRegex = /^(?=.*[a-z])(?=.*\\d)(?=.*[^A-Za-z0-9])\\S{8,}$/;\n        if (!passwordRegex.test(newPassword)) {\n            return res.status(400).json({\n                status: \"error\",\n                message: \"Mật khẩu cần >= 8 ký tự, có ít nhất 1 chữ thường, 1 số, 1 ký tự đặc biệt và không chứa khoảng trắng.\"\n            });\n        }\n\n        const { data: user, error: userError } = await supabase\n            .from(\"profiles\")\n            .select(\"id, email, password_hash\")\n            .eq(\"email\", cleanEmail)\n            .maybeSingle();\n\n        if (userError) throw userError;\n\n        if (!user || user.password_hash === \"GOOGLE_SSO_NO_PASSWORD\") {\n            return res.status(400).json({\n                status: \"error\",\n                message: \"Thông tin khôi phục không hợp lệ hoặc tài khoản không hỗ trợ đặt lại mật khẩu.\"\n            });\n        }\n\n        const salt = await bcrypt.genSalt(10);\n        const passwordHash = await bcrypt.hash(newPassword, salt);\n\n        const { error: updateError } = await supabase\n            .from(\"profiles\")\n            .update({ password_hash: passwordHash })\n            .eq(\"id\", user.id);\n\n        if (updateError) throw updateError;\n\n        res.status(200).json({\n            status: \"success\",\n            message: \"Đổi mật khẩu thành công. Vui lòng đăng nhập lại.\"\n        });\n    } catch (error) {\n        console.error(\"🔴 Lỗi resetPassword:\", error);\n        res.status(500).json({\n            status: \"error\",\n            message: error.message\n        });\n    }\n};\n\nexports.searchUsers = async (req, res) => {\n  try {\n    const { q } = req.query;\n    if (!q || q.trim() === \"\") {\n      return res.status(200).json({ status: \"success\", data: [] });\n    }\n\n    const keyword = `%${q.trim()}%`;\n    const { data, error } = await supabase\n      .from(\"profiles\")\n      .select(\"id, username, full_name, date_of_birth, is_dob_public, email\")\n      .or(`username.ilike.${keyword},full_name.ilike.${keyword}`)\n      .eq(\"status\", \"ACTIVE\")\n      .limit(20);\n\n    if (error) throw error;\n\n    return res.status(200).json({ status: \"success\", data: data || [] });\n  } catch (error) {\n    console.error(\"Lỗi searchUsers:\", error);\n    return res.status(500).json({ status: \"error\", message: error.message });\n  }\n};\n\nexports.getUserProfileById = async (req, res) => {\n  try {\n    const { id } = req.params;\n\n    // Kiểm tra đề phòng trường hợp frontend truyền nhầm chuỗi \"undefined\"\n    if (!id || id === \"undefined\") {\n      return res.status(400).json({ status: \"error\", message: \"ID người dùng không hợp lệ.\" });\n    }\n\n    // 1. Lấy thông tin tài khoản người dùng từ bảng profiles\n    const { data: profile, error: profileError } = await supabase\n      .from(\"profiles\")\n      .select(\"id, username, full_name, date_of_birth, is_dob_public\")\n      .eq(\"id\", id)\n      .eq(\"status\", \"ACTIVE\")\n      .maybeSingle();\n\n    if (profileError) throw profileError;\n    \n    if (!profile) {\n      return res.status(404).json({ status: \"error\", message: \"Không tìm thấy người dùng này trong hệ thống.\" });\n    }\n\n    // 2. Lấy danh sách thư viện được cấu hình công khai (is_public = true) của user đó\n    const { data: libraries, error: libError } = await supabase\n      .from(\"libraries\")\n      .select(\"id, name, description, created_at\")\n      .eq(\"user_id\", id)\n      .eq(\"share_on_profile\", true)\n      .eq(\"is_public\", true);\n\n    if (libError) {\n      console.warn(\"Không thể tải danh sách libraries cá nhân, bỏ qua lỗi này:\", libError);\n    }\n\n    // Trả về cấu trúc dữ liệu đồng bộ cho Frontend nhận diện\n    return res.status(200).json({\n      status: \"success\",\n      data: {\n        profile,\n        libraries: libraries || []\n      }\n    });\n\n  } catch (error) {\n    console.error(\"Lỗi hệ thống tại getUserProfileById:\", error);\n    return res.status(500).json({ status: \"error\", message: \"Lỗi xử lý server nội bộ.\", error: error.message });\n  }\n};\n\nexports.logout = async (req, res) => {\n  return res.status(200).json({\n    status: \"success\",\n    message: \"Logged out successfully.\",\n  });\n};\n",
+      "BE/src/controllers/documentController.js": "const crypto = require(\"crypto\");\nconst path = require(\"path\");\nconst supabase = require(\"../config/supabase\");\n\nconst {\n  extractTextFromFile,\n  splitTextIntoChunks,\n} = require(\"../services/textExtractService\");\n\nconst {\n  moderateDocument,\n  createEmbedding,\n  toVectorLiteral,\n} = require(\"../services/aiService\");\n\nconst BUCKET = process.env.SUPABASE_DOCUMENT_BUCKET || \"documents\";\n\nfunction sanitizeFileName(fileName) {\n  const baseName = path.basename(fileName || \"upload.bin\");\n\n  return baseName\n    .normalize(\"NFKD\")\n    .replace(/[\\u0300-\\u036f]/g, \"\")\n    .replace(/[^a-zA-Z0-9._-]/g, \"_\")\n    .replace(/_+/g, \"_\")\n    .slice(0, 160);\n}\n\nasync function processDocumentWithAI(file, documentId) {\n  try {\n    console.log(\"Starting AI processing for document:\", documentId);\n\n    const extractedText = await extractTextFromFile(file);\n\n    if (!extractedText || extractedText.trim().length < 20) {\n      await supabase\n        .from(\"documents\")\n        .update({\n          status: \"REJECTED\",\n          ai_reject_reason: { reason: \"Could not extract enough readable text from this file.\" },\n        })\n        .eq(\"id\", documentId);\n\n      return { status: \"REJECTED\", reason: \"Could not extract enough readable text\", chunkCount: 0 };\n    }\n\n    const moderation = await moderateDocument(extractedText);\n\n    if (moderation.status === \"REJECTED\") {\n      await supabase\n        .from(\"documents\")\n        .update({ status: \"REJECTED\", ai_reject_reason: moderation })\n        .eq(\"id\", documentId);\n\n      return { status: \"REJECTED\", reason: moderation.reason, chunkCount: 0 };\n    }\n\n    // ==============================================================================\n    // BƯỚC MỚI: Gọi AI phân tích tạo Tags và kiểm tra tên file\n    // ==============================================================================\n    let aiTagsAndName = null;\n    try {\n      if (generateTagsAndName) {\n        aiTagsAndName = await generateTagsAndName(extractedText, file.originalname);\n      }\n    } catch (tagError) {\n      console.warn(\"Lỗi khi AI generate tags, bỏ qua bước này:\", tagError);\n    }\n\n    // Nếu AI sinh ra tags, tiến hành lưu vào DB\n    if (aiTagsAndName && aiTagsAndName.tags && aiTagsAndName.tags.length > 0) {\n      for (const tagName of aiTagsAndName.tags) {\n        const cleanTagName = tagName.replace('#', '').trim().toLowerCase();\n        \n        // 1. Kiểm tra xem Tag đã tồn tại trong bảng `tags` chưa, chưa có thì insert\n        let { data: tagData } = await supabase.from(\"tags\").select(\"id\").eq(\"name\", cleanTagName).single();\n        \n        if (!tagData) {\n          const { data: newTag } = await supabase.from(\"tags\").insert({ name: cleanTagName }).select(\"id\").single();\n          tagData = newTag;\n        }\n\n        // 2. Gắn tag vào document thông qua bảng `document_tags`\n        if (tagData && tagData.id) {\n          await supabase.from(\"document_tags\").insert({\n            document_id: documentId,\n            tag_id: tagData.id\n          });\n        }\n      }\n    }\n    // ==============================================================================\n\n    const chunks = splitTextIntoChunks(extractedText);\n\n    if (chunks.length === 0) {\n      await supabase\n        .from(\"documents\")\n        .update({\n          status: \"REJECTED\",\n          ai_reject_reason: { reason: \"No readable text chunks could be created.\" },\n        })\n        .eq(\"id\", documentId);\n\n      return { status: \"REJECTED\", reason: \"No readable text chunks could be created.\", chunkCount: 0 };\n    }\n\n    const chunkRows = [];\n    for (let i = 0; i < chunks.length; i++) {\n      const embedding = await createEmbedding(chunks[i], \"document\");\n      chunkRows.push({\n        document_id: documentId,\n        chunk_index: i,\n        content: chunks[i],\n        embedding: toVectorLiteral(embedding),\n      });\n    }\n\n    await supabase.from(\"document_chunks\").delete().eq(\"document_id\", documentId);\n\n    const { error: chunkInsertError } = await supabase.from(\"document_chunks\").insert(chunkRows);\n\n    if (chunkInsertError) {\n      throw chunkInsertError;\n    }\n\n    // Chuẩn bị object cập nhật trạng thái Document\n    const updatePayload = {\n      status: \"APPROVED\",\n      ai_reject_reason: null, // Mặc định là null\n    };\n\n    // Nếu AI gợi ý đổi tên file do sai ngữ nghĩa, lưu thông báo này vào DB để hiển thị lên UI\n    if (aiTagsAndName && aiTagsAndName.message) {\n      updatePayload.ai_reject_reason = {\n        type: \"RENAME_SUGGESTION\",\n        suggested_name: aiTagsAndName.suggestedName,\n        message: aiTagsAndName.message\n      };\n    }\n\n    await supabase.from(\"documents\").update(updatePayload).eq(\"id\", documentId);\n\n    console.log(\"AI processing completed for document:\", documentId);\n\n    return {\n      status: \"APPROVED\",\n      reason: \"Document approved by AI moderation.\",\n      chunkCount: chunks.length,\n      aiSuggestion: updatePayload.ai_reject_reason\n    };\n  } catch (error) {\n    console.error(\"AI processing failed:\", error);\n\n    await supabase\n      .from(\"documents\")\n      .update({\n        status: \"PENDING_RETRY\",\n        ai_reject_reason: {\n          reason: \"AI processing failed. Manual review may be needed.\",\n          error: error.message,\n        },\n      })\n      .eq(\"id\", documentId);\n\n    return {\n      status: \"PENDING_RETRY\",\n      reason: \"AI processing failed. Manual review may be needed.\",\n      error: error.message,\n      chunkCount: 0,\n    };\n  }\n}\n\nexports.listMyDocuments = async (req, res) => {\n  try {\n    const userID = req.user.userId;\n\n    const { data, error } = await supabase\n      .from(\"documents\")\n      .select(\n        `\n        id,\n        uploader_id,\n        workspace_id,\n        title,\n        file_size_bytes,\n        is_public,\n        status,\n        ai_reject_reason,\n        created_at\n      `\n      )\n      .eq(\"uploader_id\", userID)\n      .is(\"deleted_at\", null)\n      .order(\"created_at\", { ascending: false });\n\n    if (error) {\n      throw error;\n    }\n\n    return res.status(200).json({\n      status: \"success\",\n      data: data || [],\n    });\n  } catch (error) {\n    console.error(\"Lỗi listMyDocuments:\", error);\n\n    return res.status(500).json({\n      status: \"error\",\n      message: \"Không thể tải danh sách tài liệu.\",\n      error: error.message,\n    });\n  }\n};\n\nexports.uploadDocuments = async (req, res) => {\n  try {\n    const userID = req.user.userId;\n    const files = req.files || [];\n    const workspaceId = req.body?.workspaceId || null;\n    const libraryId = req.body?.libraryId || null; // Hỗ trợ up lên Library\n\n    if (files.length === 0) {\n      return res.status(400).json({ status: \"error\", message: \"Vui lòng chọn tệp.\" });\n    }\n\n    // CHECK GIỚI HẠN 50MB NẾU UP VÀO WORKSPACE\n    if (workspaceId) {\n      const { data: existingDocs } = await supabase\n        .from(\"documents\")\n        .select(\"file_size_bytes\")\n        .eq(\"workspace_id\", workspaceId)\n        .is(\"deleted_at\", null);\n\n      const currentUsedBytes = (existingDocs || []).reduce((acc, doc) => acc + (Number(doc.file_size_bytes) || 0), 0);\n      const incomingBytes = files.reduce((acc, file) => acc + file.size, 0);\n\n      if (currentUsedBytes + incomingBytes > 50 * 1024 * 1024) {\n        return res.status(400).json({\n          status: \"error\",\n          message: \"Workspace đã đạt giới hạn 50MB dung lượng tải lên.\"\n        });\n      }\n    }\n\n    const uploadedDocuments = [];\n\n    for (const file of files) {\n      const safeFileName = sanitizeFileName(file.originalname);\n      const storagePath = `${userID}/${Date.now()}-${crypto.randomUUID()}-${safeFileName}`;\n\n      const { error: uploadError } = await supabase.storage\n        .from(BUCKET)\n        .upload(storagePath, file.buffer, {\n          contentType: file.mimetype || \"application/octet-stream\"\n        });\n\n      if (uploadError) throw uploadError;\n\n      // Lưu thông tin vào DB, bao gồm cả library_id\n      const { data: document, error: insertError } = await supabase\n        .from(\"documents\")\n        .insert({\n          uploader_id: userID,\n          workspace_id: workspaceId,\n          library_id: libraryId, // Cột mới trong DB\n          title: file.originalname,\n          file_url: storagePath,\n          file_size_bytes: file.size,\n          is_public: libraryId ? true : false, // Nếu up lên lib thì public theo cấu hình\n          status: \"PENDING\"\n        })\n        .select(\"*\").single();\n\n      if (insertError) throw insertError;\n\n      // Gọi hàm xử lý AI (Sẽ cấu hình auto-tag ở bước sau)\n      const aiResult = await processDocumentWithAI(file, document.id);\n      uploadedDocuments.push({ ...document, status: aiResult.status });\n    }\n\n    return res.status(201).json({ status: \"success\", data: uploadedDocuments });\n  } catch (error) {\n    return res.status(500).json({ status: \"error\", error: error.message });\n  }\n};\n\nexports.downloadDocument = async (req, res) => {\n  try {\n    const userID = req.user.userId;\n    const { documentId } = req.params;\n\n    const { data: document, error: documentError } = await supabase\n      .from(\"documents\")\n      .select(\"*\")\n      .eq(\"id\", documentId)\n      .is(\"deleted_at\", null)\n      .maybeSingle();\n\n    if (documentError) {\n      throw documentError;\n    }\n\n    if (!document) {\n      return res.status(404).json({\n        status: \"error\",\n        message: \"Không tìm thấy tài liệu.\",\n      });\n    }\n\n    const isOwner = String(document.uploader_id) === String(userID);\n\n    if (!isOwner && document.is_public !== true) {\n      return res.status(403).json({\n        status: \"error\",\n        message: \"Bạn không có quyền truy cập tài liệu này.\",\n      });\n    }\n\n    const { data: signedUrlData, error: signedUrlError } =\n      await supabase.storage.from(BUCKET).createSignedUrl(document.file_url, 60, {\n        download: document.title,\n      });\n\n    if (signedUrlError) {\n      throw signedUrlError;\n    }\n\n    return res.status(200).json({\n      status: \"success\",\n      data: {\n        documentId: document.id,\n        fileName: document.title,\n        downloadUrl: signedUrlData.signedUrl,\n      },\n    });\n  } catch (error) {\n    console.error(\"Lỗi downloadDocument:\", error);\n\n    return res.status(500).json({\n      status: \"error\",\n      message: \"Không thể tải tài liệu.\",\n      error: error.message,\n    });\n  }\n};\n\nexports.deleteDocument = async (req, res) => {\n  try {\n    const userID = req.user.userId;\n    const { documentId } = req.params;\n\n    const { data: document, error: documentError } = await supabase\n      .from(\"documents\")\n      .select(\"*\")\n      .eq(\"id\", documentId)\n      .is(\"deleted_at\", null)\n      .maybeSingle();\n\n    if (documentError) {\n      throw documentError;\n    }\n\n    if (!document) {\n      return res.status(404).json({\n        status: \"error\",\n        message: \"Không tìm thấy tài liệu.\",\n      });\n    }\n\n    const isOwner = String(document.uploader_id) === String(userID);\n\n    if (!isOwner) {\n      return res.status(403).json({\n        status: \"error\",\n        message: \"Bạn không có quyền xóa tài liệu này.\",\n      });\n    }\n\n    const { error: updateError } = await supabase\n      .from(\"documents\")\n      .update({\n        deleted_at: new Date().toISOString(),\n      })\n      .eq(\"id\", documentId);\n\n    if (updateError) {\n      throw updateError;\n    }\n\n    return res.status(200).json({\n      status: \"success\",\n      message: \"Xóa tài liệu thành công.\",\n    });\n  } catch (error) {\n    console.error(\"Lỗi deleteDocument:\", error);\n\n    return res.status(500).json({\n      status: \"error\",\n      message: \"Không thể xóa tài liệu.\",\n      error: error.message,\n    });\n  }\n};\n\n// Hàm API tạo thư viện mới vào Supabase\nexports.createLibrary = async (req, res) => {\n  try {\n    // Đã thêm biến share_on_profile vào đây\n    const { name, description, is_public, share_on_profile } = req.body;\n    const userID = req.user.userId; \n    \n    const { data, error } = await supabase\n      .from(\"libraries\")\n      .insert({ \n        user_id: userId, \n        name, \n        description, \n        is_public,\n        share_on_profile \n      })\n      .select().single();\n      \n    if (error) throw error;\n    return res.status(201).json({ status: \"success\", data });\n  } catch (error) {\n    return res.status(500).json({ status: \"error\", message: error.message });\n  }\n};\n\n// Hàm API cập nhật trạng thái của thư viện\nexports.updateLibrary = async (req, res) => {\n  try {\n    const { id } = req.params;\n    // Đã thêm biến share_on_profile\n    const { name, description, is_public, share_on_profile } = req.body;\n    \n    const { data, error } = await supabase\n      .from(\"libraries\")\n      .update({ name, description, is_public, share_on_profile })\n      .eq(\"id\", id)\n      .select().single();\n      \n    if (error) throw error;\n    return res.status(200).json({ status: \"success\", data });\n  } catch (error) {\n    return res.status(500).json({ status: \"error\", message: error.message });\n  }\n};",
+      "BE/src/controllers/workspaceController.js": "const supabase = require(\"../config/supabase\");\n\nconst MEMBER_ROLES = [\"Editor\", \"Viewer\"];\n\nasync function getWorkspaceAccess(workspaceId, userId) {\n  const { data: workspace, error: workspaceError } = await supabase\n    .from(\"workspaces\")\n    .select(\"id, name, description, created_by, created_at\")\n    .eq(\"id\", workspaceId)\n    .is(\"deleted_at\", null)\n    .maybeSingle();\n\n  if (workspaceError) throw workspaceError;\n  if (!workspace) return { workspace: null, member: null, isAdmin: false };\n\n  const { data: member, error: memberError } = await supabase\n    .from(\"workspace_members\")\n    .select(\"workspace_id, user_id, role, joined_at\")\n    .eq(\"workspace_id\", workspaceId)\n    .eq(\"user_id\", userId)\n    .maybeSingle();\n\n  if (memberError) throw memberError;\n\n  const isCreator = String(workspace.created_by) === String(userId);\n  const isAdmin = isCreator || member?.role === \"Admin\";\n\n  return { workspace, member, isAdmin };\n}\n\nexports.createWorkspace = async (req, res) => {\n  try {\n    const userId = req.user.id;\n    const name = req.body.name?.trim();\n    const description = req.body.description?.trim() || null;\n\n    if (!name) {\n      return res\n        .status(400)\n        .json({ status: \"error\", message: \"Workspace name is required.\" });\n    }\n\n    const { data: workspace, error: workspaceError } = await supabase\n      .from(\"workspaces\")\n      .insert({ name, description, created_by: userId })\n      .select(\"id, name, description, created_by, created_at\")\n      .single();\n\n    if (workspaceError) throw workspaceError;\n\n    const { error: memberError } = await supabase\n      .from(\"workspace_members\")\n      .insert({ workspace_id: workspace.id, user_id: userId, role: \"Admin\" });\n\n    if (memberError) throw memberError;\n\n    return res.status(201).json({ status: \"success\", data: workspace });\n  } catch (error) {\n    return res\n      .status(500)\n      .json({\n        status: \"error\",\n        message: \"Could not create workspace.\",\n        error: error.message,\n      });\n  }\n};\n\nexports.listMyWorkspaces = async (req, res) => {\n  try {\n    const { data, error } = await supabase\n      .from(\"workspace_members\")\n      .select(\n        `\n        role,\n        joined_at,\n        workspace:workspaces!workspace_members_workspace_id_fkey (\n          id,\n          name,\n          description,\n          created_by,\n          created_at,\n          deleted_at\n        )\n      `,\n      )\n      .eq(\"user_id\", req.user.id)\n      .is(\"workspace.deleted_at\", null)\n      .order(\"joined_at\", { ascending: false });\n\n    if (error) throw error;\n\n    return res.status(200).json({\n      status: \"success\",\n      data: (data || []).map((row) => ({\n        ...row.workspace,\n        myRole: row.role,\n        joinedAt: row.joined_at,\n      })),\n    });\n  } catch (error) {\n    return res\n      .status(500)\n      .json({\n        status: \"error\",\n        message: \"Could not load workspaces.\",\n        error: error.message,\n      });\n  }\n};\n\nexports.getWorkspace = async (req, res) => {\n  try {\n    const { workspace, member } = await getWorkspaceAccess(\n      req.params.workspaceId,\n      req.user.id,\n    );\n\n    if (!workspace || !member) {\n      return res\n        .status(404)\n        .json({ status: \"error\", message: \"Workspace not found.\" });\n    }\n\n    return res.status(200).json({\n      status: \"success\",\n      data: { ...workspace, myRole: member.role },\n    });\n  } catch (error) {\n    return res\n      .status(500)\n      .json({\n        status: \"error\",\n        message: \"Could not load workspace.\",\n        error: error.message,\n      });\n  }\n};\n\nexports.listMembers = async (req, res) => {\n  try {\n    const { workspace, member } = await getWorkspaceAccess(\n      req.params.workspaceId,\n      req.user.id,\n    );\n\n    if (!workspace || !member) {\n      return res\n        .status(403)\n        .json({\n          status: \"error\",\n          message: \"You cannot access this workspace.\",\n        });\n    }\n\n    const { data, error } = await supabase\n      .from(\"workspace_members\")\n      .select(\n        `\n        role,\n        joined_at,\n        user:profiles!workspace_members_user_id_fkey (\n          id,\n          email,\n          username,\n          full_name,\n          status\n        )\n      `,\n      )\n      .eq(\"workspace_id\", req.params.workspaceId)\n      .order(\"joined_at\", { ascending: true });\n\n    if (error) throw error;\n\n    return res.status(200).json({\n      status: \"success\",\n      data: data || [],\n    });\n  } catch (error) {\n    return res\n      .status(500)\n      .json({\n        status: \"error\",\n        message: \"Could not load members.\",\n        error: error.message,\n      });\n  }\n};\n\nexports.searchUsers = async (req, res) => {\n  try {\n    const q = String(req.query.q || \"\")\n      .trim()\n      .replace(/[,%]/g, \"\");\n\n    if (q.length < 2) {\n      return res\n        .status(400)\n        .json({\n          status: \"error\",\n          message: \"Search text must be at least 2 characters.\",\n        });\n    }\n\n    const access = await getWorkspaceAccess(\n      req.params.workspaceId,\n      req.user.id,\n    );\n    if (!access.workspace || !access.isAdmin) {\n      return res\n        .status(403)\n        .json({\n          status: \"error\",\n          message: \"Only workspace admins can add members.\",\n        });\n    }\n\n    const { data: existingMembers, error: memberError } = await supabase\n      .from(\"workspace_members\")\n      .select(\"user_id\")\n      .eq(\"workspace_id\", req.params.workspaceId);\n\n    if (memberError) throw memberError;\n\n    const existingIds = new Set(\n      (existingMembers || []).map((m) => String(m.user_id)),\n    );\n\n    const { data: users, error: userError } = await supabase\n      .from(\"profiles\")\n      .select(\"id, username, full_name, status\")\n      .neq(\"status\", \"DISABLED\")\n      .or(`username.ilike.%${q}%,full_name.ilike.%${q}%`)\n      .limit(20);\n\n    if (userError) throw userError;\n\n    return res.status(200).json({\n      status: \"success\",\n      data: (users || []).filter((user) => !existingIds.has(String(user.id))),\n    });\n  } catch (error) {\n    return res\n      .status(500)\n      .json({\n        status: \"error\",\n        message: \"Could not search users.\",\n        error: error.message,\n      });\n  }\n};\n\nexports.addMember = async (req, res) => {\n  try {\n    const { userId, role = \"Viewer\" } = req.body;\n\n    if (!userId || !MEMBER_ROLES.includes(role)) {\n      return res\n        .status(400)\n        .json({\n          status: \"error\",\n          message: \"Valid userId and role are required.\",\n        });\n    }\n\n    const access = await getWorkspaceAccess(\n      req.params.workspaceId,\n      req.user.id,\n    );\n    if (!access.workspace || !access.isAdmin) {\n      return res\n        .status(403)\n        .json({\n          status: \"error\",\n          message: \"Only workspace admins can add members.\",\n        });\n    }\n\n    const { data, error } = await supabase\n      .from(\"workspace_members\")\n      .insert({\n        workspace_id: req.params.workspaceId,\n        user_id: userId,\n        role,\n      })\n      .select(\"workspace_id, user_id, role, joined_at\")\n      .single();\n\n    if (error) throw error;\n\n    return res.status(201).json({ status: \"success\", data });\n  } catch (error) {\n    return res\n      .status(500)\n      .json({\n        status: \"error\",\n        message: \"Could not add member.\",\n        error: error.message,\n      });\n  }\n};\n\n",
+      "BE/src/controllers/aiController.js": "const supabase = require(\"../config/supabase\");\n\nconst {\n  createEmbedding,\n  toVectorLiteral,\n  answerWithContext,\n  generateFlashcardsFromChunks,\n} = require(\"../services/aiService\");\n\nasync function getAllowedDocument(documentId, userId) {\n  const { data: document, error } = await supabase\n    .from(\"documents\")\n    .select(\"*\")\n    .eq(\"id\", documentId)\n    .is(\"deleted_at\", null)\n    .maybeSingle();\n\n  if (error) throw error;\n  if (!document) return null;\n\n  const isOwner = String(document.uploader_id) === String(userId);\n\n  if (!isOwner && document.is_public !== true) {\n    return \"FORBIDDEN\";\n  }\n\n  return document;\n}\n\nasync function increaseChatUsage(userId) {\n  const today = new Date().toISOString().slice(0, 10);\n\n  const { data: existing, error: selectError } = await supabase\n    .from(\"ai_usage_logs\")\n    .select(\"*\")\n    .eq(\"user_id\", userId)\n    .eq(\"usage_date\", today)\n    .maybeSingle();\n\n  if (selectError) throw selectError;\n\n  if (existing && existing.chat_count >= 50) {\n    const error = new Error(\"Daily AI chatbot quota exceeded.\");\n    error.statusCode = 429;\n    throw error;\n  }\n\n  if (existing) {\n    const { error: updateError } = await supabase\n      .from(\"ai_usage_logs\")\n      .update({ chat_count: existing.chat_count + 1 })\n      .eq(\"id\", existing.id);\n\n    if (updateError) throw updateError;\n    return;\n  }\n\n  const { error: insertError } = await supabase.from(\"ai_usage_logs\").insert({\n    user_id: userId,\n    usage_date: today,\n    chat_count: 1,\n    tokens_consumed: 0,\n  });\n\n  if (insertError) throw insertError;\n}\n\nexports.chatWithDocument = async (req, res) => {\n  try {\n    const userId = req.user.id;\n    const { documentId, question } = req.body;\n\n    if (!documentId || !question || !question.trim()) {\n      return res.status(400).json({\n        status: \"error\",\n        message: \"documentId and question are required.\",\n      });\n    }\n\n    const document = await getAllowedDocument(documentId, userId);\n\n    if (!document) {\n      return res.status(404).json({\n        status: \"error\",\n        message: \"Document not found.\",\n      });\n    }\n\n    if (document === \"FORBIDDEN\") {\n      return res.status(403).json({\n        status: \"error\",\n        message: \"You do not have permission to access this document.\",\n      });\n    }\n\n    if (document.status !== \"APPROVED\") {\n      return res.status(400).json({\n        status: \"error\",\n        message: \"This document is not approved or not ready for AI chat yet.\",\n      });\n    }\n\n    await increaseChatUsage(userId);\n\n    const questionEmbedding = await createEmbedding(question, \"query\");\n\n    const { data: chunks, error: matchError } = await supabase.rpc(\n      \"match_document_chunks\",\n      {\n        match_document_id: documentId,\n        query_embedding: toVectorLiteral(questionEmbedding),\n        match_count: 5,\n      }\n    );\n\n    if (matchError) throw matchError;\n\n    if (!chunks || chunks.length === 0) {\n      return res.status(400).json({\n        status: \"error\",\n        message: \"No AI chunks found for this document. Re-upload or re-process it.\",\n      });\n    }\n\n    const answer = await answerWithContext(question, chunks);\n\n    return res.status(200).json({\n      status: \"success\",\n      data: {\n        documentId,\n        question,\n        answer,\n        sources: chunks.map((chunk) => ({\n          chunk_index: chunk.chunk_index,\n          similarity: chunk.similarity,\n        })),\n      },\n    });\n  } catch (error) {\n    console.error(\"chatWithDocument error:\", error);\n\n    return res.status(error.statusCode || 500).json({\n      status: \"error\",\n      message: error.message || \"Could not chat with document.\",\n    });\n  }\n};\n\nexports.generateFlashcards = async (req, res) => {\n  try {\n    const userId = req.user.id;\n    const { documentId } = req.params;\n\n    const document = await getAllowedDocument(documentId, userId);\n\n    if (!document) {\n      return res.status(404).json({\n        status: \"error\",\n        message: \"Document not found.\",\n      });\n    }\n\n    if (document === \"FORBIDDEN\") {\n      return res.status(403).json({\n        status: \"error\",\n        message: \"You do not have permission to access this document.\",\n      });\n    }\n\n    if (document.status !== \"APPROVED\") {\n      return res.status(400).json({\n        status: \"error\",\n        message: \"This document is not approved or not ready for flashcard generation yet.\",\n      });\n    }\n\n    const { data: chunks, error: chunkError } = await supabase\n      .from(\"document_chunks\")\n      .select(\"chunk_index, content\")\n      .eq(\"document_id\", documentId)\n      .order(\"chunk_index\", { ascending: true })\n      .limit(10);\n\n    if (chunkError) throw chunkError;\n\n    if (!chunks || chunks.length === 0) {\n      return res.status(400).json({\n        status: \"error\",\n        message: \"No chunks found for this document. Re-upload or re-process it.\",\n      });\n    }\n\n    const cards = await generateFlashcardsFromChunks(chunks);\n\n    await supabase.from(\"flashcards\").delete().eq(\"document_id\", documentId);\n\n    const rows = cards.map((card) => ({\n      document_id: documentId,\n      question: card.question,\n      answer: card.answer,\n    }));\n\n    const { data: insertedCards, error: insertError } = await supabase\n      .from(\"flashcards\")\n      .insert(rows)\n      .select(\"*\");\n\n    if (insertError) throw insertError;\n\n    return res.status(201).json({\n      status: \"success\",\n      data: insertedCards,\n    });\n  } catch (error) {\n    console.error(\"generateFlashcards error:\", error);\n\n    return res.status(500).json({\n      status: \"error\",\n      message: error.message || \"Failed to generate flashcards.\",\n    });\n  }\n};",
+      "BE/src/controllers/adminController.js": "const supabase = require(\"../config/supabase\");\nconst { createActivityLog } = require(\"../services/activityLogService\");\n\nfunction getTodayDate() {\n  return new Date().toISOString().slice(0, 10);\n}\n\nexports.getDashboardStats = async (req, res) => {\n  try {\n    const today = getTodayDate();\n\n    const { count: totalUsers, error: userError } = await supabase\n      .from(\"profiles\")\n      .select(\"id\", { count: \"exact\", head: true });\n\n    if (userError) throw userError;\n\n    const { count: totalDocuments, error: documentError } = await supabase\n      .from(\"documents\")\n      .select(\"id\", { count: \"exact\", head: true })\n      .is(\"deleted_at\", null);\n\n    if (documentError) throw documentError;\n\n    const { count: pendingModeration, error: moderationError } = await supabase\n      .from(\"documents\")\n      .select(\"id\", { count: \"exact\", head: true })\n      .in(\"status\", [\"REJECTED\", \"FLAGGED\", \"PENDING_RETRY\"])\n      .is(\"deleted_at\", null);\n\n    if (moderationError) throw moderationError;\n\n    const { data: quotaRows, error: quotaError } = await supabase\n      .from(\"daily_quota_usage\")\n      .select(\"bytes_uploaded, bytes_downloaded\")\n      .eq(\"usage_date\", today);\n\n    if (quotaError) throw quotaError;\n\n    const totalBytesUploadedToday = (quotaRows || []).reduce(\n      (sum, row) => sum + Number(row.bytes_uploaded || 0),\n      0\n    );\n\n    const totalBytesDownloadedToday = (quotaRows || []).reduce(\n      (sum, row) => sum + Number(row.bytes_downloaded || 0),\n      0\n    );\n\n    const { data: aiRows, error: aiError } = await supabase\n      .from(\"ai_usage_logs\")\n      .select(\"tokens_consumed, chat_count\")\n      .eq(\"usage_date\", today);\n\n    if (aiError) throw aiError;\n\n    const totalAiChatsToday = (aiRows || []).reduce(\n      (sum, row) => sum + Number(row.chat_count || 0),\n      0\n    );\n\n    const totalTokensToday = (aiRows || []).reduce(\n      (sum, row) => sum + Number(row.tokens_consumed || 0),\n      0\n    );\n\n    return res.status(200).json({\n      status: \"success\",\n      data: {\n        totalUsers: totalUsers || 0,\n        totalDocuments: totalDocuments || 0,\n        pendingModeration: pendingModeration || 0,\n        totalBytesUploadedToday,\n        totalBytesDownloadedToday,\n        totalAiChatsToday,\n        totalTokensToday,\n      },\n    });\n  } catch (error) {\n    console.error(\"Admin dashboard error:\", error);\n    return res.status(500).json({\n      status: \"error\",\n      message: \"Could not load admin dashboard.\",\n      error: error.message,\n    });\n  }\n};\n\nexports.getModerationDocuments = async (req, res) => {\n  try {\n    const { data, error } = await supabase\n      .from(\"documents\")\n      .select(`\n        id,\n        uploader_id,\n        title,\n        file_url,\n        file_size_bytes,\n        is_public,\n        status,\n        ai_reject_reason,\n        reviewed_by_admin_id,\n        reviewed_at,\n        admin_review_reason,\n        created_at,\n        uploader:profiles!documents_uploader_id_fkey (\n          id,\n          email,\n          username,\n          full_name\n        )\n      `)\n      .in(\"status\", [\"REJECTED\", \"FLAGGED\", \"PENDING_RETRY\"])\n      .is(\"deleted_at\", null)\n      .order(\"created_at\", { ascending: false });\n\n    if (error) throw error;\n\n    return res.status(200).json({\n      status: \"success\",\n      data: data || [],\n    });\n  } catch (error) {\n    console.error(\"Admin moderation list error:\", error);\n    return res.status(500).json({\n      status: \"error\",\n      message: \"Could not load moderation documents.\",\n      error: error.message,\n    });\n  }\n};\n\nexports.reviewDocument = async (req, res) => {\n  try {\n    const { documentId } = req.params;\n    const { decision, reason } = req.body;\n\n    if (![\"APPROVE\", \"KEEP_REJECTED\"].includes(decision)) {\n      return res.status(400).json({\n        status: \"error\",\n        message: \"decision must be APPROVE or KEEP_REJECTED.\",\n      });\n    }\n\n    if (!reason || !String(reason).trim()) {\n      return res.status(400).json({\n        status: \"error\",\n        message: \"Admin review reason is required.\",\n      });\n    }\n\n    const { data: oldDocument, error: fetchError } = await supabase\n      .from(\"documents\")\n      .select(\"*\")\n      .eq(\"id\", documentId)\n      .is(\"deleted_at\", null)\n      .maybeSingle();\n\n    if (fetchError) throw fetchError;\n\n    if (!oldDocument) {\n      return res.status(404).json({\n        status: \"error\",\n        message: \"Document not found.\",\n      });\n    }\n\n    const newStatus = decision === \"APPROVE\" ? \"APPROVED\" : \"REJECTED\";\n\n    const { data: updatedDocument, error: updateError } = await supabase\n      .from(\"documents\")\n      .update({\n        status: newStatus,\n        reviewed_by_admin_id: req.user.id,\n        reviewed_at: new Date().toISOString(),\n        admin_review_reason: String(reason).trim(),\n      })\n      .eq(\"id\", documentId)\n      .select(\"*\")\n      .single();\n\n    if (updateError) throw updateError;\n\n    await createActivityLog({\n      actorUserId: req.user.id,\n      actionType: \"ADMIN_REVIEW_DOCUMENT\",\n      entityType: \"documents\",\n      entityId: documentId,\n      oldData: oldDocument,\n      newData: updatedDocument,\n    });\n\n    return res.status(200).json({\n      status: \"success\",\n      message: \"Document moderation decision saved.\",\n      data: updatedDocument,\n    });\n  } catch (error) {\n    console.error(\"Admin review document error:\", error);\n    return res.status(500).json({\n      status: \"error\",\n      message: \"Could not review document.\",\n      error: error.message,\n    });\n  }\n};\n\nexports.getUsers = async (req, res) => {\n  try {\n    const search = String(req.query.search || \"\").trim();\n\n    let query = supabase\n      .from(\"profiles\")\n      .select(`\n        id,\n        email,\n        username,\n        full_name,\n        role,\n        status,\n        created_at,\n        updated_at,\n        last_login_at\n      `)\n      .order(\"created_at\", { ascending: false });\n\n    if (search) {\n      query = query.or(`username.ilike.%${search}%,email.ilike.%${search}%`);\n    }\n\n    const { data, error } = await query;\n\n    if (error) throw error;\n\n    return res.status(200).json({\n      status: \"success\",\n      data: data || [],\n    });\n  } catch (error) {\n    console.error(\"Admin get users error:\", error);\n    return res.status(500).json({\n      status: \"error\",\n      message: \"Could not load users.\",\n      error: error.message,\n    });\n  }\n};\n\nexports.updateUserStatus = async (req, res) => {\n  try {\n    const { userId } = req.params;\n    const { status, reason } = req.body;\n\n    if (![\"ACTIVE\", \"DISABLED\"].includes(status)) {\n      return res.status(400).json({\n        status: \"error\",\n        message: \"status must be ACTIVE or DISABLED.\",\n      });\n    }\n\n    if (String(userId) === String(req.user.id) && status === \"DISABLED\") {\n      return res.status(400).json({\n        status: \"error\",\n        message: \"Admin cannot disable their own account.\",\n      });\n    }\n\n    const { data: oldUser, error: fetchError } = await supabase\n      .from(\"profiles\")\n      .select(\"id, email, username, full_name, role, status, created_at, updated_at\")\n      .eq(\"id\", userId)\n      .maybeSingle();\n\n    if (fetchError) throw fetchError;\n\n    if (!oldUser) {\n      return res.status(404).json({\n        status: \"error\",\n        message: \"User not found.\",\n      });\n    }\n\n    const { data: updatedUser, error: updateError } = await supabase\n      .from(\"profiles\")\n      .update({\n        status,\n        updated_at: new Date().toISOString(),\n      })\n      .eq(\"id\", userId)\n      .select(\"id, email, username, full_name, role, status, created_at, updated_at\")\n      .single();\n\n    if (updateError) throw updateError;\n\n    await createActivityLog({\n      actorUserId: req.user.id,\n      actionType: \"ADMIN_UPDATE_USER_STATUS\",\n      entityType: \"profiles\",\n      entityId: userId,\n      oldData: oldUser,\n      newData: {\n        ...updatedUser,\n        admin_reason: reason || null,\n      },\n    });\n\n    return res.status(200).json({\n      status: \"success\",\n      message: \"User status updated.\",\n      data: updatedUser,\n    });\n  } catch (error) {\n    console.error(\"Admin update user status error:\", error);\n    return res.status(500).json({\n      status: \"error\",\n      message: \"Could not update user status.\",\n      error: error.message,\n    });\n  }\n};\n\nexports.getActivityLogs = async (req, res) => {\n  try {\n    const { data, error } = await supabase\n      .from(\"activity_logs\")\n      .select(`\n        id,\n        user_id,\n        action_type,\n        entity_type,\n        entity_id,\n        old_data,\n        new_data,\n        created_at,\n        actor:profiles!activity_logs_user_id_fkey (\n          id,\n          email,\n          username,\n          full_name\n        )\n      `)\n      .order(\"created_at\", { ascending: false })\n      .limit(100);\n\n    if (error) throw error;\n\n    return res.status(200).json({\n      status: \"success\",\n      data: data || [],\n    });\n  } catch (error) {\n    console.error(\"Admin activity logs error:\", error);\n    return res.status(500).json({\n      status: \"error\",\n      message: \"Could not load activity logs.\",\n      error: error.message,\n    });\n  }\n};\n\nexports.getUsage = async (req, res) => {\n  try {\n    const { data: quotaUsage, error: quotaError } = await supabase\n      .from(\"daily_quota_usage\")\n      .select(`\n        id,\n        user_id,\n        usage_date,\n        bytes_uploaded,\n        bytes_downloaded,\n        user:profiles!daily_quota_usage_user_id_fkey (\n          id,\n          email,\n          username,\n          full_name\n        )\n      `)\n      .order(\"usage_date\", { ascending: false })\n      .limit(100);\n\n    if (quotaError) throw quotaError;\n\n    const { data: aiUsage, error: aiError } = await supabase\n      .from(\"ai_usage_logs\")\n      .select(`\n        id,\n        user_id,\n        usage_date,\n        tokens_consumed,\n        chat_count,\n        user:profiles!ai_usage_logs_user_id_fkey (\n          id,\n          email,\n          username,\n          full_name\n        )\n      `)\n      .order(\"usage_date\", { ascending: false })\n      .limit(100);\n\n    if (aiError) throw aiError;\n\n    return res.status(200).json({\n      status: \"success\",\n      data: {\n        quotaUsage: quotaUsage || [],\n        aiUsage: aiUsage || [],\n      },\n    });\n  } catch (error) {\n    console.error(\"Admin usage error:\", error);\n    return res.status(500).json({\n      status: \"error\",\n      message: \"Could not load usage data.\",\n      error: error.message,\n    });\n  }\n};",
+      "BE/src/services/aiService.js": "let aiClient = null;\n\n/**\n * Create and reuse Gemini client.\n *\n * We use dynamic import because many Node/Express projects use CommonJS require(),\n * while @google/genai is easier to load with import().\n */\nasync function getAiClient() {\n  if (aiClient) {\n    return aiClient;\n  }\n\n  if (!process.env.GEMINI_API_KEY) {\n    throw new Error(\"Missing GEMINI_API_KEY in .env file.\");\n  }\n\n  const { GoogleGenAI } = await import(\"@google/genai\");\n\n  aiClient = new GoogleGenAI({\n    apiKey: process.env.GEMINI_API_KEY,\n  });\n\n  return aiClient;\n}\n\n/**\n * Extract JSON from Gemini output.\n * Sometimes AI wraps JSON in ```json ... ```, so this function cleans it.\n */\nfunction extractJson(text) {\n  const raw = String(text || \"\").trim();\n\n  const codeBlockMatch = raw.match(/```(?:json)?\\s*([\\s\\S]*?)```/i);\n  const cleaned = codeBlockMatch ? codeBlockMatch[1].trim() : raw;\n\n  const objectStart = cleaned.indexOf(\"{\");\n  const arrayStart = cleaned.indexOf(\"[\");\n\n  let start = -1;\n  let end = -1;\n\n  if (arrayStart !== -1 && (objectStart === -1 || arrayStart < objectStart)) {\n    start = arrayStart;\n    end = cleaned.lastIndexOf(\"]\");\n  } else {\n    start = objectStart;\n    end = cleaned.lastIndexOf(\"}\");\n  }\n\n  if (start === -1 || end === -1 || end <= start) {\n    throw new Error(\"AI did not return valid JSON.\");\n  }\n\n  return JSON.parse(cleaned.slice(start, end + 1));\n}\n\n/**\n * General text generation using Gemini.\n */\nasync function generateText(prompt) {\n  const ai = await getAiClient();\n\n  const response = await ai.models.generateContent({\n    model: process.env.GEMINI_TEXT_MODEL || \"gemini-2.5-flash\",\n    contents: prompt,\n  });\n\n  return response.text || \"\";\n}\n\n/**\n * AI moderation for uploaded documents.\n *\n * Result:\n * {\n *   status: \"APPROVED\" or \"REJECTED\",\n *   reason: \"...\",\n *   suspicious_text: [...]\n * }\n */\nasync function moderateDocument(text) {\n  const prompt = `\nYou are an AI document moderator for a university learning platform called AI StudyHub.\n\nDecide whether this uploaded document is valid for academic study.\n\nAccept:\n- university study materials\n- lecture notes\n- programming documents\n- code documents\n- game programming documents if they are about learning programming\n\nReject:\n- entertainment gaming content not related to study\n- inappropriate sexual content\n- irrelevant TikTok/adult links\n- spam or non-study material\n\nReturn JSON only in this exact format:\n{\n  \"status\": \"APPROVED\" or \"REJECTED\",\n  \"reason\": \"short reason\",\n  \"suspicious_text\": [\"text segment 1\", \"text segment 2\"]\n}\n\nDocument text:\n${String(text || \"\").slice(0, 12000)}\n`;\n\n  const resultText = await generateText(prompt);\n  const result = extractJson(resultText);\n\n  return {\n    status: result.status === \"REJECTED\" ? \"REJECTED\" : \"APPROVED\",\n    reason: result.reason || \"\",\n    suspicious_text: Array.isArray(result.suspicious_text)\n      ? result.suspicious_text\n      : [],\n  };\n}\n\n/**\n * Create vector embedding for document chunks or user questions.\n *\n * Supabase pgvector column is VECTOR(768), so outputDimensionality = 768.\n */\nasync function createEmbedding(text, mode = \"document\") {\n  const ai = await getAiClient();\n\n  const prefix =\n    mode === \"query\"\n      ? \"Represent this question for retrieving relevant study document chunks: \"\n      : \"Represent this study document chunk for retrieval: \";\n\n  const response = await ai.models.embedContent({\n    model: process.env.GEMINI_EMBEDDING_MODEL || \"gemini-embedding-001\",\n    contents: prefix + String(text || \"\").slice(0, 7000),\n    config: {\n      outputDimensionality: 768,\n    },\n  });\n\n  const values = response.embeddings?.[0]?.values;\n\n  if (!values || !Array.isArray(values)) {\n    throw new Error(\"Could not create embedding from Gemini.\");\n  }\n\n  return values;\n}\n\n/**\n * Convert embedding array to pgvector string format.\n *\n * Example:\n * [0.1, 0.2, 0.3]\n *\n * Supabase/PostgREST usually handles pgvector better as a string literal.\n */\nfunction toVectorLiteral(values) {\n  if (!Array.isArray(values)) {\n    throw new Error(\"Embedding values must be an array.\");\n  }\n\n  return `[${values.join(\",\")}]`;\n}\n\n/**\n * Answer a question using retrieved document chunks.\n */\nasync function answerWithContext(question, chunks) {\n  const context = chunks\n    .map((chunk, index) => {\n      return `[Chunk ${index + 1}, database chunk_index: ${chunk.chunk_index}, similarity: ${chunk.similarity}]\n${chunk.content}`;\n    })\n    .join(\"\\n\\n\");\n\n  const prompt = `\nYou are StudyHub Assistant.\n\nAnswer the student's question using ONLY the document context below.\n\nRules:\n- If the answer is not in the context, say: \"I cannot find this in the uploaded document.\"\n- Give a clear student-friendly answer.\n- Mention which chunk numbers support the answer.\n- Do not invent facts outside the document.\n\nQuestion:\n${question}\n\nDocument context:\n${context}\n`;\n\n  return generateText(prompt);\n}\n\n/**\n * Generate flashcards from document chunks.\n */\nasync function generateFlashcardsFromChunks(chunks) {\n  const content = chunks\n    .map((chunk) => chunk.content)\n    .join(\"\\n\\n\")\n    .slice(0, 12000);\n\n  const prompt = `\nCreate study flashcards from the document content.\n\nReturn JSON array only in this exact format:\n[\n  {\n    \"question\": \"short question\",\n    \"answer\": \"short answer\"\n  }\n]\n\nRules:\n- Make 5 to 10 flashcards.\n- Keep answers short.\n- Use only the document content.\n- Do not invent information.\n\nDocument content:\n${content}\n`;\n\n  const resultText = await generateText(prompt);\n  const cards = extractJson(resultText);\n\n  if (!Array.isArray(cards)) {\n    throw new Error(\"AI flashcard result must be a JSON array.\");\n  }\n\n  return cards\n    .filter((card) => card.question && card.answer)\n    .map((card) => ({\n      question: String(card.question).trim(),\n      answer: String(card.answer).trim(),\n    }));\n}\n\n// src/services/aiService.js\n\nexports.generateTagsAndName = async (extractedText, originalName) => {\n  // Chỉ lấy khoảng 1000 ký tự đầu tiên để tiết kiệm token\n  const sampleText = extractedText.substring(0, 1000);\n\n  const prompt = `Bạn là hệ thống phân loại tài liệu. \n  Tên file gốc: \"${originalName}\"\n  Nội dung trích xuất: \"${sampleText}\"\n  \n  Nhiệm vụ:\n  1. Gợi ý 1-3 tags mô tả nội dung (dạng danh từ, ví dụ: #math, #grade12).\n  2. Kiểm tra tên file gốc có sai chính tả hoặc sai nội dung không. Nếu sai, hãy gợi ý tên mới và viết 1 câu thông báo ngắn. Nếu đúng, để rỗng.\n  \n  BẮT BUỘC trả về ĐÚNG định dạng JSON sau, không có text nào khác:\n  {\n    \"tags\": [\"#tag1\", \"#tag2\"],\n    \"suggestedName\": \"Tên chuẩn (nếu cần đổi)\",\n    \"message\": \"Thông báo (ví dụ: File về toán học nhưng đặt tên physic, bạn có muốn đổi thành math.pdf không?)\"\n  }`;\n\n  // Giả mã gọi API OpenAI/Gemini (Cần thay bằng hàm gọi API thực tế của dự án)\n  // const response = await llmClient.generateText(prompt);\n  // const parsedJSON = JSON.parse(response);\n  \n  // Trả về mock data cho ví dụ\n  return {\n    tags: [\"#university\", \"#software\"],\n    suggestedName: \"\", \n    message: \"\"\n  };\n};\n\n\nmodule.exports = {\n  moderateDocument,\n  createEmbedding,\n  toVectorLiteral,\n  answerWithContext,\n  generateFlashcardsFromChunks,\n};\n\n",
+      "BE/src/services/textExtractService.js": "const pdfParse = require(\"pdf-parse\");\nconst mammoth = require(\"mammoth\");\n\n/**\n * Extract readable text from an uploaded file.\n *\n * This function expects Multer memoryStorage,\n * meaning uploaded file must have file.buffer.\n */\nasync function extractTextFromFile(file) {\n  if (!file) {\n    throw new Error(\"Missing uploaded file.\");\n  }\n\n  if (!file.buffer) {\n    throw new Error(\n      \"Missing file buffer. Please make sure multer is using memoryStorage.\"\n    );\n  }\n\n  const mimeType = file.mimetype;\n  const originalName = file.originalname || \"\";\n\n  // PDF\n  if (\n    mimeType === \"application/pdf\" ||\n    originalName.toLowerCase().endsWith(\".pdf\")\n  ) {\n    const result = await pdfParse(file.buffer);\n    return cleanExtractedText(result.text || \"\");\n  }\n\n  // DOCX\n  if (\n    mimeType ===\n      \"application/vnd.openxmlformats-officedocument.wordprocessingml.document\" ||\n    originalName.toLowerCase().endsWith(\".docx\")\n  ) {\n    const result = await mammoth.extractRawText({\n      buffer: file.buffer,\n    });\n\n    return cleanExtractedText(result.value || \"\");\n  }\n\n  // TXT\n  if (\n    mimeType === \"text/plain\" ||\n    originalName.toLowerCase().endsWith(\".txt\")\n  ) {\n    return cleanExtractedText(file.buffer.toString(\"utf-8\"));\n  }\n\n  throw new Error(\n    \"Unsupported file type for text extraction. Only PDF, DOCX, and TXT are supported.\"\n  );\n}\n\n/**\n * Clean extracted text by normalizing whitespace.\n * This helps improve text quality for AI processing.\n */\nfunction cleanExtractedText(text) {\n  return String(text || \"\")\n    .replace(/\\r\\n/g, \"\\n\")\n    .replace(/\\r/g, \"\\n\")\n    .replace(/\\n{3,}/g, \"\\n\\n\")\n    .replace(/[ \\t]+/g, \" \")\n    .trim();\n}\n\n/**\n * Split text into chunks with overlap.\n */\nfunction splitTextIntoChunks(text, chunkSize = 1200, overlap = 150) {\n  const cleanText = cleanExtractedText(text).replace(/\\s+/g, \" \");\n\n  if (!cleanText) {\n    return [];\n  }\n\n  const chunks = [];\n  let start = 0;\n\n  while (start < cleanText.length) {\n    const end = Math.min(start + chunkSize, cleanText.length);\n    const chunk = cleanText.slice(start, end).trim();\n\n    if (chunk.length > 0) {\n      chunks.push(chunk);\n    }\n\n    start += chunkSize - overlap;\n  }\n\n  return chunks;\n}\n\nmodule.exports = {\n  extractTextFromFile,\n  splitTextIntoChunks,\n};",
+      "BE/src/middleware/authMiddleware.js": "const jwt = require(\"jsonwebtoken\");\nconst supabase = require(\"../config/supabase\");\n\nasync function authMiddleware(req, res, next) {\n  try {\n    const authHeader = req.headers.authorization;\n\n    if (!authHeader || !authHeader.startsWith(\"Bearer \")) {\n      return res.status(401).json({\n        status: \"error\",\n        message: \"Missing or invalid Authorization header\",\n      });\n    }\n\n    const token = authHeader.split(\" \")[1];\n\n    const decoded = jwt.verify(token, process.env.JWT_SECRET);\n\n    const userID =\n      decoded.userId ||\n      decoded.userID ||\n      decoded.id ||\n      decoded.user_id ||\n      decoded.sub;\n\n    if (!userID) {\n      return res.status(401).json({\n        status: \"error\",\n        message: \"Token does not contain user id\",\n      });\n    }\n\n    const { data: user, error} = await supabase\n      .from(\"profiles\")\n      .select(\"id, email, username, full_name, role, status, session_id \")\n      .eq(\"id\", userID)\n      .maybeSingle();\n    \n    if (error){\n      throw error;\n    }\n\n    if (!user) {\n      return res.status(401).json({\n        status: \"error\",\n        message: \"User account no longer exists\",\n      });\n    }\n\n    if (user.status === \"DISABLED\"){\n      return res.status(403).json({\n        status: \"error\",\n        message: \"Your account has been disabled.\",\n      });\n    }\n\n    if (user.session_id && user.session_id !== decoded.session_id) {\n        return res.status(401).json({\n          status: \"error\",\n          message: \"Tài khoản của bạn đã được đăng nhập ở một thiết bị khác.\",\n          code: \"SESSION_EXPIRED\"\n        });\n    }\n\n    req.user = {\n      id: String(user.id),\n      email: user.email,\n      username: user.username,\n      full_name: user.full_name,\n      role: user.role || \"USER\",\n      status: user.status || \"ACTIVE\",\n    };\n\n    next();\n  } catch (error) {\n    return res.status(401).json({\n      status: \"error\",\n      message: \"Unauthorized\",\n      error: error.message,\n    });\n  }\n}\n\nmodule.exports = authMiddleware;",
+      "BE/src/middleware/requireAdmin.js": "function requireAdmin(req, res, next) {\n    if (!req.user || req.user.role !== \"SYSTEM_ADMIN\") {\n        return res.status(403).json({\n            status: \"error\",\n            message: \"Admin acces required.\",\n        });\n    }\n\n    next();\n}\n\nmodule.exports = requireAdmin;",
+      "FE/src/utils/api.js": "import axios from \"axios\";\n\nconst api = axios.create({\n  baseURL: import.meta.env.VITE_API_BASE_URL || \"http://localhost:5000/api\",\n});\n\napi.interceptors.request.use(\n  (config) => {\n    const token = localStorage.getItem(\"accessToken\");\n\n    config.headers = config.headers || {};\n\n    if (token) {\n      config.headers.Authorization = `Bearer ${token}`;\n    }\n\n    return config;\n  },\n  (error) => Promise.reject(error)\n);\n\n// Interceptor cho Response\napi.interceptors.response.use(\n  (response) => response,\n  (error) => {\n    if (error.response && error.response.status === 401) {\n      if (error.response.data?.code === \"SESSION_EXPIRED\") {\n        alert(\"Phiên đăng nhập đã hết hạn do tài khoản được đăng nhập ở nơi khác.\");\n        \n        // Dọn dẹp vùng nhớ\n        localStorage.removeItem(\"accessToken\");\n        localStorage.removeItem(\"user\");\n        localStorage.removeItem(\"aiStudyHubProfileName\");\n        \n        // Cưỡng chế điều hướng về trang đăng nhập\n        window.location.href = \"/login\";\n      }\n    }\n    return Promise.reject(error);\n  }\n);\n\nexport default api;",
+      "FE/src/utils/documentApi.js": "import api from \"./api\";\n\nexport async function getMyDocuments() {\n  const response = await api.get(\"/documents\");\n  return response.data.data;\n}\n\n// Đã bổ sung thêm tham số libraryId\nexport async function uploadDocuments(files, workspaceId = null, libraryId = null) {\n  const formData = new FormData();\n\n  files.forEach((file) => {\n    formData.append(\"files\", file);\n  });\n\n  if (workspaceId) {\n    formData.append(\"workspaceId\", workspaceId);\n  }\n  \n  if (libraryId) {\n    formData.append(\"libraryId\", libraryId);\n  }\n\n  const response = await api.post(\"/documents/upload\", formData);\n\n  return response.data.data;\n}\n\nexport async function downloadDocument(documentId) {\n  const response = await api.get(`/documents/${documentId}/download`);\n  return response.data.data;\n}\n\nexport async function deleteDocument(documentId) {\n  const response = await api.delete(`/documents/${documentId}`);\n  return response.data;\n}",
+      "FE/src/utils/workspaceApi.js": "import api from \"./api\";\n\nexport const getWorkspaces = () =>\n  api.get(\"/workspaces\").then((res) => res.data.data);\n\nexport const createWorkspace = (payload) =>\n  api.post(\"/workspaces\", payload).then((res) => res.data.data);\n\nexport const getWorkspace = (workspaceId) =>\n  api.get(`/workspaces/${workspaceId}`).then((res) => res.data.data);\n\nexport const getWorkspaceMembers = (workspaceId) =>\n  api.get(`/workspaces/${workspaceId}/members`).then((res) => res.data.data);\n\nexport const searchWorkspaceUsers = (workspaceId, q) =>\n  api.get(`/workspaces/${workspaceId}/users/search`, { params: { q } })\n    .then((res) => res.data.data);\n\nexport const addWorkspaceMember = (workspaceId, payload) =>\n  api.post(`/workspaces/${workspaceId}/members`, payload)\n    .then((res) => res.data.data);\n",
+      "FE/src/utils/aiApi.js": "import api from \"./api\";\n\nexport async function chatWithDocument(documentId, question) {\n  const response = await api.post(\"/ai/chat\", {\n    documentId,\n    question,\n  });\n\n  return response.data.data;\n}\n",
+      "FE/src/utils/adminApi.js": "import api from \"./api\";\n\nexport async function getAdminDashboard() {\n  const response = await api.get(\"/admin/dashboard\");\n  return response.data.data;\n}\n\nexport async function getModerationDocuments() {\n  const response = await api.get(\"/admin/moderation\");\n  return response.data.data;\n}\n\nexport async function reviewDocument(documentId, decision, reason) {\n  const response = await api.patch(`/admin/moderation/${documentId}`, {\n    decision,\n    reason,\n  });\n\n  return response.data.data;\n}\n\nexport async function getAdminUsers(search = \"\") {\n  const response = await api.get(\"/admin/users\", {\n    params: search ? { search } : {},\n  });\n\n  return response.data.data;\n}\n\nexport async function updateUserStatus(userId, status, reason = \"\") {\n  const response = await api.patch(`/admin/users/${userId}/status`, {\n    status,\n    reason,\n  });\n\n  return response.data.data;\n}\n\nexport async function getActivityLogs() {\n  const response = await api.get(\"/admin/logs\");\n  return response.data.data;\n}\n\nexport async function getUsageStats() {\n  const response = await api.get(\"/admin/usage\");\n  return response.data.data;\n}"
+    }
+  }
+}

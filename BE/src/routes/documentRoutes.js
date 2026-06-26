@@ -8,6 +8,7 @@ const {
     uploadDocuments,
     downloadDocument,
     deleteDocument,
+    createLibrary,
 } = require("../controllers/documentController");
 
 const router = express.Router();
@@ -41,6 +42,8 @@ router.post(
     upload.array("files", 10),
     uploadDocuments
 );
+
+router.post("/libraries", authMiddleware, createLibrary);
 
 router.get("/:documentId/download", authMiddleware, downloadDocument);
 
