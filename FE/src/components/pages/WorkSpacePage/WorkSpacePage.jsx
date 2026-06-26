@@ -24,6 +24,64 @@ function getInviteErrorMessage(error) {
   return backendMessage || "Cannot search users right now.";
 }
 
+function normalizeWorkspaceRole(role) {
+  const value = String(role || "").trim().toLowerCase();
+
+  if (value.includes("admin") || value.includes("manager") || value.includes("owner")) {
+    return "admin";
+  }
+
+  if (value.includes("editor")) {
+    return "editor";
+  }
+
+  return "viewer";
+}
+
+function normalizeIdentity(value) {
+  return String(value || "").trim().toLowerCase();
+}
+
+function getStoredUserProfile() {
+  try {
+    return JSON.parse(localStorage.getItem("user") || "null");
+  } catch (error) {
+    console.error("Cannot read current user profile:", error);
+    return null;
+  }
+}
+
+function getWorkspaceMemberRole(member) {
+  return (
+    member?.role ||
+    member?.workspaceRole ||
+    member?.workspace_role ||
+    member?.permission ||
+    member?.memberRole ||
+    member?.pivot?.role ||
+    ""
+  );
+}
+
+function getWorkspaceMemberIdentities(member) {
+  return [
+    member?.email,
+    member?.username,
+    member?.full_name,
+    member?.fullName,
+    member?.name,
+    member?.displayName,
+    member?.user?.email,
+    member?.user?.username,
+    member?.user?.full_name,
+    member?.user?.fullName,
+    member?.user?.name,
+    member?.user?.displayName,
+  ]
+    .map(normalizeIdentity)
+    .filter(Boolean);
+}
+
 function WorkSpacePage() {
   const WORKSPACE_NAME_MAX_LENGTH = 20;
 
@@ -170,6 +228,83 @@ const [isSubtaskPriorityOpen, setIsSubtaskPriorityOpen] = useState(false);
     localStorage.getItem("aiStudyHubProfileName") ||
     workspace?.owner ||
     "dangkhoabi456";
+
+  const storedUser = useMemo(() => getStoredUserProfile(), []);
+
+  const currentUserIdentifiers = useMemo(
+    () =>
+      [
+        profileName,
+        storedUser?.email,
+        storedUser?.username,
+        storedUser?.full_name,
+        storedUser?.fullName,
+        storedUser?.name,
+        storedUser?.displayName,
+        storedUser?.user?.email,
+        storedUser?.user?.username,
+        storedUser?.user?.full_name,
+        storedUser?.user?.fullName,
+        storedUser?.user?.name,
+        storedUser?.user?.displayName,
+      ]
+        .map(normalizeIdentity)
+        .filter(Boolean),
+    [profileName, storedUser],
+  );
+
+  const currentWorkspaceMember = useMemo(
+    () =>
+      backendMembers.find((member) =>
+        getWorkspaceMemberIdentities(member).some((identity) =>
+          currentUserIdentifiers.includes(identity),
+        ),
+      ),
+    [backendMembers, currentUserIdentifiers],
+  );
+
+  const isWorkspaceOwner = useMemo(() => {
+    const workspaceOwnerIdentifiers = [
+      workspace?.owner,
+      workspace?.ownerName,
+      workspace?.ownerEmail,
+      workspace?.createdBy,
+      workspace?.creator,
+      workspace?.user?.email,
+      workspace?.user?.username,
+    ]
+      .map(normalizeIdentity)
+      .filter(Boolean);
+
+    return workspaceOwnerIdentifiers.some((identity) =>
+      currentUserIdentifiers.includes(identity),
+    );
+  }, [currentUserIdentifiers, workspace]);
+
+  const currentWorkspaceRole = normalizeWorkspaceRole(
+    getWorkspaceMemberRole(currentWorkspaceMember) ||
+      workspace?.currentUserRole ||
+      workspace?.role ||
+      workspace?.memberRole ||
+      (isWorkspaceOwner || backendMembers.length === 0 ? "Admin" : "Viewer"),
+  );
+
+  const canManageTopics =
+    currentWorkspaceRole === "editor" || currentWorkspaceRole === "admin";
+  const canManageWorkspace = currentWorkspaceRole === "admin";
+
+  useEffect(() => {
+    const tabIsAllowed =
+      activeTab === "discussion" ||
+      activeTab === "messages" ||
+      (activeTab === "study" && canManageTopics) ||
+      ((activeTab === "members" || activeTab === "settings") &&
+        canManageWorkspace);
+
+    if (!tabIsAllowed) {
+      setActiveTab("discussion");
+    }
+  }, [activeTab, canManageTopics, canManageWorkspace]);
 
   const [chatMessages, setChatMessages] = useState([
     {
@@ -388,8 +523,24 @@ const workspaceStorageUsedBytes = discussionStorageUsedBytes;
     setDiscussionTopics(nextTopics);
   }
 
+  function requireTopicPermission(actionLabel) {
+    if (canManageTopics) return true;
+
+    alert(`Only workspace editors and admins can ${actionLabel}.`);
+    return false;
+  }
+
+  function requireWorkspaceAdminPermission(actionLabel) {
+    if (canManageWorkspace) return true;
+
+    alert(`Only workspace admins can ${actionLabel}.`);
+    return false;
+  }
+
   function handleCreateTopic(e) {
   e.preventDefault();
+
+  if (!requireTopicPermission("create or edit topics")) return;
 
   if (topicTitle.trim() === "") {
     alert("Please enter topic title");
@@ -452,6 +603,7 @@ const workspaceStorageUsedBytes = discussionStorageUsedBytes;
 
 function handleDeleteTopicFile(fileId) {
   if (!selectedTopic) return;
+  if (!requireTopicPermission("delete topic files")) return;
 
   const savedFile = (selectedTopic.files || []).find(
     (file) => file.id === fileId,
@@ -494,6 +646,10 @@ function handleDeleteTopicFile(fileId) {
     const selectedFiles = Array.from(e.target.files);
 
     if (selectedFiles.length === 0 || !selectedTopic) return;
+    if (!requireTopicPermission("upload topic files")) {
+      e.target.value = "";
+      return;
+    }
 
     const selectedFilesSize = selectedFiles.reduce(
       (total, file) => total + file.size,
@@ -552,6 +708,7 @@ e.target.value = "";
   e.preventDefault();
 
   if (!selectedTopic) return;
+  if (!requireTopicPermission("edit topic content")) return;
 
   const nextTopics = discussionTopics.map((topic) => {
     if (topic.id !== selectedTopic.id) return topic;
@@ -591,6 +748,8 @@ e.target.value = "";
 }
 
 function handleUpdateTopicField(field, value) {
+  if (!requireTopicPermission("edit topic properties")) return;
+
   const previousStatus = selectedTopic?.status;
 
   updateSelectedTopic((topic) => ({
@@ -611,6 +770,8 @@ function handleUpdateTopicField(field, value) {
 }
 
 function handleUpdateTopicDeadlineMode(value) {
+  if (!requireTopicPermission("edit topic deadline")) return;
+
   updateSelectedTopic((topic) => ({
     ...topic,
     dateMode: value,
@@ -620,6 +781,8 @@ function handleUpdateTopicDeadlineMode(value) {
 }
 
 function handleUpdateTopicDate(field, value) {
+  if (!requireTopicPermission("edit topic deadline")) return;
+
   updateSelectedTopic((topic) => ({
     ...topic,
     dateMode: "deadline",
@@ -629,6 +792,8 @@ function handleUpdateTopicDate(field, value) {
 
 function handleAddTopicComment(e) {
   e.preventDefault();
+
+  if (!requireTopicPermission("comment on topics")) return;
 
   if (topicCommentInput.trim() === "") return;
 
@@ -650,6 +815,8 @@ function handleAddTopicComment(e) {
 
 function handleAddTopicSubtask(e) {
   e.preventDefault();
+
+  if (!requireTopicPermission("create subtasks")) return;
 
   if (topicSubtaskInput.trim() === "") return;
 
@@ -693,6 +860,8 @@ function handleCancelSubtask() {
 }
 
 function handleToggleSubtask(subtaskId) {
+  if (!requireTopicPermission("update subtasks")) return;
+
   updateSelectedTopic((topic) => ({
     ...topic,
     subtasks: (topic.subtasks || []).map((subtask) =>
@@ -704,6 +873,8 @@ function handleToggleSubtask(subtaskId) {
 }
 
 function handleDeleteSubtask(subtaskId) {
+  if (!requireTopicPermission("delete subtasks")) return;
+
   updateSelectedTopic((topic) => ({
     ...topic,
     subtasks: (topic.subtasks || []).filter(
@@ -721,6 +892,8 @@ function getSubtaskPriorityIcon(priority) {
 }
 
   function handleOpenInviteModal() {
+    if (!requireWorkspaceAdminPermission("manage workspace members")) return;
+
     setIsInviteModalOpen(true);
   }
 
@@ -745,6 +918,10 @@ function getSubtaskPriorityIcon(priority) {
   }
 
   async function handleSearchInviteMember() {
+    if (!requireWorkspaceAdminPermission("search and invite workspace members")) {
+      return;
+    }
+
     const query = inviteQuery.trim().replace(/^@+/, "");
 
     if (query.length < 2) {
@@ -773,6 +950,8 @@ function getSubtaskPriorityIcon(priority) {
   }
 
   async function handleSendInvite() {
+    if (!requireWorkspaceAdminPermission("add workspace members")) return;
+
     if (inviteStatus !== "found" || !selectedUserId) return;
 
     try {
@@ -858,6 +1037,8 @@ function getSubtaskPriorityIcon(priority) {
   function handleRenameWorkspace(e) {
     e.preventDefault();
 
+    if (!requireWorkspaceAdminPermission("rename this workspace")) return;
+
     const rawName = workspaceNameInput;
     const trimmedName = rawName.trim();
 
@@ -887,6 +1068,8 @@ function getSubtaskPriorityIcon(priority) {
   }
 
   function handleDeleteWorkspace() {
+    if (!requireWorkspaceAdminPermission("delete this workspace")) return;
+
     const isConfirmed = window.confirm(
       "Are you sure you want to delete this workspace?",
     );
@@ -1078,6 +1261,16 @@ function getSubtaskPriorityIcon(priority) {
   }
 
   function renderMembersTab() {
+    if (!canManageWorkspace) {
+      return (
+        <section className="workspace_permission_empty">
+          <i className="ti-lock"></i>
+          <h2>Admin access only</h2>
+          <p>Only workspace admins can manage members and invitations.</p>
+        </section>
+      );
+    }
+
     const workspaceMembers = [
       {
         name: "TrongBVD",
@@ -1362,15 +1555,18 @@ const filteredDiscussionTopics = discussionTopics.filter((topic) => {
 <section className="workspace_topic_info_panel">
   <button
     type="button"
-    className="workspace_topic_info_item editable"
-    onClick={() => setEditingTopicField("type")}
+    className={`workspace_topic_info_item ${
+      canManageTopics ? "editable" : "read_only"
+    }`}
+    onClick={() => canManageTopics && setEditingTopicField("type")}
+    disabled={!canManageTopics}
   >
     <span>
       <i className="ti-bookmark-alt"></i>
       Type
     </span>
 
-    {editingTopicField === "type" ? (
+    {canManageTopics && editingTopicField === "type" ? (
       <select
         value={selectedTopic.type || "Question"}
         onClick={(e) => e.stopPropagation()}
@@ -1393,15 +1589,18 @@ const filteredDiscussionTopics = discussionTopics.filter((topic) => {
 
   <button
     type="button"
-    className="workspace_topic_info_item editable"
-    onClick={() => setEditingTopicField("status")}
+    className={`workspace_topic_info_item ${
+      canManageTopics ? "editable" : "read_only"
+    }`}
+    onClick={() => canManageTopics && setEditingTopicField("status")}
+    disabled={!canManageTopics}
   >
     <span>
       <i className="ti-target"></i>
       Status
     </span>
 
-    {editingTopicField === "status" ? (
+    {canManageTopics && editingTopicField === "status" ? (
       <select
         value={selectedTopic.status || "Open"}
         onClick={(e) => e.stopPropagation()}
@@ -1424,15 +1623,18 @@ const filteredDiscussionTopics = discussionTopics.filter((topic) => {
 
   <button
     type="button"
-    className="workspace_topic_info_item editable"
-    onClick={() => setEditingTopicField("priority")}
+    className={`workspace_topic_info_item ${
+      canManageTopics ? "editable" : "read_only"
+    }`}
+    onClick={() => canManageTopics && setEditingTopicField("priority")}
+    disabled={!canManageTopics}
   >
     <span>
       <i className="ti-flag-alt"></i>
       Priority
     </span>
 
-    {editingTopicField === "priority" ? (
+    {canManageTopics && editingTopicField === "priority" ? (
       <select
         value={selectedTopic.priority || "Normal"}
         onClick={(e) => e.stopPropagation()}
@@ -1455,15 +1657,18 @@ const filteredDiscussionTopics = discussionTopics.filter((topic) => {
 
   <button
     type="button"
-    className="workspace_topic_info_item editable deadline"
-    onClick={() => setEditingTopicField("deadline")}
+    className={`workspace_topic_info_item deadline ${
+      canManageTopics ? "editable" : "read_only"
+    }`}
+    onClick={() => canManageTopics && setEditingTopicField("deadline")}
+    disabled={!canManageTopics}
   >
     <span>
       <i className="ti-calendar"></i>
       Deadline
     </span>
 
-    {editingTopicField === "deadline" ? (
+    {canManageTopics && editingTopicField === "deadline" ? (
       <div
         className="workspace_topic_deadline_editor"
         onClick={(e) => e.stopPropagation()}
@@ -1518,11 +1723,18 @@ const filteredDiscussionTopics = discussionTopics.filter((topic) => {
             value={topicContent}
             onChange={(e) => setTopicContent(e.target.value)}
             placeholder="Add topic description, information, note, or wiki..."
+            readOnly={!canManageTopics}
           />
 
-          <div className="workspace_clickup_description_actions">
-            <button type="submit">Save update</button>
-          </div>
+          {canManageTopics ? (
+            <div className="workspace_clickup_description_actions">
+              <button type="submit">Save update</button>
+            </div>
+          ) : (
+            <p className="workspace_permission_hint">
+              Viewer mode: you can read topics and use the Message tab.
+            </p>
+          )}
         </form>
 
         <section className="workspace_clickup_section">
@@ -1541,6 +1753,7 @@ const filteredDiscussionTopics = discussionTopics.filter((topic) => {
 </div>
   </div>
 
+  {canManageTopics ? (
   <form
     className={`workspace_clickup_subtask_form ${
       isSubtaskEditing ? "editing" : ""
@@ -1726,6 +1939,11 @@ const filteredDiscussionTopics = discussionTopics.filter((topic) => {
       </div>
     )}
   </form>
+  ) : (
+    <p className="workspace_permission_hint">
+      Only editors and admins can add or update subtasks.
+    </p>
+  )}
 
   {subtasks.length > 0 && (
     <div className="workspace_clickup_subtask_list">
@@ -1740,6 +1958,7 @@ const filteredDiscussionTopics = discussionTopics.filter((topic) => {
             type="button"
             className="workspace_clickup_subtask_check"
             onClick={() => handleToggleSubtask(subtask.id)}
+            disabled={!canManageTopics}
           >
             {subtask.completed ? <i className="ti-check"></i> : null}
           </button>
@@ -1775,13 +1994,15 @@ const filteredDiscussionTopics = discussionTopics.filter((topic) => {
             </div>
           </div>
 
-          <button
-            type="button"
-            className="workspace_clickup_subtask_delete"
-            onClick={() => handleDeleteSubtask(subtask.id)}
-          >
-            <i className="ti-trash"></i>
-          </button>
+          {canManageTopics && (
+            <button
+              type="button"
+              className="workspace_clickup_subtask_delete"
+              onClick={() => handleDeleteSubtask(subtask.id)}
+            >
+              <i className="ti-trash"></i>
+            </button>
+          )}
         </article>
       ))}
     </div>
@@ -1807,17 +2028,25 @@ const filteredDiscussionTopics = discussionTopics.filter((topic) => {
         <i className="ti-menu-alt"></i>
       </button>
 
-      <label title="Upload file">
-        <i className="ti-plus"></i>
-        <input type="file" multiple onChange={handleTopicFileChange} />
-      </label>
+      {canManageTopics && (
+        <label title="Upload file">
+          <i className="ti-plus"></i>
+          <input type="file" multiple onChange={handleTopicFileChange} />
+        </label>
+      )}
     </div>
   </div>
 
-  <label className="workspace_clickup_drop_zone">
-    Drop your files here to <span>upload</span>
-    <input type="file" multiple onChange={handleTopicFileChange} />
-  </label>
+  {canManageTopics ? (
+    <label className="workspace_clickup_drop_zone">
+      Drop your files here to <span>upload</span>
+      <input type="file" multiple onChange={handleTopicFileChange} />
+    </label>
+  ) : (
+    <p className="workspace_permission_hint">
+      Only editors and admins can upload attachments to topics.
+    </p>
+  )}
 
   {relatedFiles.length === 0 ? (
     <div className="workspace_clickup_attachment_empty">
@@ -1844,14 +2073,16 @@ const filteredDiscussionTopics = discussionTopics.filter((topic) => {
     {profileName.slice(0, 1).toUpperCase()}
   </span>
 
-  <button
-    type="button"
-    className="workspace_clickup_attachment_delete"
-    onClick={() => handleDeleteTopicFile(file.id)}
-    title="Delete file"
-  >
-    <i className="ti-trash"></i>
-  </button>
+  {canManageTopics && (
+    <button
+      type="button"
+      className="workspace_clickup_attachment_delete"
+      onClick={() => handleDeleteTopicFile(file.id)}
+      title="Delete file"
+    >
+      <i className="ti-trash"></i>
+    </button>
+  )}
 </div>
           </div>
         </article>
@@ -1912,26 +2143,32 @@ const filteredDiscussionTopics = discussionTopics.filter((topic) => {
           )}
         </section>
 
-        <form
-          className="workspace_clickup_comment_form"
-          onSubmit={handleAddTopicComment}
-        >
-          <textarea
-            value={topicCommentInput}
-            onChange={(e) => setTopicCommentInput(e.target.value)}
-            placeholder="Write a comment..."
-          />
+        {canManageTopics ? (
+          <form
+            className="workspace_clickup_comment_form"
+            onSubmit={handleAddTopicComment}
+          >
+            <textarea
+              value={topicCommentInput}
+              onChange={(e) => setTopicCommentInput(e.target.value)}
+              placeholder="Write a comment..."
+            />
 
-          <div>
-            <button type="button">
-              <i className="ti-plus"></i>
-            </button>
+            <div>
+              <button type="button">
+                <i className="ti-plus"></i>
+              </button>
 
-            <button type="submit">
-              <i className="ti-control-play"></i>
-            </button>
-          </div>
-        </form>
+              <button type="submit">
+                <i className="ti-control-play"></i>
+              </button>
+            </div>
+          </form>
+        ) : (
+          <p className="workspace_permission_hint">
+            Use the Message tab to chat with this workspace.
+          </p>
+        )}
       </aside>
     </section>
   );
@@ -1949,14 +2186,21 @@ const filteredDiscussionTopics = discussionTopics.filter((topic) => {
             </p>
           </div>
 
-          <button
-            type="button"
-            className="new_discussion_topic_btn"
-            onClick={() => setIsTopicFormOpen(true)}
-          >
-            <i className="ti-plus"></i>
-            New Topic
-          </button>
+          {canManageTopics ? (
+            <button
+              type="button"
+              className="new_discussion_topic_btn"
+              onClick={() => setIsTopicFormOpen(true)}
+            >
+              <i className="ti-plus"></i>
+              New Topic
+            </button>
+          ) : (
+            <span className="workspace_permission_pill">
+              <i className="ti-eye"></i>
+              Viewer mode
+            </span>
+          )}
         </div>
 
         <div className="discussion_filter_row">
@@ -2011,13 +2255,19 @@ const filteredDiscussionTopics = discussionTopics.filter((topic) => {
               Start the first topic so members can ask questions, share notes,
               and exchange study materials.
             </p>
-            <button type="button" onClick={() => setIsTopicFormOpen(true)}>
-              Create first topic
-            </button>
+            {canManageTopics ? (
+              <button type="button" onClick={() => setIsTopicFormOpen(true)}>
+                Create first topic
+              </button>
+            ) : (
+              <span className="workspace_permission_pill">
+                Editors and admins can create topics
+              </span>
+            )}
           </section>
         ) : null}
 
-        {isTopicFormOpen && (
+        {isTopicFormOpen && canManageTopics && (
           <div className="discussion_topic_modal_overlay">
             <form
               className="discussion_create_card discussion_topic_modal_card"
@@ -2496,6 +2746,16 @@ const filteredDiscussionTopics = discussionTopics.filter((topic) => {
   }
 
   function renderSettingsTab() {
+    if (!canManageWorkspace) {
+      return (
+        <section className="workspace_permission_empty">
+          <i className="ti-lock"></i>
+          <h2>Admin access only</h2>
+          <p>Only workspace admins can change workspace settings.</p>
+        </section>
+      );
+    }
+
     return (
       <section className="workspace_settings_tab">
         <header className="workspace_settings_header">
@@ -2814,29 +3074,35 @@ const filteredDiscussionTopics = discussionTopics.filter((topic) => {
           Message
         </button>
 
-        <button
-          className={activeTab === "study" ? "active" : ""}
-          onClick={() => setActiveTab("study")}
-        >
-          <i className="ti-book"></i>
-          Study
-        </button>
+        {canManageTopics && (
+          <button
+            className={activeTab === "study" ? "active" : ""}
+            onClick={() => setActiveTab("study")}
+          >
+            <i className="ti-book"></i>
+            Study
+          </button>
+        )}
 
-        <button
-          className={activeTab === "members" ? "active" : ""}
-          onClick={() => setActiveTab("members")}
-        >
-          <i className="ti-user"></i>
-          Member
-        </button>
+        {canManageWorkspace && (
+          <>
+            <button
+              className={activeTab === "members" ? "active" : ""}
+              onClick={() => setActiveTab("members")}
+            >
+              <i className="ti-user"></i>
+              Member
+            </button>
 
-        <button
-          className={activeTab === "settings" ? "active" : ""}
-          onClick={() => setActiveTab("settings")}
-        >
-          <i className="ti-settings"></i>
-          Setting
-        </button>
+            <button
+              className={activeTab === "settings" ? "active" : ""}
+              onClick={() => setActiveTab("settings")}
+            >
+              <i className="ti-settings"></i>
+              Setting
+            </button>
+          </>
+        )}
       </nav>
 
       {activeTab === "messages" && renderMessagesTab()}

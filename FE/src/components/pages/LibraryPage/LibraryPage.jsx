@@ -66,11 +66,6 @@ function LibraryPage() {
     setLibraryNameMessage("");
   }
   function getInitialLibraryData() {
-<<<<<<< HEAD
-    const savedLibraries = JSON.parse(
-      localStorage.getItem("aiStudyHubLibraries") || "[]",
-    );
-=======
   const routeLibrary = location.state?.library;
 
   if (routeLibrary?.id) {
@@ -85,7 +80,6 @@ function LibraryPage() {
   const savedLibraries = JSON.parse(
     localStorage.getItem("aiStudyHubLibraries") || "[]",
   );
->>>>>>> ca0e61cf86d9a5e18df1751a0d79eb809d27ecca
 
     const matchedLibrary = savedLibraries.find(
       (library) => library.id === libraryId,
@@ -134,6 +128,9 @@ function LibraryPage() {
   const [libraryName, setLibraryName] = useState(
     () => getInitialLibraryData().name,
   );
+  const [libraryDescription, setLibraryDescription] = useState(
+    () => getInitialLibraryData().description || "",
+  );
   useEffect(() => {
     if (!libraryData?.id) return;
 
@@ -144,6 +141,10 @@ function LibraryPage() {
     const recentLibrary = {
       id: libraryData.id,
       name: libraryName || libraryData.name || "Untitled Library",
+      description:
+        libraryDescription ||
+        libraryData.description ||
+        "This library helps students manage learning resources, upload documents, and use AI to summarize or ask questions from files.",
       documents: Number(libraryData.documents) || 0,
       icon: libraryData.icon || "ti-archive",
       updatedAt: libraryData.updatedAt || "Updated just now",
@@ -157,22 +158,6 @@ function LibraryPage() {
       ...currentRecentLibraries.filter((item) => item.id !== libraryData.id),
     ].slice(0, 2);
 
-<<<<<<< HEAD
-    localStorage.setItem(
-      "aiStudyHubRecentLibraries",
-      JSON.stringify(nextRecentLibraries)
-    );
-  }, [
-    libraryData?.id,
-    libraryData?.name,
-    libraryData?.documents,
-    libraryData?.icon,
-    libraryData?.updatedAt,
-    libraryData?.stars,
-    libraryData?.isStarred,
-    libraryName,
-  ]);
-=======
   if (isGuest) return;
 
   localStorage.setItem(
@@ -190,7 +175,6 @@ libraryData?.isStarred,
   libraryName,
   isGuest,
 ]);
->>>>>>> ca0e61cf86d9a5e18df1751a0d79eb809d27ecca
   const [libraryVisibility, setLibraryVisibility] = useState(
     () => getInitialLibraryData().visibility || "public",
   );
@@ -245,6 +229,7 @@ libraryData?.isStarred,
       library: {
         ...libraryData,
         name: libraryName.trim() || libraryData.name,
+        description: libraryDescription.trim() || libraryData.description,
         visibility: libraryVisibility,
         shareOnProfile,
         stars,
@@ -461,6 +446,7 @@ libraryData?.isStarred,
     const updatedLibrary = {
       ...libraryData,
       name: libraryName.trim() || libraryData.name,
+      description: libraryDescription.trim() || libraryData.description,
       visibility: libraryVisibility,
       shareOnProfile: shareOnProfile,
       documents: nextDocumentCount,
@@ -910,6 +896,7 @@ libraryData?.isStarred,
     const updatedLibrary = {
       ...libraryData,
       name: trimmedLibraryName,
+      description: libraryDescription.trim(),
       visibility: libraryVisibility,
       shareOnProfile: shareOnProfile,
       documents: countUploadedFiles(libraryItems),
@@ -937,6 +924,7 @@ libraryData?.isStarred,
 
     setLibraryData(updatedLibrary);
     setLibraryName(trimmedLibraryName);
+    setLibraryDescription(updatedLibrary.description);
     setLibraryNameMessage("Library settings saved successfully.");
   }
   function handleDeleteLibrary() {
@@ -1161,7 +1149,6 @@ libraryData?.isStarred,
                   {stars > 0 && <span className="star_count">{stars}</span>}
                 </button>
 
-<<<<<<< HEAD
               <label className="upload_btn">
                 <i className="ti-upload"></i>
                 Upload
@@ -1173,15 +1160,7 @@ libraryData?.isStarred,
                 />
               </label>
             </div>
-=======
-                <label className="upload_btn">
-                  <i className="ti-upload"></i>
-                  Upload
-                  <input type="file" multiple onChange={handleUploadFile} />
-                </label>
-              </div>
             )}
->>>>>>> ca0e61cf86d9a5e18df1751a0d79eb809d27ecca
           </div>
         </section>
 
@@ -1239,7 +1218,6 @@ libraryData?.isStarred,
                           New folder
                         </button>
 
-<<<<<<< HEAD
                       <label className="documents_upload_btn">
                         <i className="ti-upload"></i>
                         Upload file
@@ -1251,15 +1229,7 @@ libraryData?.isStarred,
                         />
                       </label>
                     </div>
-=======
-                        <label className="documents_upload_btn">
-                          <i className="ti-upload"></i>
-                          Upload file
-                          <input type="file" multiple onChange={handleUploadFile} />
-                        </label>
-                      </div>
                     )}
->>>>>>> ca0e61cf86d9a5e18df1751a0d79eb809d27ecca
                   </div>
                 </div>
 
@@ -1317,7 +1287,6 @@ libraryData?.isStarred,
                     <div className="empty_state_icon">
                       <i className="ti-folder"></i>
                     </div>
-<<<<<<< HEAD
                     <h3>{currentFolder ? "This folder is empty" : "Your library is empty"}</h3>
                     <p>Add your first document to start building this study library.</p>
                     <label className="empty_state_action">
@@ -1330,21 +1299,6 @@ libraryData?.isStarred,
                         onChange={handleUploadFile}
                       />
                     </label>
-=======
-                    <h3>{currentFolder ? "This folder is empty" : isGuest ? "No public files yet" : "Your library is empty"}</h3>
-                    <p>
-                      {isGuest
-                        ? "This public library does not have shared files available."
-                        : "Add your first document to start building this study library."}
-                    </p>
-                    {!isGuest && (
-                      <label className="empty_state_action">
-                        <i className="ti-upload"></i>
-                        Upload document
-                        <input type="file" multiple onChange={handleUploadFile} />
-                      </label>
-                    )}
->>>>>>> ca0e61cf86d9a5e18df1751a0d79eb809d27ecca
                   </div>
                 ) : documentSearch && filteredStorageItemsCount === 0 ? (
                   <div className="empty_state_card">
@@ -1352,7 +1306,6 @@ libraryData?.isStarred,
                       <i className="ti-search"></i>
                     </div>
                     <h3>No documents found</h3>
-<<<<<<< HEAD
                     <p>Try another keyword or upload a new document.</p>
                     <label className="empty_state_action">
                       <i className="ti-upload"></i>
@@ -1364,20 +1317,6 @@ libraryData?.isStarred,
                         onChange={handleUploadFile}
                       />
                     </label>
-=======
-                    <p>
-                      {isGuest
-                        ? "Try another keyword."
-                        : "Try another keyword or upload a new document."}
-                    </p>
-                    {!isGuest && (
-                      <label className="empty_state_action">
-                        <i className="ti-upload"></i>
-                        Upload document
-                        <input type="file" multiple onChange={handleUploadFile} />
-                      </label>
-                    )}
->>>>>>> ca0e61cf86d9a5e18df1751a0d79eb809d27ecca
                   </div>
                 ) : filteredStorageItemsCount > 0 ? (
                   <section className="documents_table_card storage_table_card">
@@ -1450,7 +1389,6 @@ libraryData?.isStarred,
                             >
                               <i className="ti-folder"></i>
                             </button>
-<<<<<<< HEAD
 
                             <button
                               type="button"
@@ -1468,110 +1406,68 @@ libraryData?.isStarred,
                             >
                               <i className="ti-trash"></i>
                             </button>
-=======
-                            {!isGuest && (
-                              <button
-                                type="button"
-                                className="delete_document_btn"
-                                title="Delete folder"
-                                onClick={(event) =>
-                                  handleDeleteFolder(folder, event)
-                                }
-                              >
-                                <i className="ti-trash"></i>
-                              </button>
-                            )}
->>>>>>> ca0e61cf86d9a5e18df1751a0d79eb809d27ecca
                           </div>
                         </div>
                       ))}
 
                       {filteredDocuments.map((document) => (
-                        <div
-                          className="documents_table_row"
-                          key={document.id || `${document.name}-${document.uploadedTime || ""}`}
-                        >
-                          <div className="document_file_name">
-                            <div className="document_icon_shell">
-                              <i className={getFileIcon(document.name)}></i>
-                            </div>
+  <div
+    className="documents_table_row"
+    key={document.id || `${document.name}-${document.uploadedTime || ""}`}
+  >
+    <div className="document_file_name">
+      <div className="document_icon_shell">
+        <i className={getFileIcon(document.name)}></i>
+      </div>
 
-                            <div className="document_name_with_tags">
-                              <span>{document.name}</span>
+      <div className="document_name_with_tags">
+        <span>{document.name}</span>
 
-<<<<<<< HEAD
-                              {document.hashtags && document.hashtags.length > 0 && (
-                                <div className="document_hashtags">
-                                  {document.hashtags.map((tag) => (
-                                    <small key={tag}>{tag}</small>
-                                  ))}
-                                </div>
-=======
-                            <div className="document_uploaded">
-                              <strong>
-                                {document.uploadedTime ||
-                                  document.note.split("·")[1]?.trim() ||
-                                  "Recently"}
-                              </strong>
-                              <span>by {document.uploadedBy || "dangkhoabi456"}</span>
-                            </div>
+        {document.hashtags?.length > 0 && (
+          <div className="document_tags">
+            {document.hashtags.map((tag) => (
+              <small key={tag}>{tag}</small>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
 
-                            <div className="document_actions">
-                              <button
-                                type="button"
-                                title="Download"
-                                onClick={() => handleDownloadDocument(document)}
-                              >
-                                <i className="ti-download"></i>
-                              </button>
+    <div className="document_size">
+      {document.size || document.note?.split("·")[0]?.trim() || "Unknown"}
+    </div>
 
-                              {!isGuest && (
-                                <button
-                                  type="button"
-                                  className="delete_document_btn"
-                                  title="Delete"
-                                  onClick={() => handleDeleteDocument(document)}
-                                >
-                                  <i className="ti-trash"></i>
-                                </button>
->>>>>>> ca0e61cf86d9a5e18df1751a0d79eb809d27ecca
-                              )}
-                            </div>
-                          </div>
+    <div className="document_uploaded">
+      <strong>
+        {document.uploadedTime ||
+          document.note?.split("·")[1]?.trim() ||
+          "Recently"}
+      </strong>
+      <span>by {document.uploadedBy || "dangkhoabi456"}</span>
+    </div>
 
-                          <div className="document_size">
-                            {document.size || document.note.split("·")[0].trim()}
-                          </div>
+    <div className="document_actions">
+      <button
+        type="button"
+        title="Download"
+        onClick={() => handleDownloadDocument(document)}
+      >
+        <i className="ti-download"></i>
+      </button>
 
-                          <div className="document_uploaded">
-                            <strong>
-                              {document.uploadedTime ||
-                                document.note.split("·")[1]?.trim() ||
-                                "Recently"}
-                            </strong>
-                            <span>by {document.uploadedBy || "dangkhoabi456"}</span>
-                          </div>
-
-                          <div className="document_actions">
-                            <button
-                              type="button"
-                              title="Download"
-                              onClick={() => handleDownloadDocument(document)}
-                            >
-                              <i className="ti-download"></i>
-                            </button>
-
-                            <button
-                              type="button"
-                              className="delete_document_btn"
-                              title="Delete"
-                              onClick={() => handleDeleteDocument(document)}
-                            >
-                              <i className="ti-trash"></i>
-                            </button>
-                          </div>
-                        </div>
-                      ))}
+      {!isGuest && (
+        <button
+          type="button"
+          className="delete_document_btn"
+          title="Delete"
+          onClick={() => handleDeleteDocument(document)}
+        >
+          <i className="ti-trash"></i>
+        </button>
+      )}
+    </div>
+  </div>
+))}
                     </div>
                   </section>
                 ) : (
@@ -1825,16 +1721,24 @@ libraryData?.isStarred,
             <header className="library_readme_header">
               <div>
                 <i className="ti-book"></i>
-                <strong>Title Description</strong>
+                <strong>Description</strong>
               </div>
             </header>
 
             <div className="library_readme_content">
-              <h2>{libraryData.name}</h2>
-              <p>
-                {libraryData.description ||
-                  "This library helps students manage learning resources, upload documents, and use AI to summarize or ask questions from files."}
-              </p>
+              <textarea
+                value={libraryDescription}
+                onChange={(event) => setLibraryDescription(event.target.value)}
+                placeholder="Write a short description for this library..."
+                aria-label="Library description"
+              />
+
+              <div className="library_description_actions">
+                <small>{libraryDescription.length} characters</small>
+                <button type="button" onClick={handleSaveSettings}>
+                  Save description
+                </button>
+              </div>
             </div>
           </section>
         )}

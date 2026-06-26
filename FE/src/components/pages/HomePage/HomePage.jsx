@@ -12,7 +12,6 @@ function readStorageList(key) {
   }
 }
 
-<<<<<<< HEAD
 function getWorkspaceId(workspace) {
   return workspace?.id || workspace?._id || workspace?.workspaceId || "";
 }
@@ -66,7 +65,8 @@ function getSyncedRecentWorkspaces(workspaces, storedRecentWorkspaces) {
   return workspaces
     .map((workspace) => normalizeWorkspace(workspace))
     .filter(Boolean);
-=======
+}
+    
 function getStoredUserRole() {
   try {
     const user = JSON.parse(localStorage.getItem("user") || "null");
@@ -78,7 +78,6 @@ function getStoredUserRole() {
 
 function notifyGuestRegistrationRequired() {
   alert("Please register or log in with an account to create libraries and workspaces.");
->>>>>>> ca0e61cf86d9a5e18df1751a0d79eb809d27ecca
 }
 
 function HomePage() {
@@ -86,15 +85,6 @@ function HomePage() {
     localStorage.getItem("aiStudyHubProfileName") || "dangkhoabi456";
   const isGuest = getStoredUserRole() === "GUEST";
 
-<<<<<<< HEAD
-  const libraries = readStorageList("aiStudyHubLibraries");
-  const workspaces = readStorageList("aiStudyHubWorkspaces");
-  const recentLibraries = readStorageList("aiStudyHubRecentLibraries").slice(0, 2);
-  const recentWorkspaces = getSyncedRecentWorkspaces(
-    workspaces,
-    readStorageList("aiStudyHubRecentWorkspaces")
-  ).slice(0, 4);
-=======
   const libraries = isGuest ? [] : readStorageList("aiStudyHubLibraries");
   const workspaces = isGuest ? [] : readStorageList("aiStudyHubWorkspaces");
   const recentLibraries = isGuest
@@ -103,7 +93,6 @@ function HomePage() {
   const recentWorkspaces = isGuest
     ? []
     : readStorageList("aiStudyHubRecentWorkspaces").slice(0, 4);
->>>>>>> ca0e61cf86d9a5e18df1751a0d79eb809d27ecca
 
   const totalDocuments = libraries.reduce(
     (total, library) => total + Number(library.documents || 0),
@@ -131,7 +120,6 @@ function HomePage() {
     },
   ];
 
-<<<<<<< HEAD
   const quickActions = [
     {
       title: "Create workspace",
@@ -147,8 +135,6 @@ function HomePage() {
       to: "/dashboard/create-library",
     },
   ];
-=======
->>>>>>> ca0e61cf86d9a5e18df1751a0d79eb809d27ecca
 
   const latestLibrary = recentLibraries[0];
   const latestWorkspace = recentWorkspaces[0];
@@ -174,68 +160,66 @@ function HomePage() {
             </div>
 
             <div className="home_primary_actions">
-              {isGuest ? (
-                <>
-                  <button
-                    type="button"
-                    onClick={notifyGuestRegistrationRequired}
-                    className="home_btn home_btn_primary"
-                  >
-                    <i className="ti-briefcase"></i>
-                    Create workspace
-                  </button>
+  {isGuest ? (
+    <>
+      <button
+        type="button"
+        onClick={notifyGuestRegistrationRequired}
+        className="home_btn home_btn_primary"
+      >
+        <i className="ti-briefcase"></i>
+        Create workspace
+      </button>
 
-<<<<<<< HEAD
-              <Link
-                to="/dashboard/create-library"
-                state={{ from: "/dashboard/home" }}
-                className="home_btn home_btn_secondary"
-              >
-                <i className="ti-folder"></i>
-                Create library
-              </Link>
+      <button
+        type="button"
+        onClick={notifyGuestRegistrationRequired}
+        className="home_btn home_btn_secondary"
+      >
+        <i className="ti-folder"></i>
+        Create library
+      </button>
 
-              <Link
-                to="/dashboard/import-library"
-                state={{ from: "/dashboard/home" }}
-                className="home_btn home_btn_secondary"
-              >
-                <i className="ti-import"></i>
-                Import library
-              </Link>
-=======
-                  <button
-                    type="button"
-                    onClick={notifyGuestRegistrationRequired}
-                    className="home_btn home_btn_secondary"
-                  >
-                    <i className="ti-folder"></i>
-                    Create library
-                  </button>
-                </>
-              ) : (
-                <>
-                  <Link
-                    to="/dashboard/create-workspace"
-                    state={{ from: "/dashboard/home" }}
-                    className="home_btn home_btn_primary"
-                  >
-                    <i className="ti-briefcase"></i>
-                    Create workspace
-                  </Link>
+      <Link
+        to="/dashboard/import-library"
+        state={{ from: "/dashboard/home" }}
+        className="home_btn home_btn_secondary"
+      >
+        <i className="ti-import"></i>
+        Import library
+      </Link>
+    </>
+  ) : (
+    <>
+      <Link
+        to="/dashboard/create-workspace"
+        state={{ from: "/dashboard/home" }}
+        className="home_btn home_btn_primary"
+      >
+        <i className="ti-briefcase"></i>
+        Create workspace
+      </Link>
 
-                  <Link
-                    to="/dashboard/create-library"
-                    state={{ from: "/dashboard/home" }}
-                    className="home_btn home_btn_secondary"
-                  >
-                    <i className="ti-folder"></i>
-                    Create library
-                  </Link>
-                </>
-              )}
->>>>>>> ca0e61cf86d9a5e18df1751a0d79eb809d27ecca
-            </div>
+      <Link
+        to="/dashboard/create-library"
+        state={{ from: "/dashboard/home" }}
+        className="home_btn home_btn_secondary"
+      >
+        <i className="ti-folder"></i>
+        Create library
+      </Link>
+
+      <Link
+        to="/dashboard/import-library"
+        state={{ from: "/dashboard/home" }}
+        className="home_btn home_btn_secondary"
+      >
+        <i className="ti-import"></i>
+        Import library
+      </Link>
+    </>
+  )}
+</div>
           </div>
 
           <aside className="home_focus_panel" aria-label="Latest activity preview">

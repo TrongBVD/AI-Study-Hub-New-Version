@@ -4573,6 +4573,54 @@
   padding: 30px 34px 36px;
 }
 
+.library_readme_content textarea {
+  width: 100%;
+  min-height: 140px;
+  resize: vertical;
+  border: 1px solid #d8c8ad;
+  border-radius: 16px;
+  background: rgba(255, 250, 240, 0.72);
+  color: #2f2015;
+  font: inherit;
+  font-size: 15px;
+  line-height: 1.75;
+  outline: none;
+  padding: 16px 18px;
+}
+
+.library_readme_content textarea:focus {
+  border-color: #b4531a;
+  box-shadow: 0 0 0 4px rgba(180, 83, 26, 0.12);
+}
+
+.library_description_actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-top: 16px;
+}
+
+.library_description_actions small {
+  color: #735f4c;
+  font-weight: 700;
+}
+
+.library_description_actions button {
+  min-height: 42px;
+  border: 1px solid #b4531a;
+  border-radius: 14px;
+  background: #b4531a;
+  color: #ffffff;
+  cursor: pointer;
+  font-weight: 800;
+  padding: 0 18px;
+}
+
+.library_description_actions button:hover {
+  background: #923f12;
+}
+
 .library_readme_content h2 {
   margin: 0;
   padding-bottom: 14px;

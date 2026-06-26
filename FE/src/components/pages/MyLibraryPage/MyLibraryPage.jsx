@@ -1,8 +1,4 @@
-<<<<<<< HEAD
-import { useState } from "react";
-=======
 import { useEffect, useMemo, useState } from "react";
->>>>>>> ca0e61cf86d9a5e18df1751a0d79eb809d27ecca
 import { Link } from "react-router-dom";
 import { getPublicLibraries } from "../../../utils/publicApi";
 import "./MyLibraryPage.css";
@@ -116,25 +112,6 @@ function MyLibraryPage() {
             </p>
 
             <div className="library_header_actions">
-<<<<<<< HEAD
-              <Link
-                to="/dashboard/create-library"
-                state={{ from: "/dashboard/libraries" }}
-                className="create_library_btn"
-              >
-                <i className="ti-folder"></i>
-                Create library
-              </Link>
-
-              <Link
-                to="/dashboard/import-library"
-                state={{ from: "/dashboard/libraries" }}
-                className="my_library_import_btn"
-              >
-                <i className="ti-import"></i>
-                Import library
-              </Link>
-=======
               {isGuest ? (
                 <button
                   type="button"
@@ -154,7 +131,6 @@ function MyLibraryPage() {
                   Create or import library
                 </Link>
               )}
->>>>>>> ca0e61cf86d9a5e18df1751a0d79eb809d27ecca
             </div>
           </div>
 
