@@ -6,8 +6,8 @@ export async function getMyDocuments(libraryId = null) {
     params.libraryId = libraryId;
   }
   const response = await api.get("/documents", { params });
-   return response.data.data;
- }
+  return response.data.data;
+}
 
 // Đã bổ sung thêm tham số libraryId
 export async function uploadDocuments(files, workspaceId = null, libraryId = null) {

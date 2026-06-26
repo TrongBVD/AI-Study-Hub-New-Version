@@ -8,6 +8,7 @@ import {
   downloadDocument,
   deleteDocument,
 } from "../../../utils/documentApi";
+import { getAccessToken, isTokenValid } from "../../../utils/authToken";
 import {
   downloadPublicDocument,
   getPublicLibrary,
@@ -531,6 +532,7 @@ function LibraryPage() {
     return {
       id: document.id,
       type: "file",
+      libraryId: document.library_id,
       name: document.title || "Untitled document",
       note: `${formatFileSize(document.file_size_bytes || 0)} · Uploaded`,
       size: formatFileSize(document.file_size_bytes || 0),
@@ -573,6 +575,13 @@ function LibraryPage() {
         );
         return;
       }
+      const activeLibraryId = String(libraryData.id || libraryId || "");
+      const accessToken = getAccessToken();
+
+      if (!isTokenValid(accessToken)) {
+        return;
+      }
+
       const backendDocuments = await getMyDocuments(libraryData.id || libraryId);
 
       setLibraryItems((currentItems) => {
@@ -593,10 +602,27 @@ function LibraryPage() {
             }
             : mappedItem;
         });
+        const backendItemIds = new Set(
+          backendItems.map((item) => String(item.id)),
+        );
+        const legacySavedBackendItems = Array.from(savedBackendItems.values())
+          .filter((item) => !backendItemIds.has(String(item.id)))
+          .filter((item) => {
+            if (!item.libraryId) return true;
+            return String(item.libraryId) === activeLibraryId;
+          })
+          .map((item) => ({
+            ...item,
+            libraryId: item.libraryId || activeLibraryId,
+          }));
         const localItems = currentItems.filter(
           (item) => !item.isBackendFile,
         );
-        const nextItems = [...localItems, ...backendItems];
+        const nextItems = [
+          ...localItems,
+          ...legacySavedBackendItems,
+          ...backendItems,
+        ];
 
         syncLibraryDocumentCount(nextItems);
 
@@ -604,6 +630,10 @@ function LibraryPage() {
       });
     } catch (error) {
       console.error("Cannot load documents:", error);
+      if (!isGuest && error?.response?.status === 401) {
+        return;
+      }
+
       alert(
         isGuest
           ? "Cannot load this public library."
