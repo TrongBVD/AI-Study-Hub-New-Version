@@ -1,5 +1,13 @@
 import { Navigate, useLocation } from "react-router-dom";
 
+const GUEST_ALLOWED_PATHS = [
+  "/dashboard",
+  "/dashboard/home",
+  "/dashboard/libraries",
+  "/dashboard/search-user",
+  "/dashboard/profile",
+];
+
 function getStoredUser() {
   try {
     const rawUser = localStorage.getItem("user");
@@ -14,10 +22,18 @@ function getStoredUser() {
   }
 }
 
+function isGuestAllowedPath(pathname) {
+  return GUEST_ALLOWED_PATHS.some(
+    (allowedPath) =>
+      pathname === allowedPath || pathname.startsWith(`${allowedPath}/`),
+  );
+}
+
 function ProtectedRoute({ children, allowedRoles }) {
   const location = useLocation();
   const token = localStorage.getItem("accessToken");
   const user = getStoredUser();
+  const role = String(user?.role || "").toUpperCase();
 
   // Not logged in
   if (!token) {
@@ -32,6 +48,10 @@ function ProtectedRoute({ children, allowedRoles }) {
 
   // Logged in, but does not have required role
   if (allowedRoles && !allowedRoles.includes(user?.role)) {
+    return <Navigate to="/dashboard/home" replace />;
+  }
+
+  if (role === "GUEST" && !isGuestAllowedPath(location.pathname)) {
     return <Navigate to="/dashboard/home" replace />;
   }
 
