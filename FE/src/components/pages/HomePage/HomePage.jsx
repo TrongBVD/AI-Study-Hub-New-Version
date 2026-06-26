@@ -65,49 +65,6 @@ function HomePage() {
     },
   ];
 
-  const quickActions = isGuest
-    ? [
-        {
-          title: "Create workspace",
-          description: "Register to open private rooms for files and team discussion.",
-          icon: "ti-briefcase",
-          requiresAccount: true,
-          primary: true,
-        },
-        {
-          title: "Create library",
-          description: "Register to build your own collection of study materials.",
-          icon: "ti-folder",
-          requiresAccount: true,
-        },
-        {
-          title: "Browse public libraries",
-          description: "View public collections and shared files from StudyHub users.",
-          icon: "ti-archive",
-          to: "/dashboard/libraries",
-        },
-      ]
-    : [
-        {
-          title: "Create workspace",
-          description: "Open a private room for topics, files and team discussion.",
-          icon: "ti-briefcase",
-          to: "/dashboard/create-workspace",
-          primary: true,
-        },
-        {
-          title: "Create library",
-          description: "Build a clean collection for documents and study materials.",
-          icon: "ti-folder",
-          to: "/dashboard/create-library",
-        },
-        {
-          title: "Open AI Chat",
-          description: "Ask questions and continue your learning flow.",
-          icon: "ti-comments",
-          to: "/dashboard/ai-chat",
-        },
-      ];
 
   const latestLibrary = recentLibraries[0];
   const latestWorkspace = recentWorkspaces[0];
@@ -354,45 +311,29 @@ function HomePage() {
           </aside>
         </section>
 
-        <section className="home_action_grid" aria-label="Quick actions">
-          {quickActions.map((action) => {
-            const className = action.primary
-              ? "quick_action_card quick_action_card_primary"
-              : "quick_action_card";
-            const content = (
-              <>
-                <i className={action.icon}></i>
-                <div>
-                  <h3>{action.title}</h3>
-                  <p>{action.description}</p>
-                </div>
-                <span className="quick_action_arrow">
-                  <i className="ti-arrow-right"></i>
-                </span>
-              </>
-            );
-
-            return action.requiresAccount ? (
-              <button
-                type="button"
-                className={className}
-                onClick={notifyGuestRegistrationRequired}
-                key={action.title}
-              >
-                {content}
-              </button>
-            ) : (
-              <Link
-                to={action.to}
-                state={action.to.includes("create") ? { from: "/dashboard/home" } : undefined}
-                className={className}
-                key={action.title}
-              >
-                {content}
-              </Link>
-            );
-          })}
-        </section>
+        {/* <section className="home_action_grid" aria-label="Quick actions">
+          {quickActions.map((action) => (
+            <Link
+              to={action.to}
+              state={action.to.includes("create") ? { from: "/dashboard/home" } : undefined}
+              className={
+                action.primary
+                  ? "quick_action_card quick_action_card_primary"
+                  : "quick_action_card"
+              }
+              key={action.title}
+            >
+              <i className={action.icon}></i>
+              <div>
+                <h3>{action.title}</h3>
+                <p>{action.description}</p>
+              </div>
+              <span className="quick_action_arrow">
+                <i className="ti-arrow-right"></i>
+              </span>
+            </Link>
+          ))}
+        </section> */}
       </section>
     </main>
   );
