@@ -26,6 +26,9 @@ api.interceptors.response.use(
     if (error.response && error.response.status === 401) {
       if (error.response.data?.code === "SESSION_EXPIRED") {
         alert("Phiên đăng nhập đã hết hạn do tài khoản được đăng nhập ở nơi khác.");
+        } else {
+          alert("Phiên đăng nhập đã hết hạn hoặc không hợp lệ. Vui lòng đăng nhập lại.");
+        }
         
         // Dọn dẹp vùng nhớ
         localStorage.removeItem("accessToken");
