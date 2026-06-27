@@ -23,13 +23,21 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response && error.response.status === 401) {
-      if (error.response.data?.code === "SESSION_EXPIRED") {
-        alert("Phiên đăng nhập đã hết hạn do tài khoản được đăng nhập ở nơi khác.");
+    if (error.response && error.response.status === 401) {const url = error.config?.url || "";
+      const isAuthAttempt =
+        url.includes("/auth/login") ||
+        url.includes("/auth/verify-otp") ||
+        url.includes("/auth/verify-reset-otp") ||
+        url.includes("/auth/complete-setup") ||
+        url.includes("/auth/google");
+
+      if (!isAuthAttempt) {
+        if (error.response.data?.code === "SESSION_EXPIRED") {
+          alert("Phiên đăng nhập đã hết hạn do tài khoản được đăng nhập ở nơi khác.");
         } else {
           alert("Phiên đăng nhập đã hết hạn hoặc không hợp lệ. Vui lòng đăng nhập lại.");
         }
-        
+
         // Dọn dẹp vùng nhớ
         localStorage.removeItem("accessToken");
         localStorage.removeItem("user");
