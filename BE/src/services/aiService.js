@@ -246,36 +246,66 @@ ${content}
 
 // src/services/aiService.js
 
-exports.generateTagsAndName = async (extractedText, originalName) => {
-  // Chỉ lấy khoảng 1000 ký tự đầu tiên để tiết kiệm token
-  const sampleText = extractedText.substring(0, 1000);
+async function generateTagsAndName(extractedText, originalName) {
+  const sampleText = String(extractedText || "").slice(0, 1000);
 
-  const prompt = `Bạn là hệ thống phân loại tài liệu. 
-  Tên file gốc: "${originalName}"
-  Nội dung trích xuất: "${sampleText}"
-  
-  Nhiệm vụ:
-  1. Gợi ý 1-3 tags mô tả nội dung (dạng danh từ, ví dụ: #math, #grade12).
-  2. Kiểm tra tên file gốc có sai chính tả hoặc sai nội dung không. Nếu sai, hãy gợi ý tên mới và viết 1 câu thông báo ngắn. Nếu đúng, để rỗng.
-  
-  BẮT BUỘC trả về ĐÚNG định dạng JSON sau, không có text nào khác:
-  {
-    "tags": ["#tag1", "#tag2"],
-    "suggestedName": "Tên chuẩn (nếu cần đổi)",
-    "message": "Thông báo (ví dụ: File về toán học nhưng đặt tên physic, bạn có muốn đổi thành math.pdf không?)"
-  }`;
+  const prompt = `
+You are an AI assistant for a university learning platform.
 
-  // Giả mã gọi API OpenAI/Gemini (Cần thay bằng hàm gọi API thực tế của dự án)
-  // const response = await llmClient.generateText(prompt);
-  // const parsedJSON = JSON.parse(response);
-  
-  // Trả về mock data cho ví dụ
-  return {
-    tags: ["#university", "#software"],
-    suggestedName: "", 
-    message: ""
-  };
-};
+Analyze the uploaded document.
+
+Original file name:
+"${originalName}"
+
+Document content:
+"""
+${sampleText}
+"""
+
+Tasks:
+1. Generate exactly 3 relevant tags.
+2. If the file name contains spelling mistakes or does not match the document content, suggest a better file name.
+3. If a new file name is suggested, also write a short, user-friendly message explaining why.
+4. If the original file name is already appropriate, leave both suggestedName and message as empty strings.
+
+Return ONLY valid JSON in exactly this format:
+
+{
+  "tags": ["#tag1", "#tag2","#tag3"],
+  "suggestedName": "",
+  "message": ""
+}
+`;
+
+  try {
+    const resultText = await generateText(prompt);
+    const result = extractJson(resultText);
+
+    return {
+      tags: Array.isArray(result.tags)
+        ? result.tags
+            .filter((tag) => typeof tag === "string")
+            .slice(0, 3)
+        : [],
+      suggestedName:
+        typeof result.suggestedName === "string"
+          ? result.suggestedName.trim()
+          : "",
+      message:
+        typeof result.message === "string"
+          ? result.message.trim()
+          : "",
+    };
+  } catch (err) {
+    console.error("generateTagsAndName error:", err);
+
+    return {
+      tags: [],
+      suggestedName: "",
+      message: "",
+    };
+  }
+}
 
 
 module.exports = {
@@ -284,5 +314,6 @@ module.exports = {
   toVectorLiteral,
   answerWithContext,
   generateFlashcardsFromChunks,
+  generateTagsAndName
 };
 
