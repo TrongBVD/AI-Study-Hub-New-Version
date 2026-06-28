@@ -11,6 +11,7 @@ const {
   moderateDocument,
   createEmbedding,
   toVectorLiteral,
+  generateTagsAndName
 } = require("../services/aiService");
 
 const BUCKET = process.env.SUPABASE_DOCUMENT_BUCKET || "documents";
@@ -40,7 +41,7 @@ async function processDocumentWithAI(file, documentId) {
           ai_reject_reason: { reason: "Could not extract enough readable text from this file." },
         })
         .eq("id", documentId);
-
+        //file rỗng hoặc ít hơn 20 kí tự
       return { status: "REJECTED", reason: "Could not extract enough readable text", chunkCount: 0 };
     }
 
@@ -60,11 +61,10 @@ async function processDocumentWithAI(file, documentId) {
     // ==============================================================================
     let aiTagsAndName = null;
     try {
-      if (generateTagsAndName) {
+
         aiTagsAndName = await generateTagsAndName(extractedText, file.originalname);
-      }
-    } catch (tagError) {
-      console.warn("Lỗi khi AI generate tags, bỏ qua bước này:", tagError);
+    } catch(tagError){
+      console.warn("Generate tags failed:", tagError);
     }
 
     // Nếu AI sinh ra tags, tiến hành lưu vào DB

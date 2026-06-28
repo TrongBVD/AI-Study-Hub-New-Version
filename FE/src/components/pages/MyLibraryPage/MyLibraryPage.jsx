@@ -27,13 +27,16 @@ function getStoredUserRole() {
 }
 
 function notifyGuestRegistrationRequired() {
-  alert("Please register or log in with an account to create libraries and workspaces.");
+  alert(
+    "Please register or log in with an account to create libraries and workspaces.",
+  );
 }
 
 function MyLibraryPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [publicLibraries, setPublicLibraries] = useState([]);
-  const [isLoadingPublicLibraries, setIsLoadingPublicLibraries] = useState(false);
+  const [isLoadingPublicLibraries, setIsLoadingPublicLibraries] =
+    useState(false);
   const isGuest = getStoredUserRole() === "GUEST";
   const savedLibraries = useMemo(() => getSavedLibraries(), []);
   const libraries = isGuest ? publicLibraries : savedLibraries;
@@ -103,7 +106,11 @@ function MyLibraryPage() {
               {isGuest ? "Public library catalog" : "Library command center"}
             </span>
 
-            <h1>{isGuest ? "Public academic collections" : "My academic collections"}</h1>
+            <h1>
+              {isGuest
+                ? "Public academic collections"
+                : "My academic collections"}
+            </h1>
 
             <p>
               {isGuest
@@ -140,7 +147,9 @@ function MyLibraryPage() {
             </div>
 
             <div>
-              <span>{isGuest ? "Newest public collection" : "Latest collection"}</span>
+              <span>
+                {isGuest ? "Newest public collection" : "Latest collection"}
+              </span>
               <strong>{libraryStats.latestLibraryName}</strong>
             </div>
 
@@ -176,8 +185,8 @@ function MyLibraryPage() {
               {isLoadingPublicLibraries
                 ? "Loading public libraries..."
                 : libraries.length === 0
-                ? "Create your first library to start collecting documents."
-                : `${libraries.length} libraries available in your study hub.`}
+                  ? "Create your first library to start collecting documents."
+                  : `${libraries.length} libraries available in your study hub.`}
             </p>
           </div>
 
@@ -260,14 +269,17 @@ function MyLibraryPage() {
                     </div>
 
                     <span className="collection_index">
-                      {String((safeCurrentPage - 1) * ITEMS_PER_PAGE + index + 1).padStart(2, "0")}
+                      {String(
+                        (safeCurrentPage - 1) * ITEMS_PER_PAGE + index + 1,
+                      ).padStart(2, "0")}
                     </span>
                   </div>
 
                   <div className="collection_body">
                     <h3>{libraryName}</h3>
                     <p>
-                      {documentCount} {documentCount === 1 ? "document" : "documents"}
+                      {documentCount}{" "}
+                      {documentCount === 1 ? "document" : "documents"}
                     </p>
                   </div>
 
