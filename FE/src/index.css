@@ -1,0 +1,931 @@
+body[data-theme="current"] {
+  --bg-primary: #f7f1df;
+  --bg-secondary: #faf3e1;
+  --bg-card: #fffaf0;
+  --bg-elevated: #fffdf8;
+  --text-primary: #2f2015;
+  --text-secondary: #735f4c;
+  --text-muted: #9a826b;
+  --border-color: #e2d3bc;
+  --accent-color: #b4531a;
+  --accent-hover: #923f12;
+  --accent-soft: #ead7bd;
+  --sidebar-bg: #3b2a1a;
+  --sidebar-text: #faf3e1;
+  --sidebar-active-bg: #4a3425;
+  --sidebar-active-text: #fffaf0;
+  --input-bg: #fffdf8;
+  --input-border: #cfbda1;
+  --button-bg: #b4531a;
+  --button-text: #ffffff;
+  --button-hover-bg: #923f12;
+  --danger-color: #b42318;
+  --danger-bg: #f8d7da;
+  --success-color: #238636;
+  --warning-color: #b4531a;
+  --shadow-soft: 0 18px 46px rgba(59, 38, 24, 0.12);
+  --hero-bg: linear-gradient(135deg, #3b2a1a 0%, #7a3b1d 62%, #b4531a 100%);
+  --hero-card-bg: rgba(255, 250, 240, 0.78);
+  --hero-text: #fffaf0;
+  --hero-muted: #efcbb0;
+  --table-row-bg: #fffaf0;
+  --table-border: #e2d3bc;
+  --badge-bg: #ead7bd;
+  --badge-text: #3b2a1a;
+  --overlay-bg: rgba(47, 32, 21, 0.55);
+  --focus-ring: rgba(180, 83, 26, 0.22);
+  --hero-preview-bg: rgba(255, 250, 240, 0.13);
+  --hero-preview-border: rgba(255, 250, 240, 0.18);
+  --hero-preview-icon-bg: #efcbb0;
+  --hero-preview-icon-text: #3b2a1a;
+  --hero-blob-gradient: radial-gradient(
+    circle,
+    rgba(245, 226, 196, 0.28) 0%,
+    rgba(232, 205, 169, 0.16) 38%,
+    rgba(232, 205, 169, 0.04) 68%,
+    transparent 100%
+  );
+  --hero-blob-opacity: 0.48;
+  --hero-blob-blur: 10px;
+  --collection-card-bg: linear-gradient(135deg, #fffaf0 0%, #f2e9d6 100%);
+  --collection-card-hover-bg: linear-gradient(135deg, #fffdf8 0%, #ead7bd 100%);
+  --collection-action-bg: #fffaf0;
+  --collection-action-text: #3b2a1a;
+}
+
+body[data-theme="white"] {
+  --bg-primary: #f8fafc;
+  --bg-secondary: #f1f5f9;
+  --bg-card: #ffffff;
+  --bg-elevated: #ffffff;
+  --text-primary: #0f172a;
+  --text-secondary: #334155;
+  --text-muted: #64748b;
+  --border-color: #e2e8f0;
+  --accent-color: #2563eb;
+  --accent-hover: #1d4ed8;
+  --accent-soft: #eff6ff;
+  --sidebar-bg: #ffffff;
+  --sidebar-text: #334155;
+  --sidebar-active-bg: #eff6ff;
+  --sidebar-active-text: #2563eb;
+  --input-bg: #ffffff;
+  --input-border: #cbd5e1;
+  --button-bg: #2563eb;
+  --button-text: #ffffff;
+  --button-hover-bg: #1d4ed8;
+  --danger-color: #dc2626;
+  --danger-bg: #fee2e2;
+  --success-color: #16a34a;
+  --warning-color: #d97706;
+  --shadow-soft: 0 18px 45px rgba(15, 23, 42, 0.08);
+  --hero-bg: linear-gradient(135deg, #ffffff 0%, #f8fafc 65%, #eef4ff 100%);
+  --hero-card-bg: #ffffff;
+  --hero-text: #0f172a;
+  --hero-muted: #334155;
+  --table-row-bg: #ffffff;
+  --table-border: #e2e8f0;
+  --badge-bg: #eff6ff;
+  --badge-text: #2563eb;
+  --overlay-bg: rgba(15, 23, 42, 0.48);
+  --focus-ring: rgba(37, 99, 235, 0.22);
+  --hero-preview-bg: #ffffff;
+  --hero-preview-border: #e2e8f0;
+  --hero-preview-icon-bg: #eff6ff;
+  --hero-preview-icon-text: #2563eb;
+  --collection-card-bg: #ffffff;
+  --collection-card-hover-bg: #ffffff;
+  --collection-action-bg: #eff6ff;
+  --collection-action-text: #2563eb;
+}
+
+body[data-theme="black"] {
+  --bg-primary: #0f0f0f;
+  --bg-secondary: #141414;
+  --bg-card: #1a1a1a;
+  --bg-elevated: #222222;
+  --text-primary: #f5f5f5;
+  --text-secondary: #d4d4d4;
+  --text-muted: #a3a3a3;
+  --border-color: #333333;
+  --accent-color: #f97316;
+  --accent-hover: #fb923c;
+  --accent-soft: rgba(249, 115, 22, 0.14);
+  --sidebar-bg: #1a1a1a;
+  --sidebar-text: #d4d4d4;
+  --sidebar-active-bg: #2d2d2d;
+  --sidebar-active-text: #f5f5f5;
+  --input-bg: #171717;
+  --input-border: #3a3a3a;
+  --button-bg: #f97316;
+  --button-text: #111111;
+  --button-hover-bg: #fb923c;
+  --danger-color: #f87171;
+  --danger-bg: #3f1d1d;
+  --success-color: #4ade80;
+  --warning-color: #facc15;
+  --shadow-soft: 0 18px 45px rgba(0, 0, 0, 0.35);
+  --hero-bg: #1a1a1a;
+  --hero-card-bg: #1f1f1f;
+  --hero-text: #f5f5f5;
+  --hero-muted: #d4d4d4;
+  --table-row-bg: #1a1a1a;
+  --table-border: #3a3a3a;
+  --badge-bg: rgba(249, 115, 22, 0.16);
+  --badge-text: #fb923c;
+  --overlay-bg: rgba(0, 0, 0, 0.66);
+  --focus-ring: rgba(249, 115, 22, 0.24);
+  --hero-preview-bg: #1f1f1f;
+  --hero-preview-border: #333333;
+  --hero-preview-icon-bg: rgba(249, 115, 22, 0.16);
+  --hero-preview-icon-text: #fb923c;
+  --collection-card-bg: #1a1a1a;
+  --collection-card-hover-bg: #222222;
+  --collection-action-bg: rgba(249, 115, 22, 0.16);
+  --collection-action-text: #fb923c;
+}
+
+body {
+  background: var(--bg-primary, #f7f1df);
+  color: var(--text-primary, #2f2015);
+}
+
+body[data-theme="current"] .home_command_panel::after,
+body[data-theme="current"] .my_library_hero::after,
+body[data-theme="current"] .workspace_command_hero::after,
+body[data-theme="current"] .create_library_hero::after,
+body[data-theme="current"] .library_command_panel::after {
+  background: var(--hero-blob-gradient);
+  opacity: var(--hero-blob-opacity);
+  filter: blur(var(--hero-blob-blur));
+  box-shadow: none;
+}
+
+body[data-theme="current"] .create_workspace_header::after {
+  background: var(--hero-blob-gradient);
+  border: 0;
+  box-shadow: none;
+  opacity: var(--hero-blob-opacity);
+  filter: blur(var(--hero-blob-blur));
+}
+
+body[data-theme="current"] .focus_card_dark,
+body[data-theme="current"] .focus_card_light,
+body[data-theme="current"] .recent_library_card,
+body[data-theme="current"] .import_library_hero,
+body[data-theme="current"] .library_command_panel,
+body[data-theme="current"] .landing_ai_preview,
+body[data-theme="current"] .landing_cta {
+  background-image:
+    var(--hero-blob-gradient),
+    linear-gradient(135deg, var(--bg-card), var(--bg-secondary));
+  background-blend-mode: normal;
+}
+
+body[data-theme="current"] .focus_card_dark,
+body[data-theme="current"] .landing_ai_preview,
+body[data-theme="current"] .landing_cta {
+  background-image:
+    var(--hero-blob-gradient),
+    linear-gradient(135deg, var(--sidebar-active-bg), var(--sidebar-bg));
+}
+
+body[data-theme="current"] .import_library_hero {
+  background:
+    var(--hero-blob-gradient),
+    linear-gradient(135deg, var(--sidebar-bg), #563820);
+}
+
+body[data-theme="white"],
+body[data-theme="black"] {
+  color-scheme: light;
+}
+
+body[data-theme="black"] {
+  color-scheme: dark;
+}
+
+body[data-theme="white"] input,
+body[data-theme="white"] textarea,
+body[data-theme="white"] select,
+body[data-theme="black"] input,
+body[data-theme="black"] textarea,
+body[data-theme="black"] select {
+  background: var(--input-bg);
+  border-color: var(--input-border);
+  color: var(--text-primary);
+}
+
+body[data-theme="white"] input::placeholder,
+body[data-theme="white"] textarea::placeholder,
+body[data-theme="black"] input::placeholder,
+body[data-theme="black"] textarea::placeholder {
+  color: var(--text-muted);
+}
+
+body[data-theme="white"] .top_navbar,
+body[data-theme="black"] .top_navbar {
+  background: var(--bg-card);
+  border-color: var(--border-color);
+  color: var(--text-primary);
+}
+
+body[data-theme="white"] .sidebar,
+body[data-theme="black"] .sidebar,
+body[data-theme="white"] .workspace_top_tabs,
+body[data-theme="black"] .workspace_top_tabs {
+  background: var(--sidebar-bg);
+  border-color: var(--border-color);
+  color: var(--sidebar-text);
+}
+
+body[data-theme="white"] .sidebar_link,
+body[data-theme="black"] .sidebar_link,
+body[data-theme="white"] .close_btn,
+body[data-theme="black"] .close_btn {
+  color: var(--sidebar-text);
+}
+
+body[data-theme="white"] .sidebar_link:hover,
+body[data-theme="white"] .sidebar_link.active,
+body[data-theme="black"] .sidebar_link:hover,
+body[data-theme="black"] .sidebar_link.active,
+body[data-theme="white"] .workspace_top_tabs button.active,
+body[data-theme="black"] .workspace_top_tabs button.active {
+  background: var(--sidebar-active-bg);
+  color: var(--sidebar-active-text);
+}
+
+body[data-theme="white"] .home_page,
+body[data-theme="black"] .home_page,
+body[data-theme="white"] .library_page,
+body[data-theme="black"] .library_page,
+body[data-theme="white"] .my_library_page,
+body[data-theme="black"] .my_library_page,
+body[data-theme="white"] .create_library_page,
+body[data-theme="black"] .create_library_page,
+body[data-theme="white"] .import_library_page,
+body[data-theme="black"] .import_library_page,
+body[data-theme="white"] .my_workspace_page,
+body[data-theme="black"] .my_workspace_page,
+body[data-theme="white"] .create_workspace_page,
+body[data-theme="black"] .create_workspace_page,
+body[data-theme="white"] .workspace_page,
+body[data-theme="black"] .workspace_page {
+  background: var(--hero-bg);
+  color: var(--text-primary);
+}
+
+body[data-theme="white"] .home_command_panel,
+body[data-theme="black"] .home_command_panel,
+body[data-theme="white"] .my_library_hero,
+body[data-theme="black"] .my_library_hero,
+body[data-theme="white"] .workspace_command_hero,
+body[data-theme="black"] .workspace_command_hero,
+body[data-theme="white"] .create_workspace_header,
+body[data-theme="black"] .create_workspace_header,
+body[data-theme="white"] .create_library_hero,
+body[data-theme="black"] .create_library_hero,
+body[data-theme="white"] .import_library_hero,
+body[data-theme="black"] .import_library_hero {
+  background:
+    linear-gradient(135deg, var(--bg-card), var(--bg-elevated));
+  border: 1px solid var(--border-color);
+  color: var(--hero-text);
+}
+
+body[data-theme="black"] .home_command_panel,
+body[data-theme="black"] .my_library_hero,
+body[data-theme="black"] .workspace_command_hero,
+body[data-theme="black"] .create_workspace_header,
+body[data-theme="black"] .create_library_hero,
+body[data-theme="black"] .import_library_hero {
+  background: var(--hero-bg);
+}
+
+body[data-theme="black"] .home_command_panel::after,
+body[data-theme="black"] .my_library_hero::after,
+body[data-theme="black"] .workspace_command_hero::after,
+body[data-theme="black"] .create_workspace_header::after,
+body[data-theme="black"] .create_library_hero::after,
+body[data-theme="black"] .import_library_hero::after {
+  opacity: 0;
+  background: none;
+  box-shadow: none;
+}
+
+body[data-theme="black"] .home_page,
+body[data-theme="black"] .library_page,
+body[data-theme="black"] .my_library_page,
+body[data-theme="black"] .create_library_page,
+body[data-theme="black"] .import_library_page,
+body[data-theme="black"] .my_workspace_page,
+body[data-theme="black"] .create_workspace_page,
+body[data-theme="black"] .workspace_page,
+body[data-theme="black"] .settings_page,
+body[data-theme="black"] .settings_layout {
+  background: var(--bg-primary);
+}
+
+body[data-theme="black"] .home_page::before,
+body[data-theme="black"] .my_library_page::before,
+body[data-theme="black"] .create_workspace_header::before {
+  opacity: 0.04;
+  background-image:
+    linear-gradient(var(--border-color) 1px, transparent 1px),
+    linear-gradient(90deg, var(--border-color) 1px, transparent 1px);
+}
+
+body[data-theme="black"] .focus_card_dark,
+body[data-theme="black"] .focus_card_light,
+body[data-theme="black"] .recent_library_card,
+body[data-theme="black"] .home_focus_panel,
+body[data-theme="black"] .workspace_study_main,
+body[data-theme="black"] .import_library_hero,
+body[data-theme="black"] .library_hero {
+  background: var(--bg-card);
+  border-color: var(--border-color);
+}
+
+body[data-theme="black"] .home_stat_item,
+body[data-theme="black"] .discussion_label,
+body[data-theme="black"] .discussion_topic_type span,
+body[data-theme="black"] .discussion_status_badge,
+body[data-theme="black"] .workspace_private_badge,
+body[data-theme="black"] .badge,
+body[data-theme="black"] [class*="badge"],
+body[data-theme="black"] [class*="pill"] {
+  background: var(--bg-elevated);
+  color: var(--accent-color);
+}
+
+body[data-theme="white"] .home_headline_block p,
+body[data-theme="white"] .my_library_hero p,
+body[data-theme="white"] .workspace_hero_copy p,
+body[data-theme="white"] .create_workspace_header p,
+body[data-theme="white"] .create_library_hero_content > p,
+body[data-theme="white"] .import_library_hero p,
+body[data-theme="black"] .home_headline_block p,
+body[data-theme="black"] .my_library_hero p,
+body[data-theme="black"] .workspace_hero_copy p,
+body[data-theme="black"] .create_workspace_header p,
+body[data-theme="black"] .create_library_hero_content > p,
+body[data-theme="black"] .import_library_hero p {
+  color: var(--hero-muted);
+}
+
+body[data-theme="white"] .home_headline_block h1,
+body[data-theme="white"] .my_library_hero h1,
+body[data-theme="white"] .workspace_hero_copy h1,
+body[data-theme="white"] .create_workspace_header h1,
+body[data-theme="white"] .create_library_hero h1,
+body[data-theme="white"] .import_library_hero h1,
+body[data-theme="black"] .home_headline_block h1,
+body[data-theme="black"] .my_library_hero h1,
+body[data-theme="black"] .workspace_hero_copy h1,
+body[data-theme="black"] .create_workspace_header h1,
+body[data-theme="black"] .create_library_hero h1,
+body[data-theme="black"] .import_library_hero h1 {
+  color: var(--hero-text);
+}
+
+body[data-theme="white"] .home_headline_block h1 span,
+body[data-theme="black"] .home_headline_block h1 span,
+body[data-theme="white"] .library_overline,
+body[data-theme="black"] .library_overline,
+body[data-theme="white"] .workspace_eyebrow,
+body[data-theme="black"] .workspace_eyebrow {
+  color: var(--accent-color);
+}
+
+body[data-theme="white"] .home_focus_panel,
+body[data-theme="black"] .home_focus_panel,
+body[data-theme="white"] .home_stats_strip,
+body[data-theme="black"] .home_stats_strip,
+body[data-theme="white"] .quick_action_card,
+body[data-theme="black"] .quick_action_card,
+body[data-theme="white"] .library_hero,
+body[data-theme="black"] .library_hero,
+body[data-theme="white"] .library_card,
+body[data-theme="black"] .library_card,
+body[data-theme="white"] .my_library_hero_card,
+body[data-theme="black"] .my_library_hero_card,
+body[data-theme="white"] .library_details_panel,
+body[data-theme="black"] .library_details_panel,
+body[data-theme="white"] .import_library_panel,
+body[data-theme="black"] .import_library_panel,
+body[data-theme="white"] .create_library_panel,
+body[data-theme="black"] .create_library_panel,
+body[data-theme="white"] .workspace_focus_card,
+body[data-theme="black"] .workspace_focus_card,
+body[data-theme="white"] .workspace_card,
+body[data-theme="black"] .workspace_card,
+body[data-theme="white"] .workspace_preview_card,
+body[data-theme="black"] .workspace_preview_card,
+body[data-theme="white"] .workspace_details_panel,
+body[data-theme="black"] .workspace_details_panel,
+body[data-theme="white"] .workspace_privacy_notice,
+body[data-theme="black"] .workspace_privacy_notice,
+body[data-theme="white"] .discussion_intro_row,
+body[data-theme="black"] .discussion_intro_row,
+body[data-theme="white"] .discussion_topic_card,
+body[data-theme="black"] .discussion_topic_card,
+body[data-theme="white"] .discussion_side_card,
+body[data-theme="black"] .discussion_side_card,
+body[data-theme="white"] .workspace_message_tab,
+body[data-theme="black"] .workspace_message_tab,
+body[data-theme="white"] .workspace_study_sidebar,
+body[data-theme="black"] .workspace_study_sidebar,
+body[data-theme="white"] .workspace_study_main,
+body[data-theme="black"] .workspace_study_main,
+body[data-theme="white"] .workspace_settings_card,
+body[data-theme="black"] .workspace_settings_card,
+body[data-theme="white"] .workspace_settings_header,
+body[data-theme="black"] .workspace_settings_header,
+body[data-theme="white"] .settings_panel,
+body[data-theme="black"] .settings_panel,
+body[data-theme="white"] .settings_sidebar,
+body[data-theme="black"] .settings_sidebar,
+body[data-theme="white"] .settings_theme_option,
+body[data-theme="black"] .settings_theme_option,
+body[data-theme="white"] .notification_category_card,
+body[data-theme="black"] .notification_category_card {
+  background: var(--bg-card);
+  border-color: var(--border-color);
+  color: var(--text-primary);
+}
+
+body[data-theme="white"] .settings_sidebar,
+body[data-theme="black"] .settings_sidebar {
+  background: var(--sidebar-bg);
+  color: var(--sidebar-text);
+}
+
+body[data-theme="white"] .settings_menu_group button,
+body[data-theme="black"] .settings_menu_group button {
+  background: transparent;
+  color: var(--sidebar-text);
+}
+
+body[data-theme="white"] .settings_menu_group button:hover,
+body[data-theme="white"] .settings_menu_group button.active,
+body[data-theme="black"] .settings_menu_group button:hover,
+body[data-theme="black"] .settings_menu_group button.active {
+  background: var(--sidebar-active-bg);
+  color: var(--sidebar-active-text);
+}
+
+body[data-theme="white"] .library_tabs,
+body[data-theme="black"] .library_tabs,
+body[data-theme="white"] .settings_table,
+body[data-theme="black"] .settings_table,
+body[data-theme="white"] .workspace_member_top,
+body[data-theme="black"] .workspace_member_top,
+body[data-theme="white"] .workspace_permission_empty,
+body[data-theme="black"] .workspace_permission_empty {
+  background: var(--bg-elevated);
+  border-color: var(--border-color);
+}
+
+body[data-theme="white"] .upload_btn,
+body[data-theme="black"] .upload_btn,
+body[data-theme="white"] .create_library_btn,
+body[data-theme="black"] .create_library_btn,
+body[data-theme="white"] .create_workspace_link,
+body[data-theme="black"] .create_workspace_link,
+body[data-theme="white"] .create_workspace_btn,
+body[data-theme="black"] .create_workspace_btn,
+body[data-theme="white"] .workspace_message_send_btn,
+body[data-theme="black"] .workspace_message_send_btn,
+body[data-theme="white"] .new_discussion_topic_btn,
+body[data-theme="black"] .new_discussion_topic_btn {
+  background: var(--button-bg);
+  border-color: var(--button-bg);
+  color: var(--button-text);
+}
+
+body[data-theme="white"] .upload_btn:hover,
+body[data-theme="black"] .upload_btn:hover,
+body[data-theme="white"] .create_library_btn:hover,
+body[data-theme="black"] .create_library_btn:hover,
+body[data-theme="white"] .create_workspace_link:hover,
+body[data-theme="black"] .create_workspace_link:hover,
+body[data-theme="white"] .create_workspace_btn:hover,
+body[data-theme="black"] .create_workspace_btn:hover {
+  background: var(--button-hover-bg);
+  border-color: var(--button-hover-bg);
+}
+
+body[data-theme="white"] .light_btn,
+body[data-theme="black"] .light_btn,
+body[data-theme="white"] .star_btn,
+body[data-theme="black"] .star_btn,
+body[data-theme="white"] .my_library_import_btn,
+body[data-theme="black"] .my_library_import_btn,
+body[data-theme="white"] .workspace_secondary_link,
+body[data-theme="black"] .workspace_secondary_link,
+body[data-theme="white"] .return_workspace_btn,
+body[data-theme="black"] .return_workspace_btn,
+body[data-theme="white"] .create_library_back,
+body[data-theme="black"] .create_library_back,
+body[data-theme="white"] .import_library_back,
+body[data-theme="black"] .import_library_back,
+body[data-theme="white"] .workspace_back_chip,
+body[data-theme="black"] .workspace_back_chip {
+  background: var(--bg-elevated);
+  border-color: var(--border-color);
+  color: var(--text-primary);
+}
+
+body[data-theme="white"] .workspace_message_bubble.received,
+body[data-theme="black"] .workspace_message_bubble.received,
+body[data-theme="white"] .workspace_message_file,
+body[data-theme="black"] .workspace_message_file,
+body[data-theme="white"] .workspace_message_selected_file,
+body[data-theme="black"] .workspace_message_selected_file {
+  background: var(--bg-elevated);
+  border-color: var(--border-color);
+  color: var(--text-primary);
+}
+
+body[data-theme="white"] .workspace_message_bubble.sent,
+body[data-theme="black"] .workspace_message_bubble.sent {
+  background: var(--button-bg);
+  color: var(--button-text);
+}
+
+body[data-theme="white"] .workspace_flashcard,
+body[data-theme="black"] .workspace_flashcard {
+  background: var(--bg-card);
+  border-color: var(--border-color);
+  color: var(--text-primary);
+}
+
+body[data-theme="white"] .library_page,
+body[data-theme="white"] .my_library_page,
+body[data-theme="white"] .create_library_page,
+body[data-theme="white"] .import_library_page,
+body[data-theme="white"] .my_workspace_page,
+body[data-theme="white"] .create_workspace_page,
+body[data-theme="white"] .workspace_page,
+body[data-theme="white"] .settings_page,
+body[data-theme="white"] .settings_layout {
+  background: var(--hero-bg);
+}
+
+body[data-theme="white"] .my_library_page::before,
+body[data-theme="white"] .home_page::before {
+  opacity: 0.045;
+}
+
+body[data-theme="white"] .library_hero,
+body[data-theme="white"] .my_library_hero,
+body[data-theme="white"] .create_library_hero,
+body[data-theme="white"] .import_library_hero,
+body[data-theme="white"] .workspace_command_hero,
+body[data-theme="white"] .create_workspace_header {
+  background: var(--hero-bg);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+}
+
+body[data-theme="white"] .my_library_hero::after,
+body[data-theme="white"] .workspace_command_hero::after,
+body[data-theme="white"] .create_library_hero::after,
+body[data-theme="white"] .create_workspace_header::after {
+  background: rgba(37, 99, 235, 0.08);
+}
+
+body[data-theme="white"] .library_hero h1,
+body[data-theme="white"] .my_library_hero h1,
+body[data-theme="white"] .create_library_hero h1,
+body[data-theme="white"] .import_library_hero h1,
+body[data-theme="white"] .workspace_command_hero h1,
+body[data-theme="white"] .create_workspace_header h1,
+body[data-theme="white"] .library_title h1,
+body[data-theme="white"] .workspace_board_header h2,
+body[data-theme="white"] .settings_sidebar_header h1,
+body[data-theme="white"] .settings_panel h2,
+body[data-theme="white"] .settings_panel h3 {
+  color: var(--text-primary);
+}
+
+body[data-theme="white"] .library_hero p,
+body[data-theme="white"] .my_library_hero p,
+body[data-theme="white"] .create_library_hero_content > p,
+body[data-theme="white"] .import_library_hero_content p,
+body[data-theme="white"] .workspace_hero_copy p,
+body[data-theme="white"] .create_workspace_header p,
+body[data-theme="white"] .library_body p,
+body[data-theme="white"] .workspace_body p,
+body[data-theme="white"] .workspace_board_header p,
+body[data-theme="white"] .settings_sidebar_header p,
+body[data-theme="white"] .settings_panel p {
+  color: var(--text-secondary);
+}
+
+body[data-theme="white"] .library_overline,
+body[data-theme="white"] .create_library_kicker,
+body[data-theme="white"] .import_library_kicker,
+body[data-theme="white"] .workspace_eyebrow,
+body[data-theme="white"] .settings_sidebar_mark,
+body[data-theme="white"] .workspace_top_tabs::before {
+  color: var(--accent-color);
+}
+
+body[data-theme="white"] .library_logo,
+body[data-theme="white"] .library_icon,
+body[data-theme="white"] .library_icon_cluster,
+body[data-theme="white"] .workspace_icon,
+body[data-theme="white"] .workspace_focus_icon,
+body[data-theme="white"] .workspace_preview_icon,
+body[data-theme="white"] .workspace_privacy_icon,
+body[data-theme="white"] .empty_library_icon,
+body[data-theme="white"] .empty_workspace_icon,
+body[data-theme="white"] .settings_sidebar_mark {
+  background: var(--accent-soft);
+  color: var(--accent-color);
+  box-shadow: none;
+}
+
+body[data-theme="white"] .library_card,
+body[data-theme="white"] .library_card_item,
+body[data-theme="white"] .library_details_panel,
+body[data-theme="white"] .library_detail_card,
+body[data-theme="white"] .library_storage_card,
+body[data-theme="white"] .library_file_card,
+body[data-theme="white"] .my_library_hero_card,
+body[data-theme="white"] .library_stats_grid article,
+body[data-theme="white"] .library_step_card,
+body[data-theme="white"] .create_library_steps article,
+body[data-theme="white"] .create_library_preview,
+body[data-theme="white"] .create_library_form,
+body[data-theme="white"] .import_library_steps article,
+body[data-theme="white"] .import_library_preview,
+body[data-theme="white"] .import_library_card,
+body[data-theme="white"] .workspace_focus_card,
+body[data-theme="white"] .workspace_stats_grid article,
+body[data-theme="white"] .workspace_card,
+body[data-theme="white"] .empty_workspace_state,
+body[data-theme="white"] .empty_library_state,
+body[data-theme="white"] .workspace_preview_card,
+body[data-theme="white"] .workspace_details_panel,
+body[data-theme="white"] .workspace_privacy_notice,
+body[data-theme="white"] .discussion_pinned_card,
+body[data-theme="white"] .discussion_topic_card,
+body[data-theme="white"] .discussion_side_card,
+body[data-theme="white"] .workspace_side_card,
+body[data-theme="white"] .workspace_pending_card,
+body[data-theme="white"] .workspace_member_table,
+body[data-theme="white"] .workspace_member_top,
+body[data-theme="white"] .workspace_member_sidebar,
+body[data-theme="white"] .workspace_message_tab,
+body[data-theme="white"] .workspace_study_sidebar,
+body[data-theme="white"] .workspace_study_main,
+body[data-theme="white"] .workspace_study_stats article,
+body[data-theme="white"] .workspace_settings_header,
+body[data-theme="white"] .workspace_settings_card,
+body[data-theme="white"] .workspace_clickup_detail,
+body[data-theme="white"] .workspace_clickup_activity,
+body[data-theme="white"] .workspace_clickup_attachment_card,
+body[data-theme="white"] .workspace_topic_info_item,
+body[data-theme="white"] .workspace_permission_empty,
+body[data-theme="white"] .settings_panel,
+body[data-theme="white"] .settings_empty_panel,
+body[data-theme="white"] .settings_table,
+body[data-theme="white"] .notification_category_card,
+body[data-theme="white"] .settings_theme_option {
+  background: var(--bg-card);
+  border-color: var(--border-color);
+  color: var(--text-primary);
+  box-shadow: var(--shadow-soft);
+}
+
+body[data-theme="white"] .library_tabs,
+body[data-theme="white"] .workspace_top_tabs,
+body[data-theme="white"] .workspace_permission_pill,
+body[data-theme="white"] .workspace_permission_hint,
+body[data-theme="white"] .workspace_message_selected_file,
+body[data-theme="white"] .workspace_message_file,
+body[data-theme="white"] .workspace_clickup_drop_zone,
+body[data-theme="white"] .workspace_clickup_comment_form,
+body[data-theme="white"] .workspace_clickup_activity header,
+body[data-theme="white"] .workspace_clickup_attachment_empty,
+body[data-theme="white"] .settings_table_row {
+  background: var(--bg-elevated);
+  border-color: var(--border-color);
+  color: var(--text-primary);
+}
+
+body[data-theme="white"] .library_tabs button,
+body[data-theme="white"] .workspace_top_tabs button,
+body[data-theme="white"] .settings_menu_group button,
+body[data-theme="white"] .workspace_study_controls button,
+body[data-theme="white"] .workspace_message_composer_actions label,
+body[data-theme="white"] .workspace_message_composer_actions button,
+body[data-theme="white"] .workspace_clickup_back,
+body[data-theme="white"] .workspace_clickup_activity header button,
+body[data-theme="white"] .workspace_pagination button {
+  color: var(--text-secondary);
+}
+
+body[data-theme="white"] .library_tabs button.active,
+body[data-theme="white"] .library_tabs button:hover,
+body[data-theme="white"] .workspace_top_tabs button.active,
+body[data-theme="white"] .workspace_top_tabs button:hover,
+body[data-theme="white"] .settings_menu_group button.active,
+body[data-theme="white"] .settings_menu_group button:hover,
+body[data-theme="white"] .workspace_pagination button.active {
+  background: var(--accent-soft);
+  border-color: var(--accent-color);
+  color: var(--accent-color);
+}
+
+body[data-theme="white"] .workspace_top_tabs button.active {
+  box-shadow: none;
+}
+
+body[data-theme="white"] .library_card:hover,
+body[data-theme="white"] .library_card_item:hover,
+body[data-theme="white"] .workspace_card:hover,
+body[data-theme="white"] .discussion_topic_card:hover,
+body[data-theme="white"] .workspace_clickup_attachment_card:hover {
+  background: var(--bg-card);
+  border-color: var(--accent-color);
+}
+
+body[data-theme="white"] .library_card_footer,
+body[data-theme="white"] .workspace_footer,
+body[data-theme="white"] .workspace_message_header,
+body[data-theme="white"] .workspace_message_composer,
+body[data-theme="white"] .workspace_member_table_header,
+body[data-theme="white"] .workspace_clickup_header,
+body[data-theme="white"] .workspace_clickup_subtask_header,
+body[data-theme="white"] .workspace_clickup_attachment_header {
+  border-color: var(--border-color);
+}
+
+body[data-theme="white"] .create_library_btn,
+body[data-theme="white"] .create_workspace_btn,
+body[data-theme="white"] .create_workspace_link,
+body[data-theme="white"] .import_library_submit,
+body[data-theme="white"] .upload_btn,
+body[data-theme="white"] .workspace_message_send_btn,
+body[data-theme="white"] .workspace_settings_form button,
+body[data-theme="white"] .workspace_topic_done_btn,
+body[data-theme="white"] .workspace_clickup_description_actions button,
+body[data-theme="white"] .workspace_clickup_subtask_form button,
+body[data-theme="white"] .new_discussion_topic_btn,
+body[data-theme="white"] .workspace_member_actions > button,
+body[data-theme="white"] .empty_library_action,
+body[data-theme="white"] .empty_workspace_state a {
+  background: var(--button-bg);
+  border-color: var(--button-bg);
+  color: var(--button-text);
+}
+
+body[data-theme="white"] .create_library_btn:hover:not(:disabled),
+body[data-theme="white"] .create_workspace_btn:hover:not(:disabled),
+body[data-theme="white"] .create_workspace_link:hover,
+body[data-theme="white"] .import_library_submit:hover:not(:disabled),
+body[data-theme="white"] .upload_btn:hover,
+body[data-theme="white"] .workspace_settings_form button:hover,
+body[data-theme="white"] .workspace_topic_done_btn:hover,
+body[data-theme="white"] .workspace_clickup_description_actions button:hover,
+body[data-theme="white"] .workspace_clickup_subtask_form button:hover,
+body[data-theme="white"] .empty_library_action:hover,
+body[data-theme="white"] .empty_workspace_state a:hover {
+  background: var(--button-hover-bg);
+  border-color: var(--button-hover-bg);
+  color: var(--button-text);
+}
+
+body[data-theme="white"] .my_library_import_btn,
+body[data-theme="white"] .workspace_secondary_link,
+body[data-theme="white"] .return_workspace_btn,
+body[data-theme="white"] .create_library_back,
+body[data-theme="white"] .import_library_back,
+body[data-theme="white"] .workspace_back_chip,
+body[data-theme="white"] .light_btn,
+body[data-theme="white"] .star_btn,
+body[data-theme="white"] .workspace_delete_btn {
+  background: var(--bg-card);
+  border-color: var(--border-color);
+  color: var(--text-primary);
+}
+
+body[data-theme="white"] .my_library_import_btn:hover,
+body[data-theme="white"] .workspace_secondary_link:hover,
+body[data-theme="white"] .return_workspace_btn:hover,
+body[data-theme="white"] .create_library_back:hover,
+body[data-theme="white"] .import_library_back:hover,
+body[data-theme="white"] .workspace_back_chip:hover,
+body[data-theme="white"] .light_btn:hover,
+body[data-theme="white"] .star_btn:hover {
+  background: var(--accent-soft);
+  border-color: var(--accent-color);
+  color: var(--accent-color);
+}
+
+body[data-theme="white"] .workspace_delete_btn {
+  color: var(--danger-color);
+}
+
+body[data-theme="white"] .workspace_message_bubble.received,
+body[data-theme="white"] .workspace_message_bubble.image,
+body[data-theme="white"] .workspace_message_file {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+}
+
+body[data-theme="white"] .workspace_message_bubble.sent {
+  background: var(--button-bg);
+  color: var(--button-text);
+}
+
+body[data-theme="white"] .workspace_message_time,
+body[data-theme="white"] .workspace_message_hint,
+body[data-theme="white"] .workspace_clickup_attachment_info span,
+body[data-theme="white"] .workspace_topic_info_item span,
+body[data-theme="white"] .workspace_settings_form small,
+body[data-theme="white"] .settings_theme_text small {
+  color: var(--text-muted);
+}
+
+body[data-theme="white"] .workspace_message_composer textarea,
+body[data-theme="white"] .workspace_settings_form input,
+body[data-theme="white"] .workspace_clickup_description textarea,
+body[data-theme="white"] .workspace_clickup_subtask_input_side input,
+body[data-theme="white"] .workspace_topic_info_item input,
+body[data-theme="white"] .workspace_topic_info_item select,
+body[data-theme="white"] .form_group input,
+body[data-theme="white"] .form_group textarea,
+body[data-theme="white"] .settings_field input,
+body[data-theme="white"] .settings_field select {
+  background: var(--input-bg);
+  border-color: var(--input-border);
+  color: var(--text-primary);
+}
+
+body[data-theme="white"] .workspace_message_composer textarea:focus,
+body[data-theme="white"] .workspace_settings_form input:focus,
+body[data-theme="white"] .workspace_clickup_description textarea:focus,
+body[data-theme="white"] .workspace_clickup_subtask_input_side input:focus,
+body[data-theme="white"] .form_group input:focus,
+body[data-theme="white"] .form_group textarea:focus,
+body[data-theme="white"] .settings_field input:focus,
+body[data-theme="white"] .settings_field select:focus {
+  border-color: var(--accent-color);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
+body[data-theme="white"] .settings_theme_option.active {
+  background: var(--accent-soft);
+  border-color: var(--accent-color);
+}
+
+body[data-theme="white"] table,
+body[data-theme="black"] table {
+  background: var(--bg-card);
+  color: var(--text-primary);
+}
+
+body[data-theme="white"] th,
+body[data-theme="white"] td,
+body[data-theme="black"] th,
+body[data-theme="black"] td {
+  border-color: var(--table-border);
+}
+
+body[data-theme="white"] .badge,
+body[data-theme="black"] .badge,
+body[data-theme="white"] [class*="badge"],
+body[data-theme="black"] [class*="badge"],
+body[data-theme="white"] [class*="pill"],
+body[data-theme="black"] [class*="pill"] {
+  background-color: var(--badge-bg);
+  color: var(--badge-text);
+  border-color: var(--border-color);
+}
+
+body[data-theme="white"] .settings_theme_option.active,
+body[data-theme="black"] .settings_theme_option.active {
+  background: var(--accent-soft);
+  border-color: var(--accent-color);
+  color: var(--text-primary);
+}
+
+body[data-theme="black"] .badge,
+body[data-theme="black"] [class*="badge"],
+body[data-theme="black"] [class*="pill"] {
+  background-color: var(--bg-elevated);
+  color: var(--accent-color);
+  border-color: var(--border-color);
+}
+
+body[data-theme="black"] .settings_theme_option.active {
+  background: var(--bg-elevated);
+  border-color: var(--accent-color);
+  color: var(--text-primary);
+}
