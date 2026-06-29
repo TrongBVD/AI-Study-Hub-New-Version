@@ -4,7 +4,7 @@
   justify-content: center;
   align-items: center;
   height: 100vh;
-  background-color: #f0e4d7; /* Giữ nguyên màu nền trang */
+  background-color: var(--bg-secondary); /* Giữ nguyên màu nền trang */
   margin: 0;
   font-family: 'Inter', sans-serif; /* Hoặc font hệ thống bạn đang dùng */
 }
@@ -17,9 +17,9 @@
   width: 400px; /* Kích thước chuẩn chuyên nghiệp */
   padding: 40px; /* Padding rộng rãi hơn cho thoáng */
   border-radius: 24px; /* Bo góc hiện đại hơn */
-  background-color: #fff8e7; /* Giữ nguyên màu nền form */
-  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1); /* Đổ bóng sâu và mềm hơn */
-  border: 1px solid rgba(124, 106, 88, 0.1);
+  background-color: var(--bg-card); /* Giữ nguyên màu nền form */
+  box-shadow: var(--shadow-soft); /* Đổ bóng sâu và mềm hơn */
+  border: 1px solid var(--border-color);
   box-sizing: border-box;
 }
 
@@ -32,7 +32,7 @@
   display: flex;
   align-items: center;
   padding-left: 35px;
-  color: #7c6a58; /* Đồng bộ màu nâu giống login */
+  color: var(--text-secondary); /* Đồng bộ màu nâu giống login */
   margin: 0;
 }
 
@@ -44,7 +44,7 @@
   width: 16px;
   border-radius: 50%;
   left: 0;
-  background-color: #7c6a58;
+  background-color: var(--text-secondary);
 }
 
 .register_title::after {
@@ -53,7 +53,7 @@
 
 .register_message {
   font-size: 14.5px;
-  color: #5c3a21;
+  color: var(--text-primary);
   line-height: 1.6;
   margin: 0;
   text-align: left;
@@ -61,16 +61,16 @@
 
 .register_signin {
   font-size: 14px;
-  color: #5c3a21;
+  color: var(--text-primary);
   text-align: center;
   margin: 0;
   padding-top: 20px;
-  border-top: 1px solid rgba(0, 0, 0, 0.05);
+  border-top: 1px solid var(--border-color);
 }
 
 .register_signin span {
   font-weight: 600;
-  color: #70411c;
+  color: var(--accent-hover);
   cursor: pointer;
 }
 
@@ -79,8 +79,8 @@
   width: 100%;
   padding: 14px;
   border-radius: 12px;
-  background-color: #70411c;
-  color: white;
+  background-color: var(--accent-hover);
+  color: var(--bg-card);
   border: none;
   font-size: 16px;
   font-weight: 600;
@@ -89,7 +89,7 @@
 }
 
 .register_submit:hover {
-  background-color: #42250d;
+  background-color: var(--sidebar-bg);
 }
 
 @keyframes pulse {

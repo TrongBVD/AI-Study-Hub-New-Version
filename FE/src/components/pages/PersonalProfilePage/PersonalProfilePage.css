@@ -4,8 +4,8 @@
 
 body {
   margin: 0;
-  background: #010409;
-  color: #e6edf3;
+  background: var(--bg-primary);
+  color: var(--text-secondary);
   font-family: Arial, Helvetica, sans-serif;
 }
 
@@ -22,7 +22,7 @@ body {
 
 .profile_sidebar {
 
-  color: #c9d1d9;
+  color: var(--text-muted);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -34,7 +34,7 @@ body {
   height: 360px;
   border-radius: 50%;
   overflow: hidden;
-  border: 1px solid #30363d;
+  border: 1px solid var(--bg-elevated);
   background: linear-gradient(135deg, #c084fc, #f0abfc);
   margin-bottom: 22px;
   position: relative;
@@ -56,7 +56,7 @@ body {
   position: absolute;
   inset: 0;
   background: rgba(1, 4, 9, 0.55);
-  color: #ffffff;
+  color: var(--bg-card);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -84,36 +84,36 @@ body {
   margin: 0;
   font-size: 26px;
   font-weight: 400;
-  color: #3B2A1A;
+  color: var(--sidebar-bg);
 }
 
 .edit_name_btn {
   width: 34px;
   height: 34px;
-  border: 1px solid #30363d;
+  border: 1px solid var(--bg-elevated);
   background: #161b22;
-  color: #c9d1d9;
+  color: var(--text-muted);
   border-radius: 6px;
   cursor: pointer;
 }
 
 .edit_name_btn:hover {
-  background: #21262d;
+  background: var(--bg-elevated);
 }
 
 .edit_name_box input {
   width: 100%;
   padding: 10px 12px;
-  background: #010409;
-  border: 1px solid #30363d;
-  color: #e6edf3;
+  background: var(--bg-primary);
+  border: 1px solid var(--bg-elevated);
+  color: var(--text-secondary);
   border-radius: 6px;
   outline: none;
   font-size: 16px;
 }
 
 .edit_name_box input:focus {
-  border-color: #58a6ff;
+  border-color: var(--accent-color);
 }
 
 .edit_name_actions {
@@ -125,15 +125,15 @@ body {
 .edit_name_actions button {
   padding: 7px 12px;
   border-radius: 6px;
-  border: 1px solid #30363d;
+  border: 1px solid var(--bg-elevated);
   cursor: pointer;
-  background: #21262d;
-  color: #e6edf3;
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
 }
 
 .edit_name_actions button:first-child {
-  background: #238636;
-  border-color: #238636;
+  background: var(--success-color);
+  border-color: var(--success-color);
 }
 
 .edit_profile_btn {
@@ -141,23 +141,23 @@ body {
   max-width: 300px;
   padding: 9px 14px;
   border-radius: 6px;
-  border: 1px solid #30363d;
-  background: #21262d;
-  color: #e6edf3;
+  border: 1px solid var(--bg-elevated);
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
   font-weight: 600;
   cursor: pointer;
   margin-bottom: 16px;
 }
 
 .edit_profile_btn:hover {
-  background: #30363d;
+  background: var(--bg-elevated);
 }
 
 .follow_info {
   display: flex;
   align-items: center;
   gap: 6px;
-  color: #c9d1d9;
+  color: var(--text-muted);
   font-size: 15px;
 }
 
@@ -165,7 +165,7 @@ body {
   width: 100%;
   max-width: 300px;
   height: 1px;
-  background: #30363d;
+  background: var(--bg-elevated);
   margin: 26px 0 18px;
 }
 
@@ -183,7 +183,7 @@ body {
   align-items: center;
   justify-content: center;
   font-size: 28px;
-  border: 2px solid #58a6ff;
+  border: 2px solid var(--accent-color);
 }
 
 /* Right content */
@@ -196,14 +196,14 @@ body {
   display: flex;
   align-items: center;
   gap: 8px;
-  border-bottom: 1px solid #30363d;
+  border-bottom: 1px solid var(--bg-elevated);
   margin-bottom: 28px;
 }
 
 .profile_tabs button {
   background: transparent;
   border: none;
-  color: #c9d1d9;
+  color: var(--text-muted);
   padding: 14px 10px;
   cursor: pointer;
   font-size: 15px;
@@ -211,13 +211,13 @@ body {
 }
 
 .profile_tabs button.active {
-  color: #e6edf3;
+  color: var(--text-secondary);
   border-bottom-color: #f78166;
   font-weight: 600;
 }
 
 .profile_tabs span {
-  background: #30363d;
+  background: var(--bg-elevated);
   padding: 2px 7px;
   border-radius: 999px;
   font-size: 12px;
@@ -238,13 +238,13 @@ body {
   margin: 0;
   font-size: 18px;
   font-weight: 500;
-  color: #70411c;
+  color: var(--accent-hover);
 }
 
 .libraries_header button {
   background: transparent;
   border: none;
-  color: #58a6ff;
+  color: var(--accent-color);
   cursor: pointer;
 }
 
@@ -257,10 +257,10 @@ body {
 
 .library_profile_card {
   min-height: 130px;
-  border: 1px solid #30363d;
+  border: 1px solid var(--bg-elevated);
   border-radius: 8px;
   padding: 18px;
-  background: #3B2A1A;
+  background: var(--sidebar-bg);
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -278,7 +278,7 @@ body {
 
 .library_card_title h4 {
   margin: 0;
-  color: #ffff;
+  color: var(--hero-card-bg);
   font-size: 16px;
   line-height: 1.35;
   word-break: break-word;
@@ -288,14 +288,14 @@ body {
 .library_card_title span {
   flex-shrink: 0;
   border: 1px solid #8b949e;
-  color: #c9d1d9;
+  color: var(--text-muted);
   border-radius: 999px;
   padding: 2px 8px;
   font-size: 12px;
 }
 
 .library_description {
-  color: #c9d1d9;
+  color: var(--text-muted);
   font-size: 14px;
   line-height: 1.5;
   margin: 14px 0;
@@ -305,7 +305,7 @@ body {
   display: flex;
   align-items: center;
   gap: 7px;
-  color: #c9d1d9;
+  color: var(--text-muted);
   font-size: 14px;
 }
 
@@ -352,8 +352,8 @@ body {
   min-height: 36px;
   border: none;
   border-radius: 8px;
-  background: #b4531a;
-  color: #ffffff;
+  background: var(--accent-color);
+  color: var(--bg-card);
   padding: 0 18px;
   font-size: 14px;
   font-weight: 800;
@@ -369,9 +369,9 @@ body {
 }
 
 .library_view_btn:hover {
-  background: #923f12;
+  background: var(--accent-hover);
   transform: translateY(-1px);
-  box-shadow: 0 8px 18px rgba(59, 38, 24, 0.22);
+  box-shadow: var(--shadow-soft);
 }
 
 .library_view_btn:active {
@@ -387,13 +387,13 @@ body {
   align-items: center;
   justify-content: center;
 
-  color: #b4531a;
+  color: var(--accent-color);
   font-size: 22px;
   font-weight: 800;
   text-align: center;
 
   background: rgba(242, 227, 201, 0.45);
-  border: 1px dashed #d9c6aa;
+  border: 1px dashed var(--border-color);
   border-radius: 16px;
 }
 

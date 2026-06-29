@@ -128,15 +128,15 @@ function Logo({ size = 36 }) {
       xmlns="http://www.w3.org/2000/svg"
       aria-hidden="true"
     >
-      <rect width="40" height="40" rx="10" fill="#3B2A1A" />
+      <rect width="40" height="40" rx="10" fill="var(--sidebar-bg)" />
       <path
         d="M12 14L20 10L28 14V20C28 24.4 24.4 28 20 28C15.6 28 12 24.4 12 20V14Z"
-        fill="#FAF3E1"
+        fill="var(--sidebar-text)"
       />
-      <circle cx="20" cy="19" r="3" fill="#B14E1E" />
+      <circle cx="20" cy="19" r="3" fill="var(--accent-color)" />
       <path
         d="M20 22V25"
-        stroke="#B14E1E"
+        stroke="var(--accent-color)"
         strokeWidth="1.5"
         strokeLinecap="round"
       />

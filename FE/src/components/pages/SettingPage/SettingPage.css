@@ -1,30 +1,60 @@
 .settings_page {
-  --settings-bg: #f6efdf;
-  --settings-surface: #fffaf0;
-  --settings-surface-strong: #f0e3cc;
-  --settings-line: #deceb4;
-  --settings-line-soft: #eadfc9;
-  --settings-text: #2f2015;
-  --settings-muted: #735f4c;
-  --settings-subtle: #9a826b;
-  --settings-accent: #a84d18;
-  --settings-accent-dark: #78340f;
-  --settings-dark: #3b2a1a;
+  --settings-bg: var(--bg-primary, var(--bg-primary));
+  --settings-surface: var(--bg-card);
+  --settings-surface-strong: var(--bg-secondary, var(--bg-secondary));
+  --settings-line: var(--border-color, var(--border-color));
+  --settings-line-soft: var(--border-color, var(--border-color));
+  --settings-text: var(--text-primary);
+  --settings-muted: var(--text-secondary);
+  --settings-subtle: var(--text-muted);
+  --settings-accent: var(--accent-color, var(--accent-color));
+  --settings-accent-dark: var(--button-bg, var(--accent-hover));
+  --settings-dark: var(--sidebar-bg);
 
   min-height: calc(100dvh - 74px);
   background:
-    radial-gradient(circle at 92% 2%, rgba(180, 83, 26, 0.08), transparent 26rem),
+    radial-gradient(circle at 92% 2%, var(--focus-ring), transparent 26rem),
     var(--settings-bg);
   color: var(--settings-text);
   display: grid;
   grid-template-columns: minmax(15rem, 18rem) minmax(0, 1fr);
 }
 
+body[data-theme="white"] .user_dashboard_layout .settings_sidebar {
+  background: var(--hero-card-bg);
+}
+
+body[data-theme="black"] .user_dashboard_layout .settings_sidebar {
+  background: var(--bg-secondary);
+}
+
+body[data-theme="black"] .user_dashboard_layout .settings_menu_group button {
+  color: var(--settings-muted);
+}
+
+body[data-theme="black"] .user_dashboard_layout .settings_panel,
+body[data-theme="black"] .user_dashboard_layout .settings_empty_panel {
+  background: var(--bg-card);
+}
+
+body[data-theme="black"] .user_dashboard_layout .settings_field input,
+body[data-theme="black"] .user_dashboard_layout .settings_field select {
+  background: var(--input-bg, var(--bg-secondary));
+  border-color: var(--input-border, var(--border-color));
+  color: var(--settings-text);
+}
+
+body[data-theme="white"] .user_dashboard_layout .settings_field input,
+body[data-theme="white"] .user_dashboard_layout .settings_field select {
+  background: var(--input-bg, var(--bg-card));
+  border-color: var(--input-border);
+}
+
 .settings_sidebar {
   min-height: calc(100dvh - 74px);
   max-height: calc(100dvh - 74px);
   border-right: 1px solid var(--settings-line);
-  background: rgba(255, 250, 240, 0.82);
+  background: var(--hero-card-bg);
   padding: 1.5rem 1rem 1.25rem;
   position: sticky;
   top: 74px;
@@ -50,7 +80,7 @@
   color: #f8d9bc;
   display: grid;
   place-items: center;
-  box-shadow: 0 0.5rem 1.5rem rgba(59, 42, 26, 0.16);
+  box-shadow: var(--shadow-soft);
 }
 
 .settings_sidebar_mark i {
@@ -106,7 +136,7 @@
   border: 1px solid transparent;
   border-radius: 0.7rem;
   background: transparent;
-  color: #5c4635;
+  color: var(--text-secondary);
   padding: 0.55rem 0.7rem;
   cursor: pointer;
   display: grid;
@@ -126,7 +156,7 @@
 
 .settings_menu_group button:hover {
   border-color: var(--settings-line-soft);
-  background: rgba(234, 215, 189, 0.55);
+  background: var(--accent-soft);
   color: var(--settings-text);
 }
 
@@ -137,16 +167,17 @@
 .settings_menu_group button:focus-visible,
 .settings_add_btn:focus-visible,
 .settings_switch:focus-visible,
+.settings_theme_option:focus-visible,
 .settings_color_list button:focus-visible,
 .settings_field input:focus-visible,
 .settings_field select:focus-visible,
 .notification_category_card input:focus-visible {
-  outline: 3px solid rgba(168, 77, 24, 0.24);
+  outline: 3px solid var(--focus-ring);
   outline-offset: 2px;
 }
 
 .settings_menu_group button.active {
-  border-color: #d9c4a5;
+  border-color: var(--border-color);
   background: var(--settings-surface-strong);
   color: var(--settings-text);
   box-shadow: inset 3px 0 0 var(--settings-accent);
@@ -210,7 +241,7 @@
 .settings_header_icon {
   width: 3.75rem;
   height: 3.75rem;
-  border: 1px solid #d9c4a5;
+  border: 1px solid var(--border-color);
   border-radius: 1rem;
   background:
     linear-gradient(145deg, rgba(255, 255, 255, 0.62), transparent),
@@ -218,7 +249,7 @@
   color: var(--settings-accent-dark);
   display: grid;
   place-items: center;
-  box-shadow: 0 0.75rem 1.7rem rgba(91, 61, 34, 0.1);
+  box-shadow: var(--shadow-soft);
 }
 
 .settings_header_icon i {
@@ -246,9 +277,9 @@
 }
 
 .settings_header_meta > strong {
-  border: 1px solid #d9c4a5;
+  border: 1px solid var(--border-color);
   border-radius: 0.45rem;
-  background: rgba(255, 250, 240, 0.72);
+  background: var(--hero-card-bg);
   color: var(--settings-muted);
   padding: 0.2rem 0.45rem;
   font-size: 0.66rem;
@@ -300,9 +331,9 @@
 .settings_table {
   border: 1px solid var(--settings-line);
   border-radius: 1rem;
-  background: rgba(255, 250, 240, 0.86);
+  background: var(--hero-card-bg);
   overflow: hidden;
-  box-shadow: 0 1rem 2.5rem rgba(91, 61, 34, 0.07);
+  box-shadow: var(--shadow-soft);
 }
 
 .settings_table_row {
@@ -346,12 +377,12 @@
   height: 2.8rem;
   border-radius: 0.8rem;
   background: var(--settings-accent);
-  color: #fffaf0;
+  color: var(--bg-card);
   display: grid;
   place-items: center;
   font-size: 1rem;
   font-weight: 850;
-  box-shadow: 0 0.6rem 1.2rem rgba(168, 77, 24, 0.18);
+  box-shadow: 0 0.6rem 1.2rem var(--focus-ring);
 }
 
 .settings_field {
@@ -370,9 +401,9 @@
 .settings_field select {
   width: 100%;
   height: 2.55rem;
-  border: 1px solid #cfbda1;
+  border: 1px solid var(--input-border);
   border-radius: 0.65rem;
-  background: #fffdf8;
+  background: var(--input-bg);
   color: var(--settings-text);
   outline: none;
   padding: 0 0.75rem;
@@ -386,15 +417,15 @@
 
 .settings_field input:hover,
 .settings_field select:hover {
-  border-color: #bfa989;
+  border-color: var(--border-color);
 }
 
 .settings_switch {
   width: 2.9rem;
   height: 1.6rem;
-  border: 1px solid #8f8a82;
+  border: 1px solid var(--text-muted);
   border-radius: 999px;
-  background: #9b978f;
+  background: var(--text-muted);
   padding: 0.18rem;
   cursor: pointer;
   transition:
@@ -411,9 +442,9 @@
   width: 1.1rem;
   height: 1.1rem;
   border-radius: 50%;
-  background: #fff;
+  background: var(--bg-card);
   display: block;
-  box-shadow: 0 0.15rem 0.35rem rgba(47, 32, 21, 0.25);
+  box-shadow: var(--shadow-soft);
   transition: transform 220ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
@@ -429,7 +460,7 @@
 .settings_add_btn {
   min-width: 6.4rem;
   height: 2.35rem;
-  border: 1px solid #ccb795;
+  border: 1px solid var(--border-color);
   border-radius: 0.65rem;
   background: var(--settings-surface-strong);
   color: var(--settings-text);
@@ -445,12 +476,133 @@
 }
 
 .settings_add_btn:hover {
-  border-color: #b99d75;
-  background: #e5cfad;
+  border-color: var(--border-color);
+  background: var(--accent-soft);
 }
 
 .settings_add_btn:active {
   transform: translateY(1px);
+}
+
+.settings_theme_list {
+  width: min(100%, 23rem);
+  display: grid;
+  gap: 0.6rem;
+}
+
+.settings_theme_option {
+  position: relative;
+  width: 100%;
+  border: 1px solid var(--settings-line);
+  border-radius: 0.85rem;
+  background: var(--hero-card-bg);
+  color: var(--settings-text);
+  padding: 0.75rem;
+  cursor: pointer;
+  display: grid;
+  grid-template-columns: 4rem minmax(0, 1fr);
+  gap: 0.75rem;
+  text-align: left;
+  align-items: center;
+  font: inherit;
+  transition:
+    border-color 180ms ease,
+    background-color 180ms ease,
+    box-shadow 180ms ease,
+    transform 180ms ease;
+}
+
+.settings_theme_option:hover {
+  border-color: var(--border-color);
+  transform: translateY(-1px);
+}
+
+.settings_theme_option.active {
+  border-color: var(--settings-accent);
+  background: var(--settings-surface-strong);
+  box-shadow: 0 0 0 3px var(--focus-ring);
+}
+
+.settings_theme_check {
+  position: absolute;
+  top: 0.55rem;
+  right: 0.55rem;
+  width: 1.3rem;
+  height: 1.3rem;
+  border-radius: 999px;
+  background: var(--settings-accent);
+  color: var(--bg-card);
+  display: grid;
+  place-items: center;
+  font-size: 0.68rem;
+}
+
+.settings_theme_preview {
+  height: 2.65rem;
+  border-radius: 0.7rem;
+  padding: 0.4rem;
+  display: grid;
+  align-content: center;
+  gap: 0.25rem;
+  box-shadow: inset 0 0 0 1px var(--border-color);
+}
+
+.settings_theme_preview span {
+  height: 0.32rem;
+  border-radius: 999px;
+}
+
+.settings_theme_preview span:first-child {
+  width: 55%;
+}
+
+.settings_theme_preview span:nth-child(2) {
+  width: 82%;
+}
+
+.settings_theme_preview span:last-child {
+  width: 45%;
+}
+
+.theme_current .settings_theme_preview {
+  background: var(--bg-primary);
+}
+
+.theme_current .settings_theme_preview span {
+  background: var(--sidebar-bg);
+}
+
+.theme_white .settings_theme_preview {
+  background: var(--bg-card);
+}
+
+.theme_white .settings_theme_preview span {
+  background: var(--accent-color);
+}
+
+.theme_black .settings_theme_preview {
+  background: var(--bg-secondary);
+}
+
+.theme_black .settings_theme_preview span {
+  background: var(--text-primary);
+}
+
+.settings_theme_text {
+  display: grid;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.settings_theme_text strong {
+  font-size: 0.82rem;
+  font-weight: 850;
+}
+
+.settings_theme_text small {
+  color: var(--settings-muted);
+  font-size: 0.68rem;
+  line-height: 1.35;
 }
 
 .settings_color_list {
@@ -467,7 +619,7 @@
   border: 2px solid var(--settings-surface);
   border-radius: 50%;
   cursor: pointer;
-  box-shadow: 0 0 0 1px rgba(47, 32, 21, 0.12);
+  box-shadow: 0 0 0 1px var(--border-color);
   transition:
     box-shadow 180ms ease,
     transform 180ms ease;
@@ -492,9 +644,9 @@
 .notification_category_card {
   border: 1px solid var(--settings-line);
   border-radius: 1rem;
-  background: rgba(255, 250, 240, 0.88);
+  background: var(--hero-card-bg);
   padding: 1.05rem;
-  box-shadow: 0 0.8rem 2rem rgba(91, 61, 34, 0.06);
+  box-shadow: var(--shadow-soft);
 }
 
 .notification_category_header {
@@ -540,7 +692,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  color: #493628;
+  color: var(--text-secondary);
   font-size: 0.78rem;
   font-weight: 700;
 }
@@ -553,28 +705,28 @@
 }
 
 .settings_quiet_summary {
-  border: 1px solid #d5bf9e;
+  border: 1px solid var(--border-color);
   border-radius: 1rem;
   background:
-    radial-gradient(circle at 100% 0, rgba(180, 83, 26, 0.13), transparent 15rem),
+    radial-gradient(circle at 100% 0, var(--focus-ring), transparent 15rem),
     var(--settings-dark);
-  color: #fff5e7;
+  color: var(--hero-card-bg);
   margin-top: 2rem;
   padding: 1.4rem;
   display: grid;
   grid-template-columns: 3.2rem minmax(0, 1fr);
   align-items: center;
   gap: 1rem;
-  box-shadow: 0 1rem 2.5rem rgba(59, 42, 26, 0.14);
+  box-shadow: 0 1rem 2.5rem var(--focus-ring);
 }
 
 .settings_quiet_clock {
   width: 3.2rem;
   height: 3.2rem;
-  border: 1px solid rgba(255, 245, 231, 0.2);
+  border: 1px solid var(--sidebar-active-bg);
   border-radius: 0.9rem;
-  background: rgba(255, 245, 231, 0.1);
-  color: #f4bd91;
+  background: var(--sidebar-active-bg);
+  color: var(--accent-soft);
   display: grid;
   place-items: center;
 }
@@ -585,7 +737,7 @@
 }
 
 .settings_quiet_summary span {
-  color: #dcbfa5;
+  color: var(--accent-soft);
   font-size: 0.7rem;
   font-weight: 750;
 }
@@ -599,7 +751,7 @@
 
 .settings_quiet_summary p {
   margin: 0.4rem 0 0;
-  color: #e8d4c0;
+  color: var(--accent-soft);
   font-size: 0.75rem;
   line-height: 1.5;
 }
@@ -622,9 +774,9 @@
 }
 
 .settings_preview_notice {
-  border: 1px solid #d8c19d;
+  border: 1px solid var(--border-color);
   border-radius: 0.9rem;
-  background: rgba(240, 227, 204, 0.76);
+  background: var(--accent-soft);
   margin-top: 2rem;
   padding: 1rem;
   display: grid;
@@ -701,7 +853,7 @@
 .settings_planned_status {
   border: 1px solid var(--settings-line);
   border-radius: 0.45rem;
-  background: rgba(255, 250, 240, 0.68);
+  background: var(--hero-card-bg);
   color: var(--settings-subtle);
   padding: 0.3rem 0.5rem;
   font-size: 0.66rem;
@@ -719,6 +871,7 @@
   .settings_switch,
   .settings_switch span,
   .settings_add_btn,
+  .settings_theme_option,
   .settings_color_list button {
     transition: none;
   }
@@ -784,7 +937,7 @@
   .settings_menu_items {
     border: 1px solid var(--settings-line-soft);
     border-radius: 0.8rem;
-    background: rgba(255, 250, 240, 0.55);
+    background: var(--hero-card-bg);
     padding: 0.25rem;
   }
 

@@ -6,8 +6,8 @@
 
 .main {
   font-family: Arial, Helvetica, sans-serif;
-  background-color: #050712;
-  color: #ffffff;
+  background-color: var(--bg-primary);
+  color: var(--bg-card);
 }
 
 .hero {
@@ -37,7 +37,7 @@ background-color: #FAF3E1;
   gap: 12px;
   font-size: 30px;
   font-weight: 800;
-  color: #3B2A1A;
+  color: var(--sidebar-bg);
 }
 
 .nav_actions {
@@ -48,29 +48,29 @@ background-color: #FAF3E1;
 
 .login_link {
   text-decoration: none;
-  color: #3B2A1A;
+  color: var(--sidebar-bg);
   font-size: 17px;
   font-weight: 700;
 }
 
 .login_link:hover {
-  color: #92400E;
+  color: var(--accent-color);
 }
 
 .nav_btn {
   text-decoration: none;
-  color: #ffffff;
+  color: var(--bg-card);
   padding: 14px 26px;
   border-radius: 999px;
-  background: #3B2A1A;
+  background: var(--sidebar-bg);
   font-size: 17px;
   font-weight: 700;
   transition: 0.25s ease;
-  box-shadow: 0 10px 24px rgba(59, 42, 26, 0.22);
+  box-shadow: var(--shadow-soft);
 }
 
 .nav_btn:hover {
-  background: #92400E;
+  background: var(--accent-color);
   transform: translateY(-2px);
 }
 
@@ -92,14 +92,14 @@ background-color: #FAF3E1;
     margin-bottom: 22px;
     padding: 10px 16px;
     border-radius: 999px;
-    background: rgb(78 64 46 / 91%);
-    color: #e9e9e9eb;
+    background: var(--sidebar-bg);
+    color: var(--text-secondary);
     font-size: 15px;
     font-weight: 600;
 }
 
 .hero_text h1 {
-    color: #70411c;
+    color: var(--accent-hover);
     font-size: 78px;
     line-height: 1.08;
     letter-spacing: -3px;
@@ -109,7 +109,7 @@ background-color: #FAF3E1;
 
 .hero_description {
     max-width: 560px;
-    color: #040a23;
+    color: var(--text-primary);
     font-size: 20px;
     line-height: 1.65;
     margin-bottom: 38px;
@@ -132,22 +132,22 @@ background-color: #FAF3E1;
 }
 
 .primary_btn {
-    color: #ffffff;
-    background: #b14e1e;
+    color: var(--bg-card);
+    background: var(--accent-color);
 }
 
 .primary_btn:hover {
-  background: #753f08;
+  background: var(--accent-hover);
   transform: translateY(-2px);
 }
 
 .secondary_btn {
-    color: #ffffff;
-    background: rgb(98 88 88 / 89%);
+    color: var(--bg-card);
+    background: var(--bg-elevated);
 }
 
 .secondary_btn:hover {
-    background: rgb(136 125 125 / 80%);
+    background: var(--bg-elevated);
     transform: translateY(-2px);
 }
 
@@ -165,10 +165,10 @@ background-color: #FAF3E1;
     min-height: 430px;
     padding: 28px;
     border-radius: 28px;
-    background: rgb(4 0 0);
-    border: 1px solid rgba(255, 255, 255, 0.14);
+    background: var(--bg-primary);
+    border: 1px solid var(--sidebar-active-bg);
     backdrop-filter: blur(22px);
-    box-shadow: 0 40px 90px rgba(0, 0, 0, 0.05);
+    box-shadow: var(--shadow-soft);
 }
 .preview_header {
   display: flex;
@@ -183,8 +183,8 @@ background-color: #FAF3E1;
   width: 12px;
   height: 12px;
   border-radius: 50%;
-  background-color: #22c55e;
-  box-shadow: 0 0 18px #22c55e;
+  background-color: var(--success-color);
+  box-shadow: 0 0 18px var(--success-color);
 }
 
 .preview_message {
@@ -196,13 +196,13 @@ background-color: #FAF3E1;
 }
 
 .preview_message.user {
-  background: #2563eb;
+  background: var(--accent-color);
   margin-left: 70px;
 }
 
 .preview_message.ai {
-  background: rgba(255, 255, 255, 0.12);
-  color: #e5e7eb;
+  background: var(--sidebar-active-bg);
+  color: var(--border-color);
   margin-right: 40px;
 }
 
@@ -210,8 +210,8 @@ background-color: #FAF3E1;
   margin-top: 36px;
   padding: 17px 18px;
   border-radius: 16px;
-  color: #9ca3af;
-  background: rgba(255, 255, 255, 0.09);
+  color: var(--text-muted);
+  background: var(--sidebar-active-bg);
   font-size: 15px;
 }
 
@@ -220,22 +220,22 @@ background-color: #FAF3E1;
   width: 230px;
   padding: 18px;
   border-radius: 20px;
-  background: rgba(255, 255, 255, 0.11);
-  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: var(--sidebar-active-bg);
+  border: 1px solid var(--sidebar-active-bg);
   backdrop-filter: blur(18px);
-  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.3);
+  box-shadow: var(--shadow-soft);
 }
 
 .floating_card .card_title {
   display: block;
   font-size: 14px;
-  color: #93c5fd;
+  color: var(--accent-color);
   font-weight: 700;
   margin-bottom: 8px;
 }
 
 .floating_card p {
-  color: #f3f4f6;
+  color: var(--bg-secondary);
   font-size: 14px;
   line-height: 1.45;
 }

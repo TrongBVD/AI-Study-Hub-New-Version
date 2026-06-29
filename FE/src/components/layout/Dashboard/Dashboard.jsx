@@ -8,7 +8,7 @@ function Dashboard() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   return (
-    <div className="layout">
+    <div className="layout user_dashboard_layout">
       {isSidebarOpen && (
         <div
           className="sidebar_overlay"
@@ -21,7 +21,7 @@ function Dashboard() {
       <div className="main_area">
         <Navbar onOpenSidebar={() => setIsSidebarOpen(true)} />
 
-        <main className="content">
+        <main className="content user_dashboard_content">
           <Outlet />
         </main>
       </div>

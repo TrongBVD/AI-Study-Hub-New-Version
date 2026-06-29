@@ -3,6 +3,7 @@ import {
   getNotificationSettings,
   saveNotificationSettings,
 } from "../../../utils/notificationStore.js";
+import { useTheme } from "../../../context/ThemeContext.jsx";
 import "./SettingPage.css";
 
 const SETTING_MENUS = [
@@ -385,6 +386,7 @@ const NOTIFICATION_CATEGORIES = [
 ];
 
 function SettingPage() {
+  const { theme, setTheme, availableThemes } = useTheme();
   const [workspaceName, setWorkspaceName] = useState("AI Student Hub");
   const [customBranding, setCustomBranding] = useState(false);
   const [selectedColor, setSelectedColor] = useState("#b4531a");
@@ -480,6 +482,9 @@ function SettingPage() {
               setCustomBranding={setCustomBranding}
               selectedColor={selectedColor}
               setSelectedColor={setSelectedColor}
+              selectedTheme={theme}
+              setSelectedTheme={setTheme}
+              availableThemes={availableThemes}
             />
           )}
 
@@ -571,6 +576,9 @@ function ProfileAppearanceSettings({
   setCustomBranding,
   selectedColor,
   setSelectedColor,
+  selectedTheme,
+  setSelectedTheme,
+  availableThemes,
 }) {
   return (
     <>
@@ -625,6 +633,45 @@ function ProfileAppearanceSettings({
               onClick={() => setCustomBranding(!customBranding)}
               label="Toggle custom branding"
             />
+          </SettingRow>
+
+          <SettingRow
+            title="Theme"
+            description="Choose the visual style used across your StudyHub workspace."
+          >
+            <div
+              className="settings_theme_list"
+              role="radiogroup"
+              aria-label="Choose StudyHub theme"
+            >
+              {availableThemes.map((theme) => (
+                <button
+                  type="button"
+                  key={theme.value}
+                  className={`settings_theme_option theme_${theme.value} ${
+                    selectedTheme === theme.value ? "active" : ""
+                  }`}
+                  onClick={() => setSelectedTheme(theme.value)}
+                  role="radio"
+                  aria-checked={selectedTheme === theme.value}
+                >
+                  {selectedTheme === theme.value && (
+                    <span className="settings_theme_check" aria-hidden="true">
+                      <i className="ti-check"></i>
+                    </span>
+                  )}
+                  <span className="settings_theme_preview" aria-hidden="true">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                  </span>
+                  <span className="settings_theme_text">
+                    <strong>{theme.label}</strong>
+                    <small>{theme.description}</small>
+                  </span>
+                </button>
+              ))}
+            </div>
           </SettingRow>
 
           <SettingRow

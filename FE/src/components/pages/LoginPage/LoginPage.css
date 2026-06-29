@@ -3,7 +3,7 @@
   justify-content: center;
   align-items: center;
   height: 100vh;
-  background-color: #f0e4d7;
+  background-color: var(--bg-secondary);
   margin: 0;
 }
 
@@ -17,9 +17,9 @@
   padding: 40px;
   /* Bằng hệt register */
   border-radius: 24px;
-  background-color: #fff8e7;
-  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
-  border: 1px solid rgba(124, 106, 88, 0.1);
+  background-color: var(--bg-card);
+  box-shadow: var(--shadow-soft);
+  border: 1px solid var(--border-color);
   box-sizing: border-box;
 }
 
@@ -31,7 +31,7 @@
   display: flex;
   align-items: center;
   padding-left: 35px;
-  color: #7c6a58;
+  color: var(--text-secondary);
 }
 
 .login_title::before,
@@ -42,7 +42,7 @@
   width: 16px;
   border-radius: 50%;
   left: 0;
-  background-color: #7c6a58;
+  background-color: var(--text-secondary);
 }
 
 .login_title::after {
@@ -60,16 +60,16 @@
   border: none;
   padding: 14px;
   border-radius: 12px;
-  color: #fff;
+  color: var(--bg-card);
   font-size: 16px;
   font-weight: 600;
-  background-color: #70411c;
+  background-color: var(--accent-hover);
   transition: 0.3s ease;
   cursor: pointer;
 }
 
 .login_submit:hover {
-  background-color: #42250d;
+  background-color: var(--sidebar-bg);
 }
 
 .login_message,
@@ -77,13 +77,13 @@
 .forgot_password_message {
   margin: 0;
   font-size: 14.5px;
-  color: #5c3a21;
+  color: var(--text-primary);
   text-align: center;
 }
 
 .login_message span {
   font-weight: 600;
-  color: #70411c;
+  color: var(--accent-hover);
   cursor: pointer;
   text-decoration: none;
 }
@@ -98,7 +98,7 @@
 
 .link_account_text {
   margin: 0;
-  color: #5c3a21;
+  color: var(--text-primary);
   font-size: 14px;
 }
 
