@@ -9,13 +9,13 @@
 
 /* Định dạng ô input gốc của bạn */
 .form_input_group .form_input {
-  background-color: #ffffff;
-  color: #452720;
+  background-color: var(--bg-card);
+  color: var(--sidebar-bg);
   width: 100%;
   /* Padding phải 45px để nhường chỗ cho icon con mắt */
   padding: 20px 45px 5px 10px;
   outline: 0;
-  border: 2px solid rgba(73, 42, 23, 0.59);
+  border: 2px solid var(--input-border);
   border-radius: 10px;
   font-size: medium;
   box-sizing: border-box;
@@ -32,12 +32,12 @@
 }
 
 .form_input_group .form_input {
-  background-color: #ffffff;
-  color: #452720;
+  background-color: var(--bg-card);
+  color: var(--sidebar-bg);
   width: 100%;
   padding: 12px 45px 12px 10px;
   outline: 0;
-  border: 2px solid rgba(73, 42, 23, 0.59);
+  border: 2px solid var(--input-border);
   border-radius: 10px;
   font-size: medium;
   box-sizing: border-box;
@@ -59,7 +59,7 @@
   /* Xóa viền */
   cursor: pointer;
   font-size: 1.2em;
-  color: #7c6a58;
+  color: var(--text-secondary);
   padding: 0;
   display: flex;
   align-items: center;
@@ -78,7 +78,7 @@
 .form_input:-webkit-autofill:hover,
 .form_input:-webkit-autofill:focus,
 .form_input:-webkit-autofill:active {
-  -webkit-box-shadow: 0 0 0 30px #ffffff inset !important;
-  -webkit-text-fill-color: #452720 !important;
+  -webkit-box-shadow: 0 0 0 30px var(--bg-card) inset !important;
+  -webkit-text-fill-color: var(--sidebar-bg) !important;
   transition: background-color 5000s ease-in-out 0s;
 }

@@ -4,11 +4,8 @@
 
 .my_library_page {
   min-height: 100dvh;
-  background:
-    radial-gradient(circle at 8% 8%, rgba(180, 83, 26, 0.13), transparent 30%),
-    radial-gradient(circle at 92% 10%, rgba(59, 42, 26, 0.12), transparent 26%),
-    linear-gradient(180deg, #fbf6e8 0%, #f2e5ce 100%);
-  color: #2f2015;
+  background: var(--bg-primary);
+  color: var(--text-primary);
   font-family: "Outfit", "Segoe UI", Arial, sans-serif;
   overflow-x: hidden;
   position: relative;
@@ -21,10 +18,10 @@
   pointer-events: none;
   opacity: 0.22;
   background-image:
-    linear-gradient(rgba(59, 42, 26, 0.045) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(59, 42, 26, 0.04) 1px, transparent 1px);
+    linear-gradient(var(--focus-ring) 1px, transparent 1px),
+    linear-gradient(90deg, var(--focus-ring) 1px, transparent 1px);
   background-size: 44px 44px;
-  mask-image: linear-gradient(to bottom, #000, transparent 72%);
+  mask-image: linear-gradient(to bottom, var(--text-primary), transparent 72%);
 }
 
 .library_content {
@@ -49,8 +46,8 @@
     url("https://picsum.photos/seed/academic-library-desk/1600/900");
   background-size: cover;
   background-position: center;
-  color: #fffaf0;
-  box-shadow: 0 28px 72px rgba(59, 38, 24, 0.2);
+  color: var(--bg-card);
+  box-shadow: var(--shadow-soft);
   position: relative;
   overflow: hidden;
 }
@@ -63,7 +60,7 @@
   right: -150px;
   top: -170px;
   border-radius: 50%;
-  background: rgba(239, 203, 176, 0.12);
+  background: var(--accent-soft);
 }
 
 .my_library_hero_left,
@@ -82,7 +79,7 @@
 .library_overline {
   width: fit-content;
   margin-bottom: 14px;
-  color: #efcbb0;
+  color: var(--bg-secondary, var(--accent-soft));
   font-size: 12px;
   font-weight: 900;
   letter-spacing: 0.12em;
@@ -92,7 +89,7 @@
 .my_library_hero h1 {
   max-width: 620px;
   margin: 0;
-  color: #fffaf0;
+  color: var(--bg-card);
   font-size: clamp(34px, 4.2vw, 56px);
   line-height: 0.98;
   letter-spacing: -0.05em;
@@ -102,7 +99,7 @@
 .my_library_hero p {
   max-width: 500px;
   margin: 16px 0 0;
-  color: rgba(255, 250, 240, 0.76);
+  color: var(--hero-card-bg);
   font-size: 14px;
   line-height: 1.65;
 }
@@ -121,8 +118,8 @@
   border-radius: 12px;
   border: 1px solid transparent;
   padding: 0 14px;
-  background: #b4531a;
-  color: #ffffff;
+  background: var(--button-bg);
+  color: var(--button-text);
   font-size: 13px;
   font-weight: 900;
   cursor: pointer;
@@ -131,22 +128,22 @@
   align-items: center;
   justify-content: center;
   gap: 9px;
-  box-shadow: 0 14px 28px rgba(36, 20, 10, 0.22);
+  box-shadow: var(--shadow-soft);
   transition: transform 220ms ease, background 220ms ease, border-color 220ms ease, box-shadow 220ms ease;
 }
 
 .my_library_import_btn {
-  border-color: rgba(255, 250, 240, 0.32);
-  background: rgba(255, 250, 240, 0.12);
-  color: #fffaf0;
+  border-color: var(--hero-preview-border, var(--border-color));
+  background: var(--collection-action-bg, var(--sidebar-active-bg));
+  color: var(--collection-action-text, var(--bg-card));
   box-shadow: none;
 }
 
 .create_library_btn:hover,
 .my_library_import_btn:hover,
 .empty_library_action:hover {
-  background: #923f12;
-  border-color: #923f12;
+  background: var(--button-hover-bg, var(--accent-hover));
+  border-color: var(--button-hover-bg, var(--accent-hover));
   transform: translateY(-2px);
 }
 
@@ -155,11 +152,9 @@
   min-height: 190px;
   border-radius: 22px;
   padding: 20px;
-  background: rgba(255, 250, 240, 0.13);
-  border: 1px solid rgba(255, 250, 240, 0.18);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.14),
-    0 18px 40px rgba(34, 20, 12, 0.18);
+  background: var(--hero-preview-bg, var(--hero-card-bg));
+  border: 1px solid var(--hero-preview-border, var(--border-color));
+  box-shadow: var(--shadow-soft);
   backdrop-filter: blur(14px);
   display: flex;
   flex-direction: column;
@@ -170,17 +165,17 @@
   width: 46px;
   height: 46px;
   border-radius: 15px;
-  background: #efcbb0;
-  color: #3b2a1a;
+  background: var(--hero-preview-icon-bg, var(--accent-soft));
+  color: var(--hero-preview-icon-text, var(--accent-color));
   display: grid;
   place-items: center;
   font-size: 18px;
-  box-shadow: 0 16px 30px rgba(34, 20, 12, 0.22);
+  box-shadow: var(--shadow-soft);
 }
 
 .my_library_hero_card span {
   display: block;
-  color: #efcbb0;
+  color: var(--accent-color);
   font-size: 12px;
   font-weight: 900;
   letter-spacing: 0.1em;
@@ -191,7 +186,7 @@
   display: block;
   max-width: 100%;
   margin-top: 9px;
-  color: #fffaf0;
+  color: var(--text-primary);
   font-size: 22px;
   line-height: 1.05;
   letter-spacing: -0.04em;
@@ -202,7 +197,7 @@
 
 .my_library_hero_card p {
   margin: 14px 0 0;
-  color: rgba(255, 250, 240, 0.68);
+  color: var(--text-secondary);
   line-height: 1.55;
 }
 
@@ -217,14 +212,14 @@
   min-height: 84px;
   border-radius: 18px;
   padding: 16px;
-  background: rgba(255, 250, 240, 0.72);
-  border: 1px solid rgba(226, 211, 188, 0.78);
-  box-shadow: 0 14px 34px rgba(59, 38, 24, 0.08);
+  background: var(--hero-card-bg);
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-soft);
 }
 
 .library_stats_grid span {
   display: block;
-  color: #604938;
+  color: var(--text-secondary);
   font-size: 12px;
   font-weight: 900;
   letter-spacing: 0.08em;
@@ -234,7 +229,7 @@
 .library_stats_grid strong {
   display: block;
   margin-top: 10px;
-  color: #26170d;
+  color: var(--text-primary, var(--text-primary));
   font-size: 26px;
   line-height: 1;
   letter-spacing: -0.04em;
@@ -251,7 +246,7 @@
 
 .library_board_header h2 {
   margin: 0;
-  color: #26170d;
+  color: var(--text-primary, var(--text-primary));
   font-size: 28px;
   line-height: 1;
   letter-spacing: -0.05em;
@@ -259,7 +254,7 @@
 
 .library_board_header p {
   margin: 10px 0 0;
-  color: #604938;
+  color: var(--text-secondary);
   line-height: 1.6;
 }
 
@@ -267,9 +262,9 @@
   min-height: 36px;
   border-radius: 999px;
   padding: 0 14px;
-  background: #fffaf0;
-  border: 1px solid #e2d3bc;
-  color: #604938;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
   font-size: 13px;
   font-weight: 900;
   display: inline-flex;
@@ -284,17 +279,18 @@
 }
 
 .my_library_import_btn:hover {
-  border-color: rgba(255, 250, 240, 0.5);
-  background: rgba(255, 250, 240, 0.22);
+  border-color: var(--accent-color);
+  background: var(--accent-soft);
+  color: var(--accent-color);
 }
 
 .collection_card {
   min-height: 190px;
   border-radius: 20px;
   padding: 18px;
-  background: linear-gradient(180deg, #f6e6ca 0%, #efdcc0 100%);
-  border: 1px solid rgba(226, 211, 188, 0.86);
-  box-shadow: 0 14px 32px rgba(59, 38, 24, 0.08);
+  background: var(--collection-card-bg, var(--bg-card));
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-soft);
   text-decoration: none;
   color: inherit;
   display: flex;
@@ -305,9 +301,9 @@
 
 .collection_card:hover {
   transform: translateY(-5px);
-  border-color: rgba(180, 83, 26, 0.34);
-  box-shadow: 0 24px 48px rgba(59, 38, 24, 0.14);
-  background: #fff4df;
+  border-color: var(--focus-ring);
+  box-shadow: var(--shadow-soft);
+  background: var(--collection-card-hover-bg, var(--bg-secondary));
 }
 
 .collection_top,
@@ -322,21 +318,21 @@
   width: 42px;
   height: 42px;
   border-radius: 14px;
-  background: #3b2a1a;
-  color: #efcbb0;
+  background: var(--collection-action-bg, var(--accent-soft));
+  color: var(--collection-action-text, var(--accent-color));
   display: grid;
   place-items: center;
   font-size: 17px;
-  box-shadow: 0 14px 28px rgba(59, 42, 26, 0.2);
+  box-shadow: var(--shadow-soft);
 }
 
 .collection_icon.highlight {
-  background: #b4531a;
-  color: #ffffff;
+  background: var(--accent-color);
+  color: var(--button-text);
 }
 
 .collection_index {
-  color: #8a6f58;
+  color: var(--text-muted, var(--text-muted));
   font-size: 13px;
   font-weight: 900;
   font-variant-numeric: tabular-nums;
@@ -348,7 +344,7 @@
 
 .collection_body h3 {
   margin: 0;
-  color: #26170d;
+  color: var(--text-primary, var(--text-primary));
   font-size: 20px;
   line-height: 1.15;
   letter-spacing: -0.04em;
@@ -360,15 +356,15 @@
 
 .collection_body p {
   margin: 8px 0 0;
-  color: #604938;
+  color: var(--text-secondary);
   font-size: 13px;
   font-weight: 800;
 }
 
 .collection_footer {
-  border-top: 1px solid rgba(115, 95, 76, 0.2);
+  border-top: 1px solid var(--border-color);
   padding-top: 12px;
-  color: #604938;
+  color: var(--text-secondary);
 }
 
 .collection_footer span:first-child {
@@ -384,8 +380,8 @@
   width: 30px;
   height: 30px;
   border-radius: 11px;
-  background: #fffaf0;
-  color: #3b2a1a;
+  background: var(--collection-action-bg, var(--bg-card));
+  color: var(--collection-action-text, var(--accent-color));
   display: grid;
   place-items: center;
   flex-shrink: 0;
@@ -393,18 +389,18 @@
 }
 
 .collection_card:hover .collection_arrow {
-  background: #3b2a1a;
-  color: #ffffff;
+  background: var(--button-bg);
+  color: var(--button-text);
   transform: translateX(2px);
 }
 
 .empty_library_state {
   min-height: 320px;
   width: 100%;
-  border: 1px dashed rgba(180, 83, 26, 0.34);
+  border: 1px dashed var(--focus-ring);
   border-radius: 22px;
-  background: rgba(255, 250, 240, 0.72);
-  box-shadow: 0 18px 46px rgba(59, 38, 24, 0.08);
+  background: var(--hero-card-bg);
+  box-shadow: var(--shadow-soft);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -418,8 +414,8 @@
   width: 54px;
   height: 54px;
   border-radius: 18px;
-  background: #f2e3c9;
-  color: #b4531a;
+  background: var(--bg-secondary, var(--accent-soft));
+  color: var(--accent-color);
   display: grid;
   place-items: center;
   font-size: 22px;
@@ -427,7 +423,7 @@
 
 .empty_library_state h2 {
   margin: 8px 0 0;
-  color: #26170d;
+  color: var(--text-primary, var(--text-primary));
   font-size: 24px;
   font-weight: 900;
   letter-spacing: -0.04em;
@@ -436,7 +432,7 @@
 .empty_library_state p {
   max-width: 390px;
   margin: 0;
-  color: #604938;
+  color: var(--text-secondary);
   line-height: 1.6;
 }
 
@@ -457,23 +453,23 @@
   width: 36px;
   height: 36px;
   border-radius: 12px;
-  border: 1px solid #e2d3bc;
-  background: rgba(255, 250, 240, 0.68);
-  color: #3b2618;
+  border: 1px solid var(--border-color);
+  background: var(--hero-card-bg);
+  color: var(--text-primary);
   cursor: pointer;
   font-weight: 900;
   transition: transform 180ms ease, background 180ms ease, color 180ms ease, border-color 180ms ease;
 }
 
 .library_pagination button:hover:not(:disabled) {
-  background: #ead7bd;
+  background: var(--bg-secondary, var(--accent-soft));
   transform: translateY(-2px);
 }
 
 .library_pagination button.active {
-  background: #3b2a1a;
-  color: #ffffff;
-  border-color: #3b2a1a;
+  background: var(--button-bg);
+  color: var(--button-text);
+  border-color: var(--button-bg);
 }
 
 .library_pagination button:disabled {
@@ -488,7 +484,7 @@ a:active {
 
 button:focus-visible,
 a:focus-visible {
-  outline: 3px solid rgba(180, 83, 26, 0.34);
+  outline: 3px solid var(--focus-ring);
   outline-offset: 3px;
 }
 

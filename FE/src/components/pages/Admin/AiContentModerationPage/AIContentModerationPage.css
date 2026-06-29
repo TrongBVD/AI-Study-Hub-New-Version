@@ -1,16 +1,16 @@
 .ai-moderation-page {
-  --moderation-bg: #f6f2ea;
-  --moderation-surface: #fffdf9;
-  --moderation-line: #ded6c9;
-  --moderation-line-soft: #ebe5dc;
-  --moderation-text: #201a15;
-  --moderation-muted: #746b62;
-  --moderation-orange: #c45215;
+  --moderation-bg: var(--bg-primary);
+  --moderation-surface: var(--bg-card, var(--hero-card-bg));
+  --moderation-line: var(--border-color, #ded6c9);
+  --moderation-line-soft: var(--border-color, #ebe5dc);
+  --moderation-text: var(--text-primary, #201a15);
+  --moderation-muted: var(--text-secondary, #746b62);
+  --moderation-orange: var(--accent-color);
   --moderation-orange-soft: #fae8d2;
   --moderation-red: #ad2920;
   --moderation-red-soft: #f8dddd;
   --moderation-green: #278154;
-  --moderation-dark: #30231a;
+  --moderation-dark: var(--text-primary, #30231a);
 
   width: 100%;
   min-height: 100dvh;
@@ -83,7 +83,7 @@
   height: 18px;
   border-radius: 10px;
   background: var(--moderation-orange);
-  color: white;
+  color: var(--bg-card);
   position: absolute;
   top: -1px;
   right: -2px;
@@ -98,7 +98,7 @@
   height: 40px;
   border-radius: 50%;
   background: var(--moderation-orange);
-  color: white;
+  color: var(--bg-card);
   display: grid;
   place-items: center;
   font-size: 13px;
@@ -167,7 +167,7 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  color: #8b8279;
+  color: var(--text-muted, #8b8279);
 }
 
 .ai-moderation-page__search-box input {
@@ -388,7 +388,7 @@
 .ai-moderation-page__case-row.is-selected {
   border-color: #e8b785;
   border-radius: 9px;
-  background: #fff7ed;
+  background: var(--hero-card-bg);
 }
 
 .ai-moderation-page__case-row:hover {
@@ -398,7 +398,7 @@
 .ai-moderation-page__checkbox {
   width: 16px;
   height: 16px;
-  border: 1px solid #aaa199;
+  border: 1px solid var(--border-color);
   border-radius: 3px;
   display: grid;
   place-items: center;
@@ -413,7 +413,7 @@
 .ai-moderation-page__case-row.is-selected .ai-moderation-page__checkbox {
   border-color: var(--moderation-orange);
   background: var(--moderation-orange);
-  color: white;
+  color: var(--bg-card);
 }
 
 .ai-moderation-page__file-icon {
@@ -485,8 +485,8 @@
 }
 
 .ai-moderation-page__status-pill {
-  background: #eee7da;
-  color: #4b3828;
+  background: var(--accent-soft);
+  color: var(--text-primary, var(--text-secondary));
 }
 
 .ai-moderation-page__status-pill.is-flagged {
@@ -630,7 +630,7 @@
 .ai-moderation-page__reason-card p {
   border: 1px solid #efc3bd;
   border-radius: 8px;
-  background: #fff6f3;
+  background: var(--hero-card-bg);
   margin: 12px 0 0;
   padding: 13px;
   color: #4d423a;
@@ -650,7 +650,7 @@
   height: 38px;
   border-radius: 50%;
   background: var(--moderation-dark);
-  color: white;
+  color: var(--bg-card);
   flex: 0 0 auto;
   display: grid;
   place-items: center;
@@ -710,7 +710,7 @@
   min-height: 40px;
   border: 0;
   border-radius: 8px;
-  color: white;
+  color: var(--bg-card);
   cursor: pointer;
   display: inline-flex;
   align-items: center;

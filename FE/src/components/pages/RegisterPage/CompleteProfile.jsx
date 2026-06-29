@@ -108,7 +108,7 @@ function CompleteProfile() {
 
         <p
           className="register_message"
-          style={{ fontSize: "13px", color: "#7c6a58" }}
+          style={{ fontSize: "13px", color: "var(--text-secondary)" }}
         >
           Mật khẩu cần &gt;= 8 ký tự, 1 chữ thường, 1 số, 1 ký tự đặc biệt.
         </p>
