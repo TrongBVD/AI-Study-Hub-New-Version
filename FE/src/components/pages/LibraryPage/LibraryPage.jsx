@@ -184,6 +184,8 @@ function LibraryPage() {
   const [pendingFolderId, setPendingFolderId] = useState(null);
   const [isTagModalOpen, setIsTagModalOpen] = useState(false);
   const [hashtags, setHashtags] = useState(["", "", ""]);
+  const [tagErrors, setTagErrors] = useState([]);
+  const [aiRecommendedTags, setAiRecommendedTags] = useState([]);
 
   const libraryItemsStorageKey = `aiStudyHubImportedLibraryItems:${libraryId}`;
   const [libraryItems, setLibraryItems] = useState(() => {
@@ -726,6 +728,8 @@ function LibraryPage() {
     setPendingFiles([]);
     setPendingFolderId(null);
     setHashtags(["", "", ""]);
+    setTagErrors([]);
+    setAiRecommendedTags([]);
     setIsTagModalOpen(false);
   }
 
@@ -735,7 +739,7 @@ function LibraryPage() {
       .filter((tag) => tag !== "")
       .map((tag) => (tag.startsWith("#") ? tag : `#${tag}`));
 
-    if (validHashtags.length < 3) {
+    if (validHashtags.length < 1 || validHashtags.length > 3) {
       alert("Please enter 1-3 hashtags before uploading.");
       return;
     }
@@ -749,7 +753,12 @@ function LibraryPage() {
       setIsUploadingDocuments(true);
 
       const workspaceId = libraryData?.workspaceId || libraryData?.workspace_id;
-      const uploadedDocuments = await uploadDocuments(pendingFiles, workspaceId, libraryData.id || libraryId);
+      const uploadedDocuments = await uploadDocuments(
+        pendingFiles, 
+        workspaceId, 
+        libraryData.id || libraryId,
+        validHashtags
+      );
       
       const uploadedItems = (uploadedDocuments || []).map((document, index) => ({
         ...mapBackendDocumentToLibraryItem(document),
@@ -778,7 +787,17 @@ function LibraryPage() {
       alert("Upload successful.");
     } catch (error) {
       console.error("Upload failed:", error);
-      alert("Upload failed. Please check backend and Supabase.");
+      
+      if (error.response?.data?.code === "TAG_VALIDATION_FAILED") {
+        setTagErrors(error.response.data.tagValidations || []);
+        setAiRecommendedTags(error.response.data.aiRecommendedTags || []);
+        alert("AI Hashtag Verification failed. Please check recommendations next to the input fields.");
+      } else if (error.response?.data?.code === "SEVERE_SENSITIVE_CONTENT") {
+        alert(error.response.data.message || "Tài liệu chứa từ ngữ nhạy cảm thô tục và đã bị chặn tải lên.");
+        handleCancelTaggedUpload();
+      } else {
+        alert(error.response?.data?.message || error.response?.data?.error || "Upload failed. Please check backend and Supabase.");
+      }
     } finally {
       setIsUploadingDocuments(false);
     }
@@ -1779,7 +1798,7 @@ function LibraryPage() {
             <div className="hashtag_modal_header">
               <div>
                 <h2>Add tags to your document</h2>
-                <p>Provide 3 hashtags to help categorize your file for search and AI review.</p>
+                <p>Provide 1-3 hashtags (format: #(noun) e.g., #grade12, #math) to categorize your file.</p>
               </div>
 
               <button type="button" onClick={handleCancelTaggedUpload}>
@@ -1789,16 +1808,74 @@ function LibraryPage() {
 
             <div className="hashtag_modal_body">
               <div className="hashtag_input_list">
-                {hashtags.map((tag, index) => (
-                  <input
-                    key={index}
-                    type="text"
-                    value={tag}
-                    onChange={(e) => handleHashtagChange(index, e.target.value)}
-                    placeholder={`# tag${index + 1}`}
-                  />
-                ))}
+                {hashtags.map((tag, index) => {
+                  const userTagNormalized = tag.trim().toLowerCase().replace("#", "");
+                  const tagError = tagErrors.find(v => {
+                    const apiTagNormalized = (v.tag || "").trim().toLowerCase().replace("#", "");
+                    return userTagNormalized && userTagNormalized === apiTagNormalized && !v.isValid;
+                  });
+
+                  return (
+                    <div key={index} className="hashtag_input_wrapper">
+                      <input
+                        type="text"
+                        value={tag}
+                        onChange={(e) => {
+                          handleHashtagChange(index, e.target.value);
+                          setTagErrors([]);
+                        }}
+                        placeholder={`# tag${index + 1}`}
+                        className={tagError ? "input_has_error" : ""}
+                      />
+                      {tagError && (
+                        <div className="tag_error_message">
+                          <span className="error_icon">⚠️</span>
+                          <span>
+                            AI gợi ý đặt:{" "}
+                            <button
+                              type="button"
+                              className="apply_recommendation_btn"
+                              onClick={() => {
+                                handleHashtagChange(index, tagError.recommendedReplacement);
+                                setTagErrors([]);
+                              }}
+                            >
+                              {tagError.recommendedReplacement}
+                            </button>
+                            {" - "}
+                            {tagError.reason}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
+
+              {aiRecommendedTags.length > 0 && (
+                <div className="ai_recommended_tags_section">
+                  <strong>Gợi ý từ AI:</strong>
+                  <div className="ai_tags_chips">
+                    {aiRecommendedTags.map((recTag) => (
+                      <button
+                        key={recTag}
+                        type="button"
+                        className="ai_tag_chip"
+                        onClick={() => {
+                          const emptyIndex = hashtags.findIndex(h => h.trim() === "");
+                          if (emptyIndex !== -1) {
+                            handleHashtagChange(emptyIndex, recTag);
+                          } else {
+                            handleHashtagChange(2, recTag);
+                          }
+                        }}
+                      >
+                        {recTag}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {pendingFiles.length > 0 && (
                 <div className="pending_file_preview">

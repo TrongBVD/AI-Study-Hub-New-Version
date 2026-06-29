@@ -3,6 +3,7 @@ import FormInput from "../../common/FormInput/FormInput.jsx";
 import { GoogleLogin, GoogleOAuthProvider } from "@react-oauth/google";
 import api from "../../../utils/api.js";
 import { useNavigate } from "react-router-dom";
+import { isTokenValid } from "../../../utils/authToken";
 import "./LoginPage.css";
 
 const GOOGLE_CLIENT_ID =
@@ -17,9 +18,16 @@ function LoginPage() {
     // Kiểm tra xem token có tồn tại trong localStorage không
     const token = localStorage.getItem("accessToken");
     
-    // Nếu có token (nghĩa là chưa log out), đá thẳng vào trang chủ Dashboard
+    // Nếu có token và token còn hạn, đá thẳng vào trang chủ Dashboard
     if (token) {
-      navigate("/dashboard/home", { replace: true });
+      if (isTokenValid(token)) {
+        navigate("/dashboard/home", { replace: true });
+      } else {
+        // Nếu token đã hết hạn, dọn dẹp vùng nhớ tránh bị loop hoặc tự động log in lỗi
+        localStorage.removeItem("accessToken");
+        localStorage.removeItem("user");
+        localStorage.removeItem("aiStudyHubProfileName");
+      }
     }
   }, [navigate]);
 

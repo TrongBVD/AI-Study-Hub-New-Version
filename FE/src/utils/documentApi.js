@@ -9,8 +9,7 @@ export async function getMyDocuments(libraryId = null) {
   return response.data.data;
 }
 
-// Đã bổ sung thêm tham số libraryId
-export async function uploadDocuments(files, workspaceId = null, libraryId = null) {
+export async function uploadDocuments(files, workspaceId = null, libraryId = null, tags = []) {
   const formData = new FormData();
 
   files.forEach((file) => {
@@ -23,6 +22,10 @@ export async function uploadDocuments(files, workspaceId = null, libraryId = nul
   
   if (libraryId) {
     formData.append("libraryId", libraryId);
+  }
+
+  if (tags && tags.length > 0) {
+    formData.append("tags", JSON.stringify(tags));
   }
 
   const response = await api.post("/documents/upload", formData);

@@ -2103,6 +2103,98 @@
   box-shadow: 0 0 0 3px rgba(180, 83, 26, 0.14);
 }
 
+.hashtag_input_wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+}
+
+.hashtag_input_list input.input_has_error {
+  border-color: #ef4444;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.14);
+}
+
+.tag_error_message {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  color: #b91c1c;
+  font-size: 13px;
+  line-height: 1.4;
+  padding: 2px 4px;
+}
+
+.tag_error_message .error_icon {
+  margin-top: 1px;
+}
+
+.apply_recommendation_btn {
+  background: #fef2f2;
+  border: 1px solid #fee2e2;
+  color: #dc2626;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  text-decoration: underline;
+  transition: all 0.2s ease;
+  display: inline-block;
+}
+
+.apply_recommendation_btn:hover {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.ai_recommended_tags_section {
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px dashed #e2d3bc;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ai_recommended_tags_section strong {
+  color: #2f2015;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.ai_tags_chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.ai_tag_chip {
+  background: #f2e3c9;
+  border: 1px solid #e2d3bc;
+  color: #523f30;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.ai_tag_chip:hover {
+  background: #e2d3bc;
+  color: #2f2015;
+  transform: translateY(-1px);
+}
+
+.modal_description_hint {
+  margin: 0 0 14px;
+  color: #735f4c;
+  font-size: 13px;
+  line-height: 1.45;
+  font-style: italic;
+}
+
 .pending_upload_preview {
   margin: 6px 26px 0;
   background: #f2e3c9;

@@ -1,4 +1,5 @@
 import { Navigate, useLocation } from "react-router-dom";
+import { isTokenValid } from "../../../utils/authToken";
 
 const GUEST_ALLOWED_PATHS = [
   "/dashboard",
@@ -35,8 +36,13 @@ function ProtectedRoute({ children, allowedRoles }) {
   const user = getStoredUser();
   const role = String(user?.role || "").toUpperCase();
 
-  // Not logged in
-  if (!token) {
+  // Not logged in or token is expired/invalid
+  if (!token || !isTokenValid(token)) {
+    if (token) {
+      localStorage.removeItem("accessToken");
+      localStorage.removeItem("user");
+      localStorage.removeItem("aiStudyHubProfileName");
+    }
     return (
       <Navigate
         to="/login"
