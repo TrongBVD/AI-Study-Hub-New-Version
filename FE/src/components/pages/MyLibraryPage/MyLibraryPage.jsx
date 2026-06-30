@@ -169,8 +169,8 @@ function MyLibraryPage() {
           <div>
             <h2>{isGuest ? "Public library board" : "Your library board"}</h2>
             <p>
-              {isLoadingPublicLibraries
-                ? "Loading public libraries..."
+              {isLoading
+                ? "Loading libraries..."
                 : libraries.length === 0
                   ? "Create your first library to start collecting documents."
                   : `${libraries.length} libraries available in your study hub.`}
@@ -184,15 +184,15 @@ function MyLibraryPage() {
           )}
         </section>
 
-        {isLoadingPublicLibraries ? (
+        {isLoading ? (
           <section className="empty_library_state">
             <div className="empty_library_icon">
-              <i className="ti-reload"></i>
+              <i className="ti-reload animate-spin"></i>
             </div>
 
-            <h2>Loading public libraries</h2>
+            <h2>Loading libraries</h2>
 
-            <p>Please wait while StudyHub loads public study collections.</p>
+            <p>Please wait while StudyHub loads the study collections.</p>
           </section>
         ) : libraries.length === 0 ? (
           <section className="empty_library_state">
