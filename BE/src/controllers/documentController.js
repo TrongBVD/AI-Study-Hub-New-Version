@@ -194,7 +194,13 @@ exports.listMyDocuments = async (req, res) => {
         is_public,
         status,
         ai_reject_reason,
-        created_at
+        created_at,
+        document_tags (
+          tags (
+            id,
+            name
+          )
+        )
       `
       )
       .eq("uploader_id", userID)
@@ -571,5 +577,117 @@ exports.updateLibrary = async (req, res) => {
     return res.status(200).json({ status: "success", data });
   } catch (error) {
     return res.status(500).json({ status: "error", message: error.message });
+  }
+};
+
+// Hàm API lấy danh sách thư viện của người dùng đăng nhập
+exports.listMyLibraries = async (req, res) => {
+  try {
+    const userID = req.user.id;
+
+    if (!userID) {
+      return res.status(401).json({
+        status: "error",
+        message: "Authenticated user id is missing.",
+      });
+    }
+
+    const { data, error } = await supabase
+      .from("libraries")
+      .select("*")
+      .eq("user_id", userID)
+      .order("created_at", { ascending: false });
+
+    if (error) throw error;
+
+    return res.status(200).json({
+      status: "success",
+      data: data || [],
+    });
+  } catch (error) {
+    console.error("Lỗi listMyLibraries:", error);
+    return res.status(500).json({
+      status: "error",
+      message: "Không thể tải danh sách thư viện cá nhân.",
+      error: error.message,
+    });
+  }
+};
+
+// Hàm API lấy thông tin một thư viện cụ thể
+exports.getLibrary = async (req, res) => {
+  try {
+    const { libraryId } = req.params;
+    const userID = req.user.id;
+
+    if (!userID) {
+      return res.status(401).json({
+        status: "error",
+        message: "Authenticated user id is missing.",
+      });
+    }
+
+    const { data, error } = await supabase
+      .from("libraries")
+      .select("*")
+      .eq("id", libraryId)
+      .eq("user_id", userID)
+      .maybeSingle();
+
+    if (error) throw error;
+
+    if (!data) {
+      return res.status(404).json({
+        status: "error",
+        message: "Không tìm thấy thư viện.",
+      });
+    }
+
+    return res.status(200).json({
+      status: "success",
+      data,
+    });
+  } catch (error) {
+    console.error("Lỗi getLibrary:", error);
+    return res.status(500).json({
+      status: "error",
+      message: "Không thể tải thông tin thư viện.",
+      error: error.message,
+    });
+  }
+};
+
+// Hàm API xóa thư viện
+exports.deleteLibrary = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userID = req.user.id;
+
+    if (!userID) {
+      return res.status(401).json({
+        status: "error",
+        message: "Authenticated user id is missing.",
+      });
+    }
+
+    const { error } = await supabase
+      .from("libraries")
+      .delete()
+      .eq("id", id)
+      .eq("user_id", userID);
+
+    if (error) throw error;
+
+    return res.status(200).json({
+      status: "success",
+      message: "Xóa thư viện thành công.",
+    });
+  } catch (error) {
+    console.error("Lỗi deleteLibrary:", error);
+    return res.status(500).json({
+      status: "error",
+      message: "Không thể xóa thư viện.",
+      error: error.message,
+    });
   }
 };

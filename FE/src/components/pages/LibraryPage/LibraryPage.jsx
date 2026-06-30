@@ -7,6 +7,9 @@ import {
   uploadDocuments,
   downloadDocument,
   deleteDocument,
+  getLibrary,
+  updateLibrary,
+  deleteLibrary,
 } from "../../../utils/documentApi";
 import { getAccessToken, isTokenValid } from "../../../utils/authToken";
 import {
@@ -209,9 +212,21 @@ function LibraryPage() {
   );
 
   useEffect(() => {
+    const serializedItems = libraryItems.map(item => {
+      if (item.type === "folder") {
+        return item;
+      }
+      return {
+        id: item.id,
+        type: "file",
+        folderId: item.folderId ?? null,
+        hashtags: item.hashtags || [],
+        isBackendFile: true
+      };
+    });
     localStorage.setItem(
       libraryItemsStorageKey,
-      JSON.stringify(libraryItems),
+      JSON.stringify(serializedItems),
     );
   }, [libraryItems, libraryItemsStorageKey]);
 
@@ -456,25 +471,6 @@ function LibraryPage() {
       updatedAt: "Updated just now",
     };
 
-    const savedLibraries = JSON.parse(
-      localStorage.getItem("aiStudyHubLibraries") || "[]"
-    );
-
-    const hasCurrentLibrary = savedLibraries.some(
-      (library) => library.id === updatedLibrary.id
-    );
-
-    const updatedLibraries = hasCurrentLibrary
-      ? savedLibraries.map((library) =>
-        library.id === updatedLibrary.id ? updatedLibrary : library
-      )
-      : [updatedLibrary, ...savedLibraries];
-
-    localStorage.setItem(
-      "aiStudyHubLibraries",
-      JSON.stringify(updatedLibraries)
-    );
-
     setLibraryData(updatedLibrary);
   }
 
@@ -531,6 +527,10 @@ function LibraryPage() {
   }
 
   function mapBackendDocumentToLibraryItem(document) {
+    const apiTags = (document.document_tags || [])
+      .map((dt) => (dt.tags?.name ? `#${dt.tags.name}` : ""))
+      .filter(Boolean);
+
     return {
       id: document.id,
       type: "file",
@@ -545,7 +545,7 @@ function LibraryPage() {
       uploadedBy: authorName,
       icon: getFileIcon(document.title || ""),
       folderId: null,
-      hashtags: [],
+      hashtags: apiTags,
       isBackendFile: true,
     };
   }
@@ -577,14 +577,40 @@ function LibraryPage() {
         );
         return;
       }
-      const activeLibraryId = String(libraryData.id || libraryId || "");
+      let currentLibData = libraryData;
+      if (!isGuest) {
+        if (!currentLibData || currentLibData.id === "default-library" || currentLibData.id !== libraryId) {
+          try {
+            const lib = await getLibrary(libraryId);
+            if (lib) {
+              currentLibData = {
+                id: lib.id,
+                name: lib.name,
+                description: lib.description || "",
+                visibility: lib.is_public ? "public" : "private",
+                shareOnProfile: lib.share_on_profile ?? false,
+                updatedAt: lib.updated_at ? new Date(lib.updated_at).toLocaleString() : "Updated just now",
+                icon: "ti-archive",
+              };
+              setLibraryData(currentLibData);
+              setLibraryName(currentLibData.name);
+              setLibraryDescription(currentLibData.description);
+              setLibraryVisibility(currentLibData.visibility);
+              setShareOnProfile(currentLibData.shareOnProfile);
+            }
+          } catch (err) {
+            console.error("Failed to load library metadata from backend:", err);
+          }
+        }
+      }
+      const activeLibraryId = String(currentLibData?.id || libraryId || "");
       const accessToken = getAccessToken();
 
       if (!isTokenValid(accessToken)) {
         return;
       }
 
-      const backendDocuments = await getMyDocuments(libraryData.id || libraryId);
+      const backendDocuments = await getMyDocuments(activeLibraryId);
 
       setLibraryItems((currentItems) => {
         const savedBackendItems = new Map(
@@ -921,7 +947,7 @@ function LibraryPage() {
     }
   }
 
-  function handleSaveSettings(e) {
+  async function handleSaveSettings(e) {
     if (e && e.preventDefault) {
       e.preventDefault();
     }
@@ -941,74 +967,63 @@ function LibraryPage() {
       return;
     }
 
-    const updatedLibrary = {
-      ...libraryData,
-      name: trimmedLibraryName,
-      description: libraryDescription.trim(),
-      visibility: libraryVisibility,
-      shareOnProfile: shareOnProfile,
-      documents: countUploadedFiles(libraryItems),
-      updatedAt: "Updated just now",
-    };
+    try {
+      await updateLibrary(libraryData.id || libraryId, {
+        name: trimmedLibraryName,
+        description: libraryDescription.trim(),
+        is_public: libraryVisibility === "public",
+        share_on_profile: shareOnProfile,
+      });
 
-    const savedLibraries = JSON.parse(
-      localStorage.getItem("aiStudyHubLibraries") || "[]"
-    );
+      const updatedLibrary = {
+        ...libraryData,
+        name: trimmedLibraryName,
+        description: libraryDescription.trim(),
+        visibility: libraryVisibility,
+        shareOnProfile: shareOnProfile,
+        documents: countUploadedFiles(libraryItems),
+        updatedAt: "Updated just now",
+      };
 
-    const hasCurrentLibrary = savedLibraries.some(
-      (library) => library.id === updatedLibrary.id
-    );
-
-    const updatedLibraries = hasCurrentLibrary
-      ? savedLibraries.map((library) =>
-        library.id === updatedLibrary.id ? updatedLibrary : library
-      )
-      : [updatedLibrary, ...savedLibraries];
-
-    localStorage.setItem(
-      "aiStudyHubLibraries",
-      JSON.stringify(updatedLibraries)
-    );
-
-    setLibraryData(updatedLibrary);
-    setLibraryName(trimmedLibraryName);
-    setLibraryDescription(updatedLibrary.description);
-    setLibraryNameMessage("Library settings saved successfully.");
+      setLibraryData(updatedLibrary);
+      setLibraryName(trimmedLibraryName);
+      setLibraryDescription(updatedLibrary.description);
+      setLibraryNameMessage("Library settings saved successfully.");
+    } catch (error) {
+      console.error("Failed to save library settings:", error);
+      setLibraryNameMessage("Failed to save library settings on server.");
+    }
   }
-  function handleDeleteLibrary() {
+  async function handleDeleteLibrary() {
     const confirmed = window.confirm(
       "Are you sure you want to delete this library? This action cannot be undone."
     );
 
     if (!confirmed) return;
 
-    const savedLibraries = JSON.parse(
-      localStorage.getItem("aiStudyHubLibraries") || "[]"
-    );
+    try {
+      await deleteLibrary(libraryData.id || libraryId);
 
-    const updatedLibraries = savedLibraries.filter(
-      (library) => library.id !== libraryId
-    );
+      localStorage.removeItem(libraryItemsStorageKey);
 
-    localStorage.setItem(
-      "aiStudyHubLibraries",
-      JSON.stringify(updatedLibraries)
-    );
+      const recentLibraries = JSON.parse(
+        localStorage.getItem("aiStudyHubRecentLibraries") || "[]"
+      );
 
-    const recentLibraries = JSON.parse(
-      localStorage.getItem("aiStudyHubRecentLibraries") || "[]"
-    );
+      const updatedRecentLibraries = recentLibraries.filter(
+        (library) => library.id !== libraryId
+      );
 
-    const updatedRecentLibraries = recentLibraries.filter(
-      (library) => library.id !== libraryId
-    );
+      localStorage.setItem(
+        "aiStudyHubRecentLibraries",
+        JSON.stringify(updatedRecentLibraries)
+      );
 
-    localStorage.setItem(
-      "aiStudyHubRecentLibraries",
-      JSON.stringify(updatedRecentLibraries)
-    );
-
-    navigate("/dashboard/libraries", { replace: true });
+      navigate("/dashboard/libraries", { replace: true });
+    } catch (error) {
+      console.error("Failed to delete library:", error);
+      alert("Failed to delete this library. Please try again.");
+    }
   }
 
   function handleRenameFolder(folder, event) {

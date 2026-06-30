@@ -10,15 +10,6 @@ function MyWorkSpace() {
   const [currentPage, setCurrentPage] = useState(1);
   const [workspaces, setWorkspaces] = useState([]);
 
-  function getSavedWorkSpaces() {
-    try {
-      return JSON.parse(localStorage.getItem("aiStudyHubWorkspaces") || "[]");
-    } catch (error) {
-      console.error("Cannot read workspaces from localStorage:", error);
-      return [];
-    }
-  }
-
   useEffect(() => {
     let isMounted = true;
 
@@ -31,7 +22,7 @@ function MyWorkSpace() {
       } catch (error) {
         console.error("Cannot load workspaces:", error);
         if (isMounted) {
-          setWorkspaces(getSavedWorkSpaces());
+          setWorkspaces([]);
         }
       }
     }

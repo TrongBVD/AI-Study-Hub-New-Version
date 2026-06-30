@@ -20,9 +20,7 @@ function AdminSidebar({ isOpen, onClose }) {
     } catch (error) {
       console.error("Logout request failed:", error);
     } finally {
-      localStorage.removeItem("accessToken");
-      localStorage.removeItem("user");
-      localStorage.removeItem("aiStudyHubProfileName");
+      localStorage.clear();
       onClose();
       navigate("/login", { replace: true });
     }

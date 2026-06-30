@@ -6,26 +6,10 @@ import {
   markAllNotificationsAsRead,
 } from "../../../utils/notificationStore.js";
 import { searchUsers } from "../../../utils/searchApi.js";
+import { getMyLibraries } from "../../../utils/documentApi.js";
+import { getWorkspaces } from "../../../utils/workspaceApi.js";
 
 const PROFILE_AVATAR_KEY = "aiStudyHubProfileAvatar";
-
-function getSavedLibraries() {
-  try {
-    return JSON.parse(localStorage.getItem("aiStudyHubLibraries") || "[]");
-  } catch (error) {
-    console.error("Cannot read libraries from localStorage:", error);
-    return [];
-  }
-}
-
-function getSavedWorkspaces() {
-  try {
-    return JSON.parse(localStorage.getItem("aiStudyHubWorkspaces") || "[]");
-  } catch (error) {
-    console.error("Cannot read workspaces from localStorage:", error);
-    return [];
-  }
-}
 
 function getStoredUserRole() {
   try {
@@ -180,8 +164,33 @@ function Navbar({
     (notification) => !notification.isRead
   ).length;
 
-  const libraries = useMemo(() => (isGuest ? [] : getSavedLibraries()), [isGuest]);
-  const workspaces = useMemo(() => (isGuest ? [] : getSavedWorkspaces()), [isGuest]);
+  const [libraries, setLibraries] = useState([]);
+  const [workspaces, setWorkspaces] = useState([]);
+
+  useEffect(() => {
+    if (isGuest) return;
+    let isMounted = true;
+    
+    async function loadSearchData() {
+      try {
+        const [libs, wspaces] = await Promise.all([
+          getMyLibraries(),
+          getWorkspaces()
+        ]);
+        if (isMounted) {
+          setLibraries(libs || []);
+          setWorkspaces(wspaces || []);
+        }
+      } catch (err) {
+        console.error("Failed to load search data:", err);
+      }
+    }
+    loadSearchData();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [isGuest]);
 
   const searchResults = useMemo(() => {
     const keyword = searchValue.trim().toLowerCase();

@@ -308,3 +308,60 @@ exports.addMember = async (req, res) => {
   }
 };
 
+exports.updateWorkspace = async (req, res) => {
+  try {
+    const { workspaceId } = req.params;
+    const userId = req.user.id;
+    const { name, description } = req.body;
+
+    const { workspace, isAdmin } = await getWorkspaceAccess(workspaceId, userId);
+    if (!workspace) {
+      return res.status(404).json({ status: "error", message: "Workspace not found." });
+    }
+    if (!isAdmin) {
+      return res.status(403).json({ status: "error", message: "Only administrators can update this workspace." });
+    }
+
+    const { data, error } = await supabase
+      .from("workspaces")
+      .update({ name: name?.trim(), description: description?.trim() })
+      .eq("id", workspaceId)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    return res.status(200).json({ status: "success", data });
+  } catch (error) {
+    console.error("Lỗi updateWorkspace:", error);
+    return res.status(500).json({ status: "error", message: error.message });
+  }
+};
+
+exports.deleteWorkspace = async (req, res) => {
+  try {
+    const { workspaceId } = req.params;
+    const userId = req.user.id;
+
+    const { workspace, isAdmin } = await getWorkspaceAccess(workspaceId, userId);
+    if (!workspace) {
+      return res.status(404).json({ status: "error", message: "Workspace not found." });
+    }
+    if (!isAdmin) {
+      return res.status(403).json({ status: "error", message: "Only administrators can delete this workspace." });
+    }
+
+    const { error } = await supabase
+      .from("workspaces")
+      .update({ deleted_at: new Date().toISOString() })
+      .eq("id", workspaceId);
+
+    if (error) throw error;
+
+    return res.status(200).json({ status: "success", message: "Xóa workspace thành công." });
+  } catch (error) {
+    console.error("Lỗi deleteWorkspace:", error);
+    return res.status(500).json({ status: "error", message: error.message });
+  }
+};
+

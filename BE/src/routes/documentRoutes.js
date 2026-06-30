@@ -10,6 +10,10 @@ const {
     downloadDocument,
     deleteDocument,
     createLibrary,
+    listMyLibraries,
+    updateLibrary,
+    getLibrary,
+    deleteLibrary,
 } = require("../controllers/documentController");
 
 const router = express.Router();
@@ -50,7 +54,11 @@ router.post(
     uploadDocuments
 );
 
+router.get("/libraries", authMiddleware, listMyLibraries);
+router.get("/libraries/:libraryId", authMiddleware, getLibrary);
 router.post("/libraries", authMiddleware, createLibrary);
+router.put("/libraries/:id", authMiddleware, updateLibrary);
+router.delete("/libraries/:id", authMiddleware, deleteLibrary);
 
 router.get("/:documentId/download", authMiddleware, downloadDocument);
 

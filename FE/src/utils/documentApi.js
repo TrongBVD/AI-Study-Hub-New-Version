@@ -42,3 +42,28 @@ export async function deleteDocument(documentId) {
   const response = await api.delete(`/documents/${documentId}`);
   return response.data;
 }
+
+export async function getMyLibraries() {
+  const response = await api.get("/documents/libraries");
+  return response.data.data;
+}
+
+export async function createLibrary(payload) {
+  const response = await api.post("/documents/libraries", payload);
+  return response.data.data;
+}
+
+export async function updateLibrary(libraryId, payload) {
+  const response = await api.put(`/documents/libraries/${libraryId}`, payload);
+  return response.data.data;
+}
+
+export async function getLibrary(libraryId) {
+  const response = await api.get(`/documents/libraries/${libraryId}`);
+  return response.data.data;
+}
+
+export async function deleteLibrary(libraryId) {
+  const response = await api.delete(`/documents/libraries/${libraryId}`);
+  return response.data;
+}

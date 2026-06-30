@@ -5,6 +5,9 @@ import {
   addWorkspaceMember,
   getWorkspaceMembers,
   searchWorkspaceUsers,
+  getWorkspace,
+  updateWorkspace,
+  deleteWorkspace,
 } from "../../../utils/workspaceApi";
 import "./WorkSpacePage.css";
 import "../../../assets/icons/themify-icons-font/themify-icons/themify-icons.css";
@@ -159,18 +162,24 @@ const [isSubtaskPriorityOpen, setIsSubtaskPriorityOpen] = useState(false);
   const [currentStudyCardIndex, setCurrentStudyCardIndex] = useState(0);
   const [isStudyCardFlipped, setIsStudyCardFlipped] = useState(false);
 
-  const savedWorkSpaces = JSON.parse(
-    localStorage.getItem("aiStudyHubWorkspaces") || "[]",
-  );
-
-  const workspace =
-    location.state?.workspace ||
-    savedWorkSpaces.find((item) => item.id === workspaceId);
+  const [workspace, setWorkspace] = useState(() => {
+    return location.state?.workspace || null;
+  });
 
   useEffect(() => {
     if (!workspaceId) return;
 
     let isMounted = true;
+
+    if (!workspace || workspace.id !== workspaceId) {
+      getWorkspace(workspaceId)
+        .then((data) => {
+          if (isMounted) {
+            setWorkspace(data);
+          }
+        })
+        .catch((err) => console.error("Cannot load workspace:", err));
+    }
 
     getWorkspaceMembers(workspaceId)
       .then((members) => {
@@ -185,7 +194,7 @@ const [isSubtaskPriorityOpen, setIsSubtaskPriorityOpen] = useState(false);
     return () => {
       isMounted = false;
     };
-  }, [workspaceId]);
+  }, [workspaceId, workspace]);
 
   useEffect(() => {
     if (!workspace?.id) return;
@@ -1034,7 +1043,7 @@ function getSubtaskPriorityIcon(priority) {
     handleSendMessage();
   }
 
-  function handleRenameWorkspace(e) {
+  async function handleRenameWorkspace(e) {
     e.preventDefault();
 
     if (!requireWorkspaceAdminPermission("rename this workspace")) return;
@@ -1054,20 +1063,18 @@ function getSubtaskPriorityIcon(priority) {
       return;
     }
 
-    const updatedWorkspaces = savedWorkSpaces.map((item) =>
-      item.id === workspaceId ? { ...item, name: trimmedName } : item,
-    );
-
-    localStorage.setItem(
-      "aiStudyHubWorkspaces",
-      JSON.stringify(updatedWorkspaces),
-    );
-
-    setWorkspaceNameInput(trimmedName);
-    setWorkspaceSettingMessage("Workspace name updated successfully.");
+    try {
+      await updateWorkspace(workspaceId, { name: trimmedName });
+      setWorkspace((current) => ({ ...current, name: trimmedName }));
+      setWorkspaceNameInput(trimmedName);
+      setWorkspaceSettingMessage("Workspace name updated successfully.");
+    } catch (err) {
+      console.error("Failed to update workspace name:", err);
+      setWorkspaceSettingMessage("Failed to update workspace name on server.");
+    }
   }
 
-  function handleDeleteWorkspace() {
+  async function handleDeleteWorkspace() {
     if (!requireWorkspaceAdminPermission("delete this workspace")) return;
 
     const isConfirmed = window.confirm(
@@ -1076,16 +1083,27 @@ function getSubtaskPriorityIcon(priority) {
 
     if (!isConfirmed) return;
 
-    const updatedWorkspaces = savedWorkSpaces.filter(
-      (item) => item.id !== workspaceId,
-    );
+    try {
+      await deleteWorkspace(workspaceId);
 
-    localStorage.setItem(
-      "aiStudyHubWorkspaces",
-      JSON.stringify(updatedWorkspaces),
-    );
+      localStorage.removeItem(`aiStudyHubWorkspaceIssues_${workspaceId}`);
 
-    navigate("/dashboard/workspaces");
+      const recentWorkspaces = JSON.parse(
+        localStorage.getItem("aiStudyHubRecentWorkspaces") || "[]",
+      );
+      const updatedRecentWorkspaces = recentWorkspaces.filter(
+        (item) => item.id !== workspaceId,
+      );
+      localStorage.setItem(
+        "aiStudyHubRecentWorkspaces",
+        JSON.stringify(updatedRecentWorkspaces),
+      );
+
+      navigate("/dashboard/workspaces");
+    } catch (err) {
+      console.error("Failed to delete workspace:", err);
+      alert("Failed to delete workspace on server.");
+    }
   }
 
   function handleSelectStudySet(studySetId) {

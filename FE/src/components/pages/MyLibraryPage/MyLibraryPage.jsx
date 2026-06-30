@@ -1,17 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { getPublicLibraries } from "../../../utils/publicApi";
+import { getMyLibraries } from "../../../utils/documentApi";
 import "./MyLibraryPage.css";
 import "../../../assets/icons/themify-icons-font/themify-icons/themify-icons.css";
-
-function getSavedLibraries() {
-  try {
-    return JSON.parse(localStorage.getItem("aiStudyHubLibraries") || "[]");
-  } catch (error) {
-    console.error("Cannot read libraries from localStorage:", error);
-    return [];
-  }
-}
 
 function getLibraryName(library) {
   return library.name || library.libraryName || "Untitled Library";
@@ -34,38 +26,33 @@ function notifyGuestRegistrationRequired() {
 
 function MyLibraryPage() {
   const [currentPage, setCurrentPage] = useState(1);
-  const [publicLibraries, setPublicLibraries] = useState([]);
-  const [isLoadingPublicLibraries, setIsLoadingPublicLibraries] =
-    useState(false);
+  const [libraries, setLibraries] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
   const isGuest = getStoredUserRole() === "GUEST";
-  const savedLibraries = useMemo(() => getSavedLibraries(), []);
-  const libraries = isGuest ? publicLibraries : savedLibraries;
 
   useEffect(() => {
-    if (!isGuest) return;
-
     let isMounted = true;
 
-    async function loadPublicLibraries() {
+    async function loadLibraries() {
       try {
-        setIsLoadingPublicLibraries(true);
-        const data = await getPublicLibraries();
+        setIsLoading(true);
+        const data = isGuest ? await getPublicLibraries() : await getMyLibraries();
         if (isMounted) {
-          setPublicLibraries(data || []);
+          setLibraries(data || []);
         }
       } catch (error) {
-        console.error("Cannot load public libraries:", error);
+        console.error("Cannot load libraries:", error);
         if (isMounted) {
-          setPublicLibraries([]);
+          setLibraries([]);
         }
       } finally {
         if (isMounted) {
-          setIsLoadingPublicLibraries(false);
+          setIsLoading(false);
         }
       }
     }
 
-    loadPublicLibraries();
+    loadLibraries();
 
     return () => {
       isMounted = false;

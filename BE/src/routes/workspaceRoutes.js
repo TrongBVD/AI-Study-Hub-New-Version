@@ -9,6 +9,8 @@ router.use(authMiddleware);
 router.get("/", workspaceController.listMyWorkspaces);
 router.post("/", workspaceController.createWorkspace);
 router.get("/:workspaceId", workspaceController.getWorkspace);
+router.put("/:workspaceId", workspaceController.updateWorkspace);
+router.delete("/:workspaceId", workspaceController.deleteWorkspace);
 router.get("/:workspaceId/members", workspaceController.listMembers);
 router.get("/:workspaceId/users/search", workspaceController.searchUsers);
 router.post("/:workspaceId/members", workspaceController.addMember);

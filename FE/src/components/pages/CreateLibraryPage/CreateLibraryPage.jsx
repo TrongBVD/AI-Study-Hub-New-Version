@@ -1,7 +1,8 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import "./CreateLibraryPage.css";
 import api from "../../../utils/api.js";
+import { getMyLibraries } from "../../../utils/documentApi.js";
 
 const PROFILE_NAME_KEY = "aiStudyHubProfileName";
 const PROFILE_AVATAR_KEY = "aiStudyHubProfileAvatar";
@@ -42,18 +43,34 @@ function CreateLibraryPage() {
   const [libraryName, setLibraryName] = useState("");
   const [description, setDescription] = useState("");
   const [visibility, setVisibility] = useState("public");
+  const [userLibraries, setUserLibraries] = useState([]);
   const ownerName = localStorage.getItem(PROFILE_NAME_KEY) || "dangkhoabi456";
   const ownerAvatar = localStorage.getItem(PROFILE_AVATAR_KEY) || "";
   const ownerInitials = getInitials(ownerName);
 
+  useEffect(() => {
+    let isMounted = true;
+    async function loadLibraries() {
+      try {
+        const data = await getMyLibraries();
+        if (isMounted) {
+          setUserLibraries(data || []);
+        }
+      } catch (err) {
+        console.error("Failed to load user libraries for duplicate check:", err);
+      }
+    }
+    loadLibraries();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   const trimmedLibraryName = libraryName.trim();
   const trimmedDescription = description.trim();
-  const savedLibraries = JSON.parse(
-    localStorage.getItem("aiStudyHubLibraries") || "[]",
-  );
   const isDuplicateName =
     trimmedLibraryName.length > 0 &&
-    savedLibraries.some(
+    userLibraries.some(
       (library) =>
         normalizeLibraryName(library.name || library.libraryName) ===
         normalizeLibraryName(trimmedLibraryName),
@@ -112,28 +129,8 @@ function CreateLibraryPage() {
       // Lấy ID chuẩn do Supabase tạo ra
       const dbLibraryId = response.data.data.id;
 
-      // 2. LƯU VÀO LOCALSTORAGE NHƯ CŨ (Nhưng dùng ID của Database)
-      const newLibrary = {
-        id: dbLibraryId, 
-        owner: ownerName,
-        ownerAvatar,
-        name: trimmedLibraryName,
-        description: previewDescription,
-        visibility,
-        shareOnProfile: isPublic,
-        documents: 0,
-        updatedAt: "Updated just now",
-        icon: "ti-archive",
-        highlight: false,
-        createdAt: new Date().toISOString(),
-      };
-
-      const savedLibraries = JSON.parse(localStorage.getItem("aiStudyHubLibraries") || "[]");
-      localStorage.setItem("aiStudyHubLibraries", JSON.stringify([newLibrary, ...savedLibraries]));
-
-      navigate(`/dashboard/libraries/${newLibrary.id}`, {
+      navigate(`/dashboard/libraries/${dbLibraryId}`, {
         state: {
-          library: newLibrary,
           from: "/dashboard/create-library",
         },
       });

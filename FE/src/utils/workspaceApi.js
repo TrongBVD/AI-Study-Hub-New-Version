@@ -21,3 +21,9 @@ export const searchWorkspaceUsers = (workspaceId, q) =>
 export const addWorkspaceMember = (workspaceId, payload) =>
   api.post(`/workspaces/${workspaceId}/members`, payload)
     .then((res) => res.data.data);
+
+export const updateWorkspace = (workspaceId, payload) =>
+  api.put(`/workspaces/${workspaceId}`, payload).then((res) => res.data.data);
+
+export const deleteWorkspace = (workspaceId) =>
+  api.delete(`/workspaces/${workspaceId}`).then((res) => res.data);
