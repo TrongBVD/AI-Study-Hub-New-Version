@@ -5,10 +5,10 @@
 .user-management-page {
   min-height: 100dvh;
   padding: 30px 28px 56px;
-  color: #302218;
+  color: var(--text-primary);
   background:
     radial-gradient(circle at 92% 4%, rgba(197, 91, 26, 0.06), transparent 25%),
-    #f7f2e9;
+    var(--bg-primary);
   font-family: "Outfit", "Segoe UI", Arial, sans-serif;
 }
 
@@ -27,7 +27,7 @@
 
 .user-management-page__page-header > div:first-child > span,
 .user-management-page__modal-title span {
-  color: #bc4f12;
+  color: var(--accent-color);
   font-size: 11px;
   font-weight: 900;
   letter-spacing: 0.11em;
@@ -43,7 +43,7 @@
 
 .user-management-page__page-header p {
   margin: 9px 0 0;
-  color: #756456;
+  color: var(--text-secondary);
   font-size: 14px;
 }
 
@@ -54,10 +54,10 @@
 
 .user-management-page__header-actions button {
   min-height: 44px;
-  border: 1px solid #ddcbb5;
+  border: 1px solid var(--border-color);
   border-radius: 11px;
-  color: #3b2a1d;
-  background: #fffaf3;
+  color: var(--text-primary, var(--sidebar-bg));
+  background: var(--bg-card);
   padding: 0 15px;
   cursor: pointer;
   display: inline-flex;
@@ -70,9 +70,9 @@
 
 .user-management-page__header-actions button:first-child {
   min-width: 150px;
-  border-color: #c95516;
-  color: #fff;
-  background: #c95516;
+  border-color: var(--accent-color);
+  color: var(--bg-card);
+  background: var(--accent-color);
 }
 
 .user-management-page__header-actions button:last-child {
@@ -83,10 +83,10 @@
 .user-management-page__notice {
   min-height: 44px;
   margin-top: 16px;
-  border: 1px solid #d9c4a9;
+  border: 1px solid var(--border-color);
   border-radius: 12px;
-  color: #4b3828;
-  background: #fff9ef;
+  color: var(--text-primary, var(--text-secondary));
+  background: var(--bg-secondary, var(--hero-card-bg));
   padding: 0 13px;
   display: flex;
   align-items: center;
@@ -101,7 +101,7 @@
   height: 28px;
   border: 0;
   border-radius: 8px;
-  color: #4b3828;
+  color: var(--text-primary, var(--text-secondary));
   background: #ecdecc;
   cursor: pointer;
   font-size: 18px;
@@ -116,7 +116,7 @@
 
 .user-management-page__stats-grid article {
   min-height: 112px;
-  border: 1px solid #e0d1be;
+  border: 1px solid var(--border-color);
   border-radius: 14px;
   background: rgba(255, 252, 247, 0.88);
   padding: 17px;
@@ -157,7 +157,7 @@
 
 .user-management-page__stats-grid article div > span {
   display: block;
-  color: #715f51;
+  color: var(--text-secondary);
   font-size: 12px;
 }
 
@@ -170,7 +170,7 @@
 
 .user-management-page__stats-grid p {
   margin: 7px 0 0;
-  color: #8a7869;
+  color: var(--text-muted, #8a7869);
   font-size: 11px;
 }
 
@@ -184,7 +184,7 @@
 
 .user-management-page__board,
 .user-management-page__detail-panel {
-  border: 1px solid #dfd0bd;
+  border: 1px solid var(--border-color);
   border-radius: 14px;
   background: rgba(255, 252, 247, 0.9);
 }
@@ -216,10 +216,10 @@
 .user-management-page__search-box,
 .user-management-page__toolbar select {
   height: 40px;
-  border: 1px solid #ddcbb5;
+  border: 1px solid var(--border-color);
   border-radius: 10px;
-  color: #3b2a1d;
-  background: #fffdfa;
+  color: var(--text-primary, var(--sidebar-bg));
+  background: var(--input-bg);
 }
 
 .user-management-page__search-box {
@@ -258,10 +258,10 @@
 
 .user-management-page__filter-row button {
   height: 40px;
-  border: 1px solid #ddcbb5;
+  border: 1px solid var(--border-color);
   border-radius: 9px;
-  color: #463225;
-  background: #fffdfa;
+  color: var(--text-primary, #463225);
+  background: var(--input-bg);
   padding: 0 13px;
   cursor: pointer;
   font-family: inherit;
@@ -270,9 +270,9 @@
 
 .user-management-page__filter-row button.active,
 .user-management-page__filter-row button:hover {
-  border-color: #3b2a1d;
-  color: #fffaf3;
-  background: #3b2a1d;
+  border-color: var(--text-primary, var(--sidebar-bg));
+  color: var(--bg-card);
+  background: var(--text-primary, var(--sidebar-bg));
 }
 
 .user-management-page__table-wrap {
@@ -288,10 +288,10 @@
 
 .user-management-page__table th {
   padding: 13px 16px;
-  border-top: 1px solid #e6d9c9;
-  border-bottom: 1px solid #e6d9c9;
-  color: #6d5b4d;
-  background: #fbf6ee;
+  border-top: 1px solid var(--border-color);
+  border-bottom: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  background: var(--bg-secondary);
   font-size: 10px;
   font-weight: 850;
   text-align: left;
@@ -301,7 +301,7 @@
   height: 86px;
   padding: 12px 16px;
   border-bottom: 1px solid #ebdfd0;
-  color: #3c2a1e;
+  color: var(--text-primary, #3c2a1e);
   font-size: 11px;
   vertical-align: middle;
 }
@@ -311,22 +311,22 @@
 }
 
 .user-management-page__table tbody tr:hover td {
-  background: #fff8ee;
+  background: var(--bg-secondary);
 }
 
 .user-management-page__table tbody tr.is-selected td {
-  background: #fff8ee;
-  border-top: 1px solid #e9874c;
-  border-bottom: 1px solid #e9874c;
+  background: var(--bg-secondary);
+  border-top: 1px solid var(--accent-color);
+  border-bottom: 1px solid var(--accent-color);
 }
 
 .user-management-page__table tbody tr.is-selected td:first-child {
-  border-left: 1px solid #e9874c;
+  border-left: 1px solid var(--accent-color);
   border-radius: 10px 0 0 10px;
 }
 
 .user-management-page__table tbody tr.is-selected td:last-child {
-  border-right: 1px solid #e9874c;
+  border-right: 1px solid var(--accent-color);
   border-radius: 0 10px 10px 0;
 }
 
@@ -354,8 +354,8 @@
 
 .user-management-page__identity > span,
 .user-management-page__profile > span {
-  color: #f6d3b5;
-  background: #3b2a1d;
+  color: var(--accent-soft);
+  background: var(--text-primary, var(--sidebar-bg));
   display: grid;
   place-items: center;
   font-weight: 900;
@@ -370,7 +370,7 @@
 .user-management-page__identity small {
   display: block;
   margin: 3px 0 0;
-  color: #746254;
+  color: var(--text-secondary, #746254);
   font-size: 10px;
 }
 
@@ -392,7 +392,7 @@
 }
 
 .user-management-page__status--active {
-  color: #3d652d;
+  color: var(--success-color);
   background: #dfead8;
 }
 
@@ -427,7 +427,7 @@
   height: 6px;
   margin-top: 6px;
   border-radius: 999px;
-  background: #e9dfd1;
+  background: var(--accent-soft);
   overflow: hidden;
 }
 
@@ -435,7 +435,7 @@
   display: block;
   height: 100%;
   border-radius: inherit;
-  background: #bd5a1e;
+  background: var(--accent-color);
 }
 
 .user-management-page__quota-bar span.danger {
@@ -453,7 +453,7 @@
 }
 
 .user-management-page__more-button:hover {
-  background: #eee1d0;
+  background: var(--accent-soft);
 }
 
 .user-management-page__table-footer {
@@ -475,15 +475,15 @@
 .user-management-page__table-footer button {
   width: 31px;
   height: 31px;
-  border: 1px solid #e0d1bf;
+  border: 1px solid var(--border-color);
   border-radius: 8px;
   color: #7f6a58;
-  background: #fffaf3;
+  background: var(--bg-card);
 }
 
 .user-management-page__table-footer button.active {
-  border-color: #d65416;
-  color: #b64610;
+  border-color: var(--accent-color);
+  color: var(--accent-color);
 }
 
 .user-management-page__detail-panel {
@@ -510,7 +510,7 @@
 .user-management-page__profile {
   margin-top: 20px;
   padding-bottom: 18px;
-  border-bottom: 1px solid #e5d8c8;
+  border-bottom: 1px solid var(--border-color);
   display: flex;
   align-items: center;
   gap: 12px;
@@ -550,14 +550,14 @@
 
 .user-management-page__details-list dt,
 .user-management-page__access-list dt {
-  color: #705e50;
+  color: var(--text-secondary);
   font-size: 10px;
 }
 
 .user-management-page__details-list dd,
 .user-management-page__access-list dd {
   margin: 0;
-  color: #4b382b;
+  color: var(--text-primary, #4b382b);
   font-size: 10px;
   text-align: right;
 }
@@ -565,8 +565,8 @@
 .user-management-page__detail-storage {
   margin-top: 13px;
   padding: 15px 0;
-  border-top: 1px solid #e5d8c8;
-  border-bottom: 1px solid #e5d8c8;
+  border-top: 1px solid var(--border-color);
+  border-bottom: 1px solid var(--border-color);
 }
 
 .user-management-page__detail-storage h3 {
@@ -582,18 +582,18 @@
 }
 
 .user-management-page__detail-storage strong {
-  color: #d24c10;
+  color: var(--accent-color);
   font-size: 22px;
 }
 
 .user-management-page__detail-storage span {
-  color: #786657;
+  color: var(--text-muted);
   font-size: 10px;
 }
 
 .user-management-page__detail-storage p {
   margin: 8px 0 0;
-  color: #d24c10;
+  color: var(--accent-color);
   font-size: 10px;
 }
 
@@ -605,10 +605,10 @@
 
 .user-management-page__detail-actions button {
   min-height: 39px;
-  border: 1px solid #dcc9b3;
+  border: 1px solid var(--border-color);
   border-radius: 9px;
-  color: #503a2a;
-  background: #fffdfa;
+  color: var(--text-secondary);
+  background: var(--input-bg);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -645,8 +645,8 @@
   width: 46px;
   height: 46px;
   border-radius: 14px;
-  color: #b85219;
-  background: #eee0cd;
+  color: var(--accent-color);
+  background: var(--accent-soft);
   display: grid;
   place-items: center;
   font-size: 18px;
@@ -682,9 +682,9 @@
 .user-management-page__invite-modal,
 .user-management-page__confirm-modal {
   width: min(430px, 100%);
-  border: 1px solid #dfcdb7;
+  border: 1px solid var(--border-color);
   border-radius: 18px;
-  background: #fffaf3;
+  background: var(--bg-card);
   padding: 24px;
   box-shadow: 0 28px 80px rgba(47, 32, 21, 0.3);
 }
@@ -714,13 +714,13 @@
 
 .user-management-page__invite-modal > p {
   margin: 15px 0 18px;
-  color: #756354;
+  color: var(--text-secondary);
   font-size: 12px;
   line-height: 1.55;
 }
 
 .user-management-page__invite-modal label {
-  color: #4b382a;
+  color: var(--text-primary, var(--text-secondary));
   display: grid;
   gap: 8px;
   font-size: 11px;
@@ -732,8 +732,8 @@
   border: 1px solid #d9c6ae;
   border-radius: 10px;
   outline: 0;
-  color: #3d2b20;
-  background: #fff;
+  color: var(--text-primary, #3d2b20);
+  background: var(--bg-card);
   padding: 0 12px;
   font: inherit;
 }
@@ -749,10 +749,10 @@
 .user-management-page__invite-actions button,
 .user-management-page__confirm-actions button {
   min-height: 42px;
-  border: 1px solid #dac7af;
+  border: 1px solid var(--border-color);
   border-radius: 10px;
-  color: #4b3828;
-  background: #fffdfa;
+  color: var(--text-primary, var(--text-secondary));
+  background: var(--input-bg);
   cursor: pointer;
   font: inherit;
   font-size: 11px;
@@ -761,9 +761,9 @@
 
 .user-management-page__invite-actions button:last-child,
 .user-management-page__confirm-actions button:last-child {
-  border-color: #c95516;
-  color: #fff;
-  background: #c95516;
+  border-color: var(--accent-color);
+  color: var(--bg-card);
+  background: var(--accent-color);
 }
 
 .user-management-page__confirm-modal {
@@ -775,8 +775,8 @@
   height: 55px;
   margin: 0 auto 15px;
   border-radius: 16px;
-  color: #b85219;
-  background: #f2dfc7;
+  color: var(--accent-color);
+  background: var(--accent-soft);
   display: grid;
   place-items: center;
   font-size: 21px;
@@ -789,7 +789,7 @@
 
 .user-management-page__confirm-modal > p {
   margin: 10px 0 0;
-  color: #756354;
+  color: var(--text-secondary);
   font-size: 12px;
   line-height: 1.55;
 }

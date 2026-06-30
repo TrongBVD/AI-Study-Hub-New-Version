@@ -11,8 +11,6 @@ const {
   moderateDocument,
   createEmbedding,
   toVectorLiteral,
-  validateTagsAndContent,
-  checkSensitiveContent,
 } = require("../services/aiService");
 
 const BUCKET = process.env.SUPABASE_DOCUMENT_BUCKET || "documents";
@@ -42,7 +40,7 @@ async function processDocumentWithAI(file, documentId, preExtractedText = null, 
           ai_reject_reason: { reason: "Could not extract enough readable text from this file." },
         })
         .eq("id", documentId);
-
+        //file rỗng hoặc ít hơn 20 kí tự
       return { status: "REJECTED", reason: "Could not extract enough readable text", chunkCount: 0 };
     }
 
@@ -58,10 +56,44 @@ async function processDocumentWithAI(file, documentId, preExtractedText = null, 
           .update({ status: "REJECTED", ai_reject_reason: moderation })
           .eq("id", documentId);
 
-        return { status: "REJECTED", reason: moderation.reason, chunkCount: 0 };
-      }
-      status = moderation.status;
+      return { status: "REJECTED", reason: moderation.reason, chunkCount: 0 };
     }
+
+    // ==============================================================================
+    // BƯỚC MỚI: Gọi AI phân tích tạo Tags và kiểm tra tên file
+    // ==============================================================================
+    let aiTagsAndName = null;
+    try {
+      if (generateTagsAndName) {
+        aiTagsAndName = await generateTagsAndName(extractedText, file.originalname);
+      }
+    } catch (tagError) {
+      console.warn("Lỗi khi AI generate tags, bỏ qua bước này:", tagError);
+    }
+
+    // Nếu AI sinh ra tags, tiến hành lưu vào DB
+    if (aiTagsAndName && aiTagsAndName.tags && aiTagsAndName.tags.length > 0) {
+      for (const tagName of aiTagsAndName.tags) {
+        const cleanTagName = tagName.replace('#', '').trim().toLowerCase();
+        
+        // 1. Kiểm tra xem Tag đã tồn tại trong bảng `tags` chưa, chưa có thì insert
+        let { data: tagData } = await supabase.from("tags").select("id").eq("name", cleanTagName).single();
+        
+        if (!tagData) {
+          const { data: newTag } = await supabase.from("tags").insert({ name: cleanTagName }).select("id").single();
+          tagData = newTag;
+        }
+
+        // 2. Gắn tag vào document thông qua bảng `document_tags`
+        if (tagData && tagData.id) {
+          await supabase.from("document_tags").insert({
+            document_id: documentId,
+            tag_id: tagData.id
+          });
+        }
+      }
+    }
+    // ==============================================================================
 
     const chunks = splitTextIntoChunks(extractedText);
 

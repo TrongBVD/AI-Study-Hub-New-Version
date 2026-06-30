@@ -11,5 +11,5 @@
 
 .admin-layout__content {
   min-height: calc(100dvh - 74px);
-  background: #faf3e1;
+  background: var(--bg-secondary);
 }

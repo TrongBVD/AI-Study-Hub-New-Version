@@ -47,7 +47,7 @@ function Register() {
           Already have an account?
           <span
             onClick={() => navigate('/login')}
-            style={{ color: '#0056b3', cursor: 'pointer', textDecoration: 'underline', marginLeft: '5px', fontWeight: '500' }}
+            style={{ color: 'var(--accent-color)', cursor: 'pointer', textDecoration: 'underline', marginLeft: '5px', fontWeight: '500' }}
           >
             Sign in
           </span>

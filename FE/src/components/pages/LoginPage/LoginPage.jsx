@@ -245,9 +245,9 @@ function LoginPage() {
             marginTop: "10px",
             width: "100%",
             padding: "12px",
-            backgroundColor: "#f1f3f5",
-            color: "#495057",
-            border: "1px solid #ced4da",
+            backgroundColor: "var(--bg-secondary)",
+            color: "var(--text-secondary)",
+            border: "1px solid var(--input-border)",
             borderRadius: "6px",
             cursor: "pointer",
             fontWeight: "600",
@@ -262,7 +262,7 @@ function LoginPage() {
           <span
             onClick={() => navigate("/register")}
             style={{
-              color: "#0056b3",
+              color: "var(--accent-color)",
               cursor: "pointer",
               textDecoration: "underline",
               fontWeight: "500",
@@ -276,7 +276,7 @@ function LoginPage() {
           <span
             onClick={() => navigate("/forgot-password")}
             style={{
-              color: "#0056b3",
+              color: "var(--accent-color)",
               cursor: "pointer",
               textDecoration: "none",
             }}

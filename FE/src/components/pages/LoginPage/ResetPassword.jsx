@@ -143,7 +143,7 @@ function ResetPassword() {
         {isOtpVerified && (
           <p
             className="login_message"
-            style={{ fontSize: "13px", color: "#7c6a58", textAlign: "left" }}
+            style={{ fontSize: "13px", color: "var(--text-secondary)", textAlign: "left" }}
           >
             Mật khẩu mới cần có ít nhất 8 ký tự, bao gồm chữ thường, số và ký tự
             đặc biệt.
@@ -165,7 +165,7 @@ function ResetPassword() {
           <span
             onClick={() => navigate("/login")}
             style={{
-              color: "#0056b3",
+              color: "var(--accent-color)",
               cursor: "pointer",
               textDecoration: "underline",
             }}

@@ -47,7 +47,7 @@ function ForgotPassword() {
         </button>
 
         <p className="login_message" style={{marginTop: "20px"}}>
-          <span onClick={() => navigate('/login')} style={{ color: '#0056b3', cursor: 'pointer', textDecoration: 'underline' }}>
+          <span onClick={() => navigate('/login')} style={{ color: 'var(--accent-color)', cursor: 'pointer', textDecoration: 'underline' }}>
             Quay lại Đăng nhập
           </span>
         </p>
