@@ -11,6 +11,9 @@ const {
   moderateDocument,
   createEmbedding,
   toVectorLiteral,
+  generateTagsAndName,
+  checkSensitiveContent,
+  validateTagsAndContent,
 } = require("../services/aiService");
 
 const BUCKET = process.env.SUPABASE_DOCUMENT_BUCKET || "documents";

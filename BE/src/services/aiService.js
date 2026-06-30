@@ -246,9 +246,9 @@ ${content}
 
 // src/services/aiService.js
 
-exports.generateTagsAndName = async (extractedText, originalName) => {
+async function generateTagsAndName(extractedText, originalName) {
   // Chỉ lấy khoảng 1000 ký tự đầu tiên để tiết kiệm token
-  const sampleText = extractedText.substring(0, 1000);
+  const sampleText = String(extractedText || "").substring(0, 1000);
 
   const prompt = `Bạn là hệ thống phân loại tài liệu. 
   Tên file gốc: "${originalName}"
@@ -265,18 +265,124 @@ exports.generateTagsAndName = async (extractedText, originalName) => {
     "message": "Thông báo (ví dụ: File về toán học nhưng đặt tên physic, bạn có muốn đổi thành math.pdf không?)"
   }`;
 
-  // Giả mã gọi API OpenAI/Gemini (Cần thay bằng hàm gọi API thực tế của dự án)
-  // const response = await llmClient.generateText(prompt);
-  // const parsedJSON = JSON.parse(response);
-  
-  // Trả về mock data cho ví dụ
-  return {
-    tags: ["#university", "#software"],
-    suggestedName: "", 
-    message: ""
-  };
-};
+  try {
+    const resultText = await generateText(prompt);
+    const result = extractJson(resultText);
+    return {
+      tags: Array.isArray(result.tags) ? result.tags : [],
+      suggestedName: result.suggestedName || "",
+      message: result.message || ""
+    };
+  } catch (error) {
+    console.error("Lỗi khi generateTagsAndName với Gemini:", error);
+    return {
+      tags: [],
+      suggestedName: "",
+      message: ""
+    };
+  }
+}
 
+function checkSensitiveContent(text) {
+  // Bộ lọc từ ngữ thô tục/nhạy cảm tiếng Việt & Anh thông dụng
+  const severeWords = [
+    "địt", "đéo", "đm", "vcl", "vú", "cu", "cặc", "lồn", "porn", "xxx", 
+    "fucking", "bitch", "asshole", "dâm", "chịch", "phịch", "phang"
+  ];
+  
+  const mildWords = [
+    "ngu", "dốt", "óc chó", "khùng", "điên", "bậy", "tục"
+  ];
+
+  const normalizedText = String(text || "").toLowerCase();
+
+  for (const word of severeWords) {
+    if (normalizedText.includes(word)) {
+      return { classification: "SEVERE", word };
+    }
+  }
+
+  for (const word of mildWords) {
+    if (normalizedText.includes(word)) {
+      return { classification: "MILD", word };
+    }
+  }
+
+  return { classification: "NONE", word: null };
+}
+
+async function validateTagsAndContent(extractedText, originalName, userTags) {
+  const sampleText = String(extractedText || "").substring(0, 5000);
+
+  const prompt = `Bạn là hệ thống kiểm duyệt và gợi ý hashtag cho tài liệu học tập của sinh viên.
+Tên file gốc: "${originalName}"
+Nội dung trích xuất của file (mẫu 5000 ký tự đầu):
+"${sampleText}"
+
+Danh sách hashtags người dùng nhập vào: ${JSON.stringify(userTags)}
+
+Nhiệm vụ của bạn:
+1. Đối với MỖI hashtag trong danh sách trên, hãy kiểm tra:
+   - Nó có sai chính tả tiếng Việt hoặc tiếng Anh không?
+   - Nó có phản ánh đúng và chính xác nội dung/chủ đề của tài liệu không?
+   - Định dạng hợp lệ là bắt đầu bằng dấu # (ví dụ: #math, #lichsu). Nếu người dùng nhập không có dấu # thì coi như hợp lệ nhưng khi gợi ý thay thế hãy thêm #.
+   
+2. Gợi ý thêm 3-5 hashtags liên quan nhất dựa trên nội dung tài liệu (luôn bắt đầu bằng dấu #).
+
+BẮT BUỘC trả về ĐÚNG định dạng JSON sau, không kèm bất kỳ đoạn văn bản giải thích nào khác ngoài JSON:
+{
+  "tagValidations": [
+    {
+      "tag": "#tên_tag_đang_kiểm_tra",
+      "isValid": true hoặc false,
+      "recommendedReplacement": "#tag_gợi_ý_thay_thế_nếu_sai_hoặc_không_phù_hợp",
+      "reason": "Lý do vì sao sai hoặc không phù hợp (nếu isValid = false), nếu isValid = true thì để chuỗi rỗng"
+    }
+  ],
+  "aiRecommendedTags": ["#goiy1", "#goiy2", "#goiy3"]
+}
+
+Ví dụ: Nếu người dùng nhập ["#physic", "#lichsu12"] mà file nói về lịch sử Việt Nam lớp 12:
+- #physic sẽ có isValid = false, recommendedReplacement = "#vietnamhistory", reason = "Hashtag vật lý không liên quan đến nội dung lịch sử Việt Nam của file."
+- #lichsu12 sẽ có isValid = true, recommendedReplacement = "#lichsu12", reason = ""
+`;
+
+  try {
+    const responseText = await generateText(prompt);
+    const result = extractJson(responseText);
+
+    const tagValidations = (result.tagValidations || []).map(v => ({
+      tag: v.tag || "",
+      isValid: typeof v.isValid === "boolean" ? v.isValid : true,
+      recommendedReplacement: v.recommendedReplacement || v.tag || "",
+      reason: v.reason || ""
+    }));
+
+    const isValid = tagValidations.every(v => v.isValid === true);
+
+    const aiRecommendedTags = Array.isArray(result.aiRecommendedTags) 
+      ? result.aiRecommendedTags 
+      : [];
+
+    return {
+      isValid,
+      tagValidations,
+      aiRecommendedTags
+    };
+  } catch (error) {
+    console.error("Lỗi khi validateTagsAndContent với Gemini:", error);
+    return {
+      isValid: true,
+      tagValidations: userTags.map(t => ({
+        tag: t,
+        isValid: true,
+        recommendedReplacement: t,
+        reason: ""
+      })),
+      aiRecommendedTags: []
+    };
+  }
+}
 
 module.exports = {
   moderateDocument,
@@ -284,5 +390,8 @@ module.exports = {
   toVectorLiteral,
   answerWithContext,
   generateFlashcardsFromChunks,
+  generateTagsAndName,
+  checkSensitiveContent,
+  validateTagsAndContent,
 };
 
