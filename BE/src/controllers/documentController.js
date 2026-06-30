@@ -40,7 +40,7 @@ async function processDocumentWithAI(file, documentId, preExtractedText = null, 
           ai_reject_reason: { reason: "Could not extract enough readable text from this file." },
         })
         .eq("id", documentId);
-        //file rỗng hoặc ít hơn 20 kí tự
+      //file rỗng hoặc ít hơn 20 kí tự
       return { status: "REJECTED", reason: "Could not extract enough readable text", chunkCount: 0 };
     }
 
@@ -56,92 +56,93 @@ async function processDocumentWithAI(file, documentId, preExtractedText = null, 
           .update({ status: "REJECTED", ai_reject_reason: moderation })
           .eq("id", documentId);
 
-      return { status: "REJECTED", reason: moderation.reason, chunkCount: 0 };
-    }
-
-    // ==============================================================================
-    // BƯỚC MỚI: Gọi AI phân tích tạo Tags và kiểm tra tên file
-    // ==============================================================================
-    let aiTagsAndName = null;
-    try {
-      if (generateTagsAndName) {
-        aiTagsAndName = await generateTagsAndName(extractedText, file.originalname);
+        return { status: "REJECTED", reason: moderation.reason, chunkCount: 0 };
       }
-    } catch (tagError) {
-      console.warn("Lỗi khi AI generate tags, bỏ qua bước này:", tagError);
-    }
 
-    // Nếu AI sinh ra tags, tiến hành lưu vào DB
-    if (aiTagsAndName && aiTagsAndName.tags && aiTagsAndName.tags.length > 0) {
-      for (const tagName of aiTagsAndName.tags) {
-        const cleanTagName = tagName.replace('#', '').trim().toLowerCase();
-        
-        // 1. Kiểm tra xem Tag đã tồn tại trong bảng `tags` chưa, chưa có thì insert
-        let { data: tagData } = await supabase.from("tags").select("id").eq("name", cleanTagName).single();
-        
-        if (!tagData) {
-          const { data: newTag } = await supabase.from("tags").insert({ name: cleanTagName }).select("id").single();
-          tagData = newTag;
+      // ==============================================================================
+      // BƯỚC MỚI: Gọi AI phân tích tạo Tags và kiểm tra tên file
+      // ==============================================================================
+      let aiTagsAndName = null;
+      try {
+        if (generateTagsAndName) {
+          aiTagsAndName = await generateTagsAndName(extractedText, file.originalname);
         }
+      } catch (tagError) {
+        console.warn("Lỗi khi AI generate tags, bỏ qua bước này:", tagError);
+      }
 
-        // 2. Gắn tag vào document thông qua bảng `document_tags`
-        if (tagData && tagData.id) {
-          await supabase.from("document_tags").insert({
-            document_id: documentId,
-            tag_id: tagData.id
-          });
+      // Nếu AI sinh ra tags, tiến hành lưu vào DB
+      if (aiTagsAndName && aiTagsAndName.tags && aiTagsAndName.tags.length > 0) {
+        for (const tagName of aiTagsAndName.tags) {
+          const cleanTagName = tagName.replace('#', '').trim().toLowerCase();
+
+          // 1. Kiểm tra xem Tag đã tồn tại trong bảng `tags` chưa, chưa có thì insert
+          let { data: tagData } = await supabase.from("tags").select("id").eq("name", cleanTagName).single();
+
+          if (!tagData) {
+            const { data: newTag } = await supabase.from("tags").insert({ name: cleanTagName }).select("id").single();
+            tagData = newTag;
+          }
+
+          // 2. Gắn tag vào document thông qua bảng `document_tags`
+          if (tagData && tagData.id) {
+            await supabase.from("document_tags").insert({
+              document_id: documentId,
+              tag_id: tagData.id
+            });
+          }
         }
       }
+      // ==============================================================================
+
+      const chunks = splitTextIntoChunks(extractedText);
+
+      if (chunks.length === 0) {
+        await supabase
+          .from("documents")
+          .update({
+            status: "REJECTED",
+            ai_reject_reason: { reason: "No readable text chunks could be created." },
+          })
+          .eq("id", documentId);
+
+        return { status: "REJECTED", reason: "No readable text chunks could be created.", chunkCount: 0 };
+      }
+
+      const chunkRows = [];
+      for (let i = 0; i < chunks.length; i++) {
+        const embedding = await createEmbedding(chunks[i], "document");
+        chunkRows.push({
+          document_id: documentId,
+          chunk_index: i,
+          content: chunks[i],
+          embedding: toVectorLiteral(embedding),
+        });
+      }
+
+      await supabase.from("document_chunks").delete().eq("document_id", documentId);
+
+      const { error: chunkInsertError } = await supabase.from("document_chunks").insert(chunkRows);
+
+      if (chunkInsertError) {
+        throw chunkInsertError;
+      }
+
+      const updatePayload = {
+        status: status,
+        ai_reject_reason: aiRejectReason,
+      };
+
+      await supabase.from("documents").update(updatePayload).eq("id", documentId);
+
+      console.log("AI processing completed for document:", documentId);
+
+      return {
+        status: status,
+        reason: "Document processed.",
+        chunkCount: chunks.length,
+      };
     }
-    // ==============================================================================
-
-    const chunks = splitTextIntoChunks(extractedText);
-
-    if (chunks.length === 0) {
-      await supabase
-        .from("documents")
-        .update({
-          status: "REJECTED",
-          ai_reject_reason: { reason: "No readable text chunks could be created." },
-        })
-        .eq("id", documentId);
-
-      return { status: "REJECTED", reason: "No readable text chunks could be created.", chunkCount: 0 };
-    }
-
-    const chunkRows = [];
-    for (let i = 0; i < chunks.length; i++) {
-      const embedding = await createEmbedding(chunks[i], "document");
-      chunkRows.push({
-        document_id: documentId,
-        chunk_index: i,
-        content: chunks[i],
-        embedding: toVectorLiteral(embedding),
-      });
-    }
-
-    await supabase.from("document_chunks").delete().eq("document_id", documentId);
-
-    const { error: chunkInsertError } = await supabase.from("document_chunks").insert(chunkRows);
-
-    if (chunkInsertError) {
-      throw chunkInsertError;
-    }
-
-    const updatePayload = {
-      status: status,
-      ai_reject_reason: aiRejectReason,
-    };
-
-    await supabase.from("documents").update(updatePayload).eq("id", documentId);
-
-    console.log("AI processing completed for document:", documentId);
-
-    return {
-      status: status,
-      reason: "Document processed.",
-      chunkCount: chunks.length,
-    };
   } catch (error) {
     console.error("AI processing failed:", error);
 
@@ -167,7 +168,7 @@ async function processDocumentWithAI(file, documentId, preExtractedText = null, 
 
 exports.listMyDocuments = async (req, res) => {
   try {
-    const userID = req.user.id; 
+    const userID = req.user.id;
     const { libraryId, workspaceId } = req.query;
 
     if (!userID) {
@@ -227,12 +228,12 @@ exports.listMyDocuments = async (req, res) => {
 
 exports.uploadDocuments = async (req, res) => {
   try {
-    const userID = req.user.id; 
+    const userID = req.user.id;
     const files = req.files || [];
     const workspaceId = req.body?.workspaceId || null;
     const libraryId = req.body?.libraryId || null; // Hỗ trợ up lên Library
     const tagsString = req.body?.tags || "[]";
-    
+
     let userTags = [];
     try {
       userTags = JSON.parse(tagsString);
@@ -265,10 +266,10 @@ exports.uploadDocuments = async (req, res) => {
 
     // 1. Trích xuất text và chạy kiểm tra nhạy cảm + tag validation cho tất cả các file trước
     const processedFilesData = [];
-    
+
     for (const file of files) {
       const extractedText = await extractTextFromFile(file);
-      
+
       // Kiểm tra ngôn từ nhạy cảm
       const sensitivity = checkSensitiveContent(extractedText);
       if (sensitivity.classification === "SEVERE") {
@@ -278,10 +279,10 @@ exports.uploadDocuments = async (req, res) => {
           message: `Tài liệu "${file.originalname}" chứa ngôn từ quá nhạy cảm hoặc thô tục (${sensitivity.word}) và đã bị chặn tải lên.`
         });
       }
-      
+
       // Chạy AI validation cho hashtag do người dùng nhập vào
       const tagValidationResult = await validateTagsAndContent(extractedText, file.originalname, userTags);
-      
+
       if (!tagValidationResult.isValid) {
         return res.status(400).json({
           status: "error",
@@ -291,7 +292,7 @@ exports.uploadDocuments = async (req, res) => {
           aiRecommendedTags: tagValidationResult.aiRecommendedTags
         });
       }
-      
+
       processedFilesData.push({
         file,
         extractedText,
@@ -305,7 +306,7 @@ exports.uploadDocuments = async (req, res) => {
 
     for (const processedData of processedFilesData) {
       const { file, extractedText, sensitivity, aiRecommendedTags } = processedData;
-      
+
       const safeFileName = sanitizeFileName(file.originalname);
       const storagePath = `${userID}/${Date.now()}-${crypto.randomUUID()}-${safeFileName}`;
 
@@ -320,7 +321,7 @@ exports.uploadDocuments = async (req, res) => {
       // Xác định status và reject reason dựa trên mức độ nhạy cảm
       let status = "APPROVED";
       let aiRejectReason = null;
-      
+
       if (sensitivity.classification === "MILD") {
         status = "FLAGGED";
         aiRejectReason = {
@@ -351,16 +352,16 @@ exports.uploadDocuments = async (req, res) => {
       const allTags = [...userTags, ...aiRecommendedTags];
       // Loại bỏ các tag trùng lặp và làm sạch
       const uniqueTags = [...new Set(allTags.map(t => t.trim().toLowerCase().replace("#", "")))];
-      
+
       for (const tagName of uniqueTags) {
         if (!tagName) continue;
-        
+
         let { data: tagData } = await supabase
           .from("tags")
           .select("id")
           .eq("name", tagName)
           .maybeSingle();
-          
+
         if (!tagData) {
           const { data: newTag, error: newTagError } = await supabase
             .from("tags")
@@ -368,10 +369,10 @@ exports.uploadDocuments = async (req, res) => {
             .select("id")
             .single();
           if (!newTagError) {
-             tagData = newTag;
+            tagData = newTag;
           }
         }
-        
+
         if (tagData && tagData.id) {
           await supabase.from("document_tags").insert({
             document_id: document.id,
@@ -382,13 +383,13 @@ exports.uploadDocuments = async (req, res) => {
 
       // Gọi hàm xử lý AI (embedding và chunking)
       const aiResult = await processDocumentWithAI(
-        file, 
-        document.id, 
-        extractedText, 
-        status, 
+        file,
+        document.id,
+        extractedText,
+        status,
         aiRejectReason
       );
-      
+
       uploadedDocuments.push({ ...document, status: aiResult.status });
     }
 
@@ -522,7 +523,7 @@ exports.createLibrary = async (req, res) => {
   try {
     // Đã thêm biến share_on_profile vào đây
     const { name, description, is_public, share_on_profile } = req.body;
-    const userID = req.user.id; 
+    const userID = req.user.id;
 
     if (!userID) {
       return res.status(401).json({
@@ -530,18 +531,18 @@ exports.createLibrary = async (req, res) => {
         message: "Authenticated user id is missing.",
       });
     }
-    
+
     const { data, error } = await supabase
       .from("libraries")
-      .insert({ 
-        user_id: userID, 
-        name, 
-        description, 
+      .insert({
+        user_id: userID,
+        name,
+        description,
         is_public,
-        share_on_profile 
+        share_on_profile
       })
       .select().single();
-      
+
     if (error) throw error;
     return res.status(201).json({ status: "success", data });
   } catch (error) {
@@ -556,13 +557,13 @@ exports.updateLibrary = async (req, res) => {
     const { id } = req.params;
     // Đã thêm biến share_on_profile
     const { name, description, is_public, share_on_profile } = req.body;
-    
+
     const { data, error } = await supabase
       .from("libraries")
       .update({ name, description, is_public, share_on_profile })
       .eq("id", id)
       .select().single();
-      
+
     if (error) throw error;
     return res.status(200).json({ status: "success", data });
   } catch (error) {
