@@ -810,7 +810,12 @@ function LibraryPage() {
 
       handleCancelTaggedUpload();
 
-      alert("Upload successful.");
+      const hasFlagged = (uploadedDocuments || []).some(doc => doc.status === "FLAGGED");
+      if (hasFlagged) {
+        alert("Upload completed. However, documents suspected of containing sensitive content have been flagged and sent to the Admin for review.");
+      } else {
+        alert("Upload successful.");
+      }
     } catch (error) {
       console.error("Upload failed:", error);
       
@@ -818,9 +823,6 @@ function LibraryPage() {
         setTagErrors(error.response.data.tagValidations || []);
         setAiRecommendedTags(error.response.data.aiRecommendedTags || []);
         alert("AI Hashtag Verification failed. Please check recommendations next to the input fields.");
-      } else if (error.response?.data?.code === "SEVERE_SENSITIVE_CONTENT") {
-        alert(error.response.data.message || "Tài liệu chứa từ ngữ nhạy cảm thô tục và đã bị chặn tải lên.");
-        handleCancelTaggedUpload();
       } else {
         alert(error.response?.data?.message || error.response?.data?.error || "Upload failed. Please check backend and Supabase.");
       }
@@ -1354,7 +1356,7 @@ function LibraryPage() {
                     <p>Add your first document to start building this study library.</p>
                     <label className="empty_state_action">
                       <i className="ti-upload"></i>
-                      Upload document
+                      Upload file
                       <input
                         type="file"
                         multiple
@@ -1372,7 +1374,7 @@ function LibraryPage() {
                     <p>Try another keyword or upload a new document.</p>
                     <label className="empty_state_action">
                       <i className="ti-upload"></i>
-                      Upload document
+                      Upload file
                       <input
                         type="file"
                         multiple

@@ -17,6 +17,7 @@ const {
 } = require("../services/aiService");
 
 const BUCKET = process.env.SUPABASE_DOCUMENT_BUCKET || "documents";
+const { createActivityLog } = require("../services/activityLogService");
 
 function sanitizeFileName(fileName) {
   const baseName = path.basename(fileName || "upload.bin");
@@ -280,14 +281,7 @@ exports.uploadDocuments = async (req, res) => {
       const extractedText = await extractTextFromFile(file);
 
       // Kiểm tra ngôn từ nhạy cảm
-      const sensitivity = checkSensitiveContent(extractedText);
-      if (sensitivity.classification === "SEVERE") {
-        return res.status(400).json({
-          status: "error",
-          code: "SEVERE_SENSITIVE_CONTENT",
-          message: `Tài liệu "${file.originalname}" chứa ngôn từ quá nhạy cảm hoặc thô tục (${sensitivity.word}) và đã bị chặn tải lên.`
-        });
-      }
+      const sensitivity = await checkSensitiveContent(extractedText);
 
       // Chạy AI validation cho hashtag do người dùng nhập vào
       const tagValidationResult = await validateTagsAndContent(extractedText, file.originalname, userTags);
@@ -331,11 +325,12 @@ exports.uploadDocuments = async (req, res) => {
       let status = "APPROVED";
       let aiRejectReason = null;
 
-      if (sensitivity.classification === "MILD") {
+      if (sensitivity.classification === "SEVERE" || sensitivity.classification === "MILD") {
         status = "FLAGGED";
         aiRejectReason = {
-          reason: "Contains mild inappropriate language",
-          word: sensitivity.word
+          reason: `Contains ${sensitivity.classification.toLowerCase()} inappropriate language`,
+          word: sensitivity.word,
+          classification: sensitivity.classification
         };
       }
 
@@ -356,6 +351,22 @@ exports.uploadDocuments = async (req, res) => {
         .select("*").single();
 
       if (insertError) throw insertError;
+
+      // Nếu tài liệu bị gắn cờ nhạy cảm, log activity để thông báo cho admin
+      if (status === "FLAGGED") {
+        await createActivityLog({
+          actorUserId: userID,
+          actionType: "FILE_FLAGGED",
+          entityType: "document",
+          entityId: document.id,
+          newData: {
+            reason: "AI detected sensitive language",
+            word: sensitivity.word,
+            classification: sensitivity.classification,
+            fileName: file.originalname
+          }
+        }).catch(err => console.error("Lỗi tạo log kiểm duyệt:", err));
+      }
 
       // Lưu tags vào DB
       const allTags = [...userTags, ...aiRecommendedTags];

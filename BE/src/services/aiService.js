@@ -283,32 +283,39 @@ async function generateTagsAndName(extractedText, originalName) {
   }
 }
 
-function checkSensitiveContent(text) {
-  // Bộ lọc từ ngữ thô tục/nhạy cảm tiếng Việt & Anh thông dụng
-  const severeWords = [
-    "địt", "đéo", "đm", "vcl", "vú", "cu", "cặc", "lồn", "porn", "xxx", 
-    "fucking", "bitch", "asshole", "dâm", "chịch", "phịch", "phang"
-  ];
-  
-  const mildWords = [
-    "ngu", "dốt", "óc chó", "khùng", "điên", "bậy", "tục"
-  ];
+function isWholeWordPresent(text, word) {
+  const esc = word.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+  const boundaryChars = "a-z0-9àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ";
+  const regex = new RegExp(`(?<=^|[^${boundaryChars}])${esc}(?=$|[^${boundaryChars}])`, "i");
+  return regex.test(text);
+}
 
-  const normalizedText = String(text || "").toLowerCase();
+async function checkSensitiveContent(text) {
+  const sampleText = String(text || "").substring(0, 8000);
 
-  for (const word of severeWords) {
-    if (normalizedText.includes(word)) {
-      return { classification: "SEVERE", word };
-    }
+  const prompt = `Bạn là hệ thống kiểm duyệt nội dung tự động. 
+Hãy kiểm tra xem đoạn văn bản tài liệu dưới đây có chứa ngôn từ thô tục, nhạy cảm, chửi bậy, khiêu dâm hoặc không phù hợp với môi trường học tập hay không.
+
+Văn bản tài liệu:
+"${sampleText}"
+
+BẮT BUỘC trả về ĐÚNG định dạng JSON sau, không kèm bất kỳ giải thích nào khác ngoài JSON:
+{
+  "classification": "SEVERE" (nếu cực kỳ thô tục, bậy bạ, khiêu dâm) hoặc "MILD" (nếu có từ chửi tục nhẹ hoặc không phù hợp nhẹ) hoặc "NONE" (nếu tài liệu học tập sạch sẽ, bình thường),
+  "word": "từ hoặc cụm từ vi phạm tiêu biểu nhất (nếu có, nếu không thì để null)"
+}`;
+
+  try {
+    const resultText = await generateText(prompt);
+    const result = extractJson(resultText);
+    return {
+      classification: ["SEVERE", "MILD", "NONE"].includes(result.classification) ? result.classification : "NONE",
+      word: result.word || null
+    };
+  } catch (error) {
+    console.error("Lỗi AI checkSensitiveContent:", error);
+    return { classification: "NONE", word: null };
   }
-
-  for (const word of mildWords) {
-    if (normalizedText.includes(word)) {
-      return { classification: "MILD", word };
-    }
-  }
-
-  return { classification: "NONE", word: null };
 }
 
 async function validateTagsAndContent(extractedText, originalName, userTags) {
