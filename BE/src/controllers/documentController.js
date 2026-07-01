@@ -62,6 +62,7 @@ async function processDocumentWithAI(file, documentId, preExtractedText = null, 
 
         return { status: "REJECTED", reason: moderation.reason, chunkCount: 0 };
       }
+    }
 
       // ==============================================================================
       // BƯỚC MỚI: Gọi AI phân tích tạo Tags và kiểm tra tên file
