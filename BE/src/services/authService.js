@@ -19,6 +19,7 @@ const {
     generateOtp,
     getOtpExpiryDate,
     signAccessToken,
+    signRefreshToken,
     buildPublicUser,
 } = require('../utils/authHelpers');
 
@@ -206,12 +207,30 @@ exports.verifyAndLoginGoogle = async (googleToken) => {
     if(user.status === "DISABLED") {
         throw new Error("Tài khoản của bạn đã bị vô hiệu hóa. Vui lòng liên hệ quản trị viên.");
     }
+    const currentSessionId = require("crypto").randomUUID();
+    user.session_id = currentSessionId;
+
+    const { error: sessionError } = await supabase
+        .from("profiles")
+        .update({
+            session_id: currentSessionId,
+            last_login_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+        })
+        .eq("id", user.id);
+
+    if (sessionError) {
+        throw sessionError;
+    }
+
     const accessToken = signAccessToken(user);
+    const refreshToken = signRefreshToken(user);
 
     // Trả về thông tin login thành công
     return {
         user: buildPublicUser(user),
         accessToken,
+        refreshToken,
         requiresSetup: false,
         requiresOTP: false
     };

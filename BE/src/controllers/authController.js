@@ -6,13 +6,50 @@ const crypto = require('crypto');
 
 const {
     signAccessToken,
+    signRefreshToken,
+    verifyRefreshToken,
     buildPublicUser,
 } = require("../utils/authHelpers");
+
+const REFRESH_COOKIE_NAME = "refreshToken";
+const REFRESH_COOKIE_MAX_AGE = 30 * 24 * 60 * 60 * 1000;
+
+function getRefreshCookieOptions() {
+    const isProduction = process.env.NODE_ENV === "production";
+    return {
+        httpOnly: true,
+        secure: isProduction,
+        sameSite: isProduction ? "none" : "lax",
+        path: "/api/auth",
+    };
+}
+
+function getCookie(req, name) {
+    const cookies = String(req.headers.cookie || "").split(";");
+    const prefix = `${name}=`;
+    const cookie = cookies.map((value) => value.trim()).find((value) => value.startsWith(prefix));
+    return cookie ? decodeURIComponent(cookie.slice(prefix.length)) : null;
+}
+
+function setRefreshCookie(res, refreshToken) {
+    res.cookie(REFRESH_COOKIE_NAME, refreshToken, {
+        ...getRefreshCookieOptions(),
+        maxAge: REFRESH_COOKIE_MAX_AGE,
+    });
+}
+
+function clearRefreshCookie(res) {
+    res.clearCookie(REFRESH_COOKIE_NAME, getRefreshCookieOptions());
+}
 
 exports.googleLogin = async (req, res) => {
     try {
         const { token } = req.body;
         const result = await authService.verifyAndLoginGoogle(token);
+        if (result.refreshToken) {
+            setRefreshCookie(res, result.refreshToken);
+            delete result.refreshToken;
+        }
         res.status(200).json({ status: 'success', data: result });
     } catch (error) {
         // THÊM DÒNG NÀY ĐỂ BIẾT LỖI TẠI ĐÂU:
@@ -254,7 +291,22 @@ exports.completeSetup = async (req, res) => {
         // ======================================================
         // 7. TẠO ACCESS TOKEN ĐỂ FRONTEND VÀO DASHBOARD
         // ======================================================
+        const currentSessionId = crypto.randomUUID();
+        updatedUser.session_id = currentSessionId;
+
+        const { error: sessionError } = await supabase
+            .from("profiles")
+            .update({
+                session_id: currentSessionId,
+                last_login_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+            })
+            .eq("id", updatedUser.id);
+
+        if (sessionError) throw sessionError;
+
         const accessToken = signAccessToken(updatedUser);
+        setRefreshCookie(res, signRefreshToken(updatedUser));
 
         res.status(200).json({
             status: 'success',
@@ -321,7 +373,7 @@ exports.login = async (req, res) => {
         // 5. Cấp phát Token
         const accessToken = signAccessToken(user);
 
-        await supabase
+        const { error: sessionError } = await supabase
             .from("profiles")
             .update({
                 last_login_at: new Date().toISOString(),
@@ -329,6 +381,10 @@ exports.login = async (req, res) => {
                 session_id: currentSessionId
             })
             .eq("id", user.id);
+
+        if (sessionError) throw sessionError;
+
+        setRefreshCookie(res, signRefreshToken(user));
             
         res.status(200).json({
             status: "success",
@@ -595,7 +651,80 @@ exports.getUserProfileById = async (req, res) => {
   }
 };
 
+exports.refresh = async (req, res) => {
+  try {
+    const token = getCookie(req, REFRESH_COOKIE_NAME);
+    if (!token) {
+      return res.status(401).json({
+        status: "error",
+        code: "REFRESH_TOKEN_MISSING",
+        message: "Refresh session is missing.",
+      });
+    }
+
+    const payload = verifyRefreshToken(token);
+    const { data: user, error } = await supabase
+      .from("profiles")
+      .select("id, email, username, full_name, role, status, session_id")
+      .eq("id", payload.userId)
+      .maybeSingle();
+
+    if (error) throw error;
+
+    if (
+      !user ||
+      user.status === "DISABLED" ||
+      !user.session_id ||
+      user.session_id !== payload.session_id
+    ) {
+      clearRefreshCookie(res);
+      return res.status(401).json({
+        status: "error",
+        code: "SESSION_EXPIRED",
+        message: "The refresh session is no longer valid.",
+      });
+    }
+
+    const accessToken = signAccessToken(user);
+    setRefreshCookie(res, signRefreshToken(user));
+
+    return res.status(200).json({
+      status: "success",
+      data: {
+        accessToken,
+        user: buildPublicUser(user),
+      },
+    });
+  } catch {
+    clearRefreshCookie(res);
+    return res.status(401).json({
+      status: "error",
+      code: "REFRESH_TOKEN_INVALID",
+      message: "Refresh session has expired or is invalid.",
+    });
+  }
+};
+
 exports.logout = async (req, res) => {
+  try {
+    const token = getCookie(req, REFRESH_COOKIE_NAME);
+
+    if (token) {
+      try {
+        const payload = verifyRefreshToken(token);
+        await supabase
+          .from("profiles")
+          .update({ session_id: null, updated_at: new Date().toISOString() })
+          .eq("id", payload.userId)
+          .eq("session_id", payload.session_id);
+      } catch {
+        // An invalid/expired cookie still needs to be removed.
+      }
+    }
+  } finally {
+    clearRefreshCookie(res);
+  }
+
   return res.status(200).json({
     status: "success",
     message: "Logged out successfully.",

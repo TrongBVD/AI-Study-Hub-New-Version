@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import FormInput from "../../common/FormInput/FormInput.jsx";
 import { GoogleLogin, GoogleOAuthProvider } from "@react-oauth/google";
-import api from "../../../utils/api.js";
+import api, { refreshAccessToken } from "../../../utils/api.js";
 import { useNavigate } from "react-router-dom";
 import { isTokenValid } from "../../../utils/authToken";
 import "./LoginPage.css";
@@ -15,20 +15,31 @@ function LoginPage() {
   const navigate = useNavigate();
 
   useEffect(() => {
+    let isMounted = true;
     // Kiểm tra xem token có tồn tại trong localStorage không
     const token = localStorage.getItem("accessToken");
     
     // Nếu có token và token còn hạn, đá thẳng vào trang chủ Dashboard
-    if (token) {
-      if (isTokenValid(token)) {
-        navigate("/dashboard/home", { replace: true });
-      } else {
+    if (isTokenValid(token)) {
+      navigate("/dashboard/home", { replace: true });
+    } else {
+      refreshAccessToken()
+        .then(() => {
+          if (isMounted) navigate("/dashboard/home", { replace: true });
+        })
+        .catch(() => {
         // Nếu token đã hết hạn, dọn dẹp vùng nhớ tránh bị loop hoặc tự động log in lỗi
-        localStorage.removeItem("accessToken");
-        localStorage.removeItem("user");
-        localStorage.removeItem("aiStudyHubProfileName");
-      }
+          if (!isTokenValid(localStorage.getItem("accessToken"))) {
+            localStorage.removeItem("accessToken");
+            localStorage.removeItem("user");
+            localStorage.removeItem("aiStudyHubProfileName");
+          }
+        });
     }
+
+    return () => {
+      isMounted = false;
+    };
   }, [navigate]);
 
   function extractAccessToken(responseData) {

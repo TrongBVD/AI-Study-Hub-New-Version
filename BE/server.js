@@ -17,6 +17,7 @@ const publicRoutes = require("./src/routes/publicRoutes");
 // 1. Cấu hình Middleware CORS để cho phép Frontend (Vite - 5173) gọi API
 app.use(cors({
     origin: [
+        ...(process.env.FRONTEND_URL ? [process.env.FRONTEND_URL] : []),
         'http://localhost:5173',
         'http://localhost:5174',
         'http://127.0.0.1:5173',

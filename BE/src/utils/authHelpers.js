@@ -5,6 +5,7 @@ const jwt = require("jsonwebtoken");
 const GOOGLE_SSO_NO_PASSWORD = "GOOGLE_SSO_NO_PASSWORD";
 const OTP_EXPIRY_MINUTES = 10;
 const ACCESS_TOKEN_EXPIRY = "30m";
+const REFRESH_TOKEN_EXPIRY = "30d";
 const SETUP_TOKEN_EXPIRY = "15m";
 const PASSWORD_RESET_TOKEN_EXPIRY = "15m";
 
@@ -90,6 +91,28 @@ function signAccessToken(user) {
   );
 }
 
+function signRefreshToken(user) {
+  return jwt.sign(
+    {
+      userId: user.id,
+      session_id: user.session_id,
+      type: "refresh",
+    },
+    getJwtSecret(),
+    { expiresIn: REFRESH_TOKEN_EXPIRY },
+  );
+}
+
+function verifyRefreshToken(token) {
+  const payload = jwt.verify(token, getJwtSecret());
+
+  if (payload.type !== "refresh" || !payload.userId || !payload.session_id) {
+    throw new Error("Invalid refresh token.");
+  }
+
+  return payload;
+}
+
 function signSetupToken(email) {
   return jwt.sign(
     {
@@ -162,6 +185,8 @@ module.exports = {
     getOtpExpiryDate,
     hashPassword,
     signAccessToken,
+    signRefreshToken,
+    verifyRefreshToken,
     signSetupToken,
     signPasswordResetToken,
     verifySetupToken,
