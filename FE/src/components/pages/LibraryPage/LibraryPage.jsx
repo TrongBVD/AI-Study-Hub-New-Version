@@ -1145,10 +1145,10 @@ function LibraryPage() {
   const normalizedDocumentSearch = documentSearch.trim().toLowerCase();
 
   const filteredDocuments = documentItems.filter((item) =>
-    item.name.toLowerCase().includes(normalizedDocumentSearch),
+    (item.name || "").toLowerCase().includes(normalizedDocumentSearch),
   );
   const filteredFolders = folderItems.filter((item) =>
-    item.name.toLowerCase().includes(normalizedDocumentSearch),
+    (item.name || "").toLowerCase().includes(normalizedDocumentSearch),
   );
   const filteredStorageItemsCount =
     filteredFolders.length + filteredDocuments.length;
