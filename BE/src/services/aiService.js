@@ -330,28 +330,29 @@ Danh sách hashtags người dùng nhập vào: ${JSON.stringify(userTags)}
 
 Nhiệm vụ của bạn:
 1. Đối với MỖI hashtag trong danh sách trên, hãy kiểm tra:
-   - Nó có sai chính tả tiếng Việt hoặc tiếng Anh không?
+   - Nó có sai chính tả tiếng Việt hoặc tiếng Anh không? Lưu ý quan trọng: Vì là hashtag nên người dùng có thể viết liền không dấu hoặc viết hoa chữ cái đầu từ (ví dụ: "SoftwareTesting", "softwaretesting", "onthihocky"). Đây là định dạng bình thường của hashtag, không được báo là sai chính tả. Hãy phân tích các từ đơn cấu thành để kiểm tra xem có sai chính tả thực tế không.
    - Nó có phản ánh đúng và chính xác nội dung/chủ đề của tài liệu không?
-   - Định dạng hợp lệ là bắt đầu bằng dấu # (ví dụ: #math, #lichsu). Nếu người dùng nhập không có dấu # thì coi như hợp lệ nhưng khi gợi ý thay thế hãy thêm #.
+   - Định dạng của hashtag: Bắt đầu bằng dấu # và viết liền (không có khoảng trắng, ví dụ: #SoftwareTesting). Nếu người dùng nhập không có dấu # (ví dụ: "Software Testing" hoặc "SoftwareTesting"), hãy xem xét nó vẫn là hợp lệ (isValid = true) nếu đúng chính tả và chủ đề, nhưng trong phần "recommendedReplacement" bạn hãy định dạng lại nó thành chuẩn hashtag có dấu # và viết liền (ví dụ: "#SoftwareTesting").
+   - Ngôn ngữ của hashtag: Ưu tiên sử dụng tiếng Anh cho các hashtag để đồng bộ hệ thống. Nếu người dùng nhập hashtag bằng tiếng Việt (ví dụ: "lichsu", "toanhoc"), bạn VẪN coi là hợp lệ (isValid = true, KHÔNG được đánh dấu false để chặn upload), nhưng trong phần "recommendedReplacement" bạn hãy dịch và gợi ý tag tương đương bằng tiếng Anh (ví dụ: "#history", "#mathematics") và ghi chú vào phần "reason" khuyên họ nên đổi sang tiếng Anh (ví dụ: "Bạn nên dùng tiếng Anh cho hashtag (#history) thay vì tiếng Việt (#lichsu) để đồng bộ.").
    
-2. Gợi ý thêm 3-5 hashtags liên quan nhất dựa trên nội dung tài liệu (luôn bắt đầu bằng dấu #).
+2. Gợi ý thêm 3-5 hashtags liên quan nhất dựa trên nội dung tài liệu (luôn bắt đầu bằng dấu #, viết liền và viết bằng tiếng Anh).
 
 BẮT BUỘC trả về ĐÚNG định dạng JSON sau, không kèm bất kỳ đoạn văn bản giải thích nào khác ngoài JSON:
 {
   "tagValidations": [
     {
-      "tag": "#tên_tag_đang_kiểm_tra",
+      "tag": "tên_tag_đang_kiểm_tra",
       "isValid": true hoặc false,
-      "recommendedReplacement": "#tag_gợi_ý_thay_thế_nếu_sai_hoặc_không_phù_hợp",
-      "reason": "Lý do vì sao sai hoặc không phù hợp (nếu isValid = false), nếu isValid = true thì để chuỗi rỗng"
+      "recommendedReplacement": "#tag_gợi_ý_thay_thế_nếu_sai_hoặc_không_phù_hợp_hoặc_cần_thêm_dấu_thăng_và_viết_liền_hoặc_dịch_sang_tiếng_anh",
+      "reason": "Lý do khuyên dùng tiếng Anh (nếu tag là tiếng Việt) hoặc lý do sai chính tả/không phù hợp (nếu isValid = false), ngược lại để rỗng"
     }
   ],
   "aiRecommendedTags": ["#goiy1", "#goiy2", "#goiy3"]
 }
 
-Ví dụ: Nếu người dùng nhập ["#physic", "#lichsu12"] mà file nói về lịch sử Việt Nam lớp 12:
-- #physic sẽ có isValid = false, recommendedReplacement = "#vietnamhistory", reason = "Hashtag vật lý không liên quan đến nội dung lịch sử Việt Nam của file."
-- #lichsu12 sẽ có isValid = true, recommendedReplacement = "#lichsu12", reason = ""
+Ví dụ: Nếu người dùng nhập ["Software Testing", "lichsu12"] mà file nói về lịch sử Việt Nam lớp 12:
+- "Software Testing" sẽ có isValid = false, recommendedReplacement = "#vietnamhistory", reason = "Hashtag về phần mềm không liên quan đến nội dung lịch sử Việt Nam của file."
+- "lichsu12" sẽ có isValid = true, recommendedReplacement = "#lichsu12", reason = ""
 `;
 
   try {

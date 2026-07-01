@@ -2,6 +2,8 @@ import "./HomePage.css";
 import "../../../assets/icons/themify-icons-font/themify-icons/themify-icons.css";
 import { Link } from "react-router-dom";
 import studyHubLogo from "../../../assets/images/StudyHubLogo.svg";
+import { getMyLibraries } from "../../../utils/documentApi.js";
+import { getWorkspaces } from "../../../utils/workspaceApi.js";
 
 function readStorageList(key) {
   try {
@@ -85,21 +87,56 @@ function HomePage() {
     localStorage.getItem("aiStudyHubProfileName") || "dangkhoabi456";
   const isGuest = getStoredUserRole() === "GUEST";
 
-  const libraries = isGuest ? [] : readStorageList("aiStudyHubLibraries");
-  const workspaces = isGuest ? [] : readStorageList("aiStudyHubWorkspaces");
-  const recentLibraries = isGuest
-    ? []
-    : readStorageList("aiStudyHubRecentLibraries").slice(0, 2);
-  const recentWorkspaces = isGuest
-    ? []
-    : readStorageList("aiStudyHubRecentWorkspaces").slice(0, 4);
+  const [libraries, setLibraries] = useState([]);
+  const [workspaces, setWorkspaces] = useState([]);
 
-  const totalDocuments = libraries.reduce(
-    (total, library) => total + Number(library.documents || 0),
-    0
-  );
+  useEffect(() => {
+    if (isGuest) return;
+    let isMounted = true;
 
-  const stats = [
+    async function loadDashboardData() {
+      try {
+        const [libs, wspaces] = await Promise.all([
+          getMyLibraries(),
+          getWorkspaces()
+        ]);
+        if (isMounted) {
+          setLibraries(libs || []);
+          setWorkspaces(wspaces || []);
+        }
+      } catch (err) {
+        console.error("Failed to load dashboard data from backend:", err);
+      }
+    }
+    loadDashboardData();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [isGuest]);
+
+  const recentLibraries = useMemo(() => {
+    if (isGuest) return [];
+    return [...libraries]
+      .sort((a, b) => new Date(b.updated_at || b.created_at || 0) - new Date(a.updated_at || a.created_at || 0))
+      .slice(0, 2);
+  }, [libraries, isGuest]);
+
+  const recentWorkspaces = useMemo(() => {
+    if (isGuest) return [];
+    return [...workspaces]
+      .sort((a, b) => new Date(b.updated_at || b.created_at || 0) - new Date(a.updated_at || a.created_at || 0))
+      .slice(0, 4);
+  }, [workspaces, isGuest]);
+
+  const totalDocuments = useMemo(() => {
+    return libraries.reduce(
+      (total, library) => total + Number(library.documents || 0),
+      0
+    );
+  }, [libraries]);
+
+  const stats = useMemo(() => [
     {
       title: "Libraries",
       value: libraries.length,
@@ -118,7 +155,7 @@ function HomePage() {
       detail: "Across all libraries",
       icon: "ti-files",
     },
-  ];
+  ], [libraries.length, workspaces.length, totalDocuments]);
 
   const quickActions = [
     {
@@ -337,7 +374,7 @@ function HomePage() {
                           library.libraryName ||
                           "Untitled Library"}
                       </h3>
-                      <p>{library.updatedAt || "Updated just now"}</p>
+                      <p>{library.updated_at ? new Date(library.updated_at).toLocaleDateString() : (library.updatedAt || "Updated just now")}</p>
                     </div>
 
                     <div className="library_card_footer">

@@ -246,7 +246,18 @@ exports.uploadDocuments = async (req, res) => {
 
     let userTags = [];
     try {
-      userTags = JSON.parse(tagsString);
+      const parsed = JSON.parse(tagsString);
+      if (Array.isArray(parsed)) {
+        userTags = parsed.map(tag => {
+          let val = String(tag || "").trim();
+          if (!val) return "";
+          if (val.startsWith("#")) {
+            val = val.substring(1).trim();
+          }
+          val = val.replace(/\s+/g, "");
+          return val;
+        }).filter(Boolean);
+      }
     } catch (e) {
       console.error("Lỗi parse tags:", e);
     }
@@ -605,15 +616,20 @@ exports.listMyLibraries = async (req, res) => {
 
     const { data, error } = await supabase
       .from("libraries")
-      .select("*")
+      .select("*, documents(count)")
       .eq("user_id", userID)
       .order("created_at", { ascending: false });
 
     if (error) throw error;
 
+    const mapped = (data || []).map(lib => ({
+      ...lib,
+      documents: lib.documents?.[0]?.count || 0
+    }));
+
     return res.status(200).json({
       status: "success",
-      data: data || [],
+      data: mapped,
     });
   } catch (error) {
     console.error("Lỗi listMyLibraries:", error);
@@ -640,7 +656,7 @@ exports.getLibrary = async (req, res) => {
 
     const { data, error } = await supabase
       .from("libraries")
-      .select("*")
+      .select("*, documents(count)")
       .eq("id", libraryId)
       .eq("user_id", userID)
       .maybeSingle();
@@ -654,9 +670,14 @@ exports.getLibrary = async (req, res) => {
       });
     }
 
+    const mapped = {
+      ...data,
+      documents: data.documents?.[0]?.count || 0
+    };
+
     return res.status(200).json({
       status: "success",
-      data,
+      data: mapped,
     });
   } catch (error) {
     console.error("Lỗi getLibrary:", error);
