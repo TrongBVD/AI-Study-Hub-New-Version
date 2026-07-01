@@ -147,7 +147,6 @@ async function processDocumentWithAI(file, documentId, preExtractedText = null, 
         reason: "Document processed.",
         chunkCount: chunks.length,
       };
-    }
   } catch (error) {
     console.error("AI processing failed:", error);
 
