@@ -1,5 +1,7 @@
+import { useEffect, useState } from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import { isTokenValid } from "../../../utils/authToken";
+import { refreshAccessToken } from "../../../utils/api";
 
 const GUEST_ALLOWED_PATHS = [
   "/dashboard",
@@ -32,12 +34,40 @@ function isGuestAllowedPath(pathname) {
 
 function ProtectedRoute({ children, allowedRoles }) {
   const location = useLocation();
+  const [authState, setAuthState] = useState(() =>
+    isTokenValid(localStorage.getItem("accessToken"))
+      ? "authenticated"
+      : "checking",
+  );
   const token = localStorage.getItem("accessToken");
   const user = getStoredUser();
   const role = String(user?.role || "").toUpperCase();
 
+  useEffect(() => {
+    if (isTokenValid(localStorage.getItem("accessToken"))) {
+      return;
+    }
+
+    let isMounted = true;
+    refreshAccessToken()
+      .then(() => {
+        if (isMounted) setAuthState("authenticated");
+      })
+      .catch(() => {
+        if (isMounted) setAuthState("unauthenticated");
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  if (authState === "checking") {
+    return null;
+  }
+
   // Not logged in or token is expired/invalid
-  if (!token || !isTokenValid(token)) {
+  if (authState === "unauthenticated" || !token || !isTokenValid(token)) {
     if (token) {
       localStorage.removeItem("accessToken");
       localStorage.removeItem("user");
