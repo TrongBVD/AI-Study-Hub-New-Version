@@ -618,6 +618,7 @@ exports.listMyLibraries = async (req, res) => {
       .from("libraries")
       .select("*, documents(count)")
       .eq("user_id", userID)
+      .is("documents.deleted_at", null)
       .order("created_at", { ascending: false });
 
     if (error) throw error;
@@ -659,6 +660,7 @@ exports.getLibrary = async (req, res) => {
       .select("*, documents(count)")
       .eq("id", libraryId)
       .eq("user_id", userID)
+      .is("documents.deleted_at", null)
       .maybeSingle();
 
     if (error) throw error;
