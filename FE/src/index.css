@@ -169,7 +169,6 @@ body[data-theme="current"] .create_workspace_header::after {
   filter: blur(var(--hero-blob-blur));
 }
 
-body[data-theme="current"] .focus_card_dark,
 body[data-theme="current"] .focus_card_light,
 body[data-theme="current"] .recent_library_card,
 body[data-theme="current"] .import_library_hero,
@@ -182,7 +181,6 @@ body[data-theme="current"] .landing_cta {
   background-blend-mode: normal;
 }
 
-body[data-theme="current"] .focus_card_dark,
 body[data-theme="current"] .landing_ai_preview,
 body[data-theme="current"] .landing_cta {
   background-image:
@@ -190,10 +188,24 @@ body[data-theme="current"] .landing_cta {
     linear-gradient(135deg, var(--sidebar-active-bg), var(--sidebar-bg));
 }
 
+body[data-theme="current"] .focus_card_dark {
+  background: var(--sidebar-bg);
+  background-image: none;
+}
+
 body[data-theme="current"] .import_library_hero {
   background:
     var(--hero-blob-gradient),
     linear-gradient(135deg, var(--sidebar-bg), #563820);
+}
+
+body[data-theme="current"] .create_workspace_page,
+body[data-theme="current"] .create_library_page,
+body[data-theme="current"] .import_library_page {
+  background:
+    radial-gradient(circle at 8% 6%, var(--focus-ring), transparent 28%),
+    radial-gradient(circle at 86% 18%, var(--focus-ring), transparent 26%),
+    linear-gradient(135deg, #fbf4e5 0%, #efe0c5 48%, #f8ecd7 100%);
 }
 
 body[data-theme="white"],

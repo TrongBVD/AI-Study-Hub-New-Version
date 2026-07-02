@@ -6,68 +6,34 @@ import studyHubLogo from "../../../assets/images/StudyHubLogo.svg";
 import { getMyLibraries } from "../../../utils/documentApi.js";
 import { getWorkspaces } from "../../../utils/workspaceApi.js";
 
-function readStorageList(key) {
-  try {
-    const value = JSON.parse(localStorage.getItem(key) || "[]");
-    return Array.isArray(value) ? value : [];
-  } catch {
-    return [];
-  }
+function getItemId(item) {
+  return item?.id || item?._id || item?.libraryId || item?.workspaceId || "";
 }
 
-function getWorkspaceId(workspace) {
-  return workspace?.id || workspace?._id || workspace?.workspaceId || "";
-}
+function getRecentTimestamp(item) {
+  const values = [
+    item?.visitedAt,
+    item?.lastAccessedAt,
+    item?.lastOpenedAt,
+    item?.updatedAt,
+    item?.updated_at,
+    item?.createdAt,
+    item?.created_at,
+  ];
 
-function normalizeWorkspace(workspace, recentWorkspace = {}) {
-  const id = getWorkspaceId(workspace) || getWorkspaceId(recentWorkspace);
+  for (const value of values) {
+    const numericValue = Number(value);
+    if (Number.isFinite(numericValue) && numericValue > 0) {
+      return numericValue;
+    }
 
-  if (!id) return null;
-
-  return {
-    ...recentWorkspace,
-    ...workspace,
-    id,
-    name:
-      workspace?.name ||
-      workspace?.workspaceName ||
-      recentWorkspace?.name ||
-      recentWorkspace?.workspaceName ||
-      "Untitled Workspace",
-    description:
-      workspace?.description ||
-      recentWorkspace?.description ||
-      "Continue the discussion from this workspace.",
-    icon: workspace?.icon || recentWorkspace?.icon || "ti-layout-grid2",
-    visitedAt:
-      Number(recentWorkspace?.visitedAt) ||
-      Number(workspace?.visitedAt) ||
-      0,
-  };
-}
-
-function getSyncedRecentWorkspaces(workspaces, storedRecentWorkspaces) {
-  const workspaceMap = new Map(
-    workspaces
-      .map((workspace) => [getWorkspaceId(workspace), workspace])
-      .filter(([id]) => Boolean(id))
-  );
-
-  const syncedRecentWorkspaces = storedRecentWorkspaces
-    .map((recentWorkspace) => {
-      const workspace = workspaceMap.get(getWorkspaceId(recentWorkspace));
-      return workspace ? normalizeWorkspace(workspace, recentWorkspace) : null;
-    })
-    .filter(Boolean)
-    .sort((a, b) => Number(b.visitedAt || 0) - Number(a.visitedAt || 0));
-
-  if (syncedRecentWorkspaces.length > 0) {
-    return syncedRecentWorkspaces;
+    const parsedValue = Date.parse(value);
+    if (Number.isFinite(parsedValue)) {
+      return parsedValue;
+    }
   }
 
-  return workspaces
-    .map((workspace) => normalizeWorkspace(workspace))
-    .filter(Boolean);
+  return 0;
 }
     
 function getStoredUserRole() {
@@ -87,28 +53,39 @@ function HomePage() {
   const profileName =
     localStorage.getItem("aiStudyHubProfileName") || "dangkhoabi456";
   const isGuest = getStoredUserRole() === "GUEST";
-
   const [libraries, setLibraries] = useState([]);
   const [workspaces, setWorkspaces] = useState([]);
 
   useEffect(() => {
-    if (isGuest) return;
+    if (isGuest) {
+      setLibraries([]);
+      setWorkspaces([]);
+      return;
+    }
+
     let isMounted = true;
 
     async function loadDashboardData() {
       try {
-        const [libs, wspaces] = await Promise.all([
+        const [libraryData, workspaceData] = await Promise.all([
           getMyLibraries(),
-          getWorkspaces()
+          getWorkspaces(),
         ]);
-        if (isMounted) {
-          setLibraries(libs || []);
-          setWorkspaces(wspaces || []);
-        }
-      } catch (err) {
-        console.error("Failed to load dashboard data from backend:", err);
+
+        if (!isMounted) return;
+
+        setLibraries(Array.isArray(libraryData) ? libraryData : []);
+        setWorkspaces(Array.isArray(workspaceData) ? workspaceData : []);
+      } catch (error) {
+        console.error("Cannot load dashboard data:", error);
+
+        if (!isMounted) return;
+
+        setLibraries([]);
+        setWorkspaces([]);
       }
     }
+
     loadDashboardData();
 
     return () => {
@@ -116,19 +93,25 @@ function HomePage() {
     };
   }, [isGuest]);
 
-  const recentLibraries = useMemo(() => {
-    if (isGuest) return [];
-    return [...libraries]
-      .sort((a, b) => new Date(b.updated_at || b.created_at || 0) - new Date(a.updated_at || a.created_at || 0))
-      .slice(0, 2);
-  }, [libraries, isGuest]);
+  const recentLibraries = useMemo(
+    () =>
+      isGuest
+        ? []
+        : [...libraries]
+            .sort((a, b) => getRecentTimestamp(b) - getRecentTimestamp(a))
+            .slice(0, 2),
+    [isGuest, libraries]
+  );
 
-  const recentWorkspaces = useMemo(() => {
-    if (isGuest) return [];
-    return [...workspaces]
-      .sort((a, b) => new Date(b.updated_at || b.created_at || 0) - new Date(a.updated_at || a.created_at || 0))
-      .slice(0, 4);
-  }, [workspaces, isGuest]);
+  const recentWorkspaces = useMemo(
+    () =>
+      isGuest
+        ? []
+        : [...workspaces]
+            .sort((a, b) => getRecentTimestamp(b) - getRecentTimestamp(a))
+            .slice(0, 1),
+    [isGuest, workspaces]
+  );
 
   const totalDocuments = useMemo(() => {
     return libraries.reduce(
@@ -176,6 +159,8 @@ function HomePage() {
 
   const latestLibrary = recentLibraries[0];
   const latestWorkspace = recentWorkspaces[0];
+  const latestLibraryId = getItemId(latestLibrary);
+  const latestWorkspaceId = getItemId(latestWorkspace);
 
   return (
     <main className="home_page">
@@ -278,17 +263,15 @@ function HomePage() {
                   ? `${latestLibrary.documents || 0} documents saved`
                   : "Open a library once to place it here."}
               </p>
-              {isGuest ? (
-                <Link to="/dashboard/libraries">Browse public libraries</Link>
-              ) : (
+              {latestLibrary && (
                 <Link
                   to={
-                    latestLibrary?.id
-                      ? `/dashboard/libraries/${latestLibrary.id}`
+                    latestLibraryId
+                      ? `/dashboard/libraries/${latestLibraryId}`
                       : "/dashboard/libraries"
                   }
                 >
-                  {latestLibrary ? "Open library" : "Browse libraries"}
+                  Open library
                 </Link>
               )}
             </div>
@@ -301,15 +284,15 @@ function HomePage() {
                   ? latestWorkspace.description
                   : "Your recent collaboration room will appear here."}
               </p>
-              {!isGuest && (
+              {latestWorkspace && !isGuest && (
                 <Link
                   to={
-                    latestWorkspace?.id
-                      ? `/dashboard/workspaces/${latestWorkspace.id}`
+                    latestWorkspaceId
+                      ? `/dashboard/workspaces/${latestWorkspaceId}`
                       : "/dashboard/workspaces"
                   }
                 >
-                  {latestWorkspace ? "Open workspace" : "Browse workspaces"}
+                  Open workspace
                 </Link>
               )}
             </div>
@@ -360,14 +343,17 @@ function HomePage() {
                   </Link>
                 </div>
               ) : (
-                recentLibraries.map((library, index) => (
-                  <article className="recent_library_card" key={library.id}>
-                    <div className="library_card_header">
-                      <div className="library_icon_cluster">
-                        <i className={library.icon || "ti-archive"}></i>
+                recentLibraries.map((library, index) => {
+                  const libraryId = getItemId(library);
+
+                  return (
+                    <article className="recent_library_card" key={libraryId || index}>
+                      <div className="library_card_header">
+                        <div className="library_icon_cluster">
+                          <i className={library.icon || "ti-archive"}></i>
+                        </div>
+                        <span>{index === 0 ? "Most recent" : "Recent"}</span>
                       </div>
-                      <span>{index === 0 ? "Most recent" : "Recent"}</span>
-                    </div>
 
                     <div className="library_card_body">
                       <h3>
@@ -378,12 +364,21 @@ function HomePage() {
                       <p>{library.updated_at ? new Date(library.updated_at).toLocaleDateString() : (library.updatedAt || "Updated just now")}</p>
                     </div>
 
-                    <div className="library_card_footer">
-                      <span>{library.documents || 0} docs</span>
-                      <Link to={`/dashboard/libraries/${library.id}`}>Open</Link>
-                    </div>
-                  </article>
-                ))
+                      <div className="library_card_footer">
+                        <span>{library.documents || 0} docs</span>
+                        <Link
+                          to={
+                            libraryId
+                              ? `/dashboard/libraries/${libraryId}`
+                              : "/dashboard/libraries"
+                          }
+                        >
+                          Open
+                        </Link>
+                      </div>
+                    </article>
+                  );
+                })
               )}
             </div>
           </section>
@@ -413,25 +408,33 @@ function HomePage() {
                   {!isGuest && <Link to="/dashboard/workspaces">Browse workspaces</Link>}
                 </div>
               ) : (
-                recentWorkspaces.map((workspace) => (
-                  <article className="recent_workspace_card" key={workspace.id}>
-                    <div className="workspace_icon">
-                      <i className={workspace.icon || "ti-briefcase"}></i>
-                    </div>
+                recentWorkspaces.map((workspace, index) => {
+                  const workspaceId = getItemId(workspace);
 
-                    <div className="workspace_recent_info">
-                      <h3>{workspace.name || "Untitled Workspace"}</h3>
-                      <p>Workspace</p>
-                    </div>
+                  return (
+                    <article className="recent_workspace_card" key={workspaceId || index}>
+                      <div className="workspace_icon">
+                        <i className={workspace.icon || "ti-briefcase"}></i>
+                      </div>
 
-                    <Link
-                      to={`/dashboard/workspaces/${workspace.id}`}
-                      className="home_open_btn"
-                    >
-                      Open
-                    </Link>
-                  </article>
-                ))
+                      <div className="workspace_recent_info">
+                        <h3>{workspace.name || "Untitled Workspace"}</h3>
+                        <p>Workspace</p>
+                      </div>
+
+                      <Link
+                        to={
+                          workspaceId
+                            ? `/dashboard/workspaces/${workspaceId}`
+                            : "/dashboard/workspaces"
+                        }
+                        className="home_open_btn"
+                      >
+                        Open
+                      </Link>
+                    </article>
+                  );
+                })
               )}
             </div>
           </aside>

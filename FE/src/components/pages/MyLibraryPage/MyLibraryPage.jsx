@@ -107,23 +107,45 @@ function MyLibraryPage() {
 
             <div className="library_header_actions">
               {isGuest ? (
-                <button
-                  type="button"
-                  onClick={notifyGuestRegistrationRequired}
-                  className="create_library_btn"
-                >
-                  <i className="ti-folder"></i>
-                  Create or import library
-                </button>
+                <>
+                  <button
+                    type="button"
+                    onClick={notifyGuestRegistrationRequired}
+                    className="create_library_btn"
+                  >
+                    <i className="ti-folder"></i>
+                    Create library
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={notifyGuestRegistrationRequired}
+                    className="my_library_import_btn"
+                  >
+                    <i className="ti-import"></i>
+                    Import library
+                  </button>
+                </>
               ) : (
-                <Link
-                  to="/dashboard/create-library"
-                  state={{ from: "/dashboard/libraries" }}
-                  className="create_library_btn"
-                >
-                  <i className="ti-folder"></i>
-                  Create or import library
-                </Link>
+                <>
+                  <Link
+                    to="/dashboard/create-library"
+                    state={{ from: "/dashboard/libraries" }}
+                    className="create_library_btn"
+                  >
+                    <i className="ti-folder"></i>
+                    Create library
+                  </Link>
+
+                  <Link
+                    to="/dashboard/import-library"
+                    state={{ from: "/dashboard/libraries" }}
+                    className="my_library_import_btn"
+                  >
+                    <i className="ti-import"></i>
+                    Import library
+                  </Link>
+                </>
               )}
             </div>
           </div>
@@ -170,7 +192,7 @@ function MyLibraryPage() {
             <h2>{isGuest ? "Public library board" : "Your library board"}</h2>
             <p>
               {isLoading
-                ? "Loading libraries..."
+                ? "Loading public libraries..."
                 : libraries.length === 0
                   ? "Create your first library to start collecting documents."
                   : `${libraries.length} libraries available in your study hub.`}

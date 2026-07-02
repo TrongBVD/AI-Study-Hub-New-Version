@@ -85,6 +85,24 @@ function getWorkspaceMemberIdentities(member) {
     .filter(Boolean);
 }
 
+function getPendingInvitationsStorageKey(workspaceId) {
+  return `aiStudyHubPendingInvitations:${workspaceId}`;
+}
+
+function loadPendingInvitations(workspaceId) {
+  if (!workspaceId) return [];
+
+  try {
+    return JSON.parse(
+      localStorage.getItem(getPendingInvitationsStorageKey(workspaceId)) ||
+        "[]",
+    );
+  } catch (error) {
+    console.error("Cannot read pending workspace invitations:", error);
+    return [];
+  }
+}
+
 function WorkSpacePage() {
   const WORKSPACE_NAME_MAX_LENGTH = 20;
 
@@ -128,11 +146,58 @@ const [isSubtaskPriorityOpen, setIsSubtaskPriorityOpen] = useState(false);
   const [inviteRole, setInviteRole] = useState("Viewer");
   const [inviteStatus, setInviteStatus] = useState("idle");
   const [inviteError, setInviteError] = useState("");
+  const [inviteSuccess, setInviteSuccess] = useState("");
   const [isInviteSearching, setIsInviteSearching] = useState(false);
   const [isAddingMember, setIsAddingMember] = useState(false);
   const [backendMembers, setBackendMembers] = useState([]);
   const [candidateUsers, setCandidateUsers] = useState([]);
   const [selectedUserId, setSelectedUserId] = useState("");
+  const [activeMemberProfileId, setActiveMemberProfileId] = useState("");
+  const [pendingInvitations, setPendingInvitations] = useState(() =>
+    loadPendingInvitations(workspaceId),
+  );
+
+  useEffect(() => {
+    setPendingInvitations(loadPendingInvitations(workspaceId));
+  }, [workspaceId]);
+
+  useEffect(() => {
+    if (!workspaceId) return;
+
+    localStorage.setItem(
+      getPendingInvitationsStorageKey(workspaceId),
+      JSON.stringify(pendingInvitations),
+    );
+  }, [pendingInvitations, workspaceId]);
+
+  useEffect(() => {
+    if (!activeMemberProfileId) return;
+
+    function closeActiveMemberProfile() {
+      setActiveMemberProfileId("");
+    }
+
+    document.addEventListener("click", closeActiveMemberProfile);
+
+    return () => {
+      document.removeEventListener("click", closeActiveMemberProfile);
+    };
+  }, [activeMemberProfileId]);
+
+  function handleViewMemberProfile(profileId) {
+    if (!profileId) return;
+    navigate(`/dashboard/profile/${profileId}`);
+  }
+
+  function handleToggleMemberProfile(event, profileId) {
+    event.stopPropagation();
+    if (!profileId) return;
+
+    setActiveMemberProfileId((currentId) =>
+      currentId === profileId ? "" : profileId,
+    );
+  }
+
   function handleWorkspaceNameChange(e) {
     const nextValue = e.target.value;
 
@@ -149,19 +214,6 @@ const [isSubtaskPriorityOpen, setIsSubtaskPriorityOpen] = useState(false);
 
     setWorkspaceSettingMessage("");
   }
-  const [pendingInvitations] = useState([
-    {
-      email: "alex.proctor@edu.com",
-      invitedBy: "TrongBVD",
-      time: "2 hours ago",
-    },
-    {
-      email: "m.chen@research.io",
-      invitedBy: "TrongBVD",
-      time: "yesterday",
-    },
-  ]);
-
   const [messageText, setMessageText] = useState("");
   const [messageAttachment, setMessageAttachment] = useState(null);
   const [selectedStudySetId, setSelectedStudySetId] = useState(
@@ -204,49 +256,20 @@ const [isSubtaskPriorityOpen, setIsSubtaskPriorityOpen] = useState(false);
     };
   }, [workspaceId, workspace]);
 
-  useEffect(() => {
-    if (!workspace?.id) return;
-
-    const currentRecentWorkspaces = JSON.parse(
-      localStorage.getItem("aiStudyHubRecentWorkspaces") || "[]",
-    );
-
-    const recentWorkspace = {
-      id: workspace.id,
-      name: workspace.name || "Untitled Workspace",
-      documents: Number(workspace.documents) || 0,
-      icon: workspace.icon || "ti-layout-grid2",
-      visitedAt: Date.now(),
-    };
-
-    const nextRecentWorkspaces = [
-      recentWorkspace,
-      ...currentRecentWorkspaces.filter((item) => item.id !== workspace.id),
-    ].slice(0, 3);
-
-    localStorage.setItem(
-      "aiStudyHubRecentWorkspaces",
-      JSON.stringify(nextRecentWorkspaces),
-    );
-  }, [
-    workspace?.id,
-    workspace?.name,
-    workspace?.description,
-    workspace?.icon,
-    workspace?.documents,
-  ]);
-
   const [workspaceNameInput, setWorkspaceNameInput] = useState(
     workspace?.name || "",
   );
   const [workspaceSettingMessage, setWorkspaceSettingMessage] = useState("");
 
-  const profileName =
-    localStorage.getItem("aiStudyHubProfileName") ||
-    workspace?.owner ||
-    "dangkhoabi456";
-
   const storedUser = useMemo(() => getStoredUserProfile(), []);
+  const profileName =
+    workspace?.owner ||
+    storedUser?.displayName ||
+    storedUser?.fullName ||
+    storedUser?.full_name ||
+    storedUser?.name ||
+    storedUser?.username ||
+    "Current user";
 
   const currentUserIdentifiers = useMemo(
     () =>
@@ -310,18 +333,15 @@ const [isSubtaskPriorityOpen, setIsSubtaskPriorityOpen] = useState(false);
     currentWorkspaceRole === "editor" || currentWorkspaceRole === "admin";
   const canManageWorkspace = currentWorkspaceRole === "admin";
 
-  useEffect(() => {
-    const tabIsAllowed =
-      activeTab === "discussion" ||
-      activeTab === "messages" ||
-      (activeTab === "study" && canManageTopics) ||
-      ((activeTab === "members" || activeTab === "settings") &&
-        canManageWorkspace);
-
-    if (!tabIsAllowed) {
-      setActiveTab("discussion");
-    }
-  }, [activeTab, canManageTopics, canManageWorkspace]);
+  const pendingInvitationUserIds = useMemo(
+    () =>
+      new Set(
+        pendingInvitations
+          .map((invitation) => invitation.userId)
+          .filter(Boolean),
+      ),
+    [pendingInvitations],
+  );
 
   const [chatMessages, setChatMessages] = useState([
     {
@@ -361,22 +381,7 @@ const [isSubtaskPriorityOpen, setIsSubtaskPriorityOpen] = useState(false);
     },
   ]);
 
-  const discussionTopicsStorageKey = `aiStudyHubWorkspaceIssues_${workspaceId}`;
-
-  const initialDiscussionTopics = useMemo(() => {
-    try {
-      return JSON.parse(
-        localStorage.getItem(discussionTopicsStorageKey) || "[]",
-      );
-    } catch (error) {
-      console.error("Cannot read workspace topics:", error);
-      return [];
-    }
-  }, [discussionTopicsStorageKey]);
-
-  const [discussionTopics, setDiscussionTopics] = useState(
-    initialDiscussionTopics,
-  );
+  const [discussionTopics, setDiscussionTopics] = useState([]);
 
   
 
@@ -533,10 +538,6 @@ const workspaceStorageUsedBytes = discussionStorageUsedBytes;
   }
 
   function saveDiscussionTopics(nextTopics) {
-    localStorage.setItem(
-      discussionTopicsStorageKey,
-      JSON.stringify(nextTopics),
-    );
     setDiscussionTopics(nextTopics);
   }
 
@@ -911,6 +912,7 @@ function getSubtaskPriorityIcon(priority) {
   function handleOpenInviteModal() {
     if (!requireWorkspaceAdminPermission("manage workspace members")) return;
 
+    setInviteSuccess("");
     setIsInviteModalOpen(true);
   }
 
@@ -974,15 +976,49 @@ function getSubtaskPriorityIcon(priority) {
     try {
       setIsAddingMember(true);
       setInviteError("");
+      const invitedUser = candidateUsers.find((user) => user.id === selectedUserId);
       await addWorkspaceMember(workspaceId, {
         userId: selectedUserId,
         role: inviteRole,
       });
 
-      const refreshedMembers = await getWorkspaceMembers(workspaceId);
-      setBackendMembers(refreshedMembers || []);
+      const invitedName =
+        invitedUser?.full_name ||
+        invitedUser?.username ||
+        invitedUser?.email ||
+        "thành viên mới";
+      const invitedEmail = invitedUser?.email || invitedUser?.username || invitedName;
+
+      setPendingInvitations((currentInvitations) => {
+        const nextInvitation = {
+          userId: selectedUserId,
+          email: invitedEmail,
+          name: invitedName,
+          role: inviteRole,
+          invitedBy: profileName,
+          time: "just now",
+          createdAtMs: Date.now(),
+        };
+
+        return [
+          nextInvitation,
+          ...currentInvitations.filter(
+            (invitation) => invitation.userId !== selectedUserId,
+          ),
+        ];
+      });
       handleCloseInviteModal();
-      alert("Member added to workspace successfully.");
+      setInviteSuccess(
+        `Đã gửi lời mời workspace thành công cho ${invitedName} với quyền ${inviteRole}.`,
+      );
+      createAppNotification({
+        category: "member",
+        action: "joined",
+        title: "Lời mời workspace đã gửi",
+        message: `${invitedName} đã được mời vào workspace "${workspace?.name || "này"}".`,
+        icon: "ti-user",
+        link: `/dashboard/workspaces/${workspaceId}`,
+      });
     } catch (error) {
       console.error("Cannot add workspace member:", error);
       setInviteError(getInviteErrorMessage(error));
@@ -1093,19 +1129,6 @@ function getSubtaskPriorityIcon(priority) {
 
     try {
       await deleteWorkspace(workspaceId);
-
-      localStorage.removeItem(`aiStudyHubWorkspaceIssues_${workspaceId}`);
-
-      const recentWorkspaces = JSON.parse(
-        localStorage.getItem("aiStudyHubRecentWorkspaces") || "[]",
-      );
-      const updatedRecentWorkspaces = recentWorkspaces.filter(
-        (item) => item.id !== workspaceId,
-      );
-      localStorage.setItem(
-        "aiStudyHubRecentWorkspaces",
-        JSON.stringify(updatedRecentWorkspaces),
-      );
 
       navigate("/dashboard/workspaces");
     } catch (err) {
@@ -1287,16 +1310,6 @@ function getSubtaskPriorityIcon(priority) {
   }
 
   function renderMembersTab() {
-    if (!canManageWorkspace) {
-      return (
-        <section className="workspace_permission_empty">
-          <i className="ti-lock"></i>
-          <h2>Admin access only</h2>
-          <p>Only workspace admins can manage members and invitations.</p>
-        </section>
-      );
-    }
-
     const workspaceMembers = [
       {
         name: "TrongBVD",
@@ -1341,20 +1354,23 @@ function getSubtaskPriorityIcon(priority) {
     ];
     const visibleWorkspaceMembers =
       backendMembers.length > 0
-        ? backendMembers.map((member) => ({
-            id: member.user?.id,
-            name:
-              member.user?.full_name ||
-              member.user?.username ||
-              "Workspace member",
-            email: member.user?.email || member.user?.username || "",
-            role: member.role || "Viewer",
-            joinDate: member.joined_at
-              ? new Date(member.joined_at).toLocaleDateString()
-              : "Recently",
-            avatar: "",
-            isOnline: false,
-          }))
+        ? backendMembers
+            .filter((member) => !pendingInvitationUserIds.has(member.user?.id))
+            .map((member) => ({
+              id: member.user?.id,
+              profileId: member.user?.id,
+              name:
+                member.user?.full_name ||
+                member.user?.username ||
+                "Workspace member",
+              email: member.user?.email || member.user?.username || "",
+              role: member.role || "Viewer",
+              joinDate: member.joined_at
+                ? new Date(member.joined_at).toLocaleDateString()
+                : "Recently",
+              avatar: "",
+              isOnline: false,
+            }))
         : workspaceMembers;
 
     return (
@@ -1363,21 +1379,37 @@ function getSubtaskPriorityIcon(priority) {
           <div className="workspace_member_top">
             <div>
               <h2>Workspace Members</h2>
-              <p>Manage access and roles for this academic resource center.</p>
+              <p>
+                {canManageWorkspace
+                  ? "Manage access and roles for this academic resource center."
+                  : "View members and roles in this academic resource center."}
+              </p>
             </div>
 
-            <div className="workspace_member_actions">
-              <div className="workspace_member_search">
-                <i className="ti-search"></i>
-                <input type="text" placeholder="Search members..." />
-              </div>
+            {canManageWorkspace && (
+              <div className="workspace_member_actions">
+                <div className="workspace_member_search">
+                  <i className="ti-search"></i>
+                  <input type="text" placeholder="Search members..." />
+                </div>
 
-              <button type="button" onClick={handleOpenInviteModal}>
-                <i className="ti-user"></i>
-                Add Member
+                <button type="button" onClick={handleOpenInviteModal}>
+                  <i className="ti-user"></i>
+                  Add Member
+                </button>
+              </div>
+            )}
+          </div>
+
+          {inviteSuccess && (
+            <div className="workspace_invite_success" role="status">
+              <i className="ti-check-box"></i>
+              <span>{inviteSuccess}</span>
+              <button type="button" onClick={() => setInviteSuccess("")}>
+                ×
               </button>
             </div>
-          </div>
+          )}
 
           <div className="workspace_member_table">
             <div className="workspace_member_table_header">
@@ -1387,57 +1419,101 @@ function getSubtaskPriorityIcon(priority) {
               <span>Actions</span>
             </div>
 
-            {visibleWorkspaceMembers.map((member) => (
-              <article
-                className="workspace_member_row"
-                key={member.id || member.email || member.name}
-              >
-                <div className="workspace_member_identity">
-                  <div className="workspace_member_avatar">
-                    {member.avatar ? (
-                      <img src={member.avatar} alt={member.name} />
+            {visibleWorkspaceMembers.map((member) => {
+              const canViewProfile = Boolean(member.profileId || member.id);
+              const profileId = member.profileId || member.id;
+              const isProfileOptionActive = activeMemberProfileId === profileId;
+
+              return (
+                <article
+                  className="workspace_member_row"
+                  key={member.id || member.email || member.name}
+                >
+                  <div className="workspace_member_identity">
+                    <div
+                      className={`workspace_member_profile_trigger ${
+                        canViewProfile ? "" : "is-disabled"
+                      } ${isProfileOptionActive ? "is-active" : ""}`}
+                      role={canViewProfile ? "button" : undefined}
+                      tabIndex={canViewProfile ? 0 : undefined}
+                      onClick={(event) =>
+                        handleToggleMemberProfile(event, profileId)
+                      }
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter" || event.key === " ") {
+                          event.preventDefault();
+                          handleToggleMemberProfile(event, profileId);
+                        }
+                      }}
+                    >
+                      <div className="workspace_member_avatar">
+                        {member.avatar ? (
+                          <img src={member.avatar} alt={member.name} />
+                        ) : (
+                          <i className="ti-user"></i>
+                        )}
+
+                        {member.isOnline && <span></span>}
+                      </div>
+
+                      <div className="workspace_member_profile_text">
+                        <strong>{member.name}</strong>
+                        <p>{member.email}</p>
+                      </div>
+
+                      {canViewProfile && (
+                        <button
+                          type="button"
+                          className="workspace_member_profile_option"
+                          tabIndex={isProfileOptionActive ? 0 : -1}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            handleViewMemberProfile(profileId);
+                          }}
+                        >
+                          <i className="ti-id-badge"></i>
+                          View profile
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  <span
+                    className={`workspace_member_status ${
+                      member.role === "Manager" ? "manager" : "member"
+                    }`}
+                  >
+                    {member.role}
+                  </span>
+
+                  <span
+                    className={
+                      member.isPending
+                        ? "workspace_member_join_date pending"
+                        : "workspace_member_join_date"
+                    }
+                  >
+                    {member.joinDate}
+                  </span>
+
+                  {canManageWorkspace ? (
+                    member.isPending ? (
+                      <button type="button" className="workspace_resend_btn">
+                        Resend
+                      </button>
                     ) : (
-                      <i className="ti-user"></i>
-                    )}
-
-                    {member.isOnline && <span></span>}
-                  </div>
-
-                  <div>
-                    <strong>{member.name}</strong>
-                    <p>{member.email}</p>
-                  </div>
-                </div>
-
-                <span
-                  className={`workspace_member_status ${
-                    member.role === "Manager" ? "manager" : "member"
-                  }`}
-                >
-                  {member.role}
-                </span>
-
-                <span
-                  className={
-                    member.isPending
-                      ? "workspace_member_join_date pending"
-                      : "workspace_member_join_date"
-                  }
-                >
-                  {member.joinDate}
-                </span>
-
-                {member.isPending ? (
-                  <button type="button" className="workspace_resend_btn">
-                    Resend
-                  </button>
-                ) : (
-                  <button type="button" aria-label="Member settings">
-                    <i className="ti-settings"></i>
-                  </button>
-                )}
-              </article>
-            ))}
+                      <button type="button" aria-label="Member settings">
+                        <i className="ti-settings"></i>
+                      </button>
+                    )
+                  ) : (
+                    <span className="workspace_member_readonly_action">
+                      View only
+                    </span>
+                  )}
+                </article>
+              );
+            })}
           </div>
 
           <p className="workspace_member_note">
@@ -1445,34 +1521,46 @@ function getSubtaskPriorityIcon(priority) {
             explicitly listed as pending appear in this workspace list.
           </p>
 
-          <section className="workspace_pending_card">
-            <div className="workspace_pending_header">
-              <h3>Pending Invitations</h3>
-              <span>{pendingInvitations.length} Pending</span>
-            </div>
+          {canManageWorkspace && (
+            <section className="workspace_pending_card">
+              <div className="workspace_pending_header">
+                <h3>Pending Invitations</h3>
+                <span>
+                  <strong>{pendingInvitations.length}</strong> Pending
+                </span>
+              </div>
 
-            <div className="workspace_pending_list">
-              {pendingInvitations.map((invitation) => (
-                <article
-                  className="workspace_pending_item"
-                  key={invitation.email}
-                >
-                  <div className="workspace_pending_mail_icon">
-                    <i className="ti-email"></i>
+              <div className="workspace_pending_list">
+                {pendingInvitations.length > 0 ? (
+                  pendingInvitations.map((invitation) => (
+                    <article
+                      className="workspace_pending_item"
+                      key={invitation.email}
+                    >
+                      <div className="workspace_pending_mail_icon">
+                        <i className="ti-email"></i>
+                      </div>
+
+                      <div className="workspace_pending_info">
+                        <strong>{invitation.name || invitation.email}</strong>
+                        <p>
+                          Invited {invitation.time} by {invitation.invitedBy}
+                          {invitation.role ? ` as ${invitation.role}` : ""}
+                        </p>
+                      </div>
+
+                      <button type="button">Resend</button>
+                    </article>
+                  ))
+                ) : (
+                  <div className="workspace_pending_empty">
+                    <i className="ti-check-box"></i>
+                    <p>No pending invitations right now.</p>
                   </div>
-
-                  <div className="workspace_pending_info">
-                    <strong>{invitation.email}</strong>
-                    <p>
-                      Invited {invitation.time} by {invitation.invitedBy}
-                    </p>
-                  </div>
-
-                  <button type="button">Resend</button>
-                </article>
-              ))}
-            </div>
-          </section>
+                )}
+              </div>
+            </section>
+          )}
         </section>
 
         <aside className="workspace_member_sidebar">
@@ -2270,29 +2358,6 @@ const filteredDiscussionTopics = discussionTopics.filter((topic) => {
     Solved
   </button>
 </div>
-        {discussionTopics.length === 0 && !isTopicFormOpen ? (
-          <section className="discussion_empty_state">
-            <div className="discussion_empty_icon">
-              <i className="ti-comments"></i>
-            </div>
-
-            <h3>No discussion topic yet</h3>
-            <p>
-              Start the first topic so members can ask questions, share notes,
-              and exchange study materials.
-            </p>
-            {canManageTopics ? (
-              <button type="button" onClick={() => setIsTopicFormOpen(true)}>
-                Create first topic
-              </button>
-            ) : (
-              <span className="workspace_permission_pill">
-                Editors and admins can create topics
-              </span>
-            )}
-          </section>
-        ) : null}
-
         {isTopicFormOpen && canManageTopics && (
           <div className="discussion_topic_modal_overlay">
             <form
@@ -2432,6 +2497,29 @@ const filteredDiscussionTopics = discussionTopics.filter((topic) => {
 
         <section className="discussion_content_grid">
           <div className="discussion_content_left">
+            {discussionTopics.length === 0 && !isTopicFormOpen ? (
+              <section className="discussion_empty_state">
+                <div className="discussion_empty_icon">
+                  <i className="ti-comments"></i>
+                </div>
+
+                <h3>No discussion topic yet</h3>
+                <p>
+                  Start the first topic so members can ask questions, share notes,
+                  and exchange study materials.
+                </p>
+                {canManageTopics ? (
+                  <button type="button" onClick={() => setIsTopicFormOpen(true)}>
+                    Create first topic
+                  </button>
+                ) : (
+                  <span className="workspace_permission_pill">
+                    Editors and admins can create topics
+                  </span>
+                )}
+              </section>
+            ) : null}
+
             {filteredDiscussionTopics.length > 0 && (
               <>
                 <section className="discussion_pinned_card">
@@ -2943,7 +3031,6 @@ const filteredDiscussionTopics = discussionTopics.filter((topic) => {
                     </h3>
                     <p>
                       {user.username ? `@${user.username}` : user.email}
-                      {user.role ? ` · ${user.role}` : ""}
                     </p>
                     {user.isWorkspaceMember && (
                       <p className="workspace_invite_existing_note">
@@ -3100,35 +3187,29 @@ const filteredDiscussionTopics = discussionTopics.filter((topic) => {
           Message
         </button>
 
-        {canManageTopics && (
-          <button
-            className={activeTab === "study" ? "active" : ""}
-            onClick={() => setActiveTab("study")}
-          >
-            <i className="ti-book"></i>
-            Study
-          </button>
-        )}
+        <button
+          className={activeTab === "study" ? "active" : ""}
+          onClick={() => setActiveTab("study")}
+        >
+          <i className="ti-book"></i>
+          Study
+        </button>
 
-        {canManageWorkspace && (
-          <>
-            <button
-              className={activeTab === "members" ? "active" : ""}
-              onClick={() => setActiveTab("members")}
-            >
-              <i className="ti-user"></i>
-              Member
-            </button>
+        <button
+          className={activeTab === "members" ? "active" : ""}
+          onClick={() => setActiveTab("members")}
+        >
+          <i className="ti-user"></i>
+          Member
+        </button>
 
-            <button
-              className={activeTab === "settings" ? "active" : ""}
-              onClick={() => setActiveTab("settings")}
-            >
-              <i className="ti-settings"></i>
-              Setting
-            </button>
-          </>
-        )}
+        <button
+          className={activeTab === "settings" ? "active" : ""}
+          onClick={() => setActiveTab("settings")}
+        >
+          <i className="ti-settings"></i>
+          Setting
+        </button>
       </nav>
 
       {activeTab === "messages" && renderMessagesTab()}

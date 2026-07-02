@@ -21,7 +21,7 @@
     radial-gradient(circle at 78% 0, rgba(182, 83, 32, 0.06), transparent 26rem),
     var(--admin-bg);
   color: var(--admin-ink);
-  font-family: "Segoe UI", Arial, sans-serif;
+  font-family: Arial, "Segoe UI", sans-serif;
   overflow-x: hidden;
 }
 
@@ -542,14 +542,25 @@
 .admin-dashboard__severity,
 .admin-dashboard__risk,
 .admin-dashboard__user-status {
+  appearance: none;
+  min-height: auto;
   width: fit-content;
   border: 0;
   border-radius: 7px;
   padding: 6px 8px;
   font-size: 9px;
-  font-weight: 850;
+  font-weight: 800;
+  line-height: 1.1;
   letter-spacing: 0.05em;
   text-transform: uppercase;
+}
+
+.admin-dashboard__risk {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px !important;
+  font-weight: 800 !important;
 }
 
 .admin-dashboard__severity.is-warning,

@@ -171,7 +171,8 @@
 }
 
 .workspace_focus_card > span {
-  color: var(--accent-color);
+  color: inherit;
+  opacity: 0.72;
   font-size: 12px;
   font-weight: 900;
   letter-spacing: 0.12em;
@@ -180,7 +181,7 @@
 
 .workspace_focus_card h2 {
   margin: 12px 0 10px;
-  color: var(--text-primary);
+  color: var(--bg-card);
   font-size: 22px;
   line-height: 1.12;
   letter-spacing: 0;
@@ -189,7 +190,7 @@
 
 .workspace_focus_card p {
   margin: 0;
-  color: var(--text-secondary);
+  color: var(--hero-card-bg);
   line-height: 1.55;
   font-size: 13px;
 }
