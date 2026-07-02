@@ -1,4 +1,4 @@
-import { Link, useLocation, useParams, useNavigate } from "react-router-dom";
+import { Link, useLocation, useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { createAppNotification } from "../../../utils/notificationStore.js";
 import { useEffect, useMemo, useState } from "react";
 import {
@@ -113,7 +113,15 @@ const [subtaskStartDate, setSubtaskStartDate] = useState("");
 const [subtaskEndDate, setSubtaskEndDate] = useState("");
 const [isSubtaskDateOpen, setIsSubtaskDateOpen] = useState(false);
 const [isSubtaskPriorityOpen, setIsSubtaskPriorityOpen] = useState(false);
-  const [selectedTopicId, setSelectedTopicId] = useState(null);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const selectedTopicId = searchParams.get("topic");
+  const setSelectedTopicId = (id) => {
+    if (id) {
+      setSearchParams({ topic: id });
+    } else {
+      setSearchParams({});
+    }
+  };
   const [topicFilter, setTopicFilter] = useState("All");
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
   const [inviteQuery, setInviteQuery] = useState("");
