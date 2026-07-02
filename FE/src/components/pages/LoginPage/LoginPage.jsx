@@ -72,6 +72,9 @@ function LoginPage() {
       return false;
     }
 
+    // Xóa sạch Local Storage cũ để tránh xung đột dữ liệu chéo giữa các tài khoản
+    localStorage.clear();
+
     localStorage.setItem("accessToken", accessToken);
 
     const user = extractUserInfo(responseData);
@@ -97,7 +100,17 @@ function LoginPage() {
   }
 
   // --- HÀM XỬ LÝ ĐĂNG NHẬP CHO GUEST ---
-  const handleGuestLogin = () => {
+  const handleGuestLogin = async () => {
+    // 1. Dọn dẹp session cookie của tài khoản cũ trên Backend
+    try {
+      await api.post("/auth/logout");
+    } catch (err) {
+      console.warn("Failed to clear backend session cookie for guest:", err);
+    }
+
+    // 2. Xóa sạch Local Storage để tránh chồng lấp dữ liệu cũ
+    localStorage.clear();
+
     // Tạo 1 Fake JWT Token để qua mặt hàm isTokenValid() trong authToken.js
     // Payload decode ra sẽ là {"exp": 9999999999} (Sống tới năm 2286)
     const fakeGuestToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjk5OTk5OTk5OTl9.guest_signature_bypass";
