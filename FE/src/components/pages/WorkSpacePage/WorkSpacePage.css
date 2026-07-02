@@ -187,7 +187,7 @@
   background: var(--bg-secondary);
   border: 1px solid var(--border-color);
   border-radius: 18px;
-  overflow: hidden;
+  overflow: visible;
   box-shadow: none;
   width: 100%;
 }
@@ -230,6 +230,59 @@
   align-items: center;
   gap: 14px;
   min-width: 0;
+}
+
+.workspace_member_profile_trigger {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+}
+
+.workspace_member_profile_trigger:not(.is-disabled) {
+  cursor: pointer;
+}
+
+.workspace_member_profile_text {
+  min-width: 0;
+}
+
+.workspace_member_profile_option {
+  position: absolute;
+  left: 34px;
+  top: calc(100% + 8px);
+  z-index: 20;
+  min-width: 138px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--bg-card);
+  color: var(--text-primary);
+  box-shadow: 0 12px 28px rgba(44, 24, 16, 0.16);
+  padding: 9px 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 800;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-4px);
+  transition: opacity 0.16s ease, transform 0.16s ease, border-color 0.16s ease;
+  white-space: nowrap;
+}
+
+.workspace_member_profile_option:hover,
+.workspace_member_profile_option:focus-visible {
+  border-color: var(--accent-color);
+  color: var(--accent-color);
+  outline: none;
+}
+
+.workspace_member_profile_trigger.is-active .workspace_member_profile_option {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
 }
 
 .workspace_member_avatar,
@@ -360,6 +413,16 @@
   line-height: 1 !important;
 }
 
+.workspace_member_readonly_action {
+  justify-self: end;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
 .workspace_member_note {
   margin: 22px 8px 0;
   color: var(--sidebar-bg);
@@ -391,12 +454,20 @@
 }
 
 .workspace_pending_header span {
-  background: var(--accent-color);
-  color: var(--accent-hover);
+  background: linear-gradient(135deg, var(--accent-color), var(--accent-hover));
+  color: var(--bg-card);
   border-radius: 999px;
-  padding: 7px 16px;
+  padding: 8px 18px;
   font-size: 12px;
-  font-weight: 800;
+  font-weight: 900;
+  text-transform: uppercase;
+  box-shadow: 0 10px 22px rgba(181, 88, 32, 0.24);
+}
+
+.workspace_pending_header span strong {
+  color: #fff;
+  font-size: 14px;
+  margin-right: 4px;
 }
 
 .workspace_pending_list {
@@ -449,6 +520,29 @@
   color: var(--accent-color, var(--accent-hover)) !important;
   font-weight: 800;
   cursor: pointer;
+}
+
+.workspace_pending_empty {
+  min-height: 76px;
+  border: 1px dashed var(--border-color);
+  border-radius: 12px;
+  background: var(--hero-card-bg);
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.workspace_pending_empty i {
+  color: var(--accent-color);
+  font-size: 18px;
+}
+
+.workspace_pending_empty p {
+  margin: 0;
 }
 
 .workspace_member_sidebar {
@@ -689,6 +783,38 @@
   color: var(--danger-color);
   font-size: 13px;
   font-weight: 700;
+}
+
+.workspace_invite_success {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 16px;
+  padding: 13px 15px;
+  border: 1px solid rgba(34, 197, 94, 0.38);
+  border-radius: 14px;
+  background: rgba(34, 197, 94, 0.12);
+  color: var(--text-primary);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.workspace_invite_success i {
+  color: var(--success-color);
+  font-size: 18px;
+}
+
+.workspace_invite_success span {
+  flex: 1;
+}
+
+.workspace_invite_success button {
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 20px;
+  line-height: 1;
 }
 
 .workspace_invite_result_title {
@@ -2401,7 +2527,7 @@
 }
 
 .discussion_empty_state {
-  min-height: 380px;
+  min-height: 300px;
   border: 1px dashed var(--border-color);
   border-radius: 24px;
   background: var(--bg-card);
@@ -2410,7 +2536,7 @@
   align-items: center;
   justify-content: center;
   text-align: center;
-  padding: 42px;
+  padding: 34px;
 }
 
 .discussion_empty_icon {
@@ -6058,9 +6184,7 @@
 
   min-height: 100dvh;
   padding: 32px 44px 64px 224px;
-  background:
-    radial-gradient(circle at 92% 10%, var(--focus-ring), transparent 28%),
-    var(--hero-bg);
+  background: var(--bg-primary);
   color: var(--ws-text);
   overflow-x: hidden;
 }
@@ -6074,6 +6198,7 @@
   position: fixed;
   top: 112px;
   left: 28px;
+  right: auto;
   z-index: 50;
   width: 168px;
   min-height: auto;

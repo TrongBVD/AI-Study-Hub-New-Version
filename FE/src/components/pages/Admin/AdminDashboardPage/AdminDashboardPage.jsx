@@ -24,7 +24,26 @@ function getInitials(name = "") {
 }
 
 function getDisplayName(user) {
-  return user?.full_name || user?.username || user?.email || "Unknown user";
+  return repairTextEncoding(
+    user?.full_name || user?.username || user?.email || "Unknown user",
+  );
+}
+
+function repairTextEncoding(value) {
+  const text = String(value || "");
+
+  if (!/[ÃÂáºá»]/.test(text)) {
+    return text;
+  }
+
+  try {
+    const bytes = Uint8Array.from(
+      Array.from(text).map((character) => character.charCodeAt(0)),
+    );
+    return new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+  } catch {
+    return text;
+  }
 }
 
 function getLogTime(value) {
@@ -35,8 +54,10 @@ function getLogTime(value) {
 function getDocumentReason(document) {
   const reason = document.ai_reject_reason;
   if (!reason) return "Document needs admin review.";
-  if (typeof reason === "string") return reason;
-  return reason.reason || reason.error || "Document needs admin review.";
+  if (typeof reason === "string") return repairTextEncoding(reason);
+  return repairTextEncoding(
+    reason.reason || reason.error || "Document needs admin review.",
+  );
 }
 
 function getQueueSeverity(status) {
@@ -316,7 +337,7 @@ function AdminDashboardPage() {
                         <i className="ti-alert" />
                       </div>
                       <div>
-                        <strong>{item.title}</strong>
+                        <strong>{repairTextEncoding(item.title)}</strong>
                         <p>{getDocumentReason(item)}</p>
                         <span>Uploader: {getDisplayName(item.uploader)} · Status {item.status}</span>
                       </div>

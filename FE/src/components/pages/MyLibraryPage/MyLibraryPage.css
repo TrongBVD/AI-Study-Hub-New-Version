@@ -12,16 +12,7 @@
 }
 
 .my_library_page::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  opacity: 0.22;
-  background-image:
-    linear-gradient(var(--focus-ring) 1px, transparent 1px),
-    linear-gradient(90deg, var(--focus-ring) 1px, transparent 1px);
-  background-size: 44px 44px;
-  mask-image: linear-gradient(to bottom, var(--text-primary), transparent 72%);
+  content: none;
 }
 
 .library_content {
@@ -175,7 +166,8 @@
 
 .my_library_hero_card span {
   display: block;
-  color: var(--accent-color);
+  color: inherit;
+  opacity: 0.72;
   font-size: 12px;
   font-weight: 900;
   letter-spacing: 0.1em;
@@ -186,7 +178,7 @@
   display: block;
   max-width: 100%;
   margin-top: 9px;
-  color: var(--text-primary);
+  color: var(--bg-card);
   font-size: 22px;
   line-height: 1.05;
   letter-spacing: -0.04em;
@@ -197,7 +189,7 @@
 
 .my_library_hero_card p {
   margin: 14px 0 0;
-  color: var(--text-secondary);
+  color: var(--hero-card-bg);
   line-height: 1.55;
 }
 

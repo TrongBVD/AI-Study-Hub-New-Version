@@ -12,6 +12,7 @@ const GOOGLE_CLIENT_ID =
 function LoginPage() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [loginNotice, setLoginNotice] = useState(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -124,9 +125,14 @@ function LoginPage() {
     e.preventDefault();
 
     const trimmedUsername = username.trim();
+    setLoginNotice(null);
 
     if (!trimmedUsername || !password) {
-      alert("Vui lòng nhập đầy đủ Username/Email và Password!");
+      setLoginNotice({
+        type: "warning",
+        title: "Thiếu thông tin đăng nhập",
+        message: "Vui lòng nhập đầy đủ Username/Email và Password.",
+      });
       return;
     }
 
@@ -150,12 +156,22 @@ function LoginPage() {
     } catch (error) {
       console.error("Lỗi đăng nhập:", error);
 
-      const errorMsg =
+      const backendMessage =
         error.response?.data?.message ||
         error.response?.data?.error ||
         "Đăng nhập thất bại. Vui lòng kiểm tra username/password.";
 
-      alert(errorMsg);
+      const isWrongPassword =
+        error.response?.status === 401 &&
+        backendMessage.toLowerCase().includes("mật khẩu");
+
+      setLoginNotice({
+        type: "error",
+        title: isWrongPassword ? "Sai mật khẩu" : "Đăng nhập thất bại",
+        message: isWrongPassword
+          ? "Mật khẩu bạn vừa nhập chưa đúng. Vui lòng kiểm tra lại hoặc dùng Quên mật khẩu để đặt lại."
+          : backendMessage,
+      });
     }
   };
 
@@ -224,6 +240,13 @@ function LoginPage() {
     <div className="login_page">
       <form className="login_form" onSubmit={handleSubmit}>
         <p className="login_title">Log in</p>
+
+        {loginNotice && (
+          <div className={`login_notice ${loginNotice.type}`} role="alert">
+            <strong>{loginNotice.title}</strong>
+            <span>{loginNotice.message}</span>
+          </div>
+        )}
 
         <div className="login_flex">
           <FormInput

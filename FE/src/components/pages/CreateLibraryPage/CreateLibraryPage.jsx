@@ -11,7 +11,18 @@ function normalizeLibraryName(value) {
   return String(value || "")
     .normalize("NFKC")
     .trim()
+    .replace(/\s+/g, " ")
     .toLocaleLowerCase();
+}
+
+function hasDuplicateLibraryName(libraries, name) {
+  const normalizedName = normalizeLibraryName(name);
+
+  return libraries.some(
+    (library) =>
+      normalizeLibraryName(library.name || library.libraryName) ===
+      normalizedName,
+  );
 }
 
 function getInitials(name) {
@@ -70,11 +81,7 @@ function CreateLibraryPage() {
   const trimmedDescription = description.trim();
   const isDuplicateName =
     trimmedLibraryName.length > 0 &&
-    userLibraries.some(
-      (library) =>
-        normalizeLibraryName(library.name || library.libraryName) ===
-        normalizeLibraryName(trimmedLibraryName),
-    );
+    hasDuplicateLibraryName(userLibraries, trimmedLibraryName);
   const canCreate = trimmedLibraryName.length > 0 && !isDuplicateName;
 
   const previewName = trimmedLibraryName || "Untitled library";
@@ -115,6 +122,18 @@ function CreateLibraryPage() {
     }
 
     try {
+      const latestLibraries = await getMyLibraries();
+      const safeLatestLibraries = Array.isArray(latestLibraries)
+        ? latestLibraries
+        : [];
+
+      setUserLibraries(safeLatestLibraries);
+
+      if (hasDuplicateLibraryName(safeLatestLibraries, trimmedLibraryName)) {
+        alert("A library with this name already exists. Please choose another name.");
+        return;
+      }
+
       const isPublic = visibility === "public";
 
       // 1. GỌI API ĐẨY DỮ LIỆU LÊN SUPABASE
@@ -136,6 +155,11 @@ function CreateLibraryPage() {
       });
     } catch (error) {
       console.error("Lỗi tạo thư viện:", error);
+      if (error?.response?.status === 409) {
+        alert("A library with this name already exists. Please choose another name.");
+        return;
+      }
+
       alert("Lỗi kết nối với máy chủ. Thư viện chưa được lưu vào Database.");
     }
   }

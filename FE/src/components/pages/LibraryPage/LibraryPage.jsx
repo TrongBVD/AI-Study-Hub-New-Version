@@ -81,22 +81,6 @@ function LibraryPage() {
       };
     }
 
-    const savedLibraries = JSON.parse(
-      localStorage.getItem("aiStudyHubLibraries") || "[]",
-    );
-
-    const matchedLibrary = savedLibraries.find(
-      (library) => library.id === libraryId,
-    );
-
-    if (matchedLibrary) {
-      return {
-        ...matchedLibrary,
-        stars: Number(matchedLibrary.stars) || 0,
-        isStarred: Boolean(matchedLibrary.isStarred),
-      };
-    }
-
     return {
       id: libraryId || "default-library",
       name: "AI-student-hub",
@@ -116,8 +100,7 @@ function LibraryPage() {
   }
 
   const folderIdRef = useRef(1);
-  const authorName =
-    localStorage.getItem("aiStudyHubProfileName") || "dangkhoabi456";
+  const authorName = "You";
   const [libraryData, setLibraryData] = useState(getInitialLibraryData);
   const [stars, setStars] = useState(() => Number(getInitialLibraryData().stars) || 0);
 
@@ -135,50 +118,6 @@ function LibraryPage() {
   const [libraryDescription, setLibraryDescription] = useState(
     () => getInitialLibraryData().description || "",
   );
-  useEffect(() => {
-    if (!libraryData?.id) return;
-
-    const currentRecentLibraries = JSON.parse(
-      localStorage.getItem("aiStudyHubRecentLibraries") || "[]"
-    );
-
-    const recentLibrary = {
-      id: libraryData.id,
-      name: libraryName || libraryData.name || "Untitled Library",
-      description:
-        libraryDescription ||
-        libraryData.description ||
-        "This library helps students manage learning resources, upload documents, and use AI to summarize or ask questions from files.",
-      documents: Number(libraryData.documents) || 0,
-      icon: libraryData.icon || "ti-archive",
-      updatedAt: libraryData.updatedAt || "Updated just now",
-      stars: Number(libraryData.stars) || 0,
-      isStarred: Boolean(libraryData.isStarred),
-      visitedAt: Date.now(),
-    };
-
-    const nextRecentLibraries = [
-      recentLibrary,
-      ...currentRecentLibraries.filter((item) => item.id !== libraryData.id),
-    ].slice(0, 2);
-
-    if (isGuest) return;
-
-    localStorage.setItem(
-      "aiStudyHubRecentLibraries",
-      JSON.stringify(nextRecentLibraries)
-    );
-  }, [
-    libraryData?.id,
-    libraryData?.name,
-    libraryData?.documents,
-    libraryData?.icon,
-    libraryData?.updatedAt,
-    libraryData?.stars,
-    libraryData?.isStarred,
-    libraryName,
-    isGuest,
-  ]);
   const [libraryVisibility, setLibraryVisibility] = useState(
     () => getInitialLibraryData().visibility || "public",
   );
@@ -190,19 +129,7 @@ function LibraryPage() {
   const [tagErrors, setTagErrors] = useState([]);
   const [aiRecommendedTags, setAiRecommendedTags] = useState([]);
 
-  const libraryItemsStorageKey = `aiStudyHubImportedLibraryItems:${libraryId}`;
-  const [libraryItems, setLibraryItems] = useState(() => {
-    if (isGuest) return [];
-
-    try {
-      const importedItems = JSON.parse(
-        localStorage.getItem(libraryItemsStorageKey) || "[]",
-      );
-      return Array.isArray(importedItems) ? importedItems : [];
-    } catch {
-      return [];
-    }
-  });
+  const [libraryItems, setLibraryItems] = useState([]);
   const [isLoadingDocuments, setIsLoadingDocuments] = useState(false);
   const [isUploadingDocuments, setIsUploadingDocuments] = useState(false);
   const [isExportingLibrary, setIsExportingLibrary] = useState(false);
@@ -210,25 +137,6 @@ function LibraryPage() {
   const [shareOnProfile, setShareOnProfile] = useState(
     () => getInitialLibraryData().shareOnProfile ?? false
   );
-
-  useEffect(() => {
-    const serializedItems = libraryItems.map(item => {
-      if (item.type === "folder") {
-        return item;
-      }
-      return {
-        id: item.id,
-        type: "file",
-        folderId: item.folderId ?? null,
-        hashtags: item.hashtags || [],
-        isBackendFile: true
-      };
-    });
-    localStorage.setItem(
-      libraryItemsStorageKey,
-      JSON.stringify(serializedItems),
-    );
-  }, [libraryItems, libraryItemsStorageKey]);
 
   function sanitizeArchiveName(value, fallback = "file") {
     const safeValue = String(value || fallback)
@@ -411,44 +319,6 @@ function LibraryPage() {
       stars: nextStars,
       isStarred: nextIsStarred,
     };
-
-    const savedLibraries = JSON.parse(
-      localStorage.getItem("aiStudyHubLibraries") || "[]"
-    );
-
-    const hasCurrentLibrary = savedLibraries.some(
-      (library) => library.id === updatedLibrary.id
-    );
-
-    const updatedLibraries = hasCurrentLibrary
-      ? savedLibraries.map((library) =>
-        library.id === updatedLibrary.id ? updatedLibrary : library
-      )
-      : [updatedLibrary, ...savedLibraries];
-
-    localStorage.setItem(
-      "aiStudyHubLibraries",
-      JSON.stringify(updatedLibraries)
-    );
-
-    const recentLibraries = JSON.parse(
-      localStorage.getItem("aiStudyHubRecentLibraries") || "[]"
-    );
-
-    const updatedRecentLibraries = recentLibraries.map((library) =>
-      library.id === updatedLibrary.id
-        ? {
-          ...library,
-          stars: nextStars,
-          isStarred: nextIsStarred,
-        }
-        : library
-    );
-
-    localStorage.setItem(
-      "aiStudyHubRecentLibraries",
-      JSON.stringify(updatedRecentLibraries)
-    );
 
     setStars(nextStars);
     setIsStarred(nextIsStarred);
@@ -1006,21 +876,6 @@ function LibraryPage() {
     try {
       await deleteLibrary(libraryData.id || libraryId);
 
-      localStorage.removeItem(libraryItemsStorageKey);
-
-      const recentLibraries = JSON.parse(
-        localStorage.getItem("aiStudyHubRecentLibraries") || "[]"
-      );
-
-      const updatedRecentLibraries = recentLibraries.filter(
-        (library) => library.id !== libraryId
-      );
-
-      localStorage.setItem(
-        "aiStudyHubRecentLibraries",
-        JSON.stringify(updatedRecentLibraries)
-      );
-
       navigate("/dashboard/libraries", { replace: true });
     } catch (error) {
       console.error("Failed to delete library:", error);
@@ -1190,14 +1045,18 @@ function LibraryPage() {
             <div className="library_heading_block">
               <div className="library_title">
                 <h1>{libraryData.name}</h1>
-                <span>{formatVisibility(libraryData.visibility)}</span>
               </div>
             </div>
           </div>
 
           <div className="library_command_right">
             <div className="library_status_card">
-              <span>Current view</span>
+              <div className="library_status_topline">
+                <span>Current view</span>
+                <span className="library_visibility_badge">
+                  {formatVisibility(libraryData.visibility)}
+                </span>
+              </div>
               <strong>{currentLocationLabel}</strong>
               <p>{statusText}</p>
             </div>

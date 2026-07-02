@@ -7,18 +7,23 @@ import "./LoginPage.css";
 function ForgotPassword() {
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
+  const [notice, setNotice] = useState(null);
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
+    setNotice(null);
     
     try {
       await api.post("/auth/forgot-password", { email });
-      alert("Mã OTP khôi phục đã được gửi vào Email của bạn.");
       navigate("/reset-password", { state: { email } });
     } catch (error) {
-      alert(error.response?.data?.message || "Lỗi hệ thống. Vui lòng thử lại.");
+      setNotice({
+        type: "error",
+        title: "Không thể gửi OTP",
+        message: error.response?.data?.message || "Lỗi hệ thống. Vui lòng thử lại.",
+      });
     } finally {
       setLoading(false);
     }
@@ -31,6 +36,13 @@ function ForgotPassword() {
         <p className="login_message" style={{textAlign: "left", marginBottom: "15px"}}>
           Nhập email đã đăng ký của bạn. Hệ thống sẽ gửi một mã OTP gồm 6 chữ số để xác minh.
         </p>
+
+        {notice && (
+          <div className={`login_notice ${notice.type}`} role="alert">
+            <strong>{notice.title}</strong>
+            <span>{notice.message}</span>
+          </div>
+        )}
         
         <div className="login_flex">
           <FormInput

@@ -4785,6 +4785,31 @@
   border-radius: 22px;
 }
 
+.library_command_right {
+  transform: translateY(-10px);
+}
+
+.library_status_topline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.library_visibility_badge {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--border-color);
+  border-radius: 999px;
+  color: var(--accent-color);
+  background: var(--bg-secondary);
+  padding: 3px 10px;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
 .library_status_card h2 {
   font-size: 26px;
 }
