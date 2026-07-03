@@ -43,6 +43,11 @@
   box-sizing: border-box;
 }
 
+.form_input_group .form_input_password::-ms-reveal,
+.form_input_group .form_input_password::-ms-clear {
+  display: none;
+}
+
 .form_input_group .form_input_label {
   display: none;
 }
