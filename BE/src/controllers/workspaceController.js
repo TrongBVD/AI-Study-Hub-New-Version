@@ -1,6 +1,75 @@
 const supabase = require("../config/supabase");
+const nodemailer = require("nodemailer");
 
 const MEMBER_ROLES = ["Editor", "Viewer"];
+
+function createMailTransporter() {
+  return nodemailer.createTransport({
+    host: process.env.EMAIL_HOST,
+    port: parseInt(process.env.EMAIL_PORT, 10) || 2525,
+    secure: String(process.env.EMAIL_PORT) === "465",
+    auth: {
+      user: process.env.EMAIL_USER,
+      pass: process.env.EMAIL_PASS,
+    },
+  });
+}
+
+function getFrontendUrl() {
+  return (process.env.FRONTEND_URL || "http://localhost:5173").replace(/\/+$/, "");
+}
+
+function escapeHtml(value) {
+  return String(value || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+async function sendWorkspaceInviteEmail({ to, workspace, inviter, role, inviteUrl }) {
+  if (!process.env.EMAIL_HOST || !process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+    throw new Error("Email service is not configured.");
+  }
+
+  const workspaceUrl = inviteUrl || `${getFrontendUrl()}/dashboard/workspaces/${workspace.id}`;
+  const inviterName =
+    inviter?.full_name || inviter?.username || inviter?.email || "A workspace admin";
+  const workspaceName = workspace?.name || "AI StudyHub workspace";
+  const safeInviterName = escapeHtml(inviterName);
+  const safeWorkspaceName = escapeHtml(workspaceName);
+  const safeRole = escapeHtml(role);
+  const safeWorkspaceUrl = escapeHtml(workspaceUrl);
+
+  const transporter = createMailTransporter();
+
+  await transporter.sendMail({
+    from: process.env.EMAIL_USER,
+    to,
+    subject: `AI StudyHub - Workspace invitation: ${workspaceName}`,
+    text: [
+      `Hi,`,
+      ``,
+      `${inviterName} invited you to join the workspace "${workspaceName}" on AI StudyHub as ${role}.`,
+      `Open workspace: ${workspaceUrl}`,
+      ``,
+      `If you were not expecting this invitation, you can ignore this email.`,
+    ].join("\n"),
+    html: `
+      <div style="font-family: Arial, sans-serif; color: #172033; line-height: 1.55;">
+        <h2 style="margin: 0 0 12px;">You have been invited to a workspace</h2>
+        <p><strong>${safeInviterName}</strong> invited you to join <strong>${safeWorkspaceName}</strong> on AI StudyHub as <strong>${safeRole}</strong>.</p>
+        <p>
+          <a href="${safeWorkspaceUrl}" style="display: inline-block; padding: 10px 16px; border-radius: 8px; background: #2563eb; color: #ffffff; text-decoration: none;">
+            Open workspace
+          </a>
+        </p>
+        <p style="color: #64748b; font-size: 13px;">If you were not expecting this invitation, you can ignore this email.</p>
+      </div>
+    `,
+  });
+}
 
 async function getWorkspaceAccess(workspaceId, userId) {
   const { data: workspace, error: workspaceError } = await supabase
@@ -271,6 +340,23 @@ exports.addMember = async (req, res) => {
         });
     }
 
+    const { data: invitedUser, error: invitedUserError } = await supabase
+      .from("profiles")
+      .select("id, email, username, full_name, status")
+      .eq("id", userId)
+      .maybeSingle();
+
+    if (invitedUserError) throw invitedUserError;
+
+    if (!invitedUser || invitedUser.status === "DISABLED") {
+      return res
+        .status(404)
+        .json({
+          status: "error",
+          message: "The invited user was not found or is disabled.",
+        });
+    }
+
     const access = await getWorkspaceAccess(
       req.params.workspaceId,
       req.user.id,
@@ -284,6 +370,14 @@ exports.addMember = async (req, res) => {
         });
     }
 
+    const { data: inviter, error: inviterError } = await supabase
+      .from("profiles")
+      .select("id, email, username, full_name")
+      .eq("id", req.user.id)
+      .maybeSingle();
+
+    if (inviterError) throw inviterError;
+
     const { data, error } = await supabase
       .from("workspace_members")
       .insert({
@@ -296,8 +390,46 @@ exports.addMember = async (req, res) => {
 
     if (error) throw error;
 
-    return res.status(201).json({ status: "success", data });
+    let emailSent = false;
+    let emailError = null;
+
+    try {
+      await sendWorkspaceInviteEmail({
+        to: invitedUser.email,
+        workspace: access.workspace,
+        inviter,
+        role,
+      });
+      emailSent = true;
+    } catch (mailError) {
+      emailError = mailError.message;
+      console.error("Could not send workspace invite email:", mailError);
+    }
+
+    return res.status(201).json({
+      status: "success",
+      data: {
+        ...data,
+        invitedUser: {
+          id: invitedUser.id,
+          email: invitedUser.email,
+          username: invitedUser.username,
+          full_name: invitedUser.full_name,
+        },
+        emailSent,
+        emailError,
+      },
+    });
   } catch (error) {
+    if (error.code === "23505") {
+      return res
+        .status(409)
+        .json({
+          status: "error",
+          message: "This user is already a member of the workspace.",
+        });
+    }
+
     return res
       .status(500)
       .json({

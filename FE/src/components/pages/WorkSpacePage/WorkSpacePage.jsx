@@ -24,6 +24,10 @@ function getInviteErrorMessage(error) {
     return backendMessage || "Only workspace admins can add members.";
   }
 
+  if (status === 409) {
+    return backendMessage || "This user is already a member of the workspace.";
+  }
+
   return backendMessage || "Cannot search users right now.";
 }
 
@@ -150,12 +154,12 @@ const [isSubtaskPriorityOpen, setIsSubtaskPriorityOpen] = useState(false);
   const [isInviteSearching, setIsInviteSearching] = useState(false);
   const [isAddingMember, setIsAddingMember] = useState(false);
   const [backendMembers, setBackendMembers] = useState([]);
-  const [candidateUsers, setCandidateUsers] = useState([]);
-  const [selectedUserId, setSelectedUserId] = useState("");
-  const [activeMemberProfileId, setActiveMemberProfileId] = useState("");
   const [pendingInvitations, setPendingInvitations] = useState(() =>
     loadPendingInvitations(workspaceId),
   );
+  const [candidateUsers, setCandidateUsers] = useState([]);
+  const [selectedUserId, setSelectedUserId] = useState("");
+  const [activeMemberProfileId, setActiveMemberProfileId] = useState("");
 
   useEffect(() => {
     setPendingInvitations(loadPendingInvitations(workspaceId));
@@ -332,16 +336,6 @@ const [isSubtaskPriorityOpen, setIsSubtaskPriorityOpen] = useState(false);
   const canManageTopics =
     currentWorkspaceRole === "editor" || currentWorkspaceRole === "admin";
   const canManageWorkspace = currentWorkspaceRole === "admin";
-
-  const pendingInvitationUserIds = useMemo(
-    () =>
-      new Set(
-        pendingInvitations
-          .map((invitation) => invitation.userId)
-          .filter(Boolean),
-      ),
-    [pendingInvitations],
-  );
 
   const [chatMessages, setChatMessages] = useState([
     {
@@ -977,7 +971,7 @@ function getSubtaskPriorityIcon(priority) {
       setIsAddingMember(true);
       setInviteError("");
       const invitedUser = candidateUsers.find((user) => user.id === selectedUserId);
-      await addWorkspaceMember(workspaceId, {
+      const inviteResult = await addWorkspaceMember(workspaceId, {
         userId: selectedUserId,
         role: inviteRole,
       });
@@ -986,7 +980,7 @@ function getSubtaskPriorityIcon(priority) {
         invitedUser?.full_name ||
         invitedUser?.username ||
         invitedUser?.email ||
-        "thành viên mới";
+        "new member";
       const invitedEmail = invitedUser?.email || invitedUser?.username || invitedName;
 
       setPendingInvitations((currentInvitations) => {
@@ -1008,14 +1002,19 @@ function getSubtaskPriorityIcon(priority) {
         ];
       });
       handleCloseInviteModal();
+      const emailWasSent = inviteResult?.emailSent;
       setInviteSuccess(
-        `Đã gửi lời mời workspace thành công cho ${invitedName} với quyền ${inviteRole}.`,
+        emailWasSent
+          ? `Added ${invitedName} to the workspace and sent an invitation email to ${invitedEmail}.`
+          : `Added ${invitedName} to the workspace, but the invitation email could not be sent. Please check the backend email configuration.`,
       );
       createAppNotification({
         category: "member",
         action: "joined",
-        title: "Lời mời workspace đã gửi",
-        message: `${invitedName} đã được mời vào workspace "${workspace?.name || "này"}".`,
+        title: emailWasSent ? "Workspace invite email sent" : "Workspace invite created",
+        message: emailWasSent
+          ? `${invitedName} has been invited by email to "${workspace?.name || "this workspace"}".`
+          : `${invitedName} was added to "${workspace?.name || "this workspace"}", but the invite email was not sent.`,
         icon: "ti-user",
         link: `/dashboard/workspaces/${workspaceId}`,
       });
@@ -1343,19 +1342,10 @@ function getSubtaskPriorityIcon(priority) {
         avatar: "https://i.pravatar.cc/80?img=47",
         isOnline: false,
       },
-      {
-        name: "Nguyễn Văn A",
-        email: "v.a.nguyen@university.edu",
-        role: "Member",
-        joinDate: "Pending",
-        avatar: "",
-        isPending: true,
-      },
     ];
     const visibleWorkspaceMembers =
       backendMembers.length > 0
         ? backendMembers
-            .filter((member) => !pendingInvitationUserIds.has(member.user?.id))
             .map((member) => ({
               id: member.user?.id,
               profileId: member.user?.id,
@@ -1486,26 +1476,14 @@ function getSubtaskPriorityIcon(priority) {
                     {member.role}
                   </span>
 
-                  <span
-                    className={
-                      member.isPending
-                        ? "workspace_member_join_date pending"
-                        : "workspace_member_join_date"
-                    }
-                  >
+                  <span className="workspace_member_join_date">
                     {member.joinDate}
                   </span>
 
                   {canManageWorkspace ? (
-                    member.isPending ? (
-                      <button type="button" className="workspace_resend_btn">
-                        Resend
-                      </button>
-                    ) : (
-                      <button type="button" aria-label="Member settings">
-                        <i className="ti-settings"></i>
-                      </button>
-                    )
+                    <button type="button" aria-label="Member settings">
+                      <i className="ti-settings"></i>
+                    </button>
                   ) : (
                     <span className="workspace_member_readonly_action">
                       View only
@@ -1515,11 +1493,6 @@ function getSubtaskPriorityIcon(priority) {
               );
             })}
           </div>
-
-          <p className="workspace_member_note">
-            Note: Only members who have accepted their invitation or are
-            explicitly listed as pending appear in this workspace list.
-          </p>
 
           {canManageWorkspace && (
             <section className="workspace_pending_card">
@@ -1535,7 +1508,7 @@ function getSubtaskPriorityIcon(priority) {
                   pendingInvitations.map((invitation) => (
                     <article
                       className="workspace_pending_item"
-                      key={invitation.email}
+                      key={invitation.id || invitation.email}
                     >
                       <div className="workspace_pending_mail_icon">
                         <i className="ti-email"></i>
@@ -1561,6 +1534,7 @@ function getSubtaskPriorityIcon(priority) {
               </div>
             </section>
           )}
+
         </section>
 
         <aside className="workspace_member_sidebar">
