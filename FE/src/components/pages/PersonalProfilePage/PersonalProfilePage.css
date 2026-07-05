@@ -34,8 +34,8 @@ body {
   height: 360px;
   border-radius: 50%;
   overflow: hidden;
-  border: 1px solid var(--bg-elevated);
-  background: linear-gradient(135deg, #c084fc, #f0abfc);
+  border: none;
+  background: transparent;
   margin-bottom: 22px;
   position: relative;
   cursor: pointer;
@@ -46,6 +46,10 @@ body {
   width: 100%;
   height: 100%;
   object-fit: cover;
+}
+
+.profile_main_avatar img.default_profile_avatar {
+  transform: scale(1.12);
 }
 
 .profile_main_avatar input {

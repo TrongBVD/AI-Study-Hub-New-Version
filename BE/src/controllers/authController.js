@@ -613,7 +613,7 @@ exports.getUserProfileById = async (req, res) => {
     // 1. Lấy thông tin tài khoản người dùng từ bảng profiles
     const { data: profile, error: profileError } = await supabase
       .from("profiles")
-      .select("id, username, full_name, date_of_birth, is_dob_public")
+      .select("id, username, full_name, date_of_birth, is_dob_public, avatar_url")
       .eq("id", id)
       .eq("status", "ACTIVE")
       .maybeSingle();
