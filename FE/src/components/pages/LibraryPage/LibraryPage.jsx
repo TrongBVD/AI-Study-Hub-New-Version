@@ -496,7 +496,6 @@ function LibraryPage() {
             ? {
               ...mappedItem,
               folderId: savedItem.folderId ?? null,
-              hashtags: savedItem.hashtags || [],
             }
             : mappedItem;
         });
