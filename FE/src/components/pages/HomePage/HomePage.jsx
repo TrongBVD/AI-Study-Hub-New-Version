@@ -5,6 +5,7 @@ import { Link } from "react-router-dom";
 import studyHubLogo from "../../../assets/images/StudyHubLogo.svg";
 import { getMyLibraries } from "../../../utils/documentApi.js";
 import { getWorkspaces } from "../../../utils/workspaceApi.js";
+import { getMyProfile } from "../../../utils/profileApi.js";
 
 function getItemId(item) {
   return item?.id || item?._id || item?.libraryId || item?.workspaceId || "";
@@ -50,9 +51,8 @@ function notifyGuestRegistrationRequired() {
 }
 
 function HomePage() {
-  const profileName =
-    localStorage.getItem("aiStudyHubProfileName") || "dangkhoabi456";
   const isGuest = getStoredUserRole() === "GUEST";
+  const [profileName, setProfileName] = useState("User");
   const [libraries, setLibraries] = useState([]);
   const [workspaces, setWorkspaces] = useState([]);
 
@@ -87,6 +87,32 @@ function HomePage() {
     }
 
     loadDashboardData();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [isGuest]);
+
+  useEffect(() => {
+    if (isGuest) {
+      setProfileName("Guest");
+      return;
+    }
+
+    let isMounted = true;
+
+    async function loadProfileName() {
+      try {
+        const profile = await getMyProfile();
+        if (!isMounted) return;
+
+        setProfileName(profile?.full_name || profile?.username || profile?.email || "User");
+      } catch (error) {
+        console.error("Cannot load profile name:", error);
+      }
+    }
+
+    loadProfileName();
 
     return () => {
       isMounted = false;

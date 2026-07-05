@@ -3,9 +3,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import "./CreateLibraryPage.css";
 import api from "../../../utils/api.js";
 import { getMyLibraries } from "../../../utils/documentApi.js";
-
-const PROFILE_NAME_KEY = "aiStudyHubProfileName";
-const PROFILE_AVATAR_KEY = "aiStudyHubProfileAvatar";
+import { getMyProfile } from "../../../utils/profileApi.js";
 
 function normalizeLibraryName(value) {
   return String(value || "")
@@ -55,23 +53,29 @@ function CreateLibraryPage() {
   const [description, setDescription] = useState("");
   const [visibility, setVisibility] = useState("public");
   const [userLibraries, setUserLibraries] = useState([]);
-  const ownerName = localStorage.getItem(PROFILE_NAME_KEY) || "dangkhoabi456";
-  const ownerAvatar = localStorage.getItem(PROFILE_AVATAR_KEY) || "";
+  const [ownerName, setOwnerName] = useState("User");
+  const [ownerAvatar, setOwnerAvatar] = useState("");
   const ownerInitials = getInitials(ownerName);
 
   useEffect(() => {
     let isMounted = true;
-    async function loadLibraries() {
+    async function loadPageData() {
       try {
-        const data = await getMyLibraries();
+        const [librariesData, profile] = await Promise.all([
+          getMyLibraries(),
+          getMyProfile(),
+        ]);
+
         if (isMounted) {
-          setUserLibraries(data || []);
+          setUserLibraries(librariesData || []);
+          setOwnerName(profile?.full_name || profile?.username || profile?.email || "User");
+          setOwnerAvatar(profile?.avatar_url || "");
         }
       } catch (err) {
-        console.error("Failed to load user libraries for duplicate check:", err);
+        console.error("Failed to load create library data:", err);
       }
     }
-    loadLibraries();
+    loadPageData();
     return () => {
       isMounted = false;
     };

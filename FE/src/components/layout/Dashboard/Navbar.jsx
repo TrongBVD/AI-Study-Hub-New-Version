@@ -8,8 +8,8 @@ import {
 import { searchUsers } from "../../../utils/searchApi.js";
 import { getMyLibraries } from "../../../utils/documentApi.js";
 import { getWorkspaces } from "../../../utils/workspaceApi.js";
-
-const PROFILE_AVATAR_KEY = "aiStudyHubProfileAvatar";
+import { getMyProfile } from "../../../utils/profileApi.js";
+import defaultAvatar from "../../../assets/images/account.png";
 
 function getStoredUserRole() {
   try {
@@ -83,9 +83,7 @@ function Navbar({
   const [searchValue, setSearchValue] = useState("");
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [matchedUsers, setMatchedUsers] = useState([]);
-  const [profileAvatar, setProfileAvatar] = useState(() => {
-    return localStorage.getItem(PROFILE_AVATAR_KEY) || "";
-  });
+  const [profileAvatar, setProfileAvatar] = useState("");
 
 
   const [notifications, setNotifications] = useState(() => getNotifications());
@@ -144,21 +142,43 @@ function Navbar({
   }, [searchValue]);
 
   useEffect(() => {
-    function syncProfileAvatar() {
-      setProfileAvatar(localStorage.getItem(PROFILE_AVATAR_KEY) || "");
+    function syncProfileAvatar(event) {
+      setProfileAvatar(event.detail?.avatar || "");
     }
 
-    window.addEventListener("aiStudyHubProfileAvatarChanged", syncProfileAvatar);
-    window.addEventListener("storage", syncProfileAvatar);
+    window.addEventListener("aiStudyHubProfileChanged", syncProfileAvatar);
 
     return () => {
       window.removeEventListener(
-        "aiStudyHubProfileAvatarChanged",
+        "aiStudyHubProfileChanged",
         syncProfileAvatar
       );
-      window.removeEventListener("storage", syncProfileAvatar);
     };
   }, []);
+
+  useEffect(() => {
+    if (isGuest) return;
+
+    let isMounted = true;
+
+    async function loadProfileAvatar() {
+      try {
+        const profile = await getMyProfile();
+        if (!isMounted) return;
+
+        const nextAvatar = profile?.avatar_url || "";
+        setProfileAvatar(nextAvatar);
+      } catch (error) {
+        console.error("Failed to load profile avatar:", error);
+      }
+    }
+
+    loadProfileAvatar();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [isGuest]);
 
   const unreadNotificationCount = notifications.filter(
     (notification) => !notification.isRead
@@ -296,6 +316,7 @@ function Navbar({
   }
 
   const shouldShowSearchPanel = isSearchFocused && searchValue.trim() !== "";
+  const avatarImage = profileAvatar || defaultAvatar;
 
   return (
     <header className="top_navbar">
@@ -478,11 +499,7 @@ function Navbar({
           to={profilePath}
           className="profile_avatar"
           aria-label="Go to personal profile"
-          style={
-            profileAvatar
-              ? { backgroundImage: `url(${profileAvatar})` }
-              : undefined
-          }
+          style={{ backgroundImage: `url(${avatarImage})` }}
         />
       </div>
     </header>

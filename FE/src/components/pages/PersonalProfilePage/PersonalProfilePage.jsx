@@ -1,8 +1,13 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+import {
+  getMyProfile,
+  getProfileById,
+  updateMyAvatar,
+  updateMyProfile,
+} from "../../../utils/profileApi";
+import defaultAvatar from "../../../assets/images/account.png";
 import "./PersonalProfilePage.css";
-
-const PROFILE_AVATAR_KEY = "aiStudyHubProfileAvatar";
 
 function getLoggedInUserEmail() {
   try {
@@ -14,53 +19,125 @@ function getLoggedInUserEmail() {
   }
 }
 
+function getLoggedInUserId() {
+  try {
+    const storedUser = JSON.parse(localStorage.getItem("user") || "null");
+    return storedUser?.id || storedUser?._id || storedUser?.user_id || "";
+  } catch (error) {
+    console.error("Cannot read logged-in user id from localStorage:", error);
+    return "";
+  }
+}
+
 function PersonalProfile() {
   const navigate = useNavigate();
+  const { id: profileId } = useParams();
+  const loggedInUserId = getLoggedInUserId();
+  const isOwnProfile = !profileId || profileId === loggedInUserId;
 
-  const [userName, setUserName] = useState(() => {
-    return localStorage.getItem("aiStudyHubProfileName") || "dangkhoabi456";
-  });
-  const [userEmail] = useState(getLoggedInUserEmail);
-
-  const dateOfBirth = new Date("2003-11-19");
+  const [userName, setUserName] = useState("User");
+  const [userEmail, setUserEmail] = useState(getLoggedInUserEmail);
+  const [dateOfBirth, setDateOfBirth] = useState("");
+  const [isDateOfBirthPublic, setIsDateOfBirthPublic] = useState(true);
   const [isEditingName, setIsEditingName] = useState(false);
   const [newName, setNewName] = useState(userName);
-  const [avatar, setAvatar] = useState(() => {
-    return localStorage.getItem(PROFILE_AVATAR_KEY) || "";
-  });
+  const [avatar, setAvatar] = useState("");
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+  const [libraries, setLibraries] = useState([]);
 
-  const libraries = JSON.parse(
-    localStorage.getItem("aiStudyHubLibraries") || "[]",
-  ).filter((library) => library.shareOnProfile === true);
+  useEffect(() => {
+    let isMounted = true;
 
-  function handleChangeAvatar(e) {
+    async function loadProfile() {
+      try {
+        const profileData = isOwnProfile
+          ? await getMyProfile()
+          : await getProfileById(profileId);
+        if (!isMounted) return;
+
+        const profile = isOwnProfile ? profileData : profileData?.profile;
+        const sharedLibraries = isOwnProfile
+          ? JSON.parse(localStorage.getItem("aiStudyHubLibraries") || "[]").filter(
+              (library) => library.shareOnProfile === true,
+            )
+          : profileData?.libraries || [];
+        const nextAvatar = profile?.avatar_url || "";
+        const nextName =
+          profile?.full_name || profile?.username || profile?.email || "User";
+
+        setUserName(nextName);
+        setNewName(nextName);
+        setUserEmail(isOwnProfile ? profile?.email || "" : "");
+        setDateOfBirth(profile?.date_of_birth || "");
+        setIsDateOfBirthPublic(profile?.is_dob_public !== false);
+        setAvatar(nextAvatar);
+        setLibraries(sharedLibraries);
+
+        if (isOwnProfile) {
+          window.dispatchEvent(
+            new CustomEvent("aiStudyHubProfileChanged", {
+              detail: { avatar: nextAvatar },
+            }),
+          );
+        }
+      } catch (error) {
+        console.error("Cannot load profile:", error);
+      }
+    }
+
+    loadProfile();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [isOwnProfile, profileId]);
+
+  async function handleChangeAvatar(e) {
+    if (!isOwnProfile) return;
+
     const file = e.target.files[0];
 
     if (!file) return;
 
-    const reader = new FileReader();
+    try {
+      setIsUploadingAvatar(true);
+      const profile = await updateMyAvatar(file);
+      const nextAvatar = profile?.avatar_url || "";
+      setAvatar(nextAvatar);
 
-    reader.onload = () => {
-      const imageUrl = reader.result;
-
-      if (typeof imageUrl !== "string") return;
-
-      setAvatar(imageUrl);
-      localStorage.setItem(PROFILE_AVATAR_KEY, imageUrl);
-      window.dispatchEvent(new Event("aiStudyHubProfileAvatarChanged"));
-    };
-
-    reader.readAsDataURL(file);
+      window.dispatchEvent(
+        new CustomEvent("aiStudyHubProfileChanged", {
+          detail: { avatar: nextAvatar },
+        }),
+      );
+    } catch (error) {
+      console.error("Cannot update avatar:", error);
+      alert(error.response?.data?.message || "Cannot update avatar. Please try again.");
+    } finally {
+      setIsUploadingAvatar(false);
+      e.target.value = "";
+    }
   }
 
-  function handleSaveName() {
+  async function handleSaveName() {
+    if (!isOwnProfile) return;
+
     const trimmedName = newName.trim();
 
     if (trimmedName === "") return;
 
-    setUserName(trimmedName);
-    localStorage.setItem("aiStudyHubProfileName", trimmedName);
-    setIsEditingName(false);
+    try {
+      const profile = await updateMyProfile({ full_name: trimmedName });
+      const nextName =
+        profile?.full_name || profile?.username || profile?.email || trimmedName;
+
+      setUserName(nextName);
+      setNewName(nextName);
+      setIsEditingName(false);
+    } catch (error) {
+      console.error("Cannot update profile name:", error);
+      alert(error.response?.data?.message || "Cannot update profile name.");
+    }
   }
 
   function handleCancelEdit() {
@@ -68,15 +145,31 @@ function PersonalProfile() {
     setIsEditingName(false);
   }
 
+  const displayAvatar = avatar || defaultAvatar;
+  const birthdayText =
+    dateOfBirth && (isOwnProfile || isDateOfBirthPublic)
+      ? new Date(dateOfBirth).toDateString()
+      : "Birthday unavailable";
+
   return (
     <main className="profile_page">
       <aside className="profile_sidebar">
         <label className="profile_main_avatar">
-          {avatar ? <img src={avatar} alt="User avatar" /> : null}
+          <img
+            src={displayAvatar}
+            alt="User avatar"
+            className={avatar ? "" : "default_profile_avatar"}
+          />
 
-          <div className="avatar_overlay">Change avatar</div>
+          {isOwnProfile && (
+            <>
+              <div className="avatar_overlay">
+                {isUploadingAvatar ? "Uploading..." : "Change avatar"}
+              </div>
 
-          <input type="file" accept="image/*" onChange={handleChangeAvatar} />
+              <input type="file" accept="image/*" onChange={handleChangeAvatar} />
+            </>
+          )}
         </label>
 
         <div className="profile_name_area">
@@ -101,9 +194,10 @@ function PersonalProfile() {
           ) : (
             <div className="profile_name_row">
               <h2>{userName}</h2>
-              <h2>{userEmail || "Email unavailable"}</h2>
-              <h2>{dateOfBirth.toDateString()}</h2>
+              {isOwnProfile && <h2>{userEmail || "Email unavailable"}</h2>}
+              <h2>{birthdayText}</h2>
 
+              {isOwnProfile && (
               <button
                 type="button"
                 className="edit_name_btn"
@@ -112,6 +206,7 @@ function PersonalProfile() {
               >
                 ✏️
               </button>
+              )}
             </div>
           )}
         </div>
