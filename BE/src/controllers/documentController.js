@@ -186,16 +186,9 @@ exports.listMyDocuments = async (req, res) => {
       throw error;
     }
 
-    const documents = (data || []).map((document) => ({
-      ...document,
-      document_tags: (document.document_tags || []).filter(
-        (documentTag) => String(documentTag.assigned_by) === String(userID)
-      ),
-    }));
-
     return res.status(200).json({
       status: "success",
-      data: documents,
+      data: data || [],
     });
   } catch (error) {
     console.error("Lỗi listMyDocuments:", error);
@@ -366,29 +359,6 @@ exports.uploadDocuments = async (req, res) => {
         status,
         aiRejectReason
       );
-
-      const { error: clearTagsError } = await supabase
-        .from("document_tags")
-        .delete()
-        .eq("document_id", document.id);
-
-      if (clearTagsError) {
-        throw clearTagsError;
-      }
-
-      const { count: clearedTagCount, error: clearedTagCountError } = await supabase
-        .from("document_tags")
-        .select("document_id", { count: "exact", head: true })
-        .eq("document_id", document.id);
-
-      if (clearedTagCountError) {
-        throw clearedTagCountError;
-      }
-
-      console.log("[uploadDocuments] tags after reset:", {
-        documentId: document.id,
-        count: clearedTagCount,
-      });
 
       for (const tagName of uniqueTags) {
         if (!tagName) continue;
