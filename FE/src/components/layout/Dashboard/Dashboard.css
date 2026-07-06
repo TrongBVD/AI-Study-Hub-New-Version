@@ -134,11 +134,7 @@ body {
   width: 22px;
   height: 22px;
   border-radius: 50%;
-  background: linear-gradient(
-    135deg,
-    var(--study-theme-avatar-start, #c084fc),
-    var(--study-theme-avatar-end, #f0abfc)
-  );
+  background-color: transparent;
   background-position: center;
   background-size: cover;
   background-repeat: no-repeat;

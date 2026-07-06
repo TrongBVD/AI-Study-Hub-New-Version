@@ -12,7 +12,8 @@ const aiRoutes = require("./src/routes/aiRoutes");
 const adminRoutes = require("./src/routes/adminRoutes");
 const workspaceRoutes = require("./src/routes/workspaceRoutes");
 const publicRoutes = require("./src/routes/publicRoutes");
-const userRoutes = require("./src/routes/userRoutes");
+const profileRoutes = require("./src/routes/profileRoutes");
+// const userRoutes = require("./src/routes/userRoutes");
 
 // 1. Cấu hình Middleware CORS để cho phép Frontend (Vite - 5173) gọi API
 app.use(cors({
@@ -37,7 +38,8 @@ app.use("/api/ai", aiRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/workspaces", workspaceRoutes);
 app.use("/api/public", publicRoutes);
-app.use("/api/users", userRoutes);
+app.use("/api/profile", profileRoutes);
+// app.use("/api/users", userRoutes);
 
 // Route test để kiểm tra xem server có sống không
 app.get('/', (req, res) => {

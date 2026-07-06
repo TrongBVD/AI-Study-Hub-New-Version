@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { searchUsers } from "../../../utils/searchApi";
 import { getWorkspaces } from "../../../utils/workspaceApi";
+import { getMyLibraries } from "../../../utils/documentApi.js";
+import { getPublicLibraries } from "../../../utils/publicApi.js";
 import "./SearchResultPage.css";
 
 const FILTERS = [
@@ -11,19 +13,12 @@ const FILTERS = [
   { value: "workspace", label: "Workspaces", icon: "ti-layout-grid2" },
 ];
 
-function readSavedLibraries() {
+function getStoredUserRole() {
   try {
-    return JSON.parse(localStorage.getItem("aiStudyHubLibraries") || "[]");
+    const user = JSON.parse(localStorage.getItem("user") || "null");
+    return user?.role || "";
   } catch {
-    return [];
-  }
-}
-
-function readSavedWorkspaces() {
-  try {
-    return JSON.parse(localStorage.getItem("aiStudyHubWorkspaces") || "[]");
-  } catch {
-    return [];
+    return "";
   }
 }
 
@@ -53,6 +48,7 @@ function SearchResultPage() {
   const activeFilter = searchParams.get("type") || "all";
   const [users, setUsers] = useState([]);
   const [workspaces, setWorkspaces] = useState([]);
+  const [libraries, setLibraries] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -64,18 +60,25 @@ function SearchResultPage() {
         setIsLoading(true);
         setError("");
 
-        const [matchedUsers, joinedWorkspaces] = await Promise.all([
+        const isGuest = getStoredUserRole() === "GUEST";
+
+        const [matchedUsers, joinedWorkspaces, matchedLibraries] = await Promise.all([
           query.trim().length >= 2 ? searchUsers(query.trim()) : [],
-          getWorkspaces().catch(() => readSavedWorkspaces()),
+          !isGuest ? getWorkspaces().catch(() => []) : [],
+          isGuest 
+            ? getPublicLibraries().catch(() => []) 
+            : getMyLibraries().catch(() => []),
         ]);
 
         if (!isMounted) return;
         setUsers(matchedUsers || []);
         setWorkspaces(joinedWorkspaces || []);
+        setLibraries(matchedLibraries || []);
       } catch (requestError) {
         if (!isMounted) return;
         setUsers([]);
-        setWorkspaces(readSavedWorkspaces());
+        setWorkspaces([]);
+        setLibraries([]);
         setError(
           requestError.response?.data?.message ||
           "Some search results could not be loaded.",
@@ -109,10 +112,10 @@ function SearchResultPage() {
       state: { from: `/dashboard/search?q=${query}` },
     }));
 
-    const libraryResults = readSavedLibraries()
+    const libraryResults = libraries
       .filter((library) =>
         normalize(
-          `${library.name || library.libraryName} ${library.description}`,
+          `${library.name || library.libraryName || ""} ${library.description || ""}`,
         ).includes(keyword),
       )
       .map((library) => ({

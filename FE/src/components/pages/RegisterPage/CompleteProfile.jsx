@@ -79,10 +79,6 @@ function CompleteProfile() {
 
       if (user) {
         localStorage.setItem("user", JSON.stringify(user));
-        localStorage.setItem(
-          "aiStudyHubProfileName",
-          user.username || user.full_name || user.email || "User",
-        );
       }
 
       setCreatedUser(user || null);

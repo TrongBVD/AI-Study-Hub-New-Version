@@ -33,7 +33,6 @@ function LoginPage() {
           if (!isTokenValid(localStorage.getItem("accessToken"))) {
             localStorage.removeItem("accessToken");
             localStorage.removeItem("user");
-            localStorage.removeItem("aiStudyHubProfileName");
           }
         });
     }
@@ -84,19 +83,6 @@ function LoginPage() {
       localStorage.setItem("user", JSON.stringify(user));
     }
 
-    if (user) {
-      const profileName =
-        user.username ||
-        user.display_name ||
-        user.full_name ||
-        user.name ||
-        user.email ||
-        username ||
-        "User";
-
-      localStorage.setItem("aiStudyHubProfileName", profileName);
-    }
-
     return user || {};
   }
 
@@ -128,7 +114,6 @@ function LoginPage() {
     // Lưu vào LocalStorage
     localStorage.setItem("accessToken", fakeGuestToken);
     localStorage.setItem("user", JSON.stringify(guestUser));
-    localStorage.setItem("aiStudyHubProfileName", guestUser.display_name);
 
     // Chuyển hướng vào trang chủ
     navigate("/dashboard/home", { replace: true });

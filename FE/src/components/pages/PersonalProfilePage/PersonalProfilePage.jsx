@@ -1,13 +1,15 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import api from "../../../utils/api.js";
+import { useNavigate, useParams } from "react-router-dom";
+import {
+  getMyProfile,
+  getProfileById,
+  updateMyAvatar,
+  updateMyProfile,
+} from "../../../utils/profileApi";
+import defaultAvatar from "../../../assets/images/account.png";
 import "./PersonalProfilePage.css";
 
-const PROFILE_AVATAR_KEY = "aiStudyHubProfileAvatar";
-const PROFILE_BIO_KEY = "aiStudyHubProfileBio";
-const PROFILE_NAME_KEY = "aiStudyHubProfileName";
-
-function getStoredUser() {
+function getLoggedInUserEmail() {
   try {
     return JSON.parse(localStorage.getItem("user") || "null") || {};
   } catch (error) {
@@ -16,128 +18,127 @@ function getStoredUser() {
   }
 }
 
-function getLoggedInUserEmail() {
-  return getStoredUser()?.email || "";
-}
-
-function getStoredProfileBio() {
-  const storedUser = getStoredUser();
-  return storedUser?.bio || localStorage.getItem(PROFILE_BIO_KEY) || "";
-}
-
-function getStoredProfileName() {
-  const storedUser = getStoredUser();
-  return (
-    localStorage.getItem(PROFILE_NAME_KEY) ||
-    storedUser.full_name ||
-    storedUser.username ||
-    "User"
-  );
+function getLoggedInUserId() {
+  try {
+    const storedUser = JSON.parse(localStorage.getItem("user") || "null");
+    return storedUser?.id || storedUser?._id || storedUser?.user_id || "";
+  } catch (error) {
+    console.error("Cannot read logged-in user id from localStorage:", error);
+    return "";
+  }
 }
 
 function PersonalProfile() {
   const navigate = useNavigate();
+  const { id: profileId } = useParams();
+  const loggedInUserId = getLoggedInUserId();
+  const isOwnProfile = !profileId || profileId === loggedInUserId;
 
-  const [userName, setUserName] = useState(getStoredProfileName);
-  const [userEmail] = useState(getLoggedInUserEmail);
-
-  const dateOfBirth = new Date("2003-11-19");
-  const [profileBio, setProfileBio] = useState(getStoredProfileBio);
-  const [draftBio, setDraftBio] = useState(profileBio);
-  const [isEditingBio, setIsEditingBio] = useState(false);
-  const [bioStatus, setBioStatus] = useState("");
-  const [isSavingBio, setIsSavingBio] = useState(false);
-  const [avatar, setAvatar] = useState(() => {
-    return localStorage.getItem(PROFILE_AVATAR_KEY) || "";
-  });
-
-  const libraries = JSON.parse(
-    localStorage.getItem("aiStudyHubLibraries") || "[]",
-  ).filter((library) => library.shareOnProfile === true);
+  const [userName, setUserName] = useState("User");
+  const [userEmail, setUserEmail] = useState(getLoggedInUserEmail);
+  const [dateOfBirth, setDateOfBirth] = useState("");
+  const [isDateOfBirthPublic, setIsDateOfBirthPublic] = useState(true);
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [newName, setNewName] = useState(userName);
+  const [avatar, setAvatar] = useState("");
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+  const [libraries, setLibraries] = useState([]);
 
   useEffect(() => {
-    function syncProfileName() {
-      setUserName(getStoredProfileName());
+    let isMounted = true;
+
+    async function loadProfile() {
+      try {
+        const profileData = isOwnProfile
+          ? await getMyProfile()
+          : await getProfileById(profileId);
+        if (!isMounted) return;
+
+        const profile = isOwnProfile ? profileData : profileData?.profile;
+        const sharedLibraries = isOwnProfile
+          ? JSON.parse(localStorage.getItem("aiStudyHubLibraries") || "[]").filter(
+              (library) => library.shareOnProfile === true,
+            )
+          : profileData?.libraries || [];
+        const nextAvatar = profile?.avatar_url || "";
+        const nextName =
+          profile?.full_name || profile?.username || profile?.email || "User";
+
+        setUserName(nextName);
+        setNewName(nextName);
+        setUserEmail(isOwnProfile ? profile?.email || "" : "");
+        setDateOfBirth(profile?.date_of_birth || "");
+        setIsDateOfBirthPublic(profile?.is_dob_public !== false);
+        setAvatar(nextAvatar);
+        setLibraries(sharedLibraries);
+
+        if (isOwnProfile) {
+          window.dispatchEvent(
+            new CustomEvent("aiStudyHubProfileChanged", {
+              detail: { avatar: nextAvatar },
+            }),
+          );
+        }
+      } catch (error) {
+        console.error("Cannot load profile:", error);
+      }
     }
 
-    window.addEventListener("aiStudyHubProfileNameChanged", syncProfileName);
-    window.addEventListener("storage", syncProfileName);
+    loadProfile();
 
     return () => {
-      window.removeEventListener(
-        "aiStudyHubProfileNameChanged",
-        syncProfileName,
-      );
-      window.removeEventListener("storage", syncProfileName);
+      isMounted = false;
     };
-  }, []);
+  }, [isOwnProfile, profileId]);
 
-  function handleChangeAvatar(e) {
+  async function handleChangeAvatar(e) {
+    if (!isOwnProfile) return;
+
     const file = e.target.files[0];
 
     if (!file) return;
 
-    const reader = new FileReader();
+    try {
+      setIsUploadingAvatar(true);
+      const profile = await updateMyAvatar(file);
+      const nextAvatar = profile?.avatar_url || "";
+      setAvatar(nextAvatar);
 
-    reader.onload = () => {
-      const imageUrl = reader.result;
-
-      if (typeof imageUrl !== "string") return;
-
-      setAvatar(imageUrl);
-      localStorage.setItem(PROFILE_AVATAR_KEY, imageUrl);
-      window.dispatchEvent(new Event("aiStudyHubProfileAvatarChanged"));
-    };
-
-    reader.readAsDataURL(file);
+      window.dispatchEvent(
+        new CustomEvent("aiStudyHubProfileChanged", {
+          detail: { avatar: nextAvatar },
+        }),
+      );
+    } catch (error) {
+      console.error("Cannot update avatar:", error);
+      alert(error.response?.data?.message || "Cannot update avatar. Please try again.");
+    } finally {
+      setIsUploadingAvatar(false);
+      e.target.value = "";
+    }
   }
 
-  const bioWordCount = draftBio.trim() ? draftBio.trim().split(/\s+/).length : 0;
+  async function handleSaveName() {
+    if (!isOwnProfile) return;
+
+    const trimmedName = newName.trim();
 
   async function handleSaveBio() {
     const trimmedBio = draftBio.trim();
     setBioStatus("");
 
-    if (!trimmedBio) {
-      setBioStatus("Vui lòng nhập mô tả bản thân.");
-      return;
-    }
-
-    if (bioWordCount > 350) {
-      setBioStatus("Mô tả bản thân không được vượt quá 350 chữ.");
-      return;
-    }
-
-    setIsSavingBio(true);
-
-    let nextUser = getStoredUser();
-
     try {
-      const response = await api.patch("/users/profile-bio", {
-        bio: trimmedBio,
-      });
+      const profile = await updateMyProfile({ full_name: trimmedName });
+      const nextName =
+        profile?.full_name || profile?.username || profile?.email || trimmedName;
 
-      nextUser = {
-        ...nextUser,
-        ...(response.data?.data || {}),
-        bio: trimmedBio,
-      };
-      setBioStatus("Đã lưu mô tả.");
+      setUserName(nextName);
+      setNewName(nextName);
+      setIsEditingName(false);
     } catch (error) {
-      console.warn("Không thể lưu mô tả lên server, lưu tạm localStorage:", error);
-      nextUser = {
-        ...nextUser,
-        bio: trimmedBio,
-      };
-      setBioStatus("Đã lưu tạm trên trình duyệt.");
+      console.error("Cannot update profile name:", error);
+      alert(error.response?.data?.message || "Cannot update profile name.");
     }
-
-    localStorage.setItem("user", JSON.stringify(nextUser));
-    localStorage.setItem(PROFILE_BIO_KEY, trimmedBio);
-    setProfileBio(trimmedBio);
-    setDraftBio(trimmedBio);
-    setIsEditingBio(false);
-    setIsSavingBio(false);
   }
 
   function handleCancelBioEdit() {
@@ -146,15 +147,31 @@ function PersonalProfile() {
     setIsEditingBio(false);
   }
 
+  const displayAvatar = avatar || defaultAvatar;
+  const birthdayText =
+    dateOfBirth && (isOwnProfile || isDateOfBirthPublic)
+      ? new Date(dateOfBirth).toDateString()
+      : "Birthday unavailable";
+
   return (
     <main className="profile_page">
       <aside className="profile_sidebar">
         <label className="profile_main_avatar">
-          {avatar ? <img src={avatar} alt="User avatar" /> : null}
+          <img
+            src={displayAvatar}
+            alt="User avatar"
+            className={avatar ? "" : "default_profile_avatar"}
+          />
 
-          <div className="avatar_overlay">Change avatar</div>
+          {isOwnProfile && (
+            <>
+              <div className="avatar_overlay">
+                {isUploadingAvatar ? "Uploading..." : "Change avatar"}
+              </div>
 
-          <input type="file" accept="image/*" onChange={handleChangeAvatar} />
+              <input type="file" accept="image/*" onChange={handleChangeAvatar} />
+            </>
+          )}
         </label>
 
         <div className="profile_name_area">
@@ -203,9 +220,22 @@ function PersonalProfile() {
               </div>
             </div>
           ) : (
-            <p className={profileBio ? "" : "profile_bio_empty"}>
-              {profileBio || "No profile description yet."}
-            </p>
+            <div className="profile_name_row">
+              <h2>{userName}</h2>
+              {isOwnProfile && <h2>{userEmail || "Email unavailable"}</h2>}
+              <h2>{birthdayText}</h2>
+
+              {isOwnProfile && (
+              <button
+                type="button"
+                className="edit_name_btn"
+                onClick={() => setIsEditingName(true)}
+                title="Edit name"
+              >
+                ✏️
+              </button>
+              )}
+            </div>
           )}
 
           {bioStatus && <p className="profile_bio_status">{bioStatus}</p>}

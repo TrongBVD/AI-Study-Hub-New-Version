@@ -11,7 +11,6 @@ const {
   moderateDocument,
   createEmbedding,
   toVectorLiteral,
-  generateTagsAndName,
   checkSensitiveContent,
   validateTagsAndContent,
 } = require("../services/aiService");
@@ -64,41 +63,6 @@ async function processDocumentWithAI(file, documentId, preExtractedText = null, 
       }
     }
 
-      // ==============================================================================
-      // BƯỚC MỚI: Gọi AI phân tích tạo Tags và kiểm tra tên file
-      // ==============================================================================
-      let aiTagsAndName = null;
-      try {
-        if (generateTagsAndName) {
-          aiTagsAndName = await generateTagsAndName(extractedText, file.originalname);
-        }
-      } catch (tagError) {
-        console.warn("Lỗi khi AI generate tags, bỏ qua bước này:", tagError);
-      }
-
-      // Nếu AI sinh ra tags, tiến hành lưu vào DB
-      if (aiTagsAndName && aiTagsAndName.tags && aiTagsAndName.tags.length > 0) {
-        for (const tagName of aiTagsAndName.tags) {
-          const cleanTagName = tagName.replace('#', '').trim().toLowerCase();
-
-          // 1. Kiểm tra xem Tag đã tồn tại trong bảng `tags` chưa, chưa có thì insert
-          let { data: tagData } = await supabase.from("tags").select("id").eq("name", cleanTagName).single();
-
-          if (!tagData) {
-            const { data: newTag } = await supabase.from("tags").insert({ name: cleanTagName }).select("id").single();
-            tagData = newTag;
-          }
-
-          // 2. Gắn tag vào document thông qua bảng `document_tags`
-          if (tagData && tagData.id) {
-            await supabase.from("document_tags").insert({
-              document_id: documentId,
-              tag_id: tagData.id
-            });
-          }
-        }
-      }
-      // ==============================================================================
 
       const chunks = splitTextIntoChunks(extractedText);
 
@@ -197,6 +161,7 @@ exports.listMyDocuments = async (req, res) => {
         ai_reject_reason,
         created_at,
         document_tags (
+          assigned_by,
           tags (
             id,
             name
@@ -262,6 +227,8 @@ exports.uploadDocuments = async (req, res) => {
       console.error("Lỗi parse tags:", e);
     }
 
+    console.log("[uploadDocuments] userTags received:", userTags);
+
     if (files.length === 0) {
       return res.status(400).json({ status: "error", message: "Vui lòng chọn tệp." });
     }
@@ -310,8 +277,7 @@ exports.uploadDocuments = async (req, res) => {
       processedFilesData.push({
         file,
         extractedText,
-        sensitivity,
-        aiRecommendedTags: tagValidationResult.aiRecommendedTags
+        sensitivity
       });
     }
 
@@ -319,7 +285,7 @@ exports.uploadDocuments = async (req, res) => {
     const uploadedDocuments = [];
 
     for (const processedData of processedFilesData) {
-      const { file, extractedText, sensitivity, aiRecommendedTags } = processedData;
+      const { file, extractedText, sensitivity } = processedData;
 
       const safeFileName = sanitizeFileName(file.originalname);
       const storagePath = `${userID}/${Date.now()}-${crypto.randomUUID()}-${safeFileName}`;
@@ -380,9 +346,19 @@ exports.uploadDocuments = async (req, res) => {
       }
 
       // Lưu tags vào DB
-      const allTags = [...userTags, ...aiRecommendedTags];
       // Loại bỏ các tag trùng lặp và làm sạch
-      const uniqueTags = [...new Set(allTags.map(t => t.trim().toLowerCase().replace("#", "")))];
+      const uniqueTags = [...new Set(userTags.map(t => t.trim().toLowerCase().replace("#", "")))];
+      console.log("[uploadDocuments] final user tag names:", uniqueTags);
+
+
+      // Gọi hàm xử lý AI (embedding và chunking)
+      const aiResult = await processDocumentWithAI(
+        file,
+        document.id,
+        extractedText,
+        status,
+        aiRejectReason
+      );
 
       for (const tagName of uniqueTags) {
         if (!tagName) continue;
@@ -405,21 +381,31 @@ exports.uploadDocuments = async (req, res) => {
         }
 
         if (tagData && tagData.id) {
-          await supabase.from("document_tags").insert({
+          const { error: documentTagInsertError } = await supabase.from("document_tags").insert({
             document_id: document.id,
-            tag_id: tagData.id
+            tag_id: tagData.id,
+            assigned_by: userID
           });
+
+          if (documentTagInsertError) {
+            throw documentTagInsertError;
+          }
         }
       }
 
-      // Gọi hàm xử lý AI (embedding và chunking)
-      const aiResult = await processDocumentWithAI(
-        file,
-        document.id,
-        extractedText,
-        status,
-        aiRejectReason
-      );
+      const { count: finalTagCount, error: finalTagCountError } = await supabase
+        .from("document_tags")
+        .select("document_id", { count: "exact", head: true })
+        .eq("document_id", document.id);
+
+      if (finalTagCountError) {
+        throw finalTagCountError;
+      }
+
+      console.log("[uploadDocuments] tags after insert:", {
+        documentId: document.id,
+        count: finalTagCount,
+      });
 
       uploadedDocuments.push({ ...document, status: aiResult.status });
     }
@@ -534,6 +520,15 @@ exports.deleteDocument = async (req, res) => {
       throw updateError;
     }
 
+    const { error: deleteTagsError } = await supabase
+      .from("document_tags")
+      .delete()
+      .eq("document_id", documentId);
+
+    if (deleteTagsError) {
+      throw deleteTagsError;
+    }
+
     return res.status(200).json({
       status: "success",
       message: "Xóa tài liệu thành công.",
@@ -552,7 +547,6 @@ exports.deleteDocument = async (req, res) => {
 // Hàm API tạo thư viện mới vào Supabase
 exports.createLibrary = async (req, res) => {
   try {
-    // Đã thêm biến share_on_profile vào đây
     const { name, description, is_public, share_on_profile } = req.body;
     const userID = req.user.id;
 
@@ -563,11 +557,35 @@ exports.createLibrary = async (req, res) => {
       });
     }
 
+    if (!name || name.trim() === "") {
+      return res.status(400).json({
+        status: "error",
+        message: "Library name is required.",
+      });
+    }
+
+    // Kiểm tra xem người dùng đã có thư viện nào trùng tên chưa (không phân biệt hoa thường)
+    const { data: existingLib, error: searchError } = await supabase
+      .from("libraries")
+      .select("id")
+      .eq("user_id", userID)
+      .ilike("name", name.trim())
+      .maybeSingle();
+
+    if (searchError) throw searchError;
+
+    if (existingLib) {
+      return res.status(400).json({
+        status: "error",
+        message: "Bạn đã có một thư viện khác tên là \"" + name.trim() + "\". Vui lòng chọn tên khác!",
+      });
+    }
+
     const { data, error } = await supabase
       .from("libraries")
       .insert({
         user_id: userID,
-        name,
+        name: name.trim(),
         description,
         is_public,
         share_on_profile
@@ -586,12 +604,37 @@ exports.createLibrary = async (req, res) => {
 exports.updateLibrary = async (req, res) => {
   try {
     const { id } = req.params;
-    // Đã thêm biến share_on_profile
     const { name, description, is_public, share_on_profile } = req.body;
+    const userID = req.user.id;
+
+    if (name && name.trim() !== "") {
+      // Kiểm tra trùng tên với các thư viện khác cùng user (trừ thư viện hiện tại đang sửa)
+      const { data: existingLib, error: searchError } = await supabase
+        .from("libraries")
+        .select("id")
+        .eq("user_id", userID)
+        .ilike("name", name.trim())
+        .neq("id", id)
+        .maybeSingle();
+
+      if (searchError) throw searchError;
+
+      if (existingLib) {
+        return res.status(400).json({
+          status: "error",
+          message: "Tên thư viện \"" + name.trim() + "\" đã được sử dụng ở một thư viện khác của bạn.",
+        });
+      }
+    }
 
     const { data, error } = await supabase
       .from("libraries")
-      .update({ name, description, is_public, share_on_profile })
+      .update({
+        name: name ? name.trim() : undefined,
+        description,
+        is_public,
+        share_on_profile
+      })
       .eq("id", id)
       .select().single();
 
