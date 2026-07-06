@@ -76,7 +76,6 @@ function ProtectedRoute({ children, allowedRoles }) {
     if (token) {
       localStorage.removeItem("accessToken");
       localStorage.removeItem("user");
-      localStorage.removeItem("aiStudyHubProfileName");
     }
     return (
       <Navigate

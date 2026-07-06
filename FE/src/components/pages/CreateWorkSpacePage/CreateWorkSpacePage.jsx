@@ -1,10 +1,8 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { createWorkspace } from "../../../utils/workspaceApi";
+import { getMyProfile } from "../../../utils/profileApi";
 import "./CreateWorkSpacePage.css";
-
-const PROFILE_NAME_KEY = "aiStudyHubProfileName";
-const PROFILE_AVATAR_KEY = "aiStudyHubProfileAvatar";
 
 function getInitials(name) {
   const normalizedName = name.trim();
@@ -31,9 +29,31 @@ function CreateWorkSpacePage() {
 
   const [workspaceName, setWorkspaceName] = useState("");
   const [description, setDescription] = useState("");
-  const ownerName = localStorage.getItem(PROFILE_NAME_KEY) || "dangkhoabi456";
-  const ownerAvatar = localStorage.getItem(PROFILE_AVATAR_KEY) || "";
+  const [ownerName, setOwnerName] = useState("User");
+  const [ownerAvatar, setOwnerAvatar] = useState("");
   const ownerInitials = getInitials(ownerName);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadOwnerProfile() {
+      try {
+        const profile = await getMyProfile();
+        if (!isMounted) return;
+
+        setOwnerName(profile?.full_name || profile?.username || profile?.email || "User");
+        setOwnerAvatar(profile?.avatar_url || "");
+      } catch (error) {
+        console.error("Failed to load owner profile:", error);
+      }
+    }
+
+    loadOwnerProfile();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const trimmedWorkspaceName = workspaceName.trim();
   const trimmedDescription = description.trim();

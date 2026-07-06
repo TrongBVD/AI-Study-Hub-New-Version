@@ -10,7 +10,6 @@ let refreshPromise = null;
 function clearStoredSession() {
   localStorage.removeItem("accessToken");
   localStorage.removeItem("user");
-  localStorage.removeItem("aiStudyHubProfileName");
 }
 
 export async function refreshAccessToken() {
@@ -32,10 +31,6 @@ export async function refreshAccessToken() {
         localStorage.setItem("accessToken", accessToken);
         if (user) {
           localStorage.setItem("user", JSON.stringify(user));
-          localStorage.setItem(
-            "aiStudyHubProfileName",
-            user.username || user.full_name || user.email || "User",
-          );
         }
 
         return accessToken;
