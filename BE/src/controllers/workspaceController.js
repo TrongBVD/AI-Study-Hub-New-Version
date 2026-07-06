@@ -300,7 +300,7 @@ exports.searchUsers = async (req, res) => {
 
     const { data: users, error: userError } = await supabase
       .from("profiles")
-      .select("id, username, full_name, email, role, status")
+      .select("id, username, full_name, email, status")
       .neq("status", "DISABLED")
       .or(
         `username.ilike.%${q}%,full_name.ilike.%${q}%,email.ilike.%${q}%`,

@@ -420,6 +420,63 @@ body[data-theme="white"] .user_dashboard_layout .settings_field select {
   border-color: var(--border-color);
 }
 
+.settings_field input:disabled {
+  cursor: not-allowed;
+  opacity: 0.72;
+}
+
+.settings_name_editor {
+  width: 100%;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 0.55rem;
+}
+
+.settings_name_editor .settings_field {
+  min-width: 0;
+}
+
+.settings_save_name_btn {
+  height: 2.55rem;
+  border: 1px solid var(--button-bg);
+  border-radius: 0.65rem;
+  background: var(--button-bg);
+  color: var(--button-text);
+  padding: 0 0.9rem;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition:
+    background-color 180ms ease,
+    border-color 180ms ease,
+    opacity 180ms ease;
+}
+
+.settings_save_name_btn:hover:not(:disabled) {
+  border-color: var(--button-hover-bg);
+  background: var(--button-hover-bg);
+}
+
+.settings_save_name_btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.settings_name_hint {
+  grid-column: 1 / -1;
+  margin: -0.1rem 0 0;
+  color: var(--settings-muted);
+  font-size: 0.68rem;
+  line-height: 1.45;
+}
+
+.settings_name_hint.has_status {
+  color: var(--settings-subtle);
+  font-weight: 700;
+}
+
 .settings_switch {
   width: 2.9rem;
   height: 1.6rem;
@@ -971,6 +1028,14 @@ body[data-theme="white"] .user_dashboard_layout .settings_field select {
 
   .settings_row_control {
     justify-content: flex-start;
+  }
+
+  .settings_name_editor {
+    grid-template-columns: 1fr;
+  }
+
+  .settings_save_name_btn {
+    width: 100%;
   }
 
   .settings_color_list {

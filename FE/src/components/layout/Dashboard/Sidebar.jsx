@@ -21,13 +21,18 @@ function Sidebar({ isOpen, onClose }) {
   // Thêm thuộc tính hideForGuest để ẩn menu với Guest
   const menuItems = [
     { icon: "ti-home", label: "Home", path: "/dashboard/home" },
+    { icon: "ti-search", label: "Discover", path: "/dashboard/search" },
     { icon: "ti-folder", label: "My libraries", path: "/dashboard/libraries" },
     { icon: "ti-layout-grid2", label: "My workspaces", path: "/dashboard/workspaces" },
     { icon: "ti-settings", label: "Settings", path: "/dashboard/settings" },
   ];
 
-  // Lọc bỏ những chức năng không dành cho Guest
-  const visibleMenuItems = menuItems.filter(item => !(isGuest && item.hideForGuest));
+  // Guest chỉ được xem khu vực khám phá và phần cài đặt.
+  const visibleMenuItems = isGuest
+    ? menuItems.filter((item) =>
+        ["Discover", "Settings"].includes(item.label),
+      )
+    : menuItems;
 
   async function handleLogout() {
     try {

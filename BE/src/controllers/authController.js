@@ -361,7 +361,11 @@ exports.login = async (req, res) => {
         const isMatch = await bcrypt.compare(password, user.password_hash);
 
         if (!isMatch) {
-            return res.status(401).json({ status: 'error', message: 'Mật khẩu không chính xác.' });
+            return res.status(401).json({
+                status: 'error',
+                code: 'WRONG_PASSWORD',
+                message: 'Sai mật khẩu. Vui lòng kiểm tra lại hoặc chọn Quên mật khẩu để đặt lại.'
+            });
         }
 
         // 3. Tạo session_id ngẫu nhiên
@@ -442,7 +446,11 @@ exports.forgotPassword = async (req, res) => {
             text: `Mã OTP khôi phục mật khẩu của bạn là: ${otpCode}. Mã hết hạn sau 10 phút.`
         });
 
-        res.status(200).json({ status: 'success', message: 'Mã OTP đã được gửi đến email.' });
+        res.status(200).json({
+            status: 'success',
+            code: 'OTP_SENT',
+            message: 'Mã OTP đã được gửi đến email của bạn. Mã có hiệu lực trong 10 phút.'
+        });
     } catch (error) {
         console.error("🔴 Lỗi forgotPassword:", error);
         res.status(500).json({ status: 'error', message: error.message });

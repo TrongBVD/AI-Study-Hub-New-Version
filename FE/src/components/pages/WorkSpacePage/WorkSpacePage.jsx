@@ -337,43 +337,17 @@ const [isSubtaskPriorityOpen, setIsSubtaskPriorityOpen] = useState(false);
     currentWorkspaceRole === "editor" || currentWorkspaceRole === "admin";
   const canManageWorkspace = currentWorkspaceRole === "admin";
 
-  const [chatMessages, setChatMessages] = useState([
-    {
-      id: "msg-1",
-      senderName: "Sarah Jenkins",
-      avatar: "https://i.pravatar.cc/80?img=32",
-      text: "Does anyone have the notes for yesterday's lecture on architectural patterns? I missed the last 20 minutes.",
-      time: "10:42 AM",
-      isOwn: false,
-    },
-    {
-      id: "msg-2",
-      senderName: profileName,
-      text: "I have them here! I just finished digitizing the sketches of the microservices diagram we discussed.",
-      time: "10:45 AM · Read",
-      isOwn: true,
-      file: {
-        name: "Software_Arch_Notes.pdf",
-        sizeLabel: "2.4 MB",
-        isImage: false,
-      },
-    },
-    {
-      id: "msg-3",
-      senderName: "David Chen",
-      avatar: "https://i.pravatar.cc/80?img=13",
-      text: "Found this great reference in the university archives for our project proposal.",
-      time: "11:15 AM",
-      isOwn: false,
-      file: {
-        name: "University archive",
-        sizeLabel: "Image",
-        isImage: true,
-        previewUrl:
-          "https://images.unsplash.com/photo-1521587760476-6c12a4b040da?auto=format&fit=crop&w=900&q=80",
-      },
-    },
-  ]);
+  const pendingInvitationUserIds = useMemo(
+    () =>
+      new Set(
+        pendingInvitations
+          .map((invitation) => invitation.userId)
+          .filter(Boolean),
+      ),
+    [pendingInvitations],
+  );
+
+  const [chatMessages, setChatMessages] = useState([]);
 
   const [discussionTopics, setDiscussionTopics] = useState([]);
 
@@ -1189,7 +1163,14 @@ function getSubtaskPriorityIcon(priority) {
         <div className="workspace_message_day">Today</div>
 
         <section className="workspace_message_body">
-          {chatMessages.map((message) => (
+          {chatMessages.length === 0 ? (
+            <div className="workspace_message_empty">
+              <i className="ti-comment-alt"></i>
+              <h3>No messages yet</h3>
+              <p>Start the first conversation in this workspace.</p>
+            </div>
+          ) : (
+          chatMessages.map((message) => (
             <article
               className={`workspace_message_item ${message.isOwn ? "own" : ""}`}
               key={message.id}
@@ -1250,7 +1231,8 @@ function getSubtaskPriorityIcon(priority) {
                 </span>
               </div>
             </article>
-          ))}
+          ))
+          )}
         </section>
 
         {messageAttachment && (

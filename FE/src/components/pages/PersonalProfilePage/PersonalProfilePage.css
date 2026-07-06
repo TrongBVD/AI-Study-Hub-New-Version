@@ -71,6 +71,7 @@ body {
 
 .profile_name_area {
   margin-bottom: 16px;
+  width: 100%;
 }
 
 .profile_name_row {
@@ -99,6 +100,121 @@ body {
 
 .edit_name_btn:hover {
   background: var(--bg-elevated);
+}
+
+.profile_bio_panel {
+  width: 100%;
+  max-width: 360px;
+  padding: 18px;
+  border: 1px solid rgba(117, 82, 48, 0.22);
+  border-radius: 8px;
+  background: rgba(255, 251, 239, 0.72);
+  color: var(--sidebar-bg);
+}
+
+.profile_bio_header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.profile_bio_header h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--accent-hover);
+}
+
+.profile_bio_header button,
+.profile_bio_meta button {
+  min-height: 34px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--accent-hover);
+  color: var(--bg-card);
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0 14px;
+}
+
+.profile_bio_header button:hover,
+.profile_bio_meta button:hover {
+  background: var(--sidebar-bg);
+}
+
+.profile_bio_panel p {
+  margin: 0;
+  color: var(--sidebar-bg);
+  font-size: 15px;
+  line-height: 1.65;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.profile_bio_empty {
+  color: #8a7661 !important;
+  font-style: italic;
+}
+
+.profile_bio_editor {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.profile_bio_editor textarea {
+  width: 100%;
+  min-height: 190px;
+  resize: vertical;
+  padding: 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  font: inherit;
+  line-height: 1.55;
+  outline: none;
+}
+
+.profile_bio_editor textarea:focus {
+  border-color: var(--accent-hover);
+}
+
+.profile_bio_meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  color: #7a5a3d;
+  font-size: 13px;
+}
+
+.profile_bio_meta div {
+  display: flex;
+  gap: 8px;
+}
+
+.profile_bio_meta button:disabled {
+  opacity: 0.7;
+  cursor: wait;
+}
+
+.profile_bio_meta button:last-child {
+  background: transparent;
+  color: var(--sidebar-bg);
+}
+
+.profile_bio_meta .over_limit,
+.profile_bio_status {
+  color: #c2410c;
+  font-weight: 700;
+}
+
+.profile_bio_status {
+  margin-top: 10px !important;
+  font-size: 13px !important;
 }
 
 .edit_name_box input {

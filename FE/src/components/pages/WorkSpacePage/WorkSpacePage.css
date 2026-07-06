@@ -1226,6 +1226,43 @@
   overflow-y: auto;
 }
 
+.workspace_message_empty {
+  min-height: 320px;
+  border: 1px dashed var(--border-color);
+  border-radius: 22px;
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  text-align: center;
+  padding: 32px;
+}
+
+.workspace_message_empty i {
+  width: 54px;
+  height: 54px;
+  border-radius: 16px;
+  background: var(--bg-secondary, var(--accent-soft));
+  color: var(--accent-color);
+  display: grid;
+  place-items: center;
+  font-size: 22px;
+}
+
+.workspace_message_empty h3 {
+  margin: 4px 0 0;
+  color: var(--text-primary);
+  font-size: 20px;
+}
+
+.workspace_message_empty p {
+  margin: 0;
+  font-size: 14px;
+}
+
 .workspace_message_item {
   display: flex;
   align-items: flex-start;

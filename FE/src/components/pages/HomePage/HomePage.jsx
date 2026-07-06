@@ -174,8 +174,14 @@ function HomePage() {
             <div className="home_headline_block">
               <span className="home_label">Workspace command center</span>
               <h1>
-                Welcome back,
-                <span>{profileName}</span>
+                {isGuest ? (
+                  "Welcome"
+                ) : (
+                  <>
+                    Welcome back,
+                    <span>{profileName}</span>
+                  </>
+                )}
               </h1>
               <p>
                 Continue from your latest materials, manage study spaces and start new work without leaving the dashboard.
@@ -279,11 +285,6 @@ function HomePage() {
             <div className="focus_card focus_card_light">
               <span>Latest workspace</span>
               <h2>{latestWorkspace?.name || "No workspace opened yet"}</h2>
-              <p>
-                {latestWorkspace
-                  ? latestWorkspace.description
-                  : "Your recent collaboration room will appear here."}
-              </p>
               {latestWorkspace && !isGuest && (
                 <Link
                   to={

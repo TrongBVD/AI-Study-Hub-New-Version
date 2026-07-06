@@ -259,6 +259,47 @@ body {
   background: var(--study-theme-surface-strong, var(--accent-soft));
 }
 
+.guest_auth_actions {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.guest_auth_link {
+  min-height: 2.15rem;
+  border: 1px solid var(--study-theme-border, var(--border-color));
+  border-radius: 8px;
+  background: var(--study-theme-surface, var(--bg-card));
+  color: var(--study-theme-text, var(--text-primary));
+  padding: 0.5rem 0.85rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  font-size: 0.82rem;
+  font-weight: 800;
+  line-height: 1;
+  transition:
+    background-color 180ms ease,
+    border-color 180ms ease,
+    color 180ms ease;
+}
+
+.guest_auth_link:hover {
+  background: var(--study-theme-surface-strong, var(--accent-soft));
+}
+
+.guest_auth_link.primary {
+  border-color: var(--button-bg);
+  background: var(--button-bg);
+  color: var(--button-text);
+}
+
+.guest_auth_link.primary:hover {
+  border-color: var(--button-hover-bg);
+  background: var(--button-hover-bg);
+}
+
 /* Content */
 
 /* .content {
