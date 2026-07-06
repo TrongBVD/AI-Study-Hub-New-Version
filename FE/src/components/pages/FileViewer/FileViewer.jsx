@@ -3,8 +3,14 @@ import React, { useState } from "react";
 import ChatBot from "../AIchatbot/ChatBot";
 import "./FileViewer.css"; // Anh/chị tự tạo file CSS cho phần này nhé
 
-function FileViewer({ documentUrl, documentName, documentId }) {
+function FileViewer({ documentUrl, documentName, documentId, onClose }) {
   const [isChatOpen, setIsChatOpen] = useState(false);
+
+  // Thủ thuật: Sử dụng Google Docs Viewer để nhúng xem các file MS Office (docx, doc, xlsx, pptx) trực tiếp trên Web
+  const isOfficeFile = /\.(docx|doc|xlsx|xls|pptx|ppt)$/i.test(documentName || "");
+  const iframeSrc = isOfficeFile
+    ? `https://docs.google.com/gview?url=${encodeURIComponent(documentUrl)}&embedded=true`
+    : documentUrl;
 
   return (
     <div className="file_viewer_container" style={{ display: "flex", height: "100vh", backgroundColor: "var(--bg-primary)" }}>
@@ -12,15 +18,37 @@ function FileViewer({ documentUrl, documentName, documentId }) {
       {/* CỘT TRÁI: Khu vực xem file trực tiếp */}
       <div className="file_preview_section" style={{ flex: 1, padding: "20px", display: "flex", flexDirection: "column" }}>
         <header style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "15px" }}>
-          <h2 style={{ margin: 0, fontSize: "1.2rem", color: "var(--text-primary)" }}>{documentName}</h2>
+          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+            {onClose && (
+              <button
+                type="button"
+                onClick={onClose}
+                style={{
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  fontSize: "1.2rem",
+                  color: "var(--text-primary)",
+                  display: "flex",
+                  alignItems: "center",
+                  padding: "5px"
+                }}
+                title="Back to library"
+              >
+                <i className="ti-arrow-left"></i>
+              </button>
+            )}
+            <h2 style={{ margin: 0, fontSize: "1.2rem", color: "var(--text-primary)" }}>{documentName}</h2>
+          </div>
 
           {/* Nút gọi AI Chatbot chỉ hiển thị khi khung chat đang đóng */}
           {!isChatOpen && (
             <button
               onClick={() => setIsChatOpen(true)}
               style={{
-                padding: "8px 16px", backgroundColor: "var(--button-bg)", color: "var(--button-text)",
-                border: "none", borderRadius: "6px", cursor: "pointer", display: "flex", gap: "8px"
+                padding: "8px 16px", backgroundColor: "var(--accent-hover)", color: "#fff",
+                border: "none", borderRadius: "6px", cursor: "pointer", display: "flex", gap: "8px",
+                fontWeight: "700"
               }}
             >
               <i className="ti-comments"></i> Hỏi AI về file này
@@ -28,10 +56,10 @@ function FileViewer({ documentUrl, documentName, documentId }) {
           )}
         </header>
 
-        {/* Nhúng thẳng URL file (PDF/Ảnh) vào iframe để xem không cần tải */}
-        <div style={{ flex: 1, backgroundColor: "var(--bg-card)", borderRadius: "8px", overflow: "hidden", boxShadow: "var(--shadow-soft)" }}>
+        {/* Nhúng thẳng URL file vào iframe để xem không cần tải */}
+        <div style={{ flex: 1, backgroundColor: "var(--bg-card)", borderRadius: "8px", overflow: "hidden", boxShadow: "var(--shadow-soft)", border: "1px solid var(--border-color)" }}>
           <iframe
-            src={documentUrl}
+            src={iframeSrc}
             title={documentName}
             width="100%"
             height="100%"

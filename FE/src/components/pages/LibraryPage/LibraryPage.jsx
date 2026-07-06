@@ -18,6 +18,7 @@ import {
 } from "../../../utils/publicApi";
 
 import "./LibraryPage.css";
+import FileViewer from "../FileViewer/FileViewer";
 import "../../../assets/icons/themify-icons-font/themify-icons/themify-icons.css";
 
 function getStoredUserRole() {

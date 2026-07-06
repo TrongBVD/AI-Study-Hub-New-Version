@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   getMyProfile,
@@ -69,6 +69,14 @@ function PersonalProfile() {
   const [bioStatus, setBioStatus] = useState("");
   const [avatar, setAvatar] = useState("");
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+  const [isCropModalOpen, setIsCropModalOpen] = useState(false);
+  const [cropSrc, setCropSrc] = useState("");
+  const [zoom, setZoom] = useState(1);
+  const [pos, setPos] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const [imgSize, setImgSize] = useState({ width: 0, height: 0 });
+  const imgRef = useRef(null);
   const [libraries, setLibraries] = useState([]);
 
   useEffect(() => {
@@ -124,28 +132,115 @@ function PersonalProfile() {
     if (!isOwnProfile) return;
 
     const file = e.target.files[0];
-
     if (!file) return;
 
-    try {
-      setIsUploadingAvatar(true);
-      const profile = await updateMyAvatar(file);
-      const nextAvatar = profile?.avatar_url || "";
-      setAvatar(nextAvatar);
+    const reader = new FileReader();
+    reader.onload = () => {
+      setCropSrc(reader.result);
+      setIsCropModalOpen(true);
+    };
+    reader.readAsDataURL(file);
 
-      window.dispatchEvent(
-        new CustomEvent("aiStudyHubProfileChanged", {
-          detail: { avatar: nextAvatar },
-        }),
-      );
-    } catch (error) {
-      console.error("Cannot update avatar:", error);
-      alert(error.response?.data?.message || "Cannot update avatar. Please try again.");
-    } finally {
-      setIsUploadingAvatar(false);
-      e.target.value = "";
-    }
+    e.target.value = "";
   }
+
+  const handleMouseDown = (e) => {
+    setIsDragging(true);
+    setDragStart({ x: e.clientX - pos.x, y: e.clientY - pos.y });
+  };
+
+  const handleMouseMove = (e) => {
+    if (!isDragging) return;
+    setPos({ x: e.clientX - dragStart.x, y: e.clientY - dragStart.y });
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+  };
+
+  const handleTouchStart = (e) => {
+    if (e.touches.length !== 1) return;
+    setIsDragging(true);
+    setDragStart({ x: e.touches[0].clientX - pos.x, y: e.touches[0].clientY - pos.y });
+  };
+
+  const handleTouchMove = (e) => {
+    if (!isDragging || e.touches.length !== 1) return;
+    setPos({ x: e.touches[0].clientX - dragStart.x, y: e.touches[0].clientY - dragStart.y });
+  };
+
+  const handleTouchEnd = () => {
+    setIsDragging(false);
+  };
+
+  const handleImageLoaded = (e) => {
+    const { naturalWidth, naturalHeight } = e.target;
+    const containerSize = 300;
+    let w = containerSize;
+    let h = containerSize;
+
+    if (naturalWidth > naturalHeight) {
+      h = containerSize;
+      w = (naturalWidth / naturalHeight) * containerSize;
+    } else {
+      w = containerSize;
+      h = (naturalHeight / naturalWidth) * containerSize;
+    }
+
+    setImgSize({ width: w, height: h });
+    setPos({ x: 0, y: 0 });
+    setZoom(1);
+  };
+
+  const handleSaveCrop = () => {
+    if (!imgRef.current) return;
+
+    const canvas = document.createElement("canvas");
+    canvas.width = 400;
+    canvas.height = 400;
+    const ctx = canvas.getContext("2d");
+
+    // Dịch chuyển canvas về tâm
+    ctx.translate(200, 200);
+
+    // Tỉ lệ scale từ 250px (crop circle trên UI) lên 400px (canvas thực tế)
+    const screenToCanvas = 400 / 250;
+
+    ctx.scale(zoom * screenToCanvas, zoom * screenToCanvas);
+    ctx.translate(pos.x / zoom, pos.y / zoom);
+
+    ctx.drawImage(
+      imgRef.current,
+      -imgSize.width / 2,
+      -imgSize.height / 2,
+      imgSize.width,
+      imgSize.height
+    );
+
+    canvas.toBlob(async (blob) => {
+      if (!blob) return;
+      const file = new File([blob], "avatar.jpg", { type: "image/jpeg" });
+      try {
+        setIsUploadingAvatar(true);
+        setIsCropModalOpen(false);
+
+        const profile = await updateMyAvatar(file);
+        const nextAvatar = profile?.avatar_url || "";
+        setAvatar(nextAvatar);
+
+        window.dispatchEvent(
+          new CustomEvent("aiStudyHubProfileChanged", {
+            detail: { avatar: nextAvatar },
+          })
+        );
+      } catch (error) {
+        console.error("Cannot update avatar:", error);
+        alert(error.response?.data?.message || "Cannot update avatar. Please try again.");
+      } finally {
+        setIsUploadingAvatar(false);
+      }
+    }, "image/jpeg", 0.9);
+  };
 
   async function handleSaveName() {
     if (!isOwnProfile) return;
@@ -309,6 +404,63 @@ function PersonalProfile() {
           )}
         </div>
       </section>
+
+      {isCropModalOpen && (
+        <div className="crop_modal_overlay">
+          <div className="crop_modal_content">
+            <h3>Edit photo</h3>
+            <p>Drag to reposition and use the slider to scale.</p>
+
+            <div
+              className="crop_container"
+              onMouseDown={handleMouseDown}
+              onMouseMove={handleMouseMove}
+              onMouseUp={handleMouseUp}
+              onMouseLeave={handleMouseUp}
+              onTouchStart={handleTouchStart}
+              onTouchMove={handleTouchMove}
+              onTouchEnd={handleTouchEnd}
+            >
+              <img
+                ref={imgRef}
+                src={cropSrc}
+                alt="To Crop"
+                onLoad={handleImageLoaded}
+                style={{
+                  width: imgSize.width ? `${imgSize.width}px` : "auto",
+                  height: imgSize.height ? `${imgSize.height}px` : "auto",
+                  transform: `translate(-50%, -50%) translate(${pos.x}px, ${pos.y}px) scale(${zoom})`,
+                }}
+                className="crop_image"
+                draggable={false}
+              />
+              <div className="crop_overlay"></div>
+            </div>
+
+            <div className="crop_slider_control">
+              <i className="ti-minus" onClick={() => setZoom(prev => Math.max(1, prev - 0.1))}></i>
+              <input
+                type="range"
+                min="1"
+                max="3"
+                step="0.01"
+                value={zoom}
+                onChange={(e) => setZoom(parseFloat(e.target.value))}
+              />
+              <i className="ti-plus" onClick={() => setZoom(prev => Math.min(3, prev + 0.1))}></i>
+            </div>
+
+            <div className="crop_modal_actions">
+              <button type="button" className="btn_cancel" onClick={() => setIsCropModalOpen(false)}>
+                Cancel
+              </button>
+              <button type="button" className="btn_save" onClick={handleSaveCrop}>
+                Save avatar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }
