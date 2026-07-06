@@ -20,10 +20,6 @@ function getStoredUserRole() {
   }
 }
 
-function notifyGuestRegistrationRequired() {
-  alert("Please register or log in with an account to create libraries and workspaces.");
-}
-
 function saveRecentLibrary(library) {
   const currentRecentLibraries = JSON.parse(
     localStorage.getItem("aiStudyHubRecentLibraries") || "[]"
@@ -378,31 +374,23 @@ function Navbar({
       </form>
 
       <div className="nav_actions">
-        <div className="create_dropdown">
-          <button type="button" className="create_dropdown_btn">
-            <i className="ti-plus"></i>
-          </button>
+        {isGuest ? (
+          <div className="guest_auth_actions">
+            <Link to="/login" className="guest_auth_link">
+              Log in
+            </Link>
+            <Link to="/register" className="guest_auth_link primary">
+              Sign up
+            </Link>
+          </div>
+        ) : (
+          <>
+            <div className="create_dropdown">
+              <button type="button" className="create_dropdown_btn">
+                <i className="ti-plus"></i>
+              </button>
 
-          <div className="create_dropdown_menu">
-            {isGuest ? (
-              <>
-                <button type="button" onClick={notifyGuestRegistrationRequired}>
-                  <i className="ti-folder"></i>
-                  Create library
-                </button>
-
-                <button type="button" onClick={notifyGuestRegistrationRequired}>
-                  <i className="ti-import"></i>
-                  Import library
-                </button>
-
-                <button type="button" onClick={notifyGuestRegistrationRequired}>
-                  <i className="ti-layout-grid2"></i>
-                  Create workspace
-                </button>
-              </>
-            ) : (
-              <>
+              <div className="create_dropdown_menu">
                 <Link to="/dashboard/create-library">
                   <i className="ti-folder"></i>
                   Create library
@@ -420,73 +408,81 @@ function Navbar({
                   <i className="ti-layout-grid2"></i>
                   Create workspace
                 </Link>
-              </>
-            )}
-          </div>
-        </div>
-
-        <div className="notification_dropdown">
-          <button type="button" className="notification_btn">
-            <i className="ti-bell"></i>
-            {notificationSettings.showBadge && unreadNotificationCount > 0 && (
-              <span className="notification_badge">{unreadNotificationCount}</span>
-            )}
-          </button>
-
-          <div className="notification_panel">
-            <div className="notification_header">
-              <div>
-                <strong>Notifications</strong>
-                <p>Recent workspace activity</p>
               </div>
-
-              <button
-                type="button"
-                onClick={() => {
-                  markAllNotificationsAsRead();
-                  setNotifications(getNotifications());
-                }}
-              >
-                Mark all read
-              </button>
             </div>
 
-            <div className="notification_list">
-              {!notificationSettings.enabled ? (
-                <div className="notification_empty">
-                  <i className="ti-bell"></i>
-                  <p>Notifications are turned off.</p>
-                </div>
-              ) : notifications.length === 0 ? (
-                <div className="notification_empty">
-                  <i className="ti-bell"></i>
-                  <p>No notifications yet.</p>
-                </div>
-              ) : (
-                notifications.map((notification) => (
+            <div className="notification_dropdown">
+              <button type="button" className="notification_btn">
+                <i className="ti-bell"></i>
+                {notificationSettings.showBadge &&
+                  unreadNotificationCount > 0 && (
+                    <span className="notification_badge">
+                      {unreadNotificationCount}
+                    </span>
+                  )}
+              </button>
+
+              <div className="notification_panel">
+                <div className="notification_header">
+                  <div>
+                    <strong>Notifications</strong>
+                    <p>Recent workspace activity</p>
+                  </div>
+
                   <button
                     type="button"
-                    key={notification.id}
-                    className={`notification_item ${notification.isRead ? "" : "unread"
-                      }`}
                     onClick={() => {
-                      if (notification.link) {
-                        navigate(notification.link);
-                      }
+                      markAllNotificationsAsRead();
+                      setNotifications(getNotifications());
                     }}
                   >
-                    <div className="notification_icon">
-                      <i className={notification.icon}></i>
-                    </div>
-
-                    <div>
-                      <strong>{notification.title}</strong>
-                      <p>{notification.message}</p>
-                      <span>{notification.createdAt}</span>
-                    </div>
+                    Mark all read
                   </button>
-                ))
-              )}
+                </div>
+
+                <div className="notification_list">
+                  {!notificationSettings.enabled ? (
+                    <div className="notification_empty">
+                      <i className="ti-bell"></i>
+                      <p>Notifications are turned off.</p>
+                    </div>
+                  ) : notifications.length === 0 ? (
+                    <div className="notification_empty">
+                      <i className="ti-bell"></i>
+                      <p>No notifications yet.</p>
+                    </div>
+                  ) : (
+                    notifications.map((notification) => (
+                      <button
+                        type="button"
+                        key={notification.id}
+                        className={`notification_item ${
+                          notification.isRead ? "" : "unread"
+                        }`}
+                        onClick={() => {
+                          if (notification.link) {
+                            navigate(notification.link);
+                          }
+                        }}
+                      >
+                        <div className="notification_icon">
+                          <i className={notification.icon}></i>
+                        </div>
+
+                        <div>
+                          <strong>{notification.title}</strong>
+                          <p>{notification.message}</p>
+                          <span>{notification.createdAt}</span>
+                        </div>
+                      </button>
+                    ))
+                  )}
+                </div>
+
+                <button type="button" className="notification_view_all">
+                  View all notifications
+                </button>
+              </div>
             </div>
 
             <button type="button" className="notification_view_all">

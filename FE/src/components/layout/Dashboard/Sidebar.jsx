@@ -26,8 +26,12 @@ function Sidebar({ isOpen, onClose }) {
     { icon: "ti-settings", label: "Settings", path: "/dashboard/settings", hideForGuest: true },
   ];
 
-  // Lọc bỏ những chức năng không dành cho Guest
-  const visibleMenuItems = menuItems.filter(item => !(isGuest && item.hideForGuest));
+  // Guest chỉ được xem khu vực khám phá và phần cài đặt.
+  const visibleMenuItems = isGuest
+    ? menuItems.filter((item) =>
+        ["Discover", "Settings"].includes(item.label),
+      )
+    : menuItems;
 
   async function handleLogout() {
     try {

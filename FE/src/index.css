@@ -194,9 +194,7 @@ body[data-theme="current"] .focus_card_dark {
 }
 
 body[data-theme="current"] .import_library_hero {
-  background:
-    var(--hero-blob-gradient),
-    linear-gradient(135deg, var(--sidebar-bg), #563820);
+  background: linear-gradient(135deg, var(--sidebar-bg), #563820);
 }
 
 body[data-theme="current"] .create_workspace_page,

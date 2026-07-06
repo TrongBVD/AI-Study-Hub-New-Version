@@ -11,11 +11,10 @@ import "./PersonalProfilePage.css";
 
 function getLoggedInUserEmail() {
   try {
-    const storedUser = JSON.parse(localStorage.getItem("user") || "null");
-    return storedUser?.email || "";
+    return JSON.parse(localStorage.getItem("user") || "null") || {};
   } catch (error) {
     console.error("Cannot read logged-in user from localStorage:", error);
-    return "";
+    return {};
   }
 }
 
@@ -124,7 +123,9 @@ function PersonalProfile() {
 
     const trimmedName = newName.trim();
 
-    if (trimmedName === "") return;
+  async function handleSaveBio() {
+    const trimmedBio = draftBio.trim();
+    setBioStatus("");
 
     try {
       const profile = await updateMyProfile({ full_name: trimmedName });
@@ -140,9 +141,10 @@ function PersonalProfile() {
     }
   }
 
-  function handleCancelEdit() {
-    setNewName(userName);
-    setIsEditingName(false);
+  function handleCancelBioEdit() {
+    setDraftBio(profileBio);
+    setBioStatus("");
+    setIsEditingBio(false);
   }
 
   const displayAvatar = avatar || defaultAvatar;
@@ -173,22 +175,48 @@ function PersonalProfile() {
         </label>
 
         <div className="profile_name_area">
-          {isEditingName ? (
-            <div className="edit_name_box">
-              <input
-                type="text"
-                value={newName}
-                onChange={(e) => setNewName(e.target.value)}
+          <div className="profile_name_row">
+            <h2>{userName}</h2>
+            <h2>{userEmail || "Email unavailable"}</h2>
+            <h2>{dateOfBirth.toDateString()}</h2>
+          </div>
+        </div>
+
+        <div className="profile_bio_panel">
+          <div className="profile_bio_header">
+            <h3>About me</h3>
+            {!isEditingBio && (
+              <button type="button" onClick={() => setIsEditingBio(true)}>
+                Edit
+              </button>
+            )}
+          </div>
+
+          {isEditingBio ? (
+            <div className="profile_bio_editor">
+              <textarea
+                value={draftBio}
+                onChange={(e) => setDraftBio(e.target.value)}
+                placeholder="Write a short description about yourself..."
               />
 
-              <div className="edit_name_actions">
-                <button type="button" onClick={handleSaveName}>
-                  Save
-                </button>
+              <div className="profile_bio_meta">
+                <span className={bioWordCount > 350 ? "over_limit" : ""}>
+                  {bioWordCount} / 350 chữ
+                </span>
 
-                <button type="button" onClick={handleCancelEdit}>
-                  Cancel
-                </button>
+                <div>
+                  <button
+                    type="button"
+                    onClick={handleSaveBio}
+                    disabled={isSavingBio}
+                  >
+                    {isSavingBio ? "Saving..." : "Save"}
+                  </button>
+                  <button type="button" onClick={handleCancelBioEdit}>
+                    Cancel
+                  </button>
+                </div>
               </div>
             </div>
           ) : (
@@ -209,6 +237,8 @@ function PersonalProfile() {
               )}
             </div>
           )}
+
+          {bioStatus && <p className="profile_bio_status">{bioStatus}</p>}
         </div>
       </aside>
 

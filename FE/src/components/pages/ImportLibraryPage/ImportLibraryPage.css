@@ -24,9 +24,7 @@
   padding: 24px;
   border-radius: 24px;
   color: var(--bg-card);
-  background:
-    radial-gradient(circle at 100% 0%, var(--accent-soft), transparent 32%),
-    linear-gradient(135deg, var(--sidebar-bg), #563820);
+  background: linear-gradient(135deg, var(--sidebar-bg), #563820);
   box-shadow: var(--shadow-soft);
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(250px, 330px);
