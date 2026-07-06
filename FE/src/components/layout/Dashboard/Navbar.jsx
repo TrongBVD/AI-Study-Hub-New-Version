@@ -485,11 +485,8 @@ function Navbar({
               </div>
             </div>
 
-            <button type="button" className="notification_view_all">
-              View all notifications
-            </button>
-          </div>
-        </div>
+          </>
+        )}
 
         <Link
           to={profilePath}

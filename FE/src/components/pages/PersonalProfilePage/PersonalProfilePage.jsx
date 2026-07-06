@@ -9,7 +9,10 @@ import {
 import defaultAvatar from "../../../assets/images/account.png";
 import "./PersonalProfilePage.css";
 
-function getLoggedInUserEmail() {
+const PROFILE_BIO_KEY = "aiStudyHubProfileBio";
+const PROFILE_NAME_KEY = "aiStudyHubProfileName";
+
+function getStoredUser() {
   try {
     return JSON.parse(localStorage.getItem("user") || "null") || {};
   } catch (error) {
@@ -28,18 +31,42 @@ function getLoggedInUserId() {
   }
 }
 
+function getLoggedInUserEmail() {
+  return getStoredUser()?.email || "";
+}
+
+function getStoredProfileBio() {
+  const storedUser = getStoredUser();
+  return storedUser?.bio || localStorage.getItem(PROFILE_BIO_KEY) || "";
+}
+
+function getStoredProfileName() {
+  const storedUser = getStoredUser();
+  return (
+    localStorage.getItem(PROFILE_NAME_KEY) ||
+    storedUser.full_name ||
+    storedUser.username ||
+    "User"
+  );
+}
+
 function PersonalProfile() {
   const navigate = useNavigate();
   const { id: profileId } = useParams();
   const loggedInUserId = getLoggedInUserId();
   const isOwnProfile = !profileId || profileId === loggedInUserId;
 
-  const [userName, setUserName] = useState("User");
+  const [userName, setUserName] = useState(getStoredProfileName);
   const [userEmail, setUserEmail] = useState(getLoggedInUserEmail);
   const [dateOfBirth, setDateOfBirth] = useState("");
   const [isDateOfBirthPublic, setIsDateOfBirthPublic] = useState(true);
   const [isEditingName, setIsEditingName] = useState(false);
   const [newName, setNewName] = useState(userName);
+  const [profileBio, setProfileBio] = useState(getStoredProfileBio);
+  const [draftBio, setDraftBio] = useState(getStoredProfileBio);
+  const [isEditingBio, setIsEditingBio] = useState(false);
+  const [isSavingBio, setIsSavingBio] = useState(false);
+  const [bioStatus, setBioStatus] = useState("");
   const [avatar, setAvatar] = useState("");
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const [libraries, setLibraries] = useState([]);
@@ -69,6 +96,8 @@ function PersonalProfile() {
         setUserEmail(isOwnProfile ? profile?.email || "" : "");
         setDateOfBirth(profile?.date_of_birth || "");
         setIsDateOfBirthPublic(profile?.is_dob_public !== false);
+        setProfileBio(profile?.bio || "");
+        setDraftBio(profile?.bio || "");
         setAvatar(nextAvatar);
         setLibraries(sharedLibraries);
 
@@ -123,10 +152,6 @@ function PersonalProfile() {
 
     const trimmedName = newName.trim();
 
-  async function handleSaveBio() {
-    const trimmedBio = draftBio.trim();
-    setBioStatus("");
-
     try {
       const profile = await updateMyProfile({ full_name: trimmedName });
       const nextName =
@@ -134,10 +159,41 @@ function PersonalProfile() {
 
       setUserName(nextName);
       setNewName(nextName);
+      localStorage.setItem(PROFILE_NAME_KEY, nextName);
       setIsEditingName(false);
     } catch (error) {
       console.error("Cannot update profile name:", error);
       alert(error.response?.data?.message || "Cannot update profile name.");
+    }
+  }
+
+  async function handleSaveBio() {
+    if (!isOwnProfile) return;
+
+    const trimmedBio = draftBio.trim();
+    const wordCount = trimmedBio === "" ? 0 : trimmedBio.split(/\s+/).length;
+    setBioStatus("");
+
+    if (wordCount > 350) {
+      setBioStatus("Bio must be 350 words or fewer.");
+      return;
+    }
+
+    try {
+      setIsSavingBio(true);
+      const profile = await updateMyProfile({ bio: trimmedBio });
+      const nextBio = profile?.bio || trimmedBio;
+
+      setProfileBio(nextBio);
+      setDraftBio(nextBio);
+      localStorage.setItem(PROFILE_BIO_KEY, nextBio);
+      setIsEditingBio(false);
+      setBioStatus("Bio updated.");
+    } catch (error) {
+      console.error("Cannot update profile bio:", error);
+      setBioStatus(error.response?.data?.message || "Cannot update bio.");
+    } finally {
+      setIsSavingBio(false);
     }
   }
 
@@ -152,6 +208,7 @@ function PersonalProfile() {
     dateOfBirth && (isOwnProfile || isDateOfBirthPublic)
       ? new Date(dateOfBirth).toDateString()
       : "Birthday unavailable";
+  const bioWordCount = draftBio.trim() === "" ? 0 : draftBio.trim().split(/\s+/).length;
 
   return (
     <main className="profile_page">
@@ -178,7 +235,7 @@ function PersonalProfile() {
           <div className="profile_name_row">
             <h2>{userName}</h2>
             <h2>{userEmail || "Email unavailable"}</h2>
-            <h2>{dateOfBirth.toDateString()}</h2>
+            <h2>{birthdayText}</h2>
           </div>
         </div>
 
@@ -220,21 +277,8 @@ function PersonalProfile() {
               </div>
             </div>
           ) : (
-            <div className="profile_name_row">
-              <h2>{userName}</h2>
-              {isOwnProfile && <h2>{userEmail || "Email unavailable"}</h2>}
-              <h2>{birthdayText}</h2>
-
-              {isOwnProfile && (
-              <button
-                type="button"
-                className="edit_name_btn"
-                onClick={() => setIsEditingName(true)}
-                title="Edit name"
-              >
-                ✏️
-              </button>
-              )}
+            <div className="profile_bio_view">
+              <p>{profileBio || "No bio yet."}</p>
             </div>
           )}
 
