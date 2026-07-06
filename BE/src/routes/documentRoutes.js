@@ -8,6 +8,7 @@ const {
     listMyDocuments,
     uploadDocuments,
     downloadDocument,
+    viewDocument,
     deleteDocument,
     createLibrary,
     listMyLibraries,
@@ -61,6 +62,7 @@ router.put("/libraries/:id", authMiddleware, updateLibrary);
 router.delete("/libraries/:id", authMiddleware, deleteLibrary);
 
 router.get("/:documentId/download", authMiddleware, downloadDocument);
+router.get("/:documentId/view", authMiddleware, viewDocument);
 
 router.delete("/:documentId", authMiddleware, deleteDocument);
 

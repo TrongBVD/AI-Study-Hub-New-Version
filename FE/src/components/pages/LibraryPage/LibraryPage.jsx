@@ -18,7 +18,6 @@ import {
 } from "../../../utils/publicApi";
 
 import "./LibraryPage.css";
-import FileViewer from "../FileViewer/FileViewer";
 import "../../../assets/icons/themify-icons-font/themify-icons/themify-icons.css";
 
 function getStoredUserRole() {
@@ -819,6 +818,20 @@ function LibraryPage() {
     }
   }
 
+  function handleViewDocument(fileItem) {
+    if (!fileItem.id || !fileItem.isBackendFile) {
+      alert("This file is local sample data, so it cannot be opened in the viewer yet.");
+      return;
+    }
+
+    navigate(`/dashboard/documents/${fileItem.id}`, {
+      state: {
+        from: `/dashboard/libraries/${libraryId}`,
+        fileName: fileItem.name,
+      },
+    });
+  }
+
   async function handleSaveSettings(e) {
     if (e && e.preventDefault) {
       e.preventDefault();
@@ -1371,6 +1384,14 @@ function LibraryPage() {
                           </div>
 
                           <div className="document_actions">
+                            <button
+                              type="button"
+                              title="View"
+                              onClick={() => handleViewDocument(document)}
+                            >
+                              <i className="ti-eye"></i>
+                            </button>
+
                             <button
                               type="button"
                               title="Download"
