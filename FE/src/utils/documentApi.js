@@ -38,6 +38,11 @@ export async function downloadDocument(documentId) {
   return response.data.data;
 }
 
+export async function getDocumentView(documentId) {
+  const response = await api.get(`/documents/${documentId}/view`);
+  return response.data.data;
+}
+
 export async function deleteDocument(documentId) {
   const response = await api.delete(`/documents/${documentId}`);
   return response.data;

@@ -477,6 +477,67 @@ exports.downloadDocument = async (req, res) => {
   }
 };
 
+exports.viewDocument = async (req, res) => {
+  try {
+    const userID = req.user.id;
+    const { documentId } = req.params;
+
+    const { data: document, error: documentError } = await supabase
+      .from("documents")
+      .select("*")
+      .eq("id", documentId)
+      .is("deleted_at", null)
+      .maybeSingle();
+
+    if (documentError) {
+      throw documentError;
+    }
+
+    if (!document) {
+      return res.status(404).json({
+        status: "error",
+        message: "Document not found.",
+      });
+    }
+
+    const isOwner = String(document.uploader_id) === String(userID);
+
+    if (!isOwner && document.is_public !== true) {
+      return res.status(403).json({
+        status: "error",
+        message: "You do not have permission to view this document.",
+      });
+    }
+
+    const { data: signedUrlData, error: signedUrlError } =
+      await supabase.storage.from(BUCKET).createSignedUrl(document.file_url, 60 * 60);
+
+    if (signedUrlError) {
+      throw signedUrlError;
+    }
+
+    return res.status(200).json({
+      status: "success",
+      data: {
+        documentId: document.id,
+        fileName: document.title,
+        fileSizeBytes: document.file_size_bytes,
+        status: document.status,
+        viewUrl: signedUrlData.signedUrl,
+        expiresIn: 60 * 60,
+      },
+    });
+  } catch (error) {
+    console.error("View document error:", error);
+
+    return res.status(500).json({
+      status: "error",
+      message: "Could not open document.",
+      error: error.message,
+    });
+  }
+};
+
 exports.deleteDocument = async (req, res) => {
   try {
     const userID = req.user.id;

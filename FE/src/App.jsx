@@ -20,6 +20,7 @@ import MyLibraryPage from "./components/pages/MyLibraryPage/MyLibraryPage.jsx";
 import CreateLibraryPage from "./components/pages/CreateLibraryPage/CreateLibraryPage.jsx";
 import ImportLibraryPage from "./components/pages/ImportLibraryPage/ImportLibraryPage.jsx";
 import LibraryPage from "./components/pages/LibraryPage/LibraryPage.jsx";
+import DocumentViewerPage from "./components/pages/DocumentViewerPage/DocumentViewerPage.jsx";
 import MyWorkSpace from "./components/pages/MyWorkSpace/MyWorkSpace.jsx";
 import WorkSpacePage from "./components/pages/WorkSpacePage/WorkSpacePage.jsx";
 import PersonalProfilePage from "./components/pages/PersonalProfilePage/PersonalProfilePage.jsx";
@@ -82,6 +83,7 @@ function App() {
           <Route path="create-library" element={<CreateLibraryPage />} />
           <Route path="import-library" element={<ImportLibraryPage />} />
           <Route path="libraries/:libraryId" element={<LibraryPage />} />
+          <Route path="documents/:documentId" element={<DocumentViewerPage />} />
           <Route path="settings" element={<SettingPage />} />
           <Route path="create-workspace" element={<CreateWorkSpacePage />} />
           <Route path="workspaces" element={<MyWorkSpace />} />
