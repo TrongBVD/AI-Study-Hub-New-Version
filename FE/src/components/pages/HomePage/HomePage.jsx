@@ -338,7 +338,7 @@ function HomePage() {
                   </div>
                   <h3>No recent libraries yet</h3>
                   <p>Open or create a library to bring your latest study materials into this area.</p>
-                  <Link to="/dashboard/libraries">
+                  <Link to={isGuest ? "/dashboard/search?type=library" : "/dashboard/libraries"}>
                     {isGuest ? "Browse public libraries" : "Browse libraries"}
                   </Link>
                 </div>

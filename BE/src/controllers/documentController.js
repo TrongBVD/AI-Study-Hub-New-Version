@@ -547,7 +547,6 @@ exports.deleteDocument = async (req, res) => {
 // Hàm API tạo thư viện mới vào Supabase
 exports.createLibrary = async (req, res) => {
   try {
-    // Đã thêm biến share_on_profile vào đây
     const { name, description, is_public, share_on_profile } = req.body;
     const userID = req.user.id;
 
@@ -558,11 +557,35 @@ exports.createLibrary = async (req, res) => {
       });
     }
 
+    if (!name || name.trim() === "") {
+      return res.status(400).json({
+        status: "error",
+        message: "Library name is required.",
+      });
+    }
+
+    // Kiểm tra xem người dùng đã có thư viện nào trùng tên chưa (không phân biệt hoa thường)
+    const { data: existingLib, error: searchError } = await supabase
+      .from("libraries")
+      .select("id")
+      .eq("user_id", userID)
+      .ilike("name", name.trim())
+      .maybeSingle();
+
+    if (searchError) throw searchError;
+
+    if (existingLib) {
+      return res.status(400).json({
+        status: "error",
+        message: "Bạn đã có một thư viện khác tên là \"" + name.trim() + "\". Vui lòng chọn tên khác!",
+      });
+    }
+
     const { data, error } = await supabase
       .from("libraries")
       .insert({
         user_id: userID,
-        name,
+        name: name.trim(),
         description,
         is_public,
         share_on_profile
@@ -581,12 +604,37 @@ exports.createLibrary = async (req, res) => {
 exports.updateLibrary = async (req, res) => {
   try {
     const { id } = req.params;
-    // Đã thêm biến share_on_profile
     const { name, description, is_public, share_on_profile } = req.body;
+    const userID = req.user.id;
+
+    if (name && name.trim() !== "") {
+      // Kiểm tra trùng tên với các thư viện khác cùng user (trừ thư viện hiện tại đang sửa)
+      const { data: existingLib, error: searchError } = await supabase
+        .from("libraries")
+        .select("id")
+        .eq("user_id", userID)
+        .ilike("name", name.trim())
+        .neq("id", id)
+        .maybeSingle();
+
+      if (searchError) throw searchError;
+
+      if (existingLib) {
+        return res.status(400).json({
+          status: "error",
+          message: "Tên thư viện \"" + name.trim() + "\" đã được sử dụng ở một thư viện khác của bạn.",
+        });
+      }
+    }
 
     const { data, error } = await supabase
       .from("libraries")
-      .update({ name, description, is_public, share_on_profile })
+      .update({
+        name: name ? name.trim() : undefined,
+        description,
+        is_public,
+        share_on_profile
+      })
       .eq("id", id)
       .select().single();
 

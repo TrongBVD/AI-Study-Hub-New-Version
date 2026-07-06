@@ -6,9 +6,9 @@ import { refreshAccessToken } from "../../../utils/api";
 const GUEST_ALLOWED_PATHS = [
   "/dashboard",
   "/dashboard/home",
-  "/dashboard/libraries",
   "/dashboard/search-user",
   "/dashboard/profile",
+  "/dashboard/search",
 ];
 
 function getStoredUser() {
@@ -26,6 +26,11 @@ function getStoredUser() {
 }
 
 function isGuestAllowedPath(pathname) {
+  // Cho phép Guest xem chi tiết thư viện công khai (vd: /dashboard/libraries/123)
+  // nhưng KHÔNG cho phép vào trang quản lý thư viện cá nhân (/dashboard/libraries)
+  if (pathname.startsWith("/dashboard/libraries/")) {
+    return true;
+  }
   return GUEST_ALLOWED_PATHS.some(
     (allowedPath) =>
       pathname === allowedPath || pathname.startsWith(`${allowedPath}/`),
