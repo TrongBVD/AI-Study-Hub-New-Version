@@ -2,9 +2,7 @@
   min-height: calc(100vh - 92px);
   padding: 38px clamp(24px, 5vw, 82px) 72px;
   color: var(--text-primary);
-  background:
-    radial-gradient(circle at 12% 4%, var(--focus-ring), transparent 28%),
-    var(--bg-secondary);
+  background: var(--bg-secondary);
 }
 
 .search-results-header {

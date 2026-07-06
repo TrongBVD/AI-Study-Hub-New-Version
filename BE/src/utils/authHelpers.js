@@ -143,6 +143,7 @@ function buildPublicUser(user) {
     email: user.email,
     username: user.username,
     full_name: user.full_name,
+    bio: user.bio || "",
     role: user.role || "USER",
     status: user.status || "ACTIVE",
     };

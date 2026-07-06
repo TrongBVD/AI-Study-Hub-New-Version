@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import FormInput from "../../common/FormInput/FormInput.jsx";
 import api from "../../../utils/api.js";
 import { useNavigate, useLocation, Navigate } from "react-router-dom";
@@ -9,19 +9,24 @@ function CompleteProfile() {
   const location = useLocation();
 
   const [formData, setFormData] = useState({ username: "", password: "" });
+  const [profileBio, setProfileBio] = useState("");
+  const [createdUser, setCreatedUser] = useState(null);
+  const [showBioPopup, setShowBioPopup] = useState(false);
   const [usernameStatus, setUsernameStatus] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
+  const [bioErrorMsg, setBioErrorMsg] = useState("");
+  const [isSavingBio, setIsSavingBio] = useState(false);
 
   const email = location.state?.email;
   const setupToken = location.state?.setupToken;
 
-  if (!email || !setupToken) {
-    return <Navigate to="/login" replace />;
-  }
-
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
+
+  const bioWordCount = profileBio.trim()
+    ? profileBio.trim().split(/\s+/).length
+    : 0;
 
   useEffect(() => {
     const delayDebounceFn = setTimeout(async () => {
@@ -35,7 +40,7 @@ function CompleteProfile() {
           } else {
             setUsernameStatus("✅ Username hợp lệ.");
           }
-        } catch (err) {
+        } catch {
           console.error("Lỗi kiểm tra username");
         }
       } else {
@@ -45,6 +50,10 @@ function CompleteProfile() {
 
     return () => clearTimeout(delayDebounceFn);
   }, [formData.username]);
+
+  if (!email || !setupToken) {
+    return <Navigate to="/login" replace />;
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -72,10 +81,55 @@ function CompleteProfile() {
         localStorage.setItem("user", JSON.stringify(user));
       }
 
-      navigate("/dashboard/home", { replace: true });
+      setCreatedUser(user || null);
+      setShowBioPopup(true);
     } catch (error) {
       setErrorMsg(error.response?.data?.message || "Lỗi cập nhật.");
     }
+  };
+
+  const handleSaveBio = async (e) => {
+    e.preventDefault();
+
+    const trimmedBio = profileBio.trim();
+    setBioErrorMsg("");
+
+    if (!trimmedBio) {
+      setBioErrorMsg("Vui lòng nhập mô tả bản thân trước khi tiếp tục.");
+      return;
+    }
+
+    if (bioWordCount > 350) {
+      setBioErrorMsg("Mô tả bản thân không được vượt quá 350 chữ.");
+      return;
+    }
+
+    setIsSavingBio(true);
+
+    let nextUser = createdUser || {};
+
+    try {
+      const response = await api.patch("/users/profile-bio", {
+        bio: trimmedBio,
+      });
+
+      nextUser = {
+        ...nextUser,
+        ...(response.data?.data || {}),
+        bio: trimmedBio,
+      };
+    } catch (error) {
+      console.warn("Không thể lưu mô tả lên server, lưu tạm localStorage:", error);
+      nextUser = {
+        ...nextUser,
+        bio: trimmedBio,
+      };
+    }
+
+    localStorage.setItem("user", JSON.stringify(nextUser));
+    localStorage.setItem("aiStudyHubProfileBio", trimmedBio);
+    setIsSavingBio(false);
+    navigate("/dashboard/profile", { replace: true });
   };
 
   return (
@@ -135,6 +189,41 @@ function CompleteProfile() {
           Hoàn tất
         </button>
       </form>
+
+      {showBioPopup && (
+        <div className="register_bio_overlay" role="dialog" aria-modal="true">
+          <form className="register_bio_modal" onSubmit={handleSaveBio}>
+            <p className="register_title">Mô tả bản thân</p>
+            <p className="register_message">
+              Hãy viết một đoạn giới thiệu ngắn về bạn, mục tiêu học tập và lĩnh
+              vực bạn quan tâm. Nội dung này sẽ hiển thị ở trang cá nhân.
+            </p>
+
+            <textarea
+              value={profileBio}
+              onChange={(e) => setProfileBio(e.target.value)}
+              placeholder="Ví dụ: Mình đang học React, thích AI và muốn xây dựng thói quen tự học tốt hơn..."
+              autoFocus
+            />
+
+            <div className="register_bio_footer">
+              <span className={bioWordCount > 350 ? "over_limit" : ""}>
+                {bioWordCount} / 350 chữ
+              </span>
+
+              <button
+                className="register_submit"
+                type="submit"
+                disabled={isSavingBio}
+              >
+                {isSavingBio ? "Đang lưu..." : "Lưu mô tả"}
+              </button>
+            </div>
+
+            {bioErrorMsg && <p className="register_bio_error">{bioErrorMsg}</p>}
+          </form>
+        </div>
+      )}
     </div>
   );
 }

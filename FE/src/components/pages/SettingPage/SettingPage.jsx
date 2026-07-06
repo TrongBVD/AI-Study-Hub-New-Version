@@ -385,9 +385,63 @@ const NOTIFICATION_CATEGORIES = [
   },
 ];
 
+const PROFILE_NAME_KEY = "aiStudyHubProfileName";
+const PROFILE_NAME_CHANGED_AT_KEY = "aiStudyHubProfileNameChangedAt";
+const PROFILE_NAME_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000;
+const PROFILE_NAME_MAX_LENGTH = 40;
+
+function getStoredUser() {
+  try {
+    return JSON.parse(localStorage.getItem("user") || "null") || {};
+  } catch (error) {
+    console.error("Cannot read user profile from localStorage:", error);
+    return {};
+  }
+}
+
+function getInitialProfileName() {
+  const storedUser = getStoredUser();
+
+  return (
+    localStorage.getItem(PROFILE_NAME_KEY) ||
+    storedUser.full_name ||
+    storedUser.fullName ||
+    storedUser.display_name ||
+    storedUser.displayName ||
+    storedUser.name ||
+    storedUser.username ||
+    "AI Student Hub"
+  );
+}
+
+function getProfileNameChangedAt() {
+  const timestamp = Number(localStorage.getItem(PROFILE_NAME_CHANGED_AT_KEY));
+  return Number.isFinite(timestamp) ? timestamp : 0;
+}
+
+function getProfileNameCooldownText(lastChangedAt) {
+  if (!lastChangedAt) return "";
+
+  const remainingMs =
+    PROFILE_NAME_COOLDOWN_MS - (Date.now() - Number(lastChangedAt));
+
+  if (remainingMs <= 0) return "";
+
+  const remainingDays = Math.ceil(remainingMs / (24 * 60 * 60 * 1000));
+  return `You can change your display name again in ${remainingDays} day${
+    remainingDays === 1 ? "" : "s"
+  }.`;
+}
+
 function SettingPage() {
   const { theme, setTheme, availableThemes } = useTheme();
-  const [workspaceName, setWorkspaceName] = useState("AI Student Hub");
+  const [workspaceName, setWorkspaceName] = useState(getInitialProfileName);
+  const [savedProfileName, setSavedProfileName] =
+    useState(getInitialProfileName);
+  const [profileNameChangedAt, setProfileNameChangedAt] = useState(
+    getProfileNameChangedAt,
+  );
+  const [profileNameStatus, setProfileNameStatus] = useState("");
   const [customBranding, setCustomBranding] = useState(false);
   const [selectedColor, setSelectedColor] = useState("#b4531a");
   const [activeSetting, setActiveSetting] = useState("Profile & appearance");
@@ -424,6 +478,53 @@ function SettingPage() {
         [key]: value,
       },
     }));
+  }
+
+  function handleProfileNameChange(value) {
+    setWorkspaceName(value.slice(0, PROFILE_NAME_MAX_LENGTH));
+    setProfileNameStatus("");
+  }
+
+  function handleSaveProfileName() {
+    const nextName = workspaceName.trim().replace(/\s+/g, " ");
+    const cooldownText = getProfileNameCooldownText(profileNameChangedAt);
+
+    if (!nextName) {
+      setProfileNameStatus("Display name cannot be empty.");
+      return;
+    }
+
+    if (nextName === savedProfileName) {
+      setWorkspaceName(nextName);
+      setProfileNameStatus("This display name is already saved.");
+      return;
+    }
+
+    if (cooldownText) {
+      setProfileNameStatus(cooldownText);
+      return;
+    }
+
+    const nextChangedAt = Date.now();
+    const storedUser = getStoredUser();
+    const nextUser = {
+      ...storedUser,
+      full_name: nextName,
+      fullName: nextName,
+      display_name: nextName,
+      displayName: nextName,
+      name: nextName,
+    };
+
+    localStorage.setItem(PROFILE_NAME_KEY, nextName);
+    localStorage.setItem(PROFILE_NAME_CHANGED_AT_KEY, String(nextChangedAt));
+    localStorage.setItem("user", JSON.stringify(nextUser));
+
+    setWorkspaceName(nextName);
+    setSavedProfileName(nextName);
+    setProfileNameChangedAt(nextChangedAt);
+    setProfileNameStatus("Display name saved. You can change it again after 7 days.");
+    window.dispatchEvent(new Event("aiStudyHubProfileNameChanged"));
   }
 
   return (
@@ -477,7 +578,14 @@ function SettingPage() {
           {activeSetting === "Profile & appearance" && (
             <ProfileAppearanceSettings
               workspaceName={workspaceName}
-              setWorkspaceName={setWorkspaceName}
+              savedProfileName={savedProfileName}
+              profileNameStatus={profileNameStatus}
+              profileNameCooldownText={getProfileNameCooldownText(
+                profileNameChangedAt,
+              )}
+              profileNameMaxLength={PROFILE_NAME_MAX_LENGTH}
+              onWorkspaceNameChange={handleProfileNameChange}
+              onSaveProfileName={handleSaveProfileName}
               customBranding={customBranding}
               setCustomBranding={setCustomBranding}
               selectedColor={selectedColor}
@@ -571,7 +679,12 @@ function SettingsSwitch({ checked, onClick, label }) {
 
 function ProfileAppearanceSettings({
   workspaceName,
-  setWorkspaceName,
+  savedProfileName,
+  profileNameStatus,
+  profileNameCooldownText,
+  profileNameMaxLength,
+  onWorkspaceNameChange,
+  onSaveProfileName,
   customBranding,
   setCustomBranding,
   selectedColor,
@@ -580,24 +693,29 @@ function ProfileAppearanceSettings({
   setSelectedTheme,
   availableThemes,
 }) {
+  const trimmedName = workspaceName.trim().replace(/\s+/g, " ");
+  const isNameLocked = Boolean(profileNameCooldownText);
+  const canSaveProfileName =
+    !isNameLocked && trimmedName.length > 0 && trimmedName !== savedProfileName;
+
   return (
     <>
       <SettingsHeader
         icon="ti-palette"
         eyebrow="Personal"
         title="Profile & appearance"
-        description="Manage the name and visual identity used across your current study workspace."
+        description="Manage the name and visual identity used across your StudyHub account."
         badge="Local preferences"
       />
 
       <SettingsPanel
-        title="Workspace profile"
+        title="User profile"
         description="Basic information displayed around your libraries and shared spaces."
       >
         <div className="settings_table">
           <SettingRow
-            title="Workspace avatar"
-            description="Generated from the first letter of your workspace name."
+            title="User avatar"
+            description="Generated from the first letter of your display name."
           >
             <div className="settings_avatar">
               {workspaceName.slice(0, 1).toUpperCase() || "A"}
@@ -605,16 +723,39 @@ function ProfileAppearanceSettings({
           </SettingRow>
 
           <SettingRow
-            title="Workspace name"
-            description="The display name shown in your current study space."
+            title="User name"
+            description="The display name shown on your profile and study spaces."
           >
-            <label className="settings_field">
-              <span>Display name</span>
-              <input
-                value={workspaceName}
-                onChange={(event) => setWorkspaceName(event.target.value)}
-              />
-            </label>
+            <div className="settings_name_editor">
+              <label className="settings_field">
+                <span>Display name</span>
+                <input
+                  value={workspaceName}
+                  maxLength={profileNameMaxLength}
+                  disabled={isNameLocked}
+                  onChange={(event) =>
+                    onWorkspaceNameChange(event.target.value)
+                  }
+                />
+              </label>
+              <button
+                type="button"
+                className="settings_save_name_btn"
+                disabled={!canSaveProfileName}
+                onClick={onSaveProfileName}
+              >
+                Save
+              </button>
+              <p
+                className={`settings_name_hint ${
+                  profileNameStatus ? "has_status" : ""
+                }`}
+              >
+                {profileNameStatus ||
+                  profileNameCooldownText ||
+                  `You can change this name once every 7 days. ${workspaceName.length}/${profileNameMaxLength}`}
+              </p>
+            </div>
           </SettingRow>
         </div>
       </SettingsPanel>
