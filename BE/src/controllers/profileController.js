@@ -108,8 +108,30 @@ exports.updateMyAvatar = async (req, res) => {
       });
     }
 
+    // 1. Dọn dẹp avatar cũ trong storage nếu tồn tại
+    try {
+      const { data: currentProfile } = await supabase
+        .from("profiles")
+        .select("avatar_url")
+        .eq("id", userId)
+        .maybeSingle();
+
+      if (currentProfile && currentProfile.avatar_url) {
+        const oldUrl = currentProfile.avatar_url;
+        const marker = `/${AVATAR_BUCKET}/`;
+        const markerIndex = oldUrl.indexOf(marker);
+        if (markerIndex !== -1) {
+          const oldPath = oldUrl.substring(markerIndex + marker.length);
+          await supabase.storage.from(AVATAR_BUCKET).remove([oldPath]);
+        }
+      }
+    } catch (delError) {
+      console.warn("Failed to cleanup old avatar file:", delError);
+    }
+
+    // 2. Tạo đường dẫn file mới có timestamp để tránh browser cache và CDN cache
     const extension = path.extname(file.originalname || "").toLowerCase() || ".png";
-    const avatarPath = `${userId}/avatar${extension}`;
+    const avatarPath = `${userId}/avatar_${Date.now()}${extension}`;
 
     const { error: uploadError } = await supabase.storage
       .from(AVATAR_BUCKET)
