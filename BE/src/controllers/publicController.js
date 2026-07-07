@@ -24,7 +24,11 @@ exports.listPublicLibraries = async (req, res) => {
     if (libraryError) throw libraryError;
 
     const libraryIds = (libraries || []).map((library) => library.id);
+    const ownerIds = [
+      ...new Set((libraries || []).map((library) => library.user_id).filter(Boolean)),
+    ];
     let documentCounts = new Map();
+    let ownersById = new Map();
 
     if (libraryIds.length > 0) {
       const { data: documents, error: documentError } = await supabase
@@ -44,11 +48,27 @@ exports.listPublicLibraries = async (req, res) => {
       }, new Map());
     }
 
+    if (ownerIds.length > 0) {
+      const { data: owners, error: ownerError } = await supabase
+        .from("profiles")
+        .select("id, username, full_name, avatar_url")
+        .in("id", ownerIds)
+        .eq("status", "ACTIVE");
+
+      if (ownerError) throw ownerError;
+
+      ownersById = (owners || []).reduce((ownersMap, owner) => {
+        ownersMap.set(String(owner.id), owner);
+        return ownersMap;
+      }, new Map());
+    }
+
     return res.status(200).json({
       status: "success",
       data: (libraries || []).map((library) => ({
         ...library,
         documents: documentCounts.get(String(library.id)) || 0,
+        owner: ownersById.get(String(library.user_id)) || null,
         visibility: "public",
       })),
     });

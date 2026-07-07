@@ -9,6 +9,7 @@ import { searchUsers } from "../../../utils/searchApi.js";
 import { getMyLibraries } from "../../../utils/documentApi.js";
 import { getWorkspaces } from "../../../utils/workspaceApi.js";
 import { getMyProfile } from "../../../utils/profileApi.js";
+import { getPublicLibraries } from "../../../utils/publicApi.js";
 import defaultAvatar from "../../../assets/images/account.png";
 
 function getStoredUserRole() {
@@ -184,11 +185,19 @@ function Navbar({
   const [workspaces, setWorkspaces] = useState([]);
 
   useEffect(() => {
-    if (isGuest) return;
     let isMounted = true;
     
     async function loadSearchData() {
       try {
+        if (isGuest) {
+          const publicLibraries = await getPublicLibraries();
+          if (isMounted) {
+            setLibraries(publicLibraries || []);
+            setWorkspaces([]);
+          }
+          return;
+        }
+
         const [libs, wspaces] = await Promise.all([
           getMyLibraries(),
           getWorkspaces()
@@ -269,11 +278,16 @@ function Navbar({
   }, [searchValue, libraries, workspaces, matchedUsers]);
 
   function handleOpenSearchResult(result) {
-    if (result.type === "library" && !isGuest) {
-      saveRecentLibrary(result.data);
+    if (result.type === "library") {
+      if (!isGuest) {
+        saveRecentLibrary(result.data);
+      }
+
       navigate(`/dashboard/libraries/${result.id}`, {
         state: {
-          library: result.data,
+          library: isGuest
+            ? { ...result.data, isPublicView: true, visibility: "public" }
+            : result.data,
           from: window.location.pathname,
         },
       });
@@ -304,7 +318,7 @@ function Navbar({
     if (!keyword) return;
 
     if (isGuest) {
-      navigate("/dashboard/search-user");
+      navigate(`/dashboard/search?q=${encodeURIComponent(keyword)}`);
     } else {
       navigate(`/dashboard/search?q=${encodeURIComponent(keyword)}`);
     }
@@ -488,12 +502,14 @@ function Navbar({
           </>
         )}
 
-        <Link
-          to={profilePath}
-          className="profile_avatar"
-          aria-label="Go to personal profile"
-          style={{ backgroundImage: `url(${avatarImage})` }}
-        />
+        {!isGuest && (
+          <Link
+            to={profilePath}
+            className="profile_avatar"
+            aria-label="Go to personal profile"
+            style={{ backgroundImage: `url(${avatarImage})` }}
+          />
+        )}
       </div>
     </header>
   );

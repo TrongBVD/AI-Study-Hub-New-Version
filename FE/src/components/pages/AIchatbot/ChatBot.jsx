@@ -133,6 +133,19 @@ function ChatBot() {
         text: result.data.answer,
       };
 
+      if (selectedDocument) {
+        localStorage.setItem(
+          "aiStudyHubLastChatDocument",
+          JSON.stringify({
+            id: selectedDocument.id,
+            title: selectedDocument.title,
+            libraryId: selectedDocument.library_id,
+            workspaceId: selectedDocument.workspace_id,
+            chattedAt: new Date().toISOString(),
+          }),
+        );
+      }
+
       setMessages((prev) => [...prev, aiMessage]);
       setHistory((prev) => [...prev, aiMessage]);
     } catch (error) {

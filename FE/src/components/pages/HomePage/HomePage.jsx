@@ -6,6 +6,8 @@ import studyHubLogo from "../../../assets/images/StudyHubLogo.svg";
 import { getMyLibraries } from "../../../utils/documentApi.js";
 import { getWorkspaces } from "../../../utils/workspaceApi.js";
 import { getMyProfile } from "../../../utils/profileApi.js";
+import { getAiSummary } from "../../../utils/aiApi.js";
+import { getPublicLibraries } from "../../../utils/publicApi.js";
 
 function getItemId(item) {
   return item?.id || item?._id || item?.libraryId || item?.workspaceId || "";
@@ -50,23 +52,45 @@ function notifyGuestRegistrationRequired() {
   alert("Please register or log in with an account to create libraries and workspaces.");
 }
 
+function getStoredJson(key) {
+  try {
+    return JSON.parse(localStorage.getItem(key) || "null");
+  } catch {
+    return null;
+  }
+}
+
+function formatNumber(value) {
+  return new Intl.NumberFormat("en-US").format(Number(value || 0));
+}
+
+function getLibraryName(library) {
+  return library?.name || library?.libraryName || "Untitled Library";
+}
+
 function HomePage() {
   const isGuest = getStoredUserRole() === "GUEST";
   const [profileName, setProfileName] = useState("User");
   const [libraries, setLibraries] = useState([]);
   const [workspaces, setWorkspaces] = useState([]);
+  const [aiSummary, setAiSummary] = useState(null);
+  const [latestChatDocument, setLatestChatDocument] = useState(null);
+  const [latestStudyCard, setLatestStudyCard] = useState(null);
 
   useEffect(() => {
-    if (isGuest) {
-      setLibraries([]);
-      setWorkspaces([]);
-      return;
-    }
-
     let isMounted = true;
 
     async function loadDashboardData() {
       try {
+        if (isGuest) {
+          const publicLibraries = await getPublicLibraries();
+          if (!isMounted) return;
+
+          setLibraries(Array.isArray(publicLibraries) ? publicLibraries : []);
+          setWorkspaces([]);
+          return;
+        }
+
         const [libraryData, workspaceData] = await Promise.all([
           getMyLibraries(),
           getWorkspaces(),
@@ -87,6 +111,36 @@ function HomePage() {
     }
 
     loadDashboardData();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [isGuest]);
+
+  useEffect(() => {
+    if (isGuest) {
+      setAiSummary(null);
+      setLatestChatDocument(null);
+      setLatestStudyCard(null);
+      return;
+    }
+
+    let isMounted = true;
+
+    async function loadAiOverview() {
+      try {
+        const summary = await getAiSummary();
+        if (!isMounted) return;
+
+        setAiSummary(summary);
+      } catch (error) {
+        console.error("Cannot load AI summary:", error);
+      }
+    }
+
+    setLatestChatDocument(getStoredJson("aiStudyHubLastChatDocument"));
+    setLatestStudyCard(getStoredJson("aiStudyHubLastStudyCard"));
+    loadAiOverview();
 
     return () => {
       isMounted = false;
@@ -121,9 +175,7 @@ function HomePage() {
 
   const recentLibraries = useMemo(
     () =>
-      isGuest
-        ? []
-        : [...libraries]
+      [...libraries]
             .sort((a, b) => getRecentTimestamp(b) - getRecentTimestamp(a))
             .slice(0, 2),
     [isGuest, libraries]
@@ -146,26 +198,51 @@ function HomePage() {
     );
   }, [libraries]);
 
-  const stats = useMemo(() => [
-    {
-      title: "Libraries",
-      value: libraries.length,
-      detail: "Saved collections",
-      icon: "ti-folder",
-    },
-    {
-      title: "Workspaces",
-      value: workspaces.length,
-      detail: "Collaboration rooms",
-      icon: "ti-layout-grid2",
-    },
-    {
-      title: "Documents",
-      value: totalDocuments,
-      detail: "Across all libraries",
-      icon: "ti-files",
-    },
-  ], [libraries.length, workspaces.length, totalDocuments]);
+  const stats = useMemo(
+    () =>
+      isGuest
+        ? [
+            {
+              title: "Public libraries",
+              value: libraries.length,
+              detail: "Open collections",
+              icon: "ti-folder",
+            },
+            {
+              title: "Public documents",
+              value: totalDocuments,
+              detail: "Shared for reading",
+              icon: "ti-files",
+            },
+            {
+              title: "Access mode",
+              value: "Public",
+              detail: "Guest browsing only",
+              icon: "ti-unlock",
+            },
+          ]
+        : [
+            {
+              title: "Libraries",
+              value: libraries.length,
+              detail: "Saved collections",
+              icon: "ti-folder",
+            },
+            {
+              title: "Workspaces",
+              value: workspaces.length,
+              detail: "Collaboration rooms",
+              icon: "ti-layout-grid2",
+            },
+            {
+              title: "Documents",
+              value: totalDocuments,
+              detail: "Across all libraries",
+              icon: "ti-files",
+            },
+          ],
+    [isGuest, libraries.length, workspaces.length, totalDocuments],
+  );
 
   const quickActions = [
     {
@@ -187,6 +264,20 @@ function HomePage() {
   const latestWorkspace = recentWorkspaces[0];
   const latestLibraryId = getItemId(latestLibrary);
   const latestWorkspaceId = getItemId(latestWorkspace);
+  const latestChatLibrary = libraries.find(
+    (library) => String(getItemId(library)) === String(latestChatDocument?.libraryId),
+  );
+  const latestStudyWorkspace = workspaces.find(
+    (workspace) => String(getItemId(workspace)) === String(latestStudyCard?.workspaceId),
+  );
+  const latestStudyLibrary = libraries.find(
+    (library) => String(getItemId(library)) === String(latestStudyCard?.libraryId),
+  );
+  const studyTotalCards = Number(latestStudyCard?.totalCards || 0);
+  const studyDoneCards = Number(latestStudyCard?.studiedCards || 0);
+  const studyProgress = studyTotalCards
+    ? Math.min(Math.round((studyDoneCards / studyTotalCards) * 100), 100)
+    : 0;
 
   return (
     <main className="home_page">
@@ -198,10 +289,12 @@ function HomePage() {
             </div>
 
             <div className="home_headline_block">
-              <span className="home_label">Workspace command center</span>
+              <span className="home_label">
+                {isGuest ? "Public library access" : "Workspace command center"}
+              </span>
               <h1>
                 {isGuest ? (
-                  "Welcome"
+                  "Explore public libraries"
                 ) : (
                   <>
                     Welcome back,
@@ -210,38 +303,37 @@ function HomePage() {
                 )}
               </h1>
               <p>
-                Continue from your latest materials, manage study spaces and start new work without leaving the dashboard.
+                {isGuest
+                  ? "Search and read public study collections shared by the community. Log in when you want to create libraries, use AI, or join workspaces."
+                  : "Continue from your latest materials, manage study spaces and start new work without leaving the dashboard."}
               </p>
             </div>
 
             <div className="home_primary_actions">
   {isGuest ? (
     <>
-      <button
-        type="button"
-        onClick={notifyGuestRegistrationRequired}
+      <Link
+        to="/dashboard/libraries"
         className="home_btn home_btn_primary"
       >
-        <i className="ti-briefcase"></i>
-        Create workspace
-      </button>
-
-      <button
-        type="button"
-        onClick={notifyGuestRegistrationRequired}
-        className="home_btn home_btn_secondary"
-      >
-        <i className="ti-folder"></i>
-        Create library
-      </button>
+        <i className="ti-search"></i>
+        Browse public libraries
+      </Link>
 
       <Link
-        to="/dashboard/import-library"
-        state={{ from: "/dashboard/home" }}
+        to="/dashboard/search?type=library"
         className="home_btn home_btn_secondary"
       >
-        <i className="ti-import"></i>
-        Import library
+        <i className="ti-archive"></i>
+        Search library
+      </Link>
+
+      <Link
+        to="/login"
+        className="home_btn home_btn_secondary"
+      >
+        <i className="ti-user"></i>
+        Log in
       </Link>
     </>
   ) : (
@@ -284,7 +376,7 @@ function HomePage() {
             </div>
 
             <div className="focus_card focus_card_dark">
-              <span>Latest library</span>
+              <span>{isGuest ? "Newest public library" : "Latest library"}</span>
               <h2>
                 {latestLibrary?.name ||
                   latestLibrary?.libraryName ||
@@ -292,8 +384,10 @@ function HomePage() {
               </h2>
               <p>
                 {latestLibrary
-                  ? `${latestLibrary.documents || 0} documents saved`
-                  : "Open a library once to place it here."}
+                  ? `${latestLibrary.documents || 0} public documents`
+                  : isGuest
+                    ? "Public libraries will appear here once available."
+                    : "Open a library once to place it here."}
               </p>
               {latestLibrary && (
                 <Link
@@ -308,21 +402,34 @@ function HomePage() {
               )}
             </div>
 
-            <div className="focus_card focus_card_light">
-              <span>Latest workspace</span>
-              <h2>{latestWorkspace?.name || "No workspace opened yet"}</h2>
-              {latestWorkspace && !isGuest && (
+            {!isGuest ? (
+              <div className="focus_card focus_card_light">
+                <span>Latest workspace</span>
+                <h2>{latestWorkspace?.name || "No workspace opened yet"}</h2>
+                {latestWorkspace && (
+                  <Link
+                    to={
+                      latestWorkspaceId
+                        ? `/dashboard/workspaces/${latestWorkspaceId}`
+                        : "/dashboard/workspaces"
+                    }
+                  >
+                    Open workspace
+                  </Link>
+                )}
+              </div>
+            ) : (
+              <div className="focus_card focus_card_light">
+                <span>Guest mode</span>
+                <h2>Public libraries only</h2>
+                <p>You can search public collections and open shared files.</p>
                 <Link
-                  to={
-                    latestWorkspaceId
-                      ? `/dashboard/workspaces/${latestWorkspaceId}`
-                      : "/dashboard/workspaces"
-                  }
+                  to="/dashboard/search?type=library"
                 >
-                  Open workspace
+                  Search library
                 </Link>
-              )}
-            </div>
+              </div>
+            )}
           </aside>
         </section>
 
@@ -341,131 +448,215 @@ function HomePage() {
           ))}
         </section>
 
+        {isGuest ? (
+          <section className="home_body_grid">
+            <section className="home_main_stack">
+              <div className="home_section_header">
+                <div>
+                  <span className="home_label">Public materials</span>
+                  <h2>Libraries you can open as guest</h2>
+                </div>
+
+                <Link to="/dashboard/libraries" className="home_text_link">
+                  View all libraries
+                  <i className="ti-arrow-right"></i>
+                </Link>
+              </div>
+
+              <div className="recent_library_grid">
+                {recentLibraries.length === 0 ? (
+                  <div className="home_empty_state home_empty_large">
+                    <div className="home_empty_icon">
+                      <i className="ti-folder"></i>
+                    </div>
+                    <h3>No public libraries yet</h3>
+                    <p>Public study libraries will appear here when users share collections.</p>
+                  </div>
+                ) : (
+                  recentLibraries.map((library, index) => {
+                    const libraryId = getItemId(library);
+
+                    return (
+                      <article className="recent_library_card" key={libraryId || index}>
+                        <div className="library_card_header">
+                          <div className="library_icon_cluster">
+                            <i className={library.icon || "ti-archive"}></i>
+                          </div>
+                          <span>{index === 0 ? "Newest" : "Public"}</span>
+                        </div>
+
+                        <div className="library_card_body">
+                          <h3>{getLibraryName(library)}</h3>
+                        </div>
+
+                        <div className="library_card_footer">
+                          <span>{library.documents || 0} docs</span>
+                          <Link
+                            to={
+                              libraryId
+                                ? `/dashboard/libraries/${libraryId}`
+                                : "/dashboard/libraries"
+                            }
+                            state={{
+                              library: { ...library, isPublicView: true, visibility: "public" },
+                              from: "/dashboard/home",
+                            }}
+                          >
+                            Open
+                          </Link>
+                        </div>
+                      </article>
+                    );
+                  })
+                )}
+              </div>
+            </section>
+
+            <aside className="home_side_stack">
+              <div className="home_section_header compact_header">
+                <div>
+                  <span className="home_label">Guest limits</span>
+                  <h2>Read-only access</h2>
+                </div>
+              </div>
+
+              <div className="home_empty_state home_empty_compact">
+                <div className="home_empty_icon">
+                  <i className="ti-lock"></i>
+                </div>
+                <h3>Public browsing mode</h3>
+                <p>Guest accounts can search public libraries and view shared documents. Creating libraries, workspaces, AI chat and flashcards require login.</p>
+                <Link to="/register">Create account</Link>
+              </div>
+            </aside>
+          </section>
+        ) : (
         <section className="home_body_grid">
           <section className="home_main_stack">
             <div className="home_section_header">
               <div>
-                <span className="home_label">Recent materials</span>
-                <h2>Libraries you opened recently</h2>
+                <span className="home_label">AI activity</span>
+                <h2>Your AI study status</h2>
               </div>
 
               {!isGuest && (
-                <Link to="/dashboard/libraries" className="home_text_link">
-                  View all libraries
+                <Link to="/dashboard/flashcards" className="home_text_link">
+                  Study flashcards
                   <i className="ti-arrow-right"></i>
                 </Link>
               )}
             </div>
 
-            <div className="recent_library_grid">
-              {recentLibraries.length === 0 ? (
-                <div className="home_empty_state home_empty_large">
-                  <div className="home_empty_icon">
-                    <i className="ti-folder"></i>
-                  </div>
-                  <h3>No recent libraries yet</h3>
-                  <p>Open or create a library to bring your latest study materials into this area.</p>
-                  <Link to={isGuest ? "/dashboard/search?type=library" : "/dashboard/libraries"}>
-                    {isGuest ? "Browse public libraries" : "Browse libraries"}
-                  </Link>
+            <div className="ai_overview_grid">
+              <article className="ai_overview_card ai_token_card">
+                <div className="ai_overview_icon">
+                  <i className="ti-bolt"></i>
                 </div>
-              ) : (
-                recentLibraries.map((library, index) => {
-                  const libraryId = getItemId(library);
 
-                  return (
-                    <article className="recent_library_card" key={libraryId || index}>
-                      <div className="library_card_header">
-                        <div className="library_icon_cluster">
-                          <i className={library.icon || "ti-archive"}></i>
-                        </div>
-                        <span>{index === 0 ? "Most recent" : "Recent"}</span>
-                      </div>
+                <div className="ai_overview_body">
+                  <span>Tokens remaining today</span>
+                  <strong>
+                    {isGuest
+                      ? "0"
+                      : formatNumber(aiSummary?.tokensRemaining ?? aiSummary?.tokenLimit ?? 0)}
+                  </strong>
+                  <p>
+                    {isGuest
+                      ? "Sign in to use AI chat."
+                      : `${formatNumber(aiSummary?.chatsRemaining || 0)} of ${formatNumber(aiSummary?.chatLimit || 0)} AI chats left`}
+                  </p>
+                </div>
+              </article>
 
-                    <div className="library_card_body">
-                      <h3>
-                        {library.name ||
-                          library.libraryName ||
-                          "Untitled Library"}
-                      </h3>
-                      <p>{library.updated_at ? new Date(library.updated_at).toLocaleDateString() : (library.updatedAt || "Updated just now")}</p>
-                    </div>
+              <article className="ai_overview_card">
+                <div className="ai_overview_icon">
+                  <i className="ti-file"></i>
+                </div>
 
-                      <div className="library_card_footer">
-                        <span>{library.documents || 0} docs</span>
-                        <Link
-                          to={
-                            libraryId
-                              ? `/dashboard/libraries/${libraryId}`
-                              : "/dashboard/libraries"
-                          }
-                        >
-                          Open
-                        </Link>
-                      </div>
-                    </article>
-                  );
-                })
-              )}
+                <div className="ai_overview_body">
+                  <span>Latest AI chat file</span>
+                  <strong>
+                    {latestChatDocument?.title || "No file used yet"}
+                  </strong>
+                  <p>
+                    {latestChatDocument
+                      ? `Library: ${latestChatLibrary?.name || "No library"}`
+                      : "Ask AI about a document to show it here."}
+                  </p>
+                </div>
+
+                {latestChatDocument?.libraryId && (
+                  <Link
+                    to={`/dashboard/libraries/${latestChatDocument.libraryId}`}
+                    className="home_open_btn"
+                  >
+                    Open
+                  </Link>
+                )}
+              </article>
             </div>
           </section>
 
           <aside className="home_side_stack">
             <div className="home_section_header compact_header">
               <div>
-                <span className="home_label">Recent rooms</span>
-                <h2>Workspaces</h2>
+                <span className="home_label">Study card</span>
+                <h2>Latest progress</h2>
               </div>
 
               {!isGuest && (
                 <Link to="/dashboard/workspaces" className="home_text_link compact_link">
-                  View all
+                  Workspaces
                 </Link>
               )}
             </div>
 
-            <div className="recent_workspace_list">
-              {recentWorkspaces.length === 0 ? (
-                <div className="home_empty_state home_empty_compact">
-                  <div className="home_empty_icon">
-                    <i className="ti-briefcase"></i>
+            {latestStudyCard ? (
+              <article className="study_progress_card">
+                <div className="study_progress_top">
+                  <div className="workspace_icon">
+                    <i className="ti-layers"></i>
                   </div>
-                  <h3>No recent workspaces</h3>
-                  <p>Open a workspace once and it will be listed here.</p>
-                  {!isGuest && <Link to="/dashboard/workspaces">Browse workspaces</Link>}
+                  <span>{studyProgress}%</span>
                 </div>
-              ) : (
-                recentWorkspaces.map((workspace, index) => {
-                  const workspaceId = getItemId(workspace);
 
-                  return (
-                    <article className="recent_workspace_card" key={workspaceId || index}>
-                      <div className="workspace_icon">
-                        <i className={workspace.icon || "ti-briefcase"}></i>
-                      </div>
+                <h3>{latestStudyCard.title || "Untitled card set"}</h3>
+                <p>
+                  {studyDoneCards} of {studyTotalCards} cards reviewed
+                </p>
 
-                      <div className="workspace_recent_info">
-                        <h3>{workspace.name || "Untitled Workspace"}</h3>
-                        <p>Workspace</p>
-                      </div>
+                <div className="study_progress_meter" aria-hidden="true">
+                  <span style={{ width: `${studyProgress}%` }} />
+                </div>
 
-                      <Link
-                        to={
-                          workspaceId
-                            ? `/dashboard/workspaces/${workspaceId}`
-                            : "/dashboard/workspaces"
-                        }
-                        className="home_open_btn"
-                      >
-                        Open
-                      </Link>
-                    </article>
-                  );
-                })
-              )}
-            </div>
+                <dl className="study_progress_meta">
+                  <div>
+                    <dt>Workspace</dt>
+                    <dd>{latestStudyWorkspace?.name || "No workspace"}</dd>
+                  </div>
+                  <div>
+                    <dt>Library</dt>
+                    <dd>{latestStudyLibrary?.name || "No library"}</dd>
+                  </div>
+                </dl>
+
+                <Link to="/dashboard/flashcards" className="home_open_btn">
+                  Continue
+                </Link>
+              </article>
+            ) : (
+              <div className="home_empty_state home_empty_compact">
+                <div className="home_empty_icon">
+                  <i className="ti-layers"></i>
+                </div>
+                <h3>No study card yet</h3>
+                <p>Generate flashcards from an approved document to track your latest progress.</p>
+                {!isGuest && <Link to="/dashboard/flashcards">Create flashcards</Link>}
+              </div>
+            )}
           </aside>
         </section>
+        )}
 
         {/* <section className="home_action_grid" aria-label="Quick actions">
           {quickActions.map((action) => (
