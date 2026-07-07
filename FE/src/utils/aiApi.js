@@ -8,3 +8,8 @@ export async function chatWithDocument(documentId, question) {
 
   return response.data.data;
 }
+
+export async function getAiSummary() {
+  const response = await api.get("/ai/summary");
+  return response.data.data;
+}

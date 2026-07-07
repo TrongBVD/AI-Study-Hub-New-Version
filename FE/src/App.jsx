@@ -28,6 +28,7 @@ import Flashcards from "./components/pages/Flashcards/Flashcards.jsx";
 import CreateWorkSpacePage from "./components/pages/CreateWorkSpacePage/CreateWorkSpacePage.jsx";
 import SearchUserPage from "./components/pages/SearchUserPage/SearchUserPage";
 import SearchResultPage from "./components/pages/SearchResultPage/SearchResultPage.jsx";
+import DiscoverPage from "./components/pages/DiscoverPage/DiscoverPage.jsx";
 
 
 // ================= PROTECTED ROUTE =================
@@ -78,6 +79,7 @@ function App() {
           <Route index element={<Navigate to="/dashboard/home" replace />} />
 
           <Route path="home" element={<HomePage />} />
+          <Route path="discover" element={<DiscoverPage />} />
 
           <Route path="libraries" element={<MyLibraryPage />} />
           <Route path="create-library" element={<CreateLibraryPage />} />

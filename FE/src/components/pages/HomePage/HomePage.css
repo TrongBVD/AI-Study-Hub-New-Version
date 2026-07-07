@@ -463,6 +463,180 @@
   gap: 20px;
 }
 
+.ai_overview_grid {
+  display: grid;
+  grid-template-columns: minmax(190px, 0.72fr) minmax(240px, 1fr);
+  gap: 20px;
+}
+
+.ai_overview_card,
+.study_progress_card {
+  min-height: 164px;
+  border-radius: 18px;
+  padding: 16px;
+  color: var(--text-primary);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-soft);
+}
+
+.ai_overview_card {
+  display: grid;
+  grid-template-columns: 46px minmax(0, 1fr);
+  align-items: center;
+  gap: 14px;
+  position: relative;
+}
+
+.ai_overview_card .home_open_btn {
+  grid-column: 2;
+  width: fit-content;
+}
+
+.ai_token_card {
+  background: var(--sidebar-bg);
+  color: var(--bg-card);
+}
+
+.ai_token_card .ai_overview_body p {
+  color: var(--hero-card-bg);
+}
+
+.ai_overview_icon {
+  width: 46px;
+  height: 46px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  color: var(--accent-soft);
+  background: var(--sidebar-bg);
+  box-shadow: var(--shadow-soft);
+  font-size: 18px;
+}
+
+.ai_token_card .ai_overview_icon {
+  color: var(--sidebar-bg);
+  background: var(--accent-soft);
+}
+
+.ai_overview_body {
+  min-width: 0;
+}
+
+.ai_overview_body span {
+  display: block;
+  color: inherit;
+  opacity: 0.72;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.ai_overview_body strong {
+  display: block;
+  margin-top: 8px;
+  font-size: clamp(22px, 3vw, 34px);
+  line-height: 1;
+  letter-spacing: -0.045em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ai_overview_body p {
+  margin: 9px 0 0;
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+.study_progress_card {
+  display: flex;
+  flex-direction: column;
+  gap: 13px;
+}
+
+.study_progress_top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.study_progress_top span {
+  color: var(--accent-color);
+  font-size: 22px;
+  font-weight: 900;
+  letter-spacing: -0.04em;
+}
+
+.study_progress_card h3 {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 18px;
+  line-height: 1.15;
+  letter-spacing: -0.035em;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.study_progress_card p {
+  margin: -4px 0 0;
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.study_progress_meter {
+  height: 9px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: var(--focus-ring);
+}
+
+.study_progress_meter span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--accent-color);
+}
+
+.study_progress_meta {
+  margin: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.study_progress_meta div {
+  display: grid;
+  grid-template-columns: 78px minmax(0, 1fr);
+  gap: 10px;
+}
+
+.study_progress_meta dt,
+.study_progress_meta dd {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.25;
+}
+
+.study_progress_meta dt {
+  color: var(--text-secondary);
+  font-weight: 800;
+}
+
+.study_progress_meta dd {
+  color: var(--text-primary);
+  font-weight: 900;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .recent_library_card {
   min-height: 220px;
   border-radius: 20px;
@@ -822,6 +996,7 @@
   .home_focus_panel,
   .home_stats_strip,
   .recent_library_grid,
+  .ai_overview_grid,
   .recent_workspace_list,
   .home_action_grid {
     gap: 16px;
@@ -847,7 +1022,8 @@
 
   .home_focus_panel,
   .home_stats_strip,
-  .recent_library_grid {
+  .recent_library_grid,
+  .ai_overview_grid {
     grid-template-columns: 1fr;
   }
 
@@ -955,6 +1131,8 @@ body[data-theme="white"] .home_empty_state {
 body[data-theme="white"] .focus_card_dark,
 body[data-theme="white"] .focus_card_light,
 body[data-theme="white"] .recent_library_card,
+body[data-theme="white"] .ai_overview_card,
+body[data-theme="white"] .study_progress_card,
 body[data-theme="white"] .recent_workspace_card,
 body[data-theme="white"] .home_stat_item {
   color: var(--text-primary);
@@ -965,6 +1143,8 @@ body[data-theme="white"] .home_stat_item {
 body[data-theme="white"] .focus_card_dark p,
 body[data-theme="white"] .focus_card_light p,
 body[data-theme="white"] .recent_library_card p,
+body[data-theme="white"] .ai_overview_body p,
+body[data-theme="white"] .study_progress_card p,
 body[data-theme="white"] .recent_workspace_card p {
   color: var(--text-secondary);
 }
@@ -977,10 +1157,20 @@ body[data-theme="white"] .library_card_footer span {
 }
 
 body[data-theme="white"] .home_stat_icon,
-body[data-theme="white"] .library_icon_cluster {
+body[data-theme="white"] .library_icon_cluster,
+body[data-theme="white"] .ai_overview_icon {
   background: var(--accent-soft);
   color: var(--accent-color);
   box-shadow: none;
+}
+
+body[data-theme="white"] .ai_token_card {
+  color: var(--text-primary);
+  background: var(--bg-card);
+}
+
+body[data-theme="white"] .ai_token_card .ai_overview_body p {
+  color: var(--text-secondary);
 }
 
 body[data-theme="white"] .home_stat_item span {
@@ -993,6 +1183,7 @@ body[data-theme="white"] .recent_library_card {
 }
 
 body[data-theme="white"] .recent_library_card:hover,
+body[data-theme="white"] .ai_overview_card:hover,
 body[data-theme="white"] .recent_workspace_card:hover,
 body[data-theme="white"] .quick_action_card:hover {
   background: var(--bg-card);
@@ -1068,6 +1259,8 @@ body[data-theme="black"] .home_empty_state {
 body[data-theme="black"] .focus_card_dark,
 body[data-theme="black"] .focus_card_light,
 body[data-theme="black"] .recent_library_card,
+body[data-theme="black"] .ai_overview_card,
+body[data-theme="black"] .study_progress_card,
 body[data-theme="black"] .recent_workspace_card,
 body[data-theme="black"] .home_stat_item {
   color: var(--text-primary);
@@ -1079,6 +1272,8 @@ body[data-theme="black"] .home_stat_item {
 body[data-theme="black"] .focus_card_dark p,
 body[data-theme="black"] .focus_card_light p,
 body[data-theme="black"] .recent_library_card p,
+body[data-theme="black"] .ai_overview_body p,
+body[data-theme="black"] .study_progress_card p,
 body[data-theme="black"] .recent_workspace_card p,
 body[data-theme="black"] .quick_action_card p {
   color: var(--text-secondary);
@@ -1103,6 +1298,7 @@ body[data-theme="black"] .home_empty_state h3 {
 
 body[data-theme="black"] .home_stat_icon,
 body[data-theme="black"] .library_icon_cluster,
+body[data-theme="black"] .ai_overview_icon,
 body[data-theme="black"] .workspace_icon,
 body[data-theme="black"] .home_empty_icon,
 body[data-theme="black"] .quick_action_card > i,
@@ -1118,6 +1314,7 @@ body[data-theme="black"] .recent_library_card {
 }
 
 body[data-theme="black"] .recent_library_card:hover,
+body[data-theme="black"] .ai_overview_card:hover,
 body[data-theme="black"] .recent_workspace_card:hover,
 body[data-theme="black"] .quick_action_card:hover {
   background: var(--collection-card-hover-bg, var(--bg-elevated));

@@ -69,6 +69,25 @@ function Flashcards() {
       }
 
       setFlashcards(result.data || []);
+      const selectedDocument = documents.find(
+        (doc) => doc.id === selectedDocumentId,
+      );
+      const cards = result.data || [];
+
+      if (selectedDocument) {
+        localStorage.setItem(
+          "aiStudyHubLastStudyCard",
+          JSON.stringify({
+            documentId: selectedDocument.id,
+            title: selectedDocument.title,
+            libraryId: selectedDocument.library_id,
+            workspaceId: selectedDocument.workspace_id,
+            studiedCards: cards.length,
+            totalCards: cards.length,
+            studiedAt: new Date().toISOString(),
+          }),
+        );
+      }
       setMessage("Flashcards generated successfully.");
     } catch (error) {
       setMessage(error.message);

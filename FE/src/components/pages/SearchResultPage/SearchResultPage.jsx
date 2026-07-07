@@ -46,6 +46,8 @@ function SearchResultPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const query = searchParams.get("q") || "";
   const activeFilter = searchParams.get("type") || "all";
+  const isGuest = getStoredUserRole() === "GUEST";
+  const effectiveFilter = activeFilter;
   const [users, setUsers] = useState([]);
   const [workspaces, setWorkspaces] = useState([]);
   const [libraries, setLibraries] = useState([]);
@@ -59,8 +61,6 @@ function SearchResultPage() {
       try {
         setIsLoading(true);
         setError("");
-
-        const isGuest = getStoredUserRole() === "GUEST";
 
         const [matchedUsers, joinedWorkspaces, matchedLibraries] = await Promise.all([
           query.trim().length >= 2 ? searchUsers(query.trim()) : [],
@@ -93,24 +93,24 @@ function SearchResultPage() {
     return () => {
       isMounted = false;
     };
-  }, [query]);
+  }, [isGuest, query]);
 
   const results = useMemo(() => {
     const keyword = normalize(query);
     if (!keyword) return [];
 
     const userResults = users.map((user) => ({
-      id: user.id,
-      type: "user",
-      title: getUserName(user),
-      subtitle: user.username ? `@${user.username}` : user.email,
-      description: user.email || "User in AI Study Hub",
-      badge: user.role || "USER",
-      iconText: getInitials(getUserName(user)),
-      data: user,
-      to: `/dashboard/profile/${user.id}`, 
-      state: { from: `/dashboard/search?q=${query}` },
-    }));
+          id: user.id,
+          type: "user",
+          title: getUserName(user),
+          subtitle: user.username ? `@${user.username}` : user.email,
+          description: user.email || "User in AI Study Hub",
+          badge: user.role || "USER",
+          iconText: getInitials(getUserName(user)),
+          data: user,
+          to: `/dashboard/profile/${user.id}`,
+          state: { from: `/dashboard/search?q=${query}` },
+        }));
 
     const libraryResults = libraries
       .filter((library) =>
@@ -128,10 +128,17 @@ function SearchResultPage() {
         badge: library.visibility || "Library",
         icon: library.icon || "ti-archive",
         to: `/dashboard/libraries/${library.id}`,
-        state: { library, from: `/dashboard/search?q=${query}` },
+        state: {
+          library: isGuest
+            ? { ...library, isPublicView: true, visibility: "public" }
+            : library,
+          from: `/dashboard/search?q=${query}`,
+        },
       }));
 
-    const workspaceResults = workspaces
+    const workspaceResults = isGuest
+      ? []
+      : workspaces
       .filter((workspace) =>
         normalize(
           `${workspace.name} ${workspace.description} ${workspace.role}`,
@@ -154,12 +161,12 @@ function SearchResultPage() {
       }));
 
     return [...userResults, ...libraryResults, ...workspaceResults];
-  }, [query, users, workspaces]);
+  }, [isGuest, libraries, query, users, workspaces]);
 
   const filteredResults =
-    activeFilter === "all"
+    effectiveFilter === "all"
       ? results
-      : results.filter((result) => result.type === activeFilter);
+      : results.filter((result) => result.type === effectiveFilter);
 
   const resultCounts = useMemo(
     () =>
@@ -180,6 +187,10 @@ function SearchResultPage() {
     setSearchParams(nextParams);
   }
 
+  const visibleFilters = isGuest
+    ? FILTERS.filter((filter) => ["all", "user", "library"].includes(filter.value))
+    : FILTERS;
+
   return (
     <main className="search-results-page">
       <header className="search-results-header">
@@ -188,8 +199,9 @@ function SearchResultPage() {
           Results for <strong>“{query}”</strong>
         </h1>
         <p>
-          Find people in the system, your libraries, and workspaces you have
-          joined.
+          {isGuest
+            ? "Guest search includes public libraries and visible user profiles."
+            : "Find people in the system, your libraries, and workspaces you have joined."}
         </p>
       </header>
 
@@ -197,11 +209,11 @@ function SearchResultPage() {
         <aside className="search-filter-panel" aria-label="Filter search results">
           <h2>Filter by</h2>
           <nav>
-            {FILTERS.map((filter) => (
+            {visibleFilters.map((filter) => (
               <button
                 type="button"
                 key={filter.value}
-                className={activeFilter === filter.value ? "active" : ""}
+                className={effectiveFilter === filter.value ? "active" : ""}
                 onClick={() => changeFilter(filter.value)}
               >
                 <i className={filter.icon} />

@@ -6,9 +6,10 @@ import { refreshAccessToken } from "../../../utils/api";
 const GUEST_ALLOWED_PATHS = [
   "/dashboard",
   "/dashboard/home",
-  "/dashboard/search-user",
-  "/dashboard/profile",
+  "/dashboard/discover",
+  "/dashboard/libraries",
   "/dashboard/search",
+  "/dashboard/settings",
 ];
 
 function getStoredUser() {
@@ -26,14 +27,21 @@ function getStoredUser() {
 }
 
 function isGuestAllowedPath(pathname) {
-  // Cho phép Guest xem chi tiết thư viện công khai (vd: /dashboard/libraries/123)
-  // nhưng KHÔNG cho phép vào trang quản lý thư viện cá nhân (/dashboard/libraries)
-  if (pathname.startsWith("/dashboard/libraries/")) {
+  // Cho phép Guest xem catalog public và chi tiết thư viện công khai.
+  if (pathname === "/dashboard") {
     return true;
   }
+
+  if (pathname === "/dashboard/libraries" || pathname.startsWith("/dashboard/libraries/")) {
+    return true;
+  }
+
+  if (pathname.startsWith("/dashboard/profile/")) {
+    return true;
+  }
+
   return GUEST_ALLOWED_PATHS.some(
-    (allowedPath) =>
-      pathname === allowedPath || pathname.startsWith(`${allowedPath}/`),
+    (allowedPath) => pathname === allowedPath,
   );
 }
 

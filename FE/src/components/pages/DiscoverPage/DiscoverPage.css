@@ -1,0 +1,397 @@
+.discover_page {
+  min-height: calc(100vh - 92px);
+  background:
+    linear-gradient(180deg, rgba(15, 23, 42, 0.18), transparent 18rem),
+    #f7f1df;
+  color: #3b2a1a;
+}
+
+.discover_shell {
+  width: min(100% - 3rem, 92rem);
+  margin: 0 auto;
+  padding: 2.5rem 0 5rem;
+}
+
+.discover_hero {
+  min-height: 360px;
+  border: 1px solid var(--border-color);
+  border-radius: 1.3rem;
+  background:
+    linear-gradient(135deg, rgba(47, 32, 21, 0.88), rgba(180, 83, 26, 0.54)),
+    var(--hero-bg);
+  box-shadow: var(--shadow-soft);
+  padding: clamp(2rem, 4vw, 3.5rem) clamp(1.5rem, 4.5vw, 4rem);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(18rem, 25rem);
+  align-items: end;
+  gap: 2rem;
+  overflow: hidden;
+  position: relative;
+}
+
+.discover_hero::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.08) 1px, transparent 1px);
+  background-size: 3.2rem 3.2rem;
+  opacity: 0.28;
+}
+
+.discover_hero > * {
+  position: relative;
+  z-index: 1;
+}
+
+.discover_hero_copy span,
+.discover_featured_user > span,
+.discover_section_title p,
+.discover_card_body em {
+  color: var(--accent-color);
+  font-size: 0.76rem;
+  font-weight: 850;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.discover_hero_copy h1 {
+  max-width: 48rem;
+  margin: 0.75rem 0 0;
+  color: #fff8ec;
+  font-size: clamp(2.4rem, 5.2vw, 5.25rem);
+  line-height: 0.98;
+}
+
+.discover_hero_copy p {
+  max-width: 40rem;
+  margin: 1.1rem 0 0;
+  color: rgba(255, 248, 236, 0.78);
+  font-size: 1rem;
+  line-height: 1.7;
+}
+
+.discover_featured_user {
+  border: 1px solid rgba(255, 248, 236, 0.22);
+  border-radius: 1rem;
+  background: rgba(22, 17, 13, 0.42);
+  backdrop-filter: blur(18px);
+  padding: 1.35rem;
+}
+
+.discover_user_avatar {
+  width: 3.2rem;
+  height: 3.2rem;
+  border-radius: 0.85rem;
+  background: var(--accent-color);
+  color: var(--button-text);
+  display: grid;
+  place-items: center;
+  font-weight: 900;
+}
+
+.discover_featured_user .discover_user_avatar {
+  margin-top: 2.2rem;
+}
+
+.discover_featured_user h2 {
+  margin: 0.9rem 0 0.35rem;
+  color: #fff8ec;
+  font-size: 1.65rem;
+}
+
+.discover_featured_user p {
+  margin: 0;
+  color: rgba(255, 248, 236, 0.72);
+}
+
+.discover_library_card {
+  min-height: 0;
+  border: 1px solid rgba(118, 80, 48, 0.16);
+  border-radius: 18px;
+  background: #fffaf2;
+  color: #3b2a1a;
+  box-shadow: 0 14px 30px rgba(74, 45, 24, 0.08);
+  display: grid;
+  grid-template-rows: 145px minmax(0, 1fr);
+  overflow: hidden;
+  text-decoration: none;
+  transition:
+    transform 200ms ease,
+    border-color 200ms ease,
+    box-shadow 200ms ease;
+}
+
+.discover_library_card:hover {
+  border-color: rgba(180, 83, 26, 0.34);
+  box-shadow: 0 20px 42px rgba(74, 45, 24, 0.14);
+  transform: translateY(-4px);
+}
+
+.discover_library_card.wide {
+  min-height: 20rem;
+  grid-template-rows: 145px minmax(0, 1fr);
+}
+
+.discover_card_art {
+  padding: 1rem;
+  background: var(--discover-cover);
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  color: #fff8ec;
+  font-size: 1.3rem;
+}
+
+.discover_card_art span {
+  border-radius: 999px;
+  background: var(--discover-badge);
+  padding: 0.35rem 0.6rem;
+  font-size: 0.72rem;
+  font-weight: 900;
+}
+
+.discover_card_body {
+  padding: 1rem 1.1rem 1.05rem;
+  display: grid;
+  gap: 1rem;
+}
+
+.discover_card_body strong {
+  display: block;
+  font-size: 1.05rem;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.discover_card_body p {
+  margin: 0.35rem 0 0;
+  color: #6f5a49;
+  font-size: 0.85rem;
+  line-height: 1.45;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.discover_card_body footer {
+  border-top: 1px solid rgba(118, 80, 48, 0.18);
+  padding-top: 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.discover_card_body footer span {
+  color: #5f4a3b;
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.discover_card_body footer em {
+  margin-left: auto;
+  color: #8b7767;
+  font-size: 0.68rem;
+  font-style: normal;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.discover_section {
+  margin-top: 2rem;
+}
+
+.discover_section_title {
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.discover_section_title h2 {
+  margin: 0;
+  font-size: clamp(1.55rem, 2.5vw, 2.25rem);
+}
+
+.discover_section_title p {
+  margin: 0;
+  color: var(--text-muted);
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 0.9rem;
+}
+
+.discover_card_grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.discover_split {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.2rem;
+}
+
+.discover_list {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.discover_list .discover_library_card {
+  min-height: 10rem;
+  grid-template-columns: 8rem minmax(0, 1fr);
+  grid-template-rows: 1fr;
+}
+
+.discover_list .discover_card_art {
+  min-height: 100%;
+}
+
+.discover_users {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.9rem;
+}
+
+.discover_user_card {
+  border: 1px solid var(--border-color);
+  border-radius: 0.9rem;
+  background: var(--bg-card);
+  box-shadow: var(--shadow-soft);
+  padding: 1rem;
+  display: grid;
+  gap: 0.85rem;
+}
+
+.discover_user_card > span {
+  color: var(--accent-color);
+  font-weight: 900;
+}
+
+.discover_user_card strong {
+  display: block;
+  line-height: 1.25;
+}
+
+.discover_user_card p {
+  margin: 0.35rem 0 0;
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
+.discover_empty,
+.discover_error {
+  border: 1px solid var(--border-color);
+  border-radius: 1rem;
+  background: var(--bg-card);
+  box-shadow: var(--shadow-soft);
+}
+
+.discover_empty {
+  min-height: 18rem;
+  margin-top: 1.5rem;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 0.7rem;
+  text-align: center;
+}
+
+.discover_empty i {
+  color: var(--accent-color);
+  font-size: 2rem;
+}
+
+.discover_empty h2,
+.discover_empty p {
+  margin: 0;
+}
+
+.discover_empty p {
+  color: var(--text-secondary);
+}
+
+.discover_error {
+  margin: 1rem 0 0;
+  padding: 0.9rem 1rem;
+  color: var(--danger-color);
+}
+
+body[data-theme="white"] .discover_hero {
+  background:
+    linear-gradient(135deg, rgba(15, 23, 42, 0.84), rgba(37, 99, 235, 0.58)),
+    var(--hero-bg);
+}
+
+body[data-theme="black"] .discover_hero {
+  background: linear-gradient(135deg, #171717 0%, #242424 100%);
+}
+
+body[data-theme="white"] .discover_page,
+body[data-theme="black"] .discover_page {
+  background: var(--bg-primary);
+  color: var(--text-primary);
+}
+
+body[data-theme="white"] .discover_library_card,
+body[data-theme="black"] .discover_library_card {
+  border-color: var(--border-color);
+  background: var(--bg-card);
+  color: var(--text-primary);
+}
+
+body[data-theme="white"] .discover_card_body p,
+body[data-theme="black"] .discover_card_body p {
+  color: var(--text-secondary);
+}
+
+body[data-theme="white"] .discover_card_body footer,
+body[data-theme="black"] .discover_card_body footer {
+  border-top-color: var(--border-color);
+}
+
+body[data-theme="white"] .discover_card_body footer span,
+body[data-theme="black"] .discover_card_body footer span {
+  color: var(--text-secondary);
+}
+
+@media (max-width: 70rem) {
+  .discover_hero,
+  .discover_split {
+    grid-template-columns: 1fr;
+  }
+
+  .discover_card_grid,
+  .discover_users {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 44rem) {
+  .discover_shell {
+    width: min(100% - 1.2rem, 92rem);
+    padding-top: 1rem;
+  }
+
+  .discover_card_grid,
+  .discover_users {
+    grid-template-columns: 1fr;
+  }
+
+  .discover_list .discover_library_card {
+    grid-template-columns: 1fr;
+    grid-template-rows: 8rem minmax(0, 1fr);
+  }
+
+  .discover_section_title {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}

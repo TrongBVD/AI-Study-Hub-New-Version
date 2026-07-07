@@ -337,7 +337,7 @@ function PersonalProfile() {
         <div className="profile_bio_panel">
           <div className="profile_bio_header">
             <h3>About me</h3>
-            {!isEditingBio && (
+            {isOwnProfile && !isEditingBio && (
               <button type="button" onClick={() => setIsEditingBio(true)}>
                 Edit
               </button>
