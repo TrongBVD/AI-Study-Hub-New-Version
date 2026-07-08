@@ -53,6 +53,79 @@ const WORKSPACE_DOCUMENT_SELECT = `
     full_name
   )
 `;
+const DISCUSSION_TOPIC_SELECT = `
+  id,
+  workspace_id,
+  created_by,
+  title,
+  content,
+  topic_type,
+  status,
+  priority,
+  date_mode,
+  start_date,
+  end_date,
+  is_pinned,
+  created_at,
+  updated_at,
+  creator:profiles!workspace_discussion_topics_created_by_fkey (
+    id,
+    email,
+    username,
+    full_name,
+    avatar_url
+  ),
+  comments:workspace_discussion_comments (
+    id,
+    topic_id,
+    user_id,
+    content,
+    is_edited,
+    created_at,
+    updated_at,
+    author:profiles!workspace_discussion_comments_user_id_fkey (
+      id,
+      email,
+      username,
+      full_name,
+      avatar_url
+    )
+  ),
+  subtasks:workspace_discussion_subtasks (
+    id,
+    topic_id,
+    created_by,
+    title,
+    is_done,
+    sort_order,
+    created_at,
+    updated_at,
+    creator:profiles!workspace_discussion_subtasks_created_by_fkey (
+      id,
+      email,
+      username,
+      full_name,
+      avatar_url
+    )
+  ),
+  attachments:workspace_discussion_attachments (
+    id,
+    topic_id,
+    uploaded_by,
+    file_name,
+    file_url,
+    file_size_bytes,
+    mime_type,
+    created_at,
+    uploader:profiles!workspace_discussion_attachments_uploaded_by_fkey (
+      id,
+      email,
+      username,
+      full_name,
+      avatar_url
+    )
+  )
+`;
 
 function getFrontendUrl() {
   return (process.env.FRONTEND_URL || "http://localhost:5173").replace(/\/+$/, "");
@@ -148,6 +221,31 @@ async function countWorkspaceAdmins(workspaceId) {
   return count || 0;
 }
 
+async function getWorkspaceDiscussionAccess(workspaceId, userId) {
+  const access = await getWorkspaceAccess(workspaceId, userId);
+  if (!access.workspace || !access.member) {
+    return { ...access, canReadDiscussion: false, canWriteDiscussion: false };
+  }
+
+  const canWriteDiscussion =
+    access.isAdmin || ["Admin", "Editor"].includes(access.member?.role);
+
+  return { ...access, canReadDiscussion: true, canWriteDiscussion };
+}
+
+async function getDiscussionTopicInWorkspace(workspaceId, topicId) {
+  const { data, error } = await supabase
+    .from("workspace_discussion_topics")
+    .select("id")
+    .eq("workspace_id", workspaceId)
+    .eq("id", topicId)
+    .is("deleted_at", null)
+    .maybeSingle();
+
+  if (error) throw error;
+  return data;
+}
+
 function mapWorkspaceMessage(row) {
   const sender = row.sender || {};
   return {
@@ -200,6 +298,84 @@ function mapWorkspaceDocument(row) {
     uploaderName:
       uploader.full_name || uploader.username || uploader.email || "Unknown user",
     uploaderEmail: uploader.email || "",
+  };
+}
+
+function mapDiscussionUser(user, fallback = "Workspace member") {
+  return {
+    id: user?.id || null,
+    email: user?.email || "",
+    username: user?.username || "",
+    fullName: user?.full_name || "",
+    avatarUrl: user?.avatar_url || "",
+    name: user?.full_name || user?.username || user?.email || fallback,
+  };
+}
+
+function mapDiscussionComment(row) {
+  return {
+    id: row.id,
+    topicId: row.topic_id,
+    userId: row.user_id,
+    content: row.content,
+    isEdited: row.is_edited === true,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    author: mapDiscussionUser(row.author),
+  };
+}
+
+function mapDiscussionSubtask(row) {
+  return {
+    id: row.id,
+    topicId: row.topic_id,
+    createdBy: row.created_by,
+    title: row.title,
+    isDone: row.is_done === true,
+    sortOrder: row.sort_order || 0,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    creator: mapDiscussionUser(row.creator),
+  };
+}
+
+function mapDiscussionAttachment(row) {
+  return {
+    id: row.id,
+    topicId: row.topic_id,
+    uploadedBy: row.uploaded_by,
+    fileName: row.file_name,
+    fileUrl: row.file_url,
+    fileSizeBytes: row.file_size_bytes || 0,
+    mimeType: row.mime_type || "",
+    createdAt: row.created_at,
+    uploader: mapDiscussionUser(row.uploader),
+  };
+}
+
+function mapDiscussionTopic(row) {
+  const creator = row.creator || {};
+
+  return {
+    id: row.id,
+    workspaceId: row.workspace_id,
+    createdBy: row.created_by,
+    creator: creator.full_name || creator.username || creator.email || "Workspace member",
+    creatorDetails: mapDiscussionUser(creator),
+    title: row.title,
+    content: row.content || "",
+    type: row.topic_type,
+    status: row.status,
+    priority: row.priority,
+    dateMode: row.date_mode,
+    startDate: row.start_date,
+    endDate: row.end_date,
+    isPinned: row.is_pinned === true,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    comments: (row.comments || []).map(mapDiscussionComment),
+    subtasks: (row.subtasks || []).map(mapDiscussionSubtask),
+    files: (row.attachments || []).map(mapDiscussionAttachment),
   };
 }
 
@@ -938,6 +1114,597 @@ exports.reviewDocument = async (req, res) => {
     return res.status(500).json({
       status: "error",
       message: "Could not review workspace document.",
+      error: error.message,
+    });
+  }
+};
+
+exports.listDiscussionTopics = async (req, res) => {
+  try {
+    const { workspaceId } = req.params;
+    const access = await getWorkspaceDiscussionAccess(workspaceId, req.user.id);
+
+    if (!access.workspace || !access.canReadDiscussion) {
+      return res.status(403).json({
+        status: "error",
+        message: "You cannot access this workspace discussion.",
+      });
+    }
+
+    const { data, error } = await supabase
+      .from("workspace_discussion_topics")
+      .select(DISCUSSION_TOPIC_SELECT)
+      .eq("workspace_id", workspaceId)
+      .is("deleted_at", null)
+      .order("is_pinned", { ascending: false })
+      .order("updated_at", { ascending: false });
+
+    if (error) throw error;
+
+    return res.status(200).json({
+      status: "success",
+      data: (data || []).map(mapDiscussionTopic),
+    });
+  } catch (error) {
+    console.error("listDiscussionTopics error:", error);
+    return res.status(500).json({
+      status: "error",
+      message: "Could not load discussion topics.",
+      error: error.message,
+    });
+  }
+};
+
+exports.createDiscussionTopic = async (req, res) => {
+  try {
+    const { workspaceId } = req.params;
+    const access = await getWorkspaceDiscussionAccess(workspaceId, req.user.id);
+
+    if (!access.workspace || !access.canWriteDiscussion) {
+      return res.status(403).json({
+        status: "error",
+        message: "Only workspace editors and admins can create discussion topics.",
+      });
+    }
+
+    const title = String(req.body.title || "").trim();
+    if (!title) {
+      return res.status(400).json({
+        status: "error",
+        message: "Topic title is required.",
+      });
+    }
+
+    const payload = {
+      workspace_id: workspaceId,
+      created_by: req.user.id,
+      title,
+      content: String(req.body.content || "").trim() || null,
+      topic_type: req.body.topicType || "Question",
+      status: req.body.status || "Open",
+      priority: req.body.priority || "Normal",
+      date_mode: req.body.dateMode || "none",
+      start_date: req.body.startDate || null,
+      end_date: req.body.endDate || null,
+      is_pinned: req.body.isPinned === true,
+    };
+
+    const { data, error } = await supabase
+      .from("workspace_discussion_topics")
+      .insert(payload)
+      .select(DISCUSSION_TOPIC_SELECT)
+      .single();
+
+    if (error) throw error;
+
+    return res.status(201).json({
+      status: "success",
+      data: mapDiscussionTopic(data),
+    });
+  } catch (error) {
+    console.error("createDiscussionTopic error:", error);
+    return res.status(500).json({
+      status: "error",
+      message: "Could not create discussion topic.",
+      error: error.message,
+    });
+  }
+};
+
+exports.updateDiscussionTopic = async (req, res) => {
+  try {
+    const { workspaceId, topicId } = req.params;
+    const access = await getWorkspaceDiscussionAccess(workspaceId, req.user.id);
+
+    if (!access.workspace || !access.canWriteDiscussion) {
+      return res.status(403).json({
+        status: "error",
+        message: "Only workspace editors and admins can update discussion topics.",
+      });
+    }
+
+    const updatePayload = {};
+    const fields = {
+      title: "title",
+      content: "content",
+      topicType: "topic_type",
+      status: "status",
+      priority: "priority",
+      dateMode: "date_mode",
+      startDate: "start_date",
+      endDate: "end_date",
+      isPinned: "is_pinned",
+    };
+
+    Object.entries(fields).forEach(([bodyKey, column]) => {
+      if (req.body[bodyKey] !== undefined) {
+        updatePayload[column] = req.body[bodyKey];
+      }
+    });
+
+    if (typeof updatePayload.title === "string") {
+      updatePayload.title = updatePayload.title.trim();
+      if (!updatePayload.title) {
+        return res.status(400).json({
+          status: "error",
+          message: "Topic title is required.",
+        });
+      }
+    }
+
+    if (typeof updatePayload.content === "string") {
+      updatePayload.content = updatePayload.content.trim();
+    }
+
+    updatePayload.updated_at = new Date().toISOString();
+
+    const { data, error } = await supabase
+      .from("workspace_discussion_topics")
+      .update(updatePayload)
+      .eq("workspace_id", workspaceId)
+      .eq("id", topicId)
+      .is("deleted_at", null)
+      .select(DISCUSSION_TOPIC_SELECT)
+      .maybeSingle();
+
+    if (error) throw error;
+    if (!data) {
+      return res.status(404).json({
+        status: "error",
+        message: "Discussion topic not found.",
+      });
+    }
+
+    return res.status(200).json({
+      status: "success",
+      data: mapDiscussionTopic(data),
+    });
+  } catch (error) {
+    console.error("updateDiscussionTopic error:", error);
+    return res.status(500).json({
+      status: "error",
+      message: "Could not update discussion topic.",
+      error: error.message,
+    });
+  }
+};
+
+exports.deleteDiscussionTopic = async (req, res) => {
+  try {
+    const { workspaceId, topicId } = req.params;
+    const access = await getWorkspaceDiscussionAccess(workspaceId, req.user.id);
+
+    if (!access.workspace || !access.canWriteDiscussion) {
+      return res.status(403).json({
+        status: "error",
+        message: "Only workspace editors and admins can delete discussion topics.",
+      });
+    }
+
+    const { error } = await supabase
+      .from("workspace_discussion_topics")
+      .update({ deleted_at: new Date().toISOString() })
+      .eq("workspace_id", workspaceId)
+      .eq("id", topicId);
+
+    if (error) throw error;
+
+    return res.status(200).json({
+      status: "success",
+      message: "Discussion topic deleted.",
+    });
+  } catch (error) {
+    console.error("deleteDiscussionTopic error:", error);
+    return res.status(500).json({
+      status: "error",
+      message: "Could not delete discussion topic.",
+      error: error.message,
+    });
+  }
+};
+
+exports.addDiscussionComment = async (req, res) => {
+  try {
+    const { workspaceId, topicId } = req.params;
+    const access = await getWorkspaceDiscussionAccess(workspaceId, req.user.id);
+
+    if (!access.workspace || !access.canReadDiscussion) {
+      return res.status(403).json({
+        status: "error",
+        message: "You cannot access this workspace discussion.",
+      });
+    }
+
+    const content = String(req.body.content || "").trim();
+    if (!content) {
+      return res.status(400).json({
+        status: "error",
+        message: "Comment content is required.",
+      });
+    }
+
+    const { data: topic, error: topicError } = await supabase
+      .from("workspace_discussion_topics")
+      .select("id")
+      .eq("workspace_id", workspaceId)
+      .eq("id", topicId)
+      .is("deleted_at", null)
+      .maybeSingle();
+
+    if (topicError) throw topicError;
+    if (!topic) {
+      return res.status(404).json({
+        status: "error",
+        message: "Discussion topic not found.",
+      });
+    }
+
+    const { data, error } = await supabase
+      .from("workspace_discussion_comments")
+      .insert({
+        topic_id: topicId,
+        user_id: req.user.id,
+        content,
+      })
+      .select(
+        `
+        id,
+        topic_id,
+        user_id,
+        content,
+        is_edited,
+        created_at,
+        updated_at,
+        author:profiles!workspace_discussion_comments_user_id_fkey (
+          id,
+          email,
+          username,
+          full_name,
+          avatar_url
+        )
+      `,
+      )
+      .single();
+
+    if (error) throw error;
+
+    return res.status(201).json({
+      status: "success",
+      data: mapDiscussionComment(data),
+    });
+  } catch (error) {
+    console.error("addDiscussionComment error:", error);
+    return res.status(500).json({
+      status: "error",
+      message: "Could not add comment.",
+      error: error.message,
+    });
+  }
+};
+
+exports.addDiscussionSubtask = async (req, res) => {
+  try {
+    const { workspaceId, topicId } = req.params;
+    const access = await getWorkspaceDiscussionAccess(workspaceId, req.user.id);
+
+    if (!access.workspace || !access.canWriteDiscussion) {
+      return res.status(403).json({
+        status: "error",
+        message: "Only workspace editors and admins can add subtasks.",
+      });
+    }
+
+    const topic = await getDiscussionTopicInWorkspace(workspaceId, topicId);
+    if (!topic) {
+      return res.status(404).json({
+        status: "error",
+        message: "Discussion topic not found.",
+      });
+    }
+
+    const title = String(req.body.title || "").trim();
+    if (!title) {
+      return res.status(400).json({
+        status: "error",
+        message: "Subtask title is required.",
+      });
+    }
+
+    const { data, error } = await supabase
+      .from("workspace_discussion_subtasks")
+      .insert({
+        topic_id: topicId,
+        created_by: req.user.id,
+        title,
+        is_done: false,
+        sort_order: Number(req.body.sortOrder || 0),
+      })
+      .select(
+        `
+        id,
+        topic_id,
+        created_by,
+        title,
+        is_done,
+        sort_order,
+        created_at,
+        updated_at,
+        creator:profiles!workspace_discussion_subtasks_created_by_fkey (
+          id,
+          email,
+          username,
+          full_name,
+          avatar_url
+        )
+      `,
+      )
+      .single();
+
+    if (error) throw error;
+
+    return res.status(201).json({
+      status: "success",
+      data: mapDiscussionSubtask(data),
+    });
+  } catch (error) {
+    console.error("addDiscussionSubtask error:", error);
+    return res.status(500).json({
+      status: "error",
+      message: "Could not add subtask.",
+      error: error.message,
+    });
+  }
+};
+
+exports.updateDiscussionSubtask = async (req, res) => {
+  try {
+    const { workspaceId, topicId, subtaskId } = req.params;
+    const access = await getWorkspaceDiscussionAccess(workspaceId, req.user.id);
+
+    if (!access.workspace || !access.canWriteDiscussion) {
+      return res.status(403).json({
+        status: "error",
+        message: "Only workspace editors and admins can update subtasks.",
+      });
+    }
+
+    const topic = await getDiscussionTopicInWorkspace(workspaceId, topicId);
+    if (!topic) {
+      return res.status(404).json({
+        status: "error",
+        message: "Discussion topic not found.",
+      });
+    }
+
+    const updatePayload = {};
+    if (req.body.title !== undefined) updatePayload.title = String(req.body.title || "").trim();
+    if (req.body.isDone !== undefined) updatePayload.is_done = req.body.isDone === true || req.body.isDone === "true";
+    if (req.body.sortOrder !== undefined) updatePayload.sort_order = Number(req.body.sortOrder || 0);
+    updatePayload.updated_at = new Date().toISOString();
+
+    const { data, error } = await supabase
+      .from("workspace_discussion_subtasks")
+      .update(updatePayload)
+      .eq("id", subtaskId)
+      .eq("topic_id", topicId)
+      .select(
+        `
+        id,
+        topic_id,
+        created_by,
+        title,
+        is_done,
+        sort_order,
+        created_at,
+        updated_at,
+        creator:profiles!workspace_discussion_subtasks_created_by_fkey (
+          id,
+          email,
+          username,
+          full_name,
+          avatar_url
+        )
+      `,
+      )
+      .maybeSingle();
+
+    if (error) throw error;
+    if (!data) {
+      return res.status(404).json({
+        status: "error",
+        message: "Subtask not found.",
+      });
+    }
+
+    return res.status(200).json({
+      status: "success",
+      data: mapDiscussionSubtask(data),
+    });
+  } catch (error) {
+    console.error("updateDiscussionSubtask error:", error);
+    return res.status(500).json({
+      status: "error",
+      message: "Could not update subtask.",
+      error: error.message,
+    });
+  }
+};
+
+exports.deleteDiscussionSubtask = async (req, res) => {
+  try {
+    const { workspaceId, topicId, subtaskId } = req.params;
+    const access = await getWorkspaceDiscussionAccess(workspaceId, req.user.id);
+
+    if (!access.workspace || !access.canWriteDiscussion) {
+      return res.status(403).json({
+        status: "error",
+        message: "Only workspace editors and admins can delete subtasks.",
+      });
+    }
+
+    const topic = await getDiscussionTopicInWorkspace(workspaceId, topicId);
+    if (!topic) {
+      return res.status(404).json({
+        status: "error",
+        message: "Discussion topic not found.",
+      });
+    }
+
+    const { error } = await supabase
+      .from("workspace_discussion_subtasks")
+      .delete()
+      .eq("id", subtaskId)
+      .eq("topic_id", topicId);
+
+    if (error) throw error;
+
+    return res.status(200).json({
+      status: "success",
+      message: "Subtask deleted.",
+    });
+  } catch (error) {
+    console.error("deleteDiscussionSubtask error:", error);
+    return res.status(500).json({
+      status: "error",
+      message: "Could not delete subtask.",
+      error: error.message,
+    });
+  }
+};
+
+exports.addDiscussionAttachment = async (req, res) => {
+  try {
+    const { workspaceId, topicId } = req.params;
+    const access = await getWorkspaceDiscussionAccess(workspaceId, req.user.id);
+
+    if (!access.workspace || !access.canWriteDiscussion) {
+      return res.status(403).json({
+        status: "error",
+        message: "Only workspace editors and admins can add discussion attachments.",
+      });
+    }
+
+    const topic = await getDiscussionTopicInWorkspace(workspaceId, topicId);
+    if (!topic) {
+      return res.status(404).json({
+        status: "error",
+        message: "Discussion topic not found.",
+      });
+    }
+
+    const fileName = String(req.body.fileName || "").trim();
+    const fileUrl = String(req.body.fileUrl || "").trim();
+    if (!fileName || !fileUrl) {
+      return res.status(400).json({
+        status: "error",
+        message: "fileName and fileUrl are required.",
+      });
+    }
+
+    const { data, error } = await supabase
+      .from("workspace_discussion_attachments")
+      .insert({
+        topic_id: topicId,
+        uploaded_by: req.user.id,
+        file_name: fileName,
+        file_url: fileUrl,
+        file_size_bytes: Number(req.body.fileSizeBytes || 0),
+        mime_type: String(req.body.mimeType || "").trim() || null,
+      })
+      .select(
+        `
+        id,
+        topic_id,
+        uploaded_by,
+        file_name,
+        file_url,
+        file_size_bytes,
+        mime_type,
+        created_at,
+        uploader:profiles!workspace_discussion_attachments_uploaded_by_fkey (
+          id,
+          email,
+          username,
+          full_name,
+          avatar_url
+        )
+      `,
+      )
+      .single();
+
+    if (error) throw error;
+
+    return res.status(201).json({
+      status: "success",
+      data: mapDiscussionAttachment(data),
+    });
+  } catch (error) {
+    console.error("addDiscussionAttachment error:", error);
+    return res.status(500).json({
+      status: "error",
+      message: "Could not add discussion attachment.",
+      error: error.message,
+    });
+  }
+};
+
+exports.deleteDiscussionAttachment = async (req, res) => {
+  try {
+    const { workspaceId, topicId, attachmentId } = req.params;
+    const access = await getWorkspaceDiscussionAccess(workspaceId, req.user.id);
+
+    if (!access.workspace || !access.canWriteDiscussion) {
+      return res.status(403).json({
+        status: "error",
+        message: "Only workspace editors and admins can delete discussion attachments.",
+      });
+    }
+
+    const topic = await getDiscussionTopicInWorkspace(workspaceId, topicId);
+    if (!topic) {
+      return res.status(404).json({
+        status: "error",
+        message: "Discussion topic not found.",
+      });
+    }
+
+    const { error } = await supabase
+      .from("workspace_discussion_attachments")
+      .delete()
+      .eq("id", attachmentId)
+      .eq("topic_id", topicId);
+
+    if (error) throw error;
+
+    return res.status(200).json({
+      status: "success",
+      message: "Discussion attachment deleted.",
+    });
+  } catch (error) {
+    console.error("deleteDiscussionAttachment error:", error);
+    return res.status(500).json({
+      status: "error",
+      message: "Could not delete discussion attachment.",
       error: error.message,
     });
   }

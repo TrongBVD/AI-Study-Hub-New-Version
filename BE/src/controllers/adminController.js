@@ -232,9 +232,69 @@ exports.getUsers = async (req, res) => {
 
     if (error) throw error;
 
+    const userIds = (data || []).map((user) => user.id);
+
+    const [
+      { data: workspaceRows, error: workspaceError },
+      { data: libraryRows, error: libraryError },
+      { data: quotaRows, error: quotaError },
+    ] = await Promise.all([
+      userIds.length
+        ? supabase
+            .from("workspace_members")
+            .select("user_id")
+            .in("user_id", userIds)
+        : Promise.resolve({ data: [], error: null }),
+      userIds.length
+        ? supabase
+            .from("libraries")
+            .select("user_id")
+            .in("user_id", userIds)
+        : Promise.resolve({ data: [], error: null }),
+      userIds.length
+        ? supabase
+            .from("daily_quota_usage")
+            .select("user_id, bytes_uploaded, bytes_downloaded")
+            .in("user_id", userIds)
+        : Promise.resolve({ data: [], error: null }),
+    ]);
+
+    if (workspaceError) throw workspaceError;
+    if (libraryError) throw libraryError;
+    if (quotaError) throw quotaError;
+
+    const workspaceCounts = new Map();
+    (workspaceRows || []).forEach((row) => {
+      workspaceCounts.set(
+        row.user_id,
+        (workspaceCounts.get(row.user_id) || 0) + 1,
+      );
+    });
+
+    const libraryCounts = new Map();
+    (libraryRows || []).forEach((row) => {
+      libraryCounts.set(row.user_id, (libraryCounts.get(row.user_id) || 0) + 1);
+    });
+
+    const storageTotals = new Map();
+    (quotaRows || []).forEach((row) => {
+      storageTotals.set(
+        row.user_id,
+        (storageTotals.get(row.user_id) || 0) +
+          Number(row.bytes_uploaded || 0) +
+          Number(row.bytes_downloaded || 0),
+      );
+    });
+
     return res.status(200).json({
       status: "success",
-      data: data || [],
+      data: (data || []).map((user) => ({
+        ...user,
+        workspace_count: workspaceCounts.get(user.id) || 0,
+        library_count: libraryCounts.get(user.id) || 0,
+        storage_used_bytes: storageTotals.get(user.id) || 0,
+        storage_quota_bytes: 50 * 1024 * 1024,
+      })),
     });
   } catch (error) {
     console.error("Admin get users error:", error);

@@ -350,7 +350,7 @@
 .ai-moderation-page__table-head,
 .ai-moderation-page__case-row {
   display: grid;
-  grid-template-columns: 28px 34px minmax(180px, 1.35fr) minmax(130px, 1fr) 90px 100px 118px 16px;
+  grid-template-columns: 28px 34px minmax(180px, 1.35fr) minmax(130px, 1fr) 90px 118px 16px;
   gap: 10px;
   align-items: center;
 }
@@ -476,12 +476,6 @@
 .ai-moderation-page__severity.medium {
   background: #f5dfc0;
   color: #8b4a15;
-}
-
-.ai-moderation-page__confidence {
-  font-size: 11px;
-  font-weight: 800;
-  font-variant-numeric: tabular-nums;
 }
 
 .ai-moderation-page__status-pill {
@@ -791,7 +785,7 @@
 
   .ai-moderation-page__table-head,
   .ai-moderation-page__case-row {
-    grid-template-columns: 28px 34px minmax(180px, 1.4fr) minmax(130px, 1fr) 85px 90px 112px 16px;
+    grid-template-columns: 28px 34px minmax(180px, 1.4fr) minmax(130px, 1fr) 85px 112px 16px;
   }
 }
 
@@ -833,7 +827,6 @@
     grid-column: 3;
   }
 
-  .ai-moderation-page__confidence,
   .ai-moderation-page__status-pill {
     grid-column: auto;
   }
@@ -883,7 +876,6 @@
 
   .ai-moderation-page__uploader-cell,
   .ai-moderation-page__severity,
-  .ai-moderation-page__confidence,
   .ai-moderation-page__status-pill {
     grid-column: 3;
   }

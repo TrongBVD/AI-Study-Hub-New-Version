@@ -3,11 +3,19 @@ import { createAppNotification } from "../../../utils/notificationStore.js";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   addWorkspaceMember,
+  addWorkspaceDiscussionComment,
+  addWorkspaceDiscussionAttachment,
+  addWorkspaceDiscussionSubtask,
   getWorkspaceMembers,
+  getWorkspaceDiscussionTopics,
   removeWorkspaceMember,
   searchWorkspaceUsers,
   getWorkspace,
   updateWorkspace,
+  updateWorkspaceDiscussionTopic,
+  deleteWorkspaceDiscussionAttachment,
+  deleteWorkspaceDiscussionSubtask,
+  deleteWorkspaceDiscussionTopic,
   updateWorkspaceMemberRole,
   deleteWorkspace,
   getWorkspaceMessages,
@@ -16,6 +24,7 @@ import {
   getWorkspaceDocuments,
   reviewWorkspaceDocument,
   generateWorkspaceDocumentFlashcards,
+  createWorkspaceDiscussionTopic,
 } from "../../../utils/workspaceApi";
 import { uploadDocuments } from "../../../utils/documentApi";
 import "./WorkSpacePage.css";
@@ -233,7 +242,6 @@ const [newTopicPriority, setNewTopicPriority] = useState("Normal");
 const [newTopicDateMode, setNewTopicDateMode] = useState("none");
 const [newTopicStartDate, setNewTopicStartDate] = useState("");
 const [newTopicEndDate, setNewTopicEndDate] = useState("");
-  const [topicFiles, setTopicFiles] = useState([]);
   const [topicCommentInput, setTopicCommentInput] = useState("");
 const [topicSubtaskInput, setTopicSubtaskInput] = useState("");
 const [isSubtaskEditing, setIsSubtaskEditing] = useState(false);
@@ -262,6 +270,7 @@ const [isSubtaskPriorityOpen, setIsSubtaskPriorityOpen] = useState(false);
   const [isInviteSearching, setIsInviteSearching] = useState(false);
   const [isAddingMember, setIsAddingMember] = useState(false);
   const [backendMembers, setBackendMembers] = useState([]);
+  const [memberSearchQuery, setMemberSearchQuery] = useState("");
   const [memberActionStatus, setMemberActionStatus] = useState("");
   const [memberActionId, setMemberActionId] = useState("");
   const [pendingInvitations, setPendingInvitations] = useState(() =>
@@ -475,6 +484,7 @@ const [isSubtaskPriorityOpen, setIsSubtaskPriorityOpen] = useState(false);
   const canManageTopics =
     currentWorkspaceRole === "editor" || currentWorkspaceRole === "admin";
   const canManageWorkspace = currentWorkspaceRole === "admin";
+  const normalizedMemberSearch = normalizeIdentity(memberSearchQuery);
 
   const pendingInvitationUserIds = useMemo(
     () =>
@@ -489,11 +499,76 @@ const [isSubtaskPriorityOpen, setIsSubtaskPriorityOpen] = useState(false);
   const [chatMessages, setChatMessages] = useState([]);
 
   const [discussionTopics, setDiscussionTopics] = useState([]);
+  const [discussionStatus, setDiscussionStatus] = useState("");
+  const [isLoadingDiscussion, setIsLoadingDiscussion] = useState(false);
+
+  const visibleWorkspaceMembers = useMemo(() => {
+    const members = backendMembers.map((member) => ({
+      id: member.user?.id,
+      profileId: member.user?.id,
+      name:
+        member.user?.full_name ||
+        member.user?.username ||
+        "Workspace member",
+      email: member.user?.email || member.user?.username || "",
+      role: member.role || "Viewer",
+      joinDate: member.joined_at
+        ? new Date(member.joined_at).toLocaleDateString()
+        : "Recently",
+      avatar: "",
+      isOnline: false,
+    }));
+
+    if (!normalizedMemberSearch) return members;
+
+    return members.filter((member) =>
+      [member.name, member.email, member.role]
+        .join(" ")
+        .toLowerCase()
+        .includes(normalizedMemberSearch),
+    );
+  }, [backendMembers, normalizedMemberSearch]);
 
   useEffect(() => {
     if (!workspace?.name) return;
     setWorkspaceNameInput(workspace.name);
   }, [workspace?.name]);
+
+  useEffect(() => {
+    if (!workspaceId) return;
+
+    let isMounted = true;
+
+    async function loadDiscussionTopics() {
+      try {
+        setIsLoadingDiscussion(true);
+        setDiscussionStatus("");
+        const topics = await getWorkspaceDiscussionTopics(workspaceId);
+
+        if (isMounted) {
+          setDiscussionTopics(topics || []);
+        }
+      } catch (error) {
+        console.error("Cannot load workspace discussion topics:", error);
+        if (isMounted) {
+          setDiscussionStatus(
+            error.response?.data?.message ||
+              "Could not load workspace discussion topics.",
+          );
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoadingDiscussion(false);
+        }
+      }
+    }
+
+    loadDiscussionTopics();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [workspaceId]);
 
   useEffect(() => {
     if (!workspaceId) return;
@@ -666,7 +741,8 @@ const [isSubtaskPriorityOpen, setIsSubtaskPriorityOpen] = useState(false);
 
   const discussionStorageUsedBytes = discussionTopics.reduce((total, topic) => {
     const topicFileSize = (topic.files || []).reduce(
-      (fileTotal, file) => fileTotal + (Number(file.size) || 0),
+      (fileTotal, file) =>
+        fileTotal + (Number(file.fileSizeBytes || file.size) || 0),
       0,
     );
 
@@ -800,10 +876,6 @@ const workspaceStorageUsedBytes = discussionStorageUsedBytes;
     });
   }
 
-  function saveDiscussionTopics(nextTopics) {
-    setDiscussionTopics(nextTopics);
-  }
-
   function requireTopicPermission(actionLabel) {
     if (canManageTopics) return true;
 
@@ -818,71 +890,64 @@ const workspaceStorageUsedBytes = discussionStorageUsedBytes;
     return false;
   }
 
-  function handleCreateTopic(e) {
-  e.preventDefault();
+  async function handleCreateTopic(e) {
+    e.preventDefault();
 
-  if (!requireTopicPermission("create or edit topics")) return;
+    if (!requireTopicPermission("create or edit topics")) return;
 
-  if (topicTitle.trim() === "") {
-    alert("Please enter topic title");
-    return;
+    if (topicTitle.trim() === "") {
+      alert("Please enter topic title");
+      return;
+    }
+
+    if (newTopicDescription.trim() === "") {
+      alert("Please enter topic description");
+      return;
+    }
+
+    try {
+      setDiscussionStatus("");
+      const createdTopic = await createWorkspaceDiscussionTopic(workspaceId, {
+        title: topicTitle.trim(),
+        content: newTopicDescription.trim(),
+        topicType: newTopicType,
+        status: newTopicStatus,
+        priority: newTopicPriority,
+        dateMode: newTopicDateMode,
+        startDate: newTopicDateMode === "deadline" ? newTopicStartDate : "",
+        endDate: newTopicDateMode === "deadline" ? newTopicEndDate : "",
+      });
+
+      setDiscussionTopics((currentTopics) => [createdTopic, ...currentTopics]);
+      createAppNotification({
+        category: "discussion",
+        action: "newTopic",
+        title: "New discussion topic",
+        message: `${profileName} created topic "${createdTopic.title}".`,
+        icon: "ti-comments",
+        link: `/dashboard/workspaces/${workspaceId}`,
+      });
+      setSelectedTopicId(createdTopic.id);
+
+      setTopicTitle("");
+      setTopicContent(createdTopic.content || "");
+
+      setNewTopicDescription("");
+      setNewTopicType("Question");
+      setNewTopicStatus("Open");
+      setNewTopicPriority("Normal");
+      setNewTopicDateMode("none");
+      setNewTopicStartDate("");
+      setNewTopicEndDate("");
+
+      setIsTopicFormOpen(false);
+    } catch (error) {
+      console.error("Cannot create discussion topic:", error);
+      alert(error.response?.data?.message || "Could not create discussion topic.");
+    }
   }
 
-  if (newTopicDescription.trim() === "") {
-    alert("Please enter topic description");
-    return;
-  }
-
-  const newTopic = {
-    id: `topic-${Date.now()}`,
-    title: topicTitle.trim(),
-    creator: profileName,
-
-    type: newTopicType,
-    status: newTopicStatus,
-    priority: newTopicPriority,
-
-    dateMode: newTopicDateMode,
-    startDate: newTopicDateMode === "deadline" ? newTopicStartDate : "",
-    endDate: newTopicDateMode === "deadline" ? newTopicEndDate : "",
-
-    assignee: profileName,
-    content: newTopicDescription.trim(),
-    files: [],
-    comments: [],
-    subtasks: [],
-    tasks: [],
-    createdAt: "Created just now",
-    updatedAt: "Updated just now",
-  };
-
-  saveDiscussionTopics([newTopic, ...discussionTopics]);
-  createAppNotification({
-  category: "discussion",
-  action: "newTopic",
-  title: "New discussion topic",
-  message: `${profileName} created topic "${newTopic.title}".`,
-  icon: "ti-comments",
-  link: `/dashboard/workspaces/${workspaceId}`,
-});
-  setSelectedTopicId(newTopic.id);
-
-  setTopicTitle("");
-  setTopicContent(newTopic.content);
-  setTopicFiles([]);
-
-  setNewTopicDescription("");
-  setNewTopicType("Question");
-  setNewTopicStatus("Open");
-  setNewTopicPriority("Normal");
-  setNewTopicDateMode("none");
-  setNewTopicStartDate("");
-  setNewTopicEndDate("");
-
-  setIsTopicFormOpen(false);
-}
-
-function handleDeleteTopicFile(fileId) {
+async function handleDeleteTopicFile(fileId) {
   if (!selectedTopic) return;
   if (!requireTopicPermission("delete topic files")) return;
 
@@ -890,40 +955,65 @@ function handleDeleteTopicFile(fileId) {
     (file) => file.id === fileId,
   );
 
-  const pendingFile = topicFiles.find((file) => file.id === fileId);
-
-  const fileToDelete = savedFile || pendingFile;
+  const fileToDelete = savedFile;
 
   if (!fileToDelete) return;
 
   const confirmDelete = window.confirm(
-    `Delete "${fileToDelete.name}" from this topic?`,
+    `Delete "${fileToDelete.fileName || fileToDelete.name}" from this topic?`,
   );
 
   if (!confirmDelete) return;
 
   // Xóa file đang chờ lưu
-  setTopicFiles((prevFiles) =>
-    prevFiles.filter((file) => file.id !== fileId),
-  );
+  try {
+    await deleteWorkspaceDiscussionAttachment(
+      workspaceId,
+      selectedTopic.id,
+      fileId,
+    );
 
   // Xóa file đã lưu trong topic
-  updateSelectedTopic((topic) => ({
-    ...topic,
-    files: (topic.files || []).filter((file) => file.id !== fileId),
-  }));
-
-  createAppNotification({
-    category: "file",
-    action: "deleted",
-    title: "File deleted",
-    message: `${profileName} deleted ${fileToDelete.name} from ${selectedTopic.title}.`,
-    icon: "ti-trash",
-    link: `/dashboard/workspaces/${workspaceId}`,
-  });
+    setDiscussionTopics((currentTopics) =>
+      currentTopics.map((topic) =>
+        topic.id === selectedTopic.id
+          ? {
+              ...topic,
+              files: (topic.files || []).filter((file) => file.id !== fileId),
+            }
+          : topic,
+      ),
+    );
+  } catch (error) {
+    console.error("Cannot delete discussion attachment:", error);
+    alert(error.response?.data?.message || "Could not delete attachment.");
+  }
 }
 
-  function handleTopicFileChange(e) {
+  async function handleDeleteSelectedTopic() {
+    if (!selectedTopic) return;
+    if (!requireTopicPermission("delete topics")) return;
+
+    const confirmDelete = window.confirm(
+      `Delete topic "${selectedTopic.title}"?`,
+    );
+
+    if (!confirmDelete) return;
+
+    try {
+      await deleteWorkspaceDiscussionTopic(workspaceId, selectedTopic.id);
+      setDiscussionTopics((currentTopics) =>
+        currentTopics.filter((topic) => topic.id !== selectedTopic.id),
+      );
+      setSelectedTopicId(null);
+      setTopicContent("");
+    } catch (error) {
+      console.error("Cannot delete discussion topic:", error);
+      alert(error.response?.data?.message || "Could not delete topic.");
+    }
+  }
+
+  async function handleTopicFileChange(e) {
     const selectedFiles = Array.from(e.target.files);
 
     if (selectedFiles.length === 0 || !selectedTopic) return;
@@ -937,13 +1027,7 @@ function handleDeleteTopicFile(fileId) {
       0,
     );
 
-    const pendingFilesSize = topicFiles.reduce(
-      (total, file) => total + (Number(file.size) || 0),
-      0,
-    );
-
-    const nextStorageUsed =
-      workspaceStorageUsedBytes + pendingFilesSize + selectedFilesSize;
+    const nextStorageUsed = workspaceStorageUsedBytes + selectedFilesSize;
 
 if (nextStorageUsed > WORKSPACE_STORAGE_LIMIT_BYTES) {
   createAppNotification({
@@ -963,171 +1047,223 @@ if (nextStorageUsed > WORKSPACE_STORAGE_LIMIT_BYTES) {
   return;
 }
 
-    const newFiles = selectedFiles.map((file) => ({
-      id: `topic-file-${selectedTopic.id}-${file.name}-${file.size}-${file.lastModified}`,
-      name: file.name,
-      size: file.size,
-      type: file.type,
-      addedAt: "Added just now",
-    }));
+    try {
+      const uploadedDocuments = await uploadDocuments(selectedFiles, workspaceId);
+      const attachments = await Promise.all(
+        (uploadedDocuments || []).map((document) =>
+          addWorkspaceDiscussionAttachment(workspaceId, selectedTopic.id, {
+            fileName: document.title,
+            fileUrl: document.fileUrl || document.file_url,
+            fileSizeBytes: document.fileSizeBytes || document.file_size_bytes || 0,
+            mimeType: document.mimeType || "",
+          }),
+        ),
+      );
 
-    setTopicFiles((prevFiles) => [...prevFiles, ...newFiles]);
+      setDiscussionTopics((currentTopics) =>
+        currentTopics.map((topic) =>
+          topic.id === selectedTopic.id
+            ? { ...topic, files: [...(topic.files || []), ...attachments] }
+            : topic,
+        ),
+      );
 
-createAppNotification({
-  category: "file",
-  action: "uploaded",
-  title: "File uploaded",
-  message: `${profileName} uploaded ${newFiles.length} file(s) to ${selectedTopic.title}.`,
-  icon: "ti-folder",
-  link: `/dashboard/workspaces/${workspaceId}`,
-});
-
-e.target.value = "";
+      createAppNotification({
+        category: "file",
+        action: "uploaded",
+        title: "File uploaded",
+        message: `${profileName} uploaded ${attachments.length} file(s) to ${selectedTopic.title}.`,
+        icon: "ti-folder",
+        link: `/dashboard/workspaces/${workspaceId}`,
+      });
+    } catch (error) {
+      console.error("Cannot upload discussion attachments:", error);
+      alert(error.response?.data?.message || "Could not upload discussion files.");
+    } finally {
+      e.target.value = "";
+    }
   }
 
-  function handleSaveTopicNote(e) {
-  e.preventDefault();
+  async function handleSaveTopicNote(e) {
+    e.preventDefault();
 
-  if (!selectedTopic) return;
-  if (!requireTopicPermission("edit topic content")) return;
+    if (!selectedTopic) return;
+    if (!requireTopicPermission("edit topic content")) return;
 
-  const nextTopics = discussionTopics.map((topic) => {
-    if (topic.id !== selectedTopic.id) return topic;
+    try {
+      const updatedTopic = await updateWorkspaceDiscussionTopic(
+        workspaceId,
+        selectedTopic.id,
+        {
+          content: topicContent,
+        },
+      );
 
-    const mergedFiles = [...(topic.files || []), ...topicFiles];
+      setDiscussionTopics((currentTopics) =>
+        currentTopics.map((topic) =>
+          topic.id === updatedTopic.id ? updatedTopic : topic,
+        ),
+      );
+    } catch (error) {
+      console.error("Cannot update discussion topic:", error);
+      alert(error.response?.data?.message || "Could not update discussion topic.");
+    }
+  }
 
-    const uniqueFiles = mergedFiles.filter(
-      (file, index, array) =>
-        index === array.findIndex((item) => item.id === file.id),
-    );
+  async function handleUpdateTopicField(field, value) {
+    if (!requireTopicPermission("edit topic properties")) return;
 
-    return {
-      ...topic,
-      content: topicContent,
-      files: uniqueFiles,
-      updatedAt: "Updated just now",
+    const previousStatus = selectedTopic?.status;
+    const payloadFieldMap = {
+      type: "topicType",
+      status: "status",
+      priority: "priority",
     };
-  });
 
-  saveDiscussionTopics(nextTopics);
-  setTopicFiles([]);
-}
+    try {
+      const updatedTopic = await updateWorkspaceDiscussionTopic(
+        workspaceId,
+        selectedTopic.id,
+        {
+          [payloadFieldMap[field] || field]: value,
+        },
+      );
 
-  function updateSelectedTopic(updater) {
-  if (!selectedTopic) return;
+      setDiscussionTopics((currentTopics) =>
+        currentTopics.map((topic) =>
+          topic.id === updatedTopic.id ? updatedTopic : topic,
+        ),
+      );
 
-  const nextTopics = discussionTopics.map((topic) =>
-    topic.id === selectedTopic.id
-      ? {
-          ...updater(topic),
-          updatedAt: "Updated just now",
-        }
-      : topic,
-  );
-
-  saveDiscussionTopics(nextTopics);
-}
-
-function handleUpdateTopicField(field, value) {
-  if (!requireTopicPermission("edit topic properties")) return;
-
-  const previousStatus = selectedTopic?.status;
-
-  updateSelectedTopic((topic) => ({
-    ...topic,
-    [field]: value,
-  }));
-
-  if (field === "status" && value === "Solved" && previousStatus !== "Solved") {
-    createAppNotification({
-      category: "discussion",
-      action: "solved",
-      title: "Topic solved",
-      message: `Topic "${selectedTopic.title}" was marked as solved.`,
-      icon: "ti-check-box",
-      link: `/dashboard/workspaces/${workspaceId}`,
-    });
+      if (field === "status" && value === "Solved" && previousStatus !== "Solved") {
+        createAppNotification({
+          category: "discussion",
+          action: "solved",
+          title: "Topic solved",
+          message: `Topic "${selectedTopic.title}" was marked as solved.`,
+          icon: "ti-check-box",
+          link: `/dashboard/workspaces/${workspaceId}`,
+        });
+      }
+    } catch (error) {
+      console.error("Cannot update discussion topic field:", error);
+      alert(error.response?.data?.message || "Could not update discussion topic.");
+    }
   }
-}
 
-function handleUpdateTopicDeadlineMode(value) {
-  if (!requireTopicPermission("edit topic deadline")) return;
+  async function handleUpdateTopicDeadlineMode(value) {
+    if (!requireTopicPermission("edit topic deadline")) return;
 
-  updateSelectedTopic((topic) => ({
-    ...topic,
-    dateMode: value,
-    startDate: value === "deadline" ? topic.startDate : "",
-    endDate: value === "deadline" ? topic.endDate : "",
-  }));
-}
+    try {
+      const updatedTopic = await updateWorkspaceDiscussionTopic(
+        workspaceId,
+        selectedTopic.id,
+        {
+          dateMode: value,
+          startDate: value === "deadline" ? selectedTopic.startDate : null,
+          endDate: value === "deadline" ? selectedTopic.endDate : null,
+        },
+      );
 
-function handleUpdateTopicDate(field, value) {
-  if (!requireTopicPermission("edit topic deadline")) return;
+      setDiscussionTopics((currentTopics) =>
+        currentTopics.map((topic) =>
+          topic.id === updatedTopic.id ? updatedTopic : topic,
+        ),
+      );
+    } catch (error) {
+      console.error("Cannot update discussion deadline mode:", error);
+      alert(error.response?.data?.message || "Could not update discussion topic.");
+    }
+  }
 
-  updateSelectedTopic((topic) => ({
-    ...topic,
-    dateMode: "deadline",
-    [field]: value,
-  }));
-}
+  async function handleUpdateTopicDate(field, value) {
+    if (!requireTopicPermission("edit topic deadline")) return;
 
-function handleAddTopicComment(e) {
-  e.preventDefault();
+    try {
+      const updatedTopic = await updateWorkspaceDiscussionTopic(
+        workspaceId,
+        selectedTopic.id,
+        {
+          dateMode: "deadline",
+          [field]: value,
+        },
+      );
 
-  if (!requireTopicPermission("comment on topics")) return;
+      setDiscussionTopics((currentTopics) =>
+        currentTopics.map((topic) =>
+          topic.id === updatedTopic.id ? updatedTopic : topic,
+        ),
+      );
+    } catch (error) {
+      console.error("Cannot update discussion deadline date:", error);
+      alert(error.response?.data?.message || "Could not update discussion topic.");
+    }
+  }
 
-  if (topicCommentInput.trim() === "") return;
+  async function handleAddTopicComment(e) {
+    e.preventDefault();
 
-  updateSelectedTopic((topic) => ({
-    ...topic,
-    comments: [
-      ...(topic.comments || []),
-      {
-        id: `comment-${Date.now()}`,
-        author: profileName,
-        content: topicCommentInput.trim(),
-        createdAt: "Just now",
-      },
-    ],
-  }));
+    if (topicCommentInput.trim() === "") return;
 
-  setTopicCommentInput("");
-}
+    try {
+      const comment = await addWorkspaceDiscussionComment(
+        workspaceId,
+        selectedTopic.id,
+        { content: topicCommentInput.trim() },
+      );
 
-function handleAddTopicSubtask(e) {
-  e.preventDefault();
+      setDiscussionTopics((currentTopics) =>
+        currentTopics.map((topic) =>
+          topic.id === selectedTopic.id
+            ? { ...topic, comments: [...(topic.comments || []), comment] }
+            : topic,
+        ),
+      );
+      setTopicCommentInput("");
+    } catch (error) {
+      console.error("Cannot add discussion comment:", error);
+      alert(error.response?.data?.message || "Could not add comment.");
+    }
+  }
 
-  if (!requireTopicPermission("create subtasks")) return;
+  async function handleAddTopicSubtask(e) {
+    e.preventDefault();
 
-  if (topicSubtaskInput.trim() === "") return;
+    if (!requireTopicPermission("create subtasks")) return;
 
-  updateSelectedTopic((topic) => ({
-    ...topic,
-    subtasks: [
-      ...(topic.subtasks || []),
-      {
-  id: `subtask-${Date.now()}`,
-  title: topicSubtaskInput.trim(),
-  completed: false,
-  priority: subtaskPriority,
-  dateMode: subtaskDateMode,
-  startDate: subtaskDateMode === "deadline" ? subtaskStartDate : "",
-  endDate: subtaskDateMode === "deadline" ? subtaskEndDate : "",
-  assignee: profileName,
-  createdAt: "Just now",
-},
-    ],
-  }));
+    if (topicSubtaskInput.trim() === "") return;
 
-  setTopicSubtaskInput("");
-setSubtaskPriority("");
-setSubtaskDateMode("none");
-setSubtaskStartDate("");
-setSubtaskEndDate("");
-setIsSubtaskEditing(false);
-setIsSubtaskPriorityOpen(false);
-setIsSubtaskDateOpen(false);
-}
+    try {
+      const subtask = await addWorkspaceDiscussionSubtask(
+        workspaceId,
+        selectedTopic.id,
+        {
+          title: topicSubtaskInput.trim(),
+          sortOrder: 0,
+        },
+      );
+
+      setDiscussionTopics((currentTopics) =>
+        currentTopics.map((topic) =>
+          topic.id === selectedTopic.id
+            ? { ...topic, subtasks: [...(topic.subtasks || []), subtask] }
+            : topic,
+        ),
+      );
+
+      setTopicSubtaskInput("");
+      setSubtaskPriority("");
+      setSubtaskDateMode("none");
+      setSubtaskStartDate("");
+      setSubtaskEndDate("");
+      setIsSubtaskEditing(false);
+      setIsSubtaskPriorityOpen(false);
+      setIsSubtaskDateOpen(false);
+    } catch (error) {
+      console.error("Cannot add discussion subtask:", error);
+      alert(error.response?.data?.message || "Could not add subtask.");
+    }
+  }
 
 function handleCancelSubtask() {
   setTopicSubtaskInput("");
@@ -1140,29 +1276,61 @@ function handleCancelSubtask() {
   setIsSubtaskDateOpen(false);
 }
 
-function handleToggleSubtask(subtaskId) {
-  if (!requireTopicPermission("update subtasks")) return;
+  async function handleToggleSubtask(subtaskId) {
+    if (!requireTopicPermission("update subtasks")) return;
 
-  updateSelectedTopic((topic) => ({
-    ...topic,
-    subtasks: (topic.subtasks || []).map((subtask) =>
-      subtask.id === subtaskId
-        ? { ...subtask, completed: !subtask.completed }
-        : subtask,
-    ),
-  }));
-}
+    const subtask = selectedTopic?.subtasks?.find((item) => item.id === subtaskId);
+    if (!subtask) return;
 
-function handleDeleteSubtask(subtaskId) {
-  if (!requireTopicPermission("delete subtasks")) return;
+    try {
+      const updatedSubtask = await updateWorkspaceDiscussionSubtask(
+        workspaceId,
+        selectedTopic.id,
+        subtaskId,
+        { isDone: !subtask.isDone },
+      );
 
-  updateSelectedTopic((topic) => ({
-    ...topic,
-    subtasks: (topic.subtasks || []).filter(
-      (subtask) => subtask.id !== subtaskId,
-    ),
-  }));
-}
+      setDiscussionTopics((currentTopics) =>
+        currentTopics.map((topic) =>
+          topic.id === selectedTopic.id
+            ? {
+                ...topic,
+                subtasks: (topic.subtasks || []).map((item) =>
+                  item.id === subtaskId ? updatedSubtask : item,
+                ),
+              }
+            : topic,
+        ),
+      );
+    } catch (error) {
+      console.error("Cannot update discussion subtask:", error);
+      alert(error.response?.data?.message || "Could not update subtask.");
+    }
+  }
+
+  async function handleDeleteSubtask(subtaskId) {
+    if (!requireTopicPermission("delete subtasks")) return;
+
+    try {
+      await deleteWorkspaceDiscussionSubtask(workspaceId, selectedTopic.id, subtaskId);
+
+      setDiscussionTopics((currentTopics) =>
+        currentTopics.map((topic) =>
+          topic.id === selectedTopic.id
+            ? {
+                ...topic,
+                subtasks: (topic.subtasks || []).filter(
+                  (subtask) => subtask.id !== subtaskId,
+                ),
+              }
+            : topic,
+        ),
+      );
+    } catch (error) {
+      console.error("Cannot delete discussion subtask:", error);
+      alert(error.response?.data?.message || "Could not delete subtask.");
+    }
+  }
 
 function getSubtaskPriorityIcon(priority) {
   if (priority === "Urgent") return "🚩";
@@ -1342,6 +1510,26 @@ function getSubtaskPriorityIcon(priority) {
     } finally {
       setMemberActionId("");
     }
+  }
+
+  function handleResendPendingInvitation(invitation) {
+    if (!invitation) return;
+
+    setPendingInvitations((currentInvitations) =>
+      currentInvitations.map((item) =>
+        (item.id || item.email) === (invitation.id || invitation.email)
+          ? {
+              ...item,
+              time: "just now",
+              resentAtMs: Date.now(),
+            }
+          : item,
+      ),
+    );
+
+    setMemberActionStatus(
+      `Resent invitation for ${invitation.name || invitation.email}.`,
+    );
   }
 
   function handleMessageAttachmentChange(e) {
@@ -1766,21 +1954,6 @@ function getSubtaskPriorityIcon(priority) {
   }
 
   function renderMembersTab() {
-    const visibleWorkspaceMembers = backendMembers.map((member) => ({
-              id: member.user?.id,
-              profileId: member.user?.id,
-              name:
-                member.user?.full_name ||
-                member.user?.username ||
-                "Workspace member",
-              email: member.user?.email || member.user?.username || "",
-              role: member.role || "Viewer",
-              joinDate: member.joined_at
-                ? new Date(member.joined_at).toLocaleDateString()
-                : "Recently",
-              avatar: "",
-              isOnline: false,
-            }));
     const adminCount = visibleWorkspaceMembers.filter(
       (member) => member.role === "Admin",
     ).length;
@@ -1802,7 +1975,12 @@ function getSubtaskPriorityIcon(priority) {
               <div className="workspace_member_actions">
                 <div className="workspace_member_search">
                   <i className="ti-search"></i>
-                  <input type="text" placeholder="Search members..." />
+                  <input
+                    type="text"
+                    placeholder="Search members..."
+                    value={memberSearchQuery}
+                    onChange={(e) => setMemberSearchQuery(e.target.value)}
+                  />
                 </div>
 
                 <button type="button" onClick={handleOpenInviteModal}>
@@ -1989,7 +2167,12 @@ function getSubtaskPriorityIcon(priority) {
                         </p>
                       </div>
 
-                      <button type="button">Resend</button>
+                      <button
+                        type="button"
+                        onClick={() => handleResendPendingInvitation(invitation)}
+                      >
+                        Resend
+                      </button>
                     </article>
                   ))
                 ) : (
@@ -2032,13 +2215,13 @@ function getSubtaskPriorityIcon(priority) {
 
             <div className="workspace_activity_stats">
               <div>
-                <strong>42</strong>
-                <span>Posts</span>
+                <strong>{discussionTopics.length}</strong>
+                <span>Topics</span>
               </div>
 
               <div>
-                <strong>12</strong>
-                <span>Tasks</span>
+                <strong>{visibleWorkspaceMembers.length}</strong>
+                <span>Members</span>
               </div>
             </div>
           </section>
@@ -2047,15 +2230,19 @@ function getSubtaskPriorityIcon(priority) {
             <h3>Latest Activity</h3>
 
             <div className="workspace_latest_activity highlight">
-              <strong>TrongBVD</strong>
-              <p>updated the React Hooks guide.</p>
-              <span>5 hours ago</span>
+              <strong>{discussionTopics[0]?.creator || "Workspace"}</strong>
+              <p>
+                {discussionTopics[0]
+                  ? `created "${discussionTopics[0].title}"`
+                  : "No discussion activity yet."}
+              </p>
+              <span>{discussionTopics[0]?.createdAt || "No activity"}</span>
             </div>
 
             <div className="workspace_latest_activity">
               <strong>{profileName}</strong>
-              <p>joined the hub.</p>
-              <span>Yesterday</span>
+              <p>joined the workspace.</p>
+              <span>Current session</span>
             </div>
           </section>
         </aside>
@@ -2068,6 +2255,7 @@ function getSubtaskPriorityIcon(priority) {
       (total, topic) => total + (topic.files?.length || 0),
       0,
     );
+    const pinnedTopic = discussionTopics[0] || null;
 
 const filteredDiscussionTopics = discussionTopics.filter((topic) => {
   if (topicFilter === "All") return true;
@@ -2075,7 +2263,7 @@ const filteredDiscussionTopics = discussionTopics.filter((topic) => {
   return topic.type === topicFilter;
 });
     if (selectedTopic) {
-  const relatedFiles = [...(selectedTopic.files || []), ...topicFiles];
+  const relatedFiles = selectedTopic.files || [];
   const comments = selectedTopic.comments || [];
   const subtasks = selectedTopic.subtasks || [];
   const topicDeadlineText =
@@ -2105,6 +2293,17 @@ const filteredDiscussionTopics = discussionTopics.filter((topic) => {
               {selectedTopic.title}
             </h1>
           </div>
+
+          {canManageTopics && (
+            <button
+              type="button"
+              className="workspace_clickup_attachment_delete"
+              onClick={handleDeleteSelectedTopic}
+              title="Delete topic"
+            >
+              <i className="ti-trash"></i>
+            </button>
+          )}
         </header>
 
 <section className="workspace_topic_info_panel">
@@ -2505,7 +2704,7 @@ const filteredDiscussionTopics = discussionTopics.filter((topic) => {
       {subtasks.map((subtask) => (
         <article
           className={`workspace_clickup_subtask_item ${
-            subtask.completed ? "completed" : ""
+            subtask.isDone ? "completed" : ""
           }`}
           key={subtask.id}
         >
@@ -2515,7 +2714,7 @@ const filteredDiscussionTopics = discussionTopics.filter((topic) => {
             onClick={() => handleToggleSubtask(subtask.id)}
             disabled={!canManageTopics}
           >
-            {subtask.completed ? <i className="ti-check"></i> : null}
+            {subtask.isDone ? <i className="ti-check"></i> : null}
           </button>
 
           <div className="workspace_clickup_subtask_info">
@@ -2619,8 +2818,12 @@ const filteredDiscussionTopics = discussionTopics.filter((topic) => {
 
           <div className="workspace_clickup_attachment_info">
             <div>
-              <strong>{file.name}</strong>
-              <span>{file.addedAt || "Just now"}</span>
+              <strong>{file.fileName || file.name}</strong>
+              <span>
+                {file.createdAt
+                  ? new Date(file.createdAt).toLocaleDateString()
+                  : "Just now"}
+              </span>
             </div>
 
 <div className="workspace_clickup_attachment_actions">
@@ -2677,11 +2880,17 @@ const filteredDiscussionTopics = discussionTopics.filter((topic) => {
               <article className="workspace_clickup_comment" key={comment.id}>
                 <div className="workspace_clickup_comment_head">
                   <div className="workspace_clickup_comment_avatar">
-                    {comment.author.slice(0, 1).toUpperCase()}
+                    {(comment.author?.name || comment.author || "M")
+                      .slice(0, 1)
+                      .toUpperCase()}
                   </div>
 
-                  <strong>{comment.author}</strong>
-                  <span>{comment.createdAt}</span>
+                  <strong>{comment.author?.name || comment.author}</strong>
+                  <span>
+                    {comment.createdAt
+                      ? new Date(comment.createdAt).toLocaleString()
+                      : "Just now"}
+                  </span>
                 </div>
 
                 <p>{comment.content}</p>
@@ -2698,7 +2907,7 @@ const filteredDiscussionTopics = discussionTopics.filter((topic) => {
           )}
         </section>
 
-        {canManageTopics ? (
+        {selectedTopic ? (
           <form
             className="workspace_clickup_comment_form"
             onSubmit={handleAddTopicComment}
@@ -2720,9 +2929,7 @@ const filteredDiscussionTopics = discussionTopics.filter((topic) => {
             </div>
           </form>
         ) : (
-          <p className="workspace_permission_hint">
-            Use the Message tab to chat with this workspace.
-          </p>
+          null
         )}
       </aside>
     </section>
@@ -2799,6 +3006,11 @@ const filteredDiscussionTopics = discussionTopics.filter((topic) => {
     Solved
   </button>
 </div>
+        {(isLoadingDiscussion || discussionStatus) && (
+          <div className="workspace_permission_hint">
+            {isLoadingDiscussion ? "Loading discussion topics..." : discussionStatus}
+          </div>
+        )}
         {isTopicFormOpen && canManageTopics && (
           <div className="discussion_topic_modal_overlay">
             <form
@@ -2966,10 +3178,15 @@ const filteredDiscussionTopics = discussionTopics.filter((topic) => {
                 <section className="discussion_pinned_card">
                   <div>
                     <span>PINNED</span>
-                    <h3>Workspace rules and study schedule</h3>
+                    <h3>
+                      {pinnedTopic
+                        ? pinnedTopic.title
+                        : "No pinned discussion yet"}
+                    </h3>
                     <p>
-                      Use this area for important group rules, deadlines,
-                      meeting links, or exam review plans.
+                      {pinnedTopic
+                        ? `${pinnedTopic.creator || "Workspace"} shared this topic${pinnedTopic.status ? ` · ${pinnedTopic.status}` : ""} · ${pinnedTopic.comments?.length || 0} replies.`
+                        : "Create a topic to surface an important discussion here."}
                     </p>
                   </div>
 
@@ -2984,7 +3201,6 @@ const filteredDiscussionTopics = discussionTopics.filter((topic) => {
                       onClick={() => {
   setSelectedTopicId(topic.id);
   setTopicContent(topic.content || "");
-  setTopicFiles([]);
   setTopicCommentInput("");
   setTopicSubtaskInput("");
 }}
@@ -3002,7 +3218,8 @@ const filteredDiscussionTopics = discussionTopics.filter((topic) => {
 
                       <div className="discussion_topic_meta">
                         <span>
-                          <i className="ti-comment-alt"></i>0 replies
+                          <i className="ti-comment-alt"></i>
+                          {topic.comments?.length || 0} replies
                         </span>
 
                         <span>

@@ -1,8 +1,16 @@
 import { useEffect, useMemo, useState } from "react";
 import { getAdminUsers, updateUserStatus } from "../../../../utils/adminApi";
 import "./UserManagementPage.css";
+
+function formatBytes(bytes) {
+  const value = Number(bytes || 0);
+  if (value < 1024) return `${value} B`;
+  if (value < 1024 * 1024) return `${(value / 1024).toFixed(1)} KB`;
+  return `${(value / 1024 / 1024).toFixed(1)} MB`;
+}
+
 function formatStorage(used, quota) {
-  return `${used} / ${quota} GB`;
+  return `${formatBytes(used)} / ${formatBytes(quota)}`;
 }
 
 function getStoragePercent(user) {
@@ -37,8 +45,8 @@ function mapUser(row) {
     email: row.email || "",
     role: row.role || "USER",
     status,
-    storageUsed: 0,
-    quota: 50,
+    storageUsed: Number(row.storage_used_bytes || 0),
+    quota: Number(row.storage_quota_bytes || 50 * 1024 * 1024),
     lastActive: formatDate(row.last_login_at || row.updated_at),
     memberSince: formatDate(row.created_at),
     workspaceAccess: Number(row.workspace_count || 0),
@@ -67,8 +75,6 @@ function UserManagementPage() {
   const [roleFilter, setRoleFilter] = useState("all");
   const [selectedUserId, setSelectedUserId] = useState(null);
   const [confirmAction, setConfirmAction] = useState(null);
-  const [inviteEmail, setInviteEmail] = useState("");
-  const [inviteOpen, setInviteOpen] = useState(false);
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(true);
@@ -137,17 +143,6 @@ function UserManagementPage() {
 
     const { type, user } = confirmAction;
 
-    if (type === "resetQuota") {
-      setUsers((currentUsers) =>
-        currentUsers.map((item) =>
-          item.id === user.id ? { ...item, storageUsed: 0, quota: 50 } : item,
-        ),
-      );
-      setNotice(`${user.name} quota was reset locally. Backend quota reset is not implemented yet.`);
-      closeConfirmation();
-      return;
-    }
-
     const nextBackendStatus = type === "disable" ? "DISABLED" : "ACTIVE";
 
     try {
@@ -171,18 +166,34 @@ function UserManagementPage() {
     }
   }
 
-  function handleInviteUser(event) {
-    event.preventDefault();
-    const email = inviteEmail.trim();
-
-    if (!email) {
-      setNotice("Enter an email before sending an invite.");
-      return;
-    }
-
-    setInviteEmail("");
-    setInviteOpen(false);
-    setNotice(`Invite endpoint is not implemented yet. No database record was created for ${email}.`);
+  function exportUsersCsv() {
+    const rows = [
+      ["Name", "Email", "Role", "Status", "Storage used", "Quota", "Workspaces", "Libraries"],
+      ...filteredUsers.map((user) => [
+        user.name,
+        user.email,
+        user.role,
+        user.status,
+        user.storageUsed,
+        user.quota,
+        user.workspaceAccess,
+        user.libraryAccess,
+      ]),
+    ];
+    const csv = rows
+      .map((row) =>
+        row.map((cell) => `"${String(cell).replaceAll('"', '""')}"`).join(","),
+      )
+      .join("\n");
+    const url = URL.createObjectURL(
+      new Blob([csv], { type: "text/csv;charset=utf-8;" }),
+    );
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "admin-users.csv";
+    link.click();
+    URL.revokeObjectURL(url);
+    setNotice("User list exported.");
   }
 
   const confirmationContent = {
@@ -197,12 +208,6 @@ function UserManagementPage() {
       message:
         "This user will be able to sign in and continue using shared study resources.",
       button: "Reactivate account",
-    },
-    resetQuota: {
-      title: "Reset storage quota?",
-      message:
-        "This will reset the displayed used storage to 0 GB. A backend quota reset endpoint is still needed for persistence.",
-      button: "Reset quota",
     },
   };
 
@@ -248,11 +253,7 @@ function UserManagementPage() {
           </div>
 
           <div className="user-management-page__header-actions">
-            <button type="button" onClick={() => setInviteOpen(true)}>
-              <i className="ti-user"></i>
-              Invite user
-            </button>
-            <button type="button" aria-label="Export users">
+            <button type="button" aria-label="Export users" onClick={exportUsersCsv}>
               <i className="ti-download"></i>
             </button>
           </div>
@@ -313,8 +314,7 @@ function UserManagementPage() {
                   ["all", "All"],
                   ["active", "Active"],
                   ["disabled", "Disabled"],
-                  ["pending", "Pending"],
-                    ].map(([value, label]) => (
+                ].map(([value, label]) => (
                   <button
                     type="button"
                     key={value}
@@ -332,9 +332,8 @@ function UserManagementPage() {
                 aria-label="Filter by role"
               >
                 <option value="all">Role</option>
-                <option value="faculty">Faculty</option>
-                <option value="researcher">Researcher</option>
-                <option value="student">Student</option>
+                <option value="user">User</option>
+                <option value="system_admin">System admin</option>
               </select>
 
               <select aria-label="Sort users" defaultValue="last-active">
@@ -526,18 +525,17 @@ function UserManagementPage() {
                     ></span>
                   </div>
                   <p>
-                    {Math.max(
-                      0,
-                      selectedUser.quota - selectedUser.storageUsed
+                    {formatBytes(
+                      Math.max(0, selectedUser.quota - selectedUser.storageUsed)
                     )}{" "}
-                    GB remaining
+                    remaining
                   </p>
                 </section>
 
                 <dl className="user-management-page__access-list">
                   <div>
                     <dt>Storage quota</dt>
-                    <dd>{selectedUser.quota} GB</dd>
+                    <dd>{formatBytes(selectedUser.quota)}</dd>
                   </div>
                   <div>
                     <dt>Workspace access</dt>
@@ -550,15 +548,6 @@ function UserManagementPage() {
                 </dl>
 
                 <div className="user-management-page__detail-actions">
-                  <button
-                    type="button"
-                    onClick={() =>
-                      openConfirmation("resetQuota", selectedUser)
-                    }
-                  >
-                    <i className="ti-reload"></i>
-                    Reset quota
-                  </button>
                   <button
                     type="button"
                     className={
@@ -599,55 +588,6 @@ function UserManagementPage() {
         </section>
       </main>
 
-      {inviteOpen && (
-        <div
-          className="user-management-page__modal-overlay"
-          role="dialog"
-          aria-modal="true"
-        >
-          <form
-            className="user-management-page__invite-modal"
-            onSubmit={handleInviteUser}
-          >
-            <div className="user-management-page__modal-title">
-              <div>
-                <span>User administration</span>
-                <h2>Invite a new user</h2>
-              </div>
-              <button
-                type="button"
-                aria-label="Close invite dialog"
-                onClick={() => setInviteOpen(false)}
-              >
-                ×
-              </button>
-            </div>
-            <p>
-              Send an invitation with the default student role. Permissions can
-              be adjusted later.
-            </p>
-            <label>
-              Email address
-              <input
-                type="email"
-                value={inviteEmail}
-                onChange={(event) => setInviteEmail(event.target.value)}
-                placeholder="student@school.edu"
-                autoFocus
-              />
-            </label>
-            <div className="user-management-page__invite-actions">
-              <button type="button" onClick={() => setInviteOpen(false)}>
-                Cancel
-              </button>
-              <button type="submit">
-                <i className="ti-user"></i>
-                Send invite
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
 
       {confirmAction && (
         <div

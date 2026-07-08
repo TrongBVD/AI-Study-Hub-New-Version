@@ -88,38 +88,40 @@ function AdminDashboardPage() {
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(true);
+  const [lastUpdatedAt, setLastUpdatedAt] = useState("");
+
+  async function loadDashboard() {
+    try {
+      setIsLoading(true);
+      setError("");
+
+      const [dashboardData, moderationData, userData, logData, usageData] =
+        await Promise.all([
+          getAdminDashboard(),
+          getModerationDocuments(),
+          getAdminUsers(),
+          getActivityLogs(),
+          getUsageStats(),
+        ]);
+
+      setStats(dashboardData);
+      setQueue(moderationData || []);
+      setUsers(userData || []);
+      setLogs(logData || []);
+      setSelectedLog((logData || [])[0] || null);
+      setUsage({
+        quotaUsage: usageData?.quotaUsage || [],
+        aiUsage: usageData?.aiUsage || [],
+      });
+      setLastUpdatedAt(new Date().toLocaleString());
+    } catch (err) {
+      setError(err.response?.data?.message || "Could not load admin dashboard.");
+    } finally {
+      setIsLoading(false);
+    }
+  }
 
   useEffect(() => {
-    async function loadDashboard() {
-      try {
-        setIsLoading(true);
-        setError("");
-
-        const [dashboardData, moderationData, userData, logData, usageData] =
-          await Promise.all([
-            getAdminDashboard(),
-            getModerationDocuments(),
-            getAdminUsers(),
-            getActivityLogs(),
-            getUsageStats(),
-          ]);
-
-        setStats(dashboardData);
-        setQueue(moderationData || []);
-        setUsers(userData || []);
-        setLogs(logData || []);
-        setSelectedLog((logData || [])[0] || null);
-        setUsage({
-          quotaUsage: usageData?.quotaUsage || [],
-          aiUsage: usageData?.aiUsage || [],
-        });
-      } catch (err) {
-        setError(err.response?.data?.message || "Could not load admin dashboard.");
-      } finally {
-        setIsLoading(false);
-      }
-    }
-
     loadDashboard();
   }, []);
 
@@ -216,12 +218,12 @@ function AdminDashboardPage() {
             </div>
 
             <footer className="admin-dashboard__overview-footer">
-              <span>Last updated: Jun 19, 2026 03:52 PM</span>
-              <button type="button" aria-label="Refresh dashboard">
+              <span>Last updated: {lastUpdatedAt || "Not loaded yet"}</span>
+              <button type="button" aria-label="Refresh dashboard" onClick={loadDashboard}>
                 <i className="ti-reload" />
               </button>
               <span className="admin-dashboard__auto-refresh">
-                Auto refresh: On
+                Manual refresh
                 <i aria-hidden="true" />
               </span>
             </footer>
@@ -373,7 +375,7 @@ function AdminDashboardPage() {
                           <div><span style={{ width: `${item.percent}%` }} /></div>
                           <small>{formatBytes(item.used)} / {formatBytes(STORAGE_LIMIT_BYTES)}</small>
                         </div>
-                        <button type="button" onClick={() => handleQuotaAction(item.owner)}>Review</button>
+                        <button type="button" onClick={() => navigate("/admin/usage")}>Review</button>
                       </article>
                     ))
                   )}
@@ -399,7 +401,7 @@ function AdminDashboardPage() {
                           <strong>{item.owner}</strong>
                           <span>{item.tokens.toLocaleString()} tokens · {item.requests} requests</span>
                         </div>
-                        <button className={`admin-dashboard__risk is-${item.risk}`} type="button" onClick={() => handleAiAction(item.owner)}>
+                        <button className={`admin-dashboard__risk is-${item.risk}`} type="button" onClick={() => navigate("/admin/usage")}>
                           {item.risk}
                         </button>
                       </article>

@@ -50,8 +50,6 @@ function normalizeUsage(quotaUsage, aiUsage) {
       bytesDownloaded: 0,
       chatCount: 0,
       tokensConsumed: 0,
-      status: "active",
-      actionNote: "",
     };
 
     records.set(key, {
@@ -77,8 +75,6 @@ function normalizeUsage(quotaUsage, aiUsage) {
       bytesDownloaded: 0,
       chatCount: 0,
       tokensConsumed: 0,
-      status: "active",
-      actionNote: "",
     };
 
     records.set(key, {
@@ -114,7 +110,6 @@ function AdminUsagePage() {
   const [riskFilter, setRiskFilter] = useState("all");
   const [usageTypeFilter, setUsageTypeFilter] = useState("all");
   const [selectedRecord, setSelectedRecord] = useState(null);
-  const [confirmAction, setConfirmAction] = useState(null);
   const [notice, setNotice] = useState("");
 
   useEffect(() => {
@@ -175,59 +170,44 @@ function AdminUsagePage() {
     };
   }, [usageRecords]);
 
-  function openAction(type, record) {
-    setConfirmAction({ type, record });
-  }
+  function exportUsageCsv() {
+    const rows = [
+      [
+        "User",
+        "Email",
+        "Date",
+        "Uploaded bytes",
+        "Downloaded bytes",
+        "AI tokens",
+        "Chat count",
+        "Risk",
+      ],
+      ...filteredRecords.map((record) => [
+        record.userName,
+        record.email,
+        record.date,
+        record.bytesUploaded,
+        record.bytesDownloaded,
+        record.tokensConsumed,
+        record.chatCount,
+        getRiskLevel(record),
+      ]),
+    ];
+    const csv = rows
+      .map((row) =>
+        row.map((cell) => `"${String(cell).replaceAll('"', '""')}"`).join(","),
+      )
+      .join("\n");
+    const url = URL.createObjectURL(
+      new Blob([csv], { type: "text/csv;charset=utf-8;" }),
+    );
+    const link = document.createElement("a");
 
-  function applyAction() {
-    if (!confirmAction) return;
-
-    const { type, record } = confirmAction;
-    const actionLabel =
-      type === "suspend"
-        ? "User access suspended"
-        : type === "reset"
-        ? "Quota reset requested"
-        : "Usage marked for review";
-
-    setNotice(`${actionLabel}: ${record.email}`);
-
-    setUsage((current) => ({
-      quotaUsage: current.quotaUsage.map((row) => {
-        if (`${getUserKey(row)}-${getUsageDate(row)}` !== record.id) return row;
-
-        if (type === "reset") {
-          return {
-            ...row,
-            bytes_uploaded: 0,
-            bytes_downloaded: 0,
-          };
-        }
-
-        return {
-          ...row,
-          admin_status: type,
-        };
-      }),
-      aiUsage: current.aiUsage.map((row) => {
-        if (`${getUserKey(row)}-${getUsageDate(row)}` !== record.id) return row;
-
-        if (type === "reset") {
-          return {
-            ...row,
-            tokens_consumed: 0,
-            chat_count: 0,
-          };
-        }
-
-        return {
-          ...row,
-          admin_status: type,
-        };
-      }),
-    }));
-
-    setConfirmAction(null);
+    link.href = url;
+    link.download = "admin-usage-report.csv";
+    link.click();
+    URL.revokeObjectURL(url);
+    setNotice("Usage report exported.");
   }
 
   return (
@@ -244,7 +224,7 @@ function AdminUsagePage() {
             <span>Risk queue</span>
             <strong>{stats.riskyUsers}</strong>
           </div>
-          <button type="button" onClick={() => setNotice("Usage report is ready for export.")}>
+          <button type="button" onClick={exportUsageCsv}>
             <i className="ti-download" />
             Export report
           </button>
@@ -434,11 +414,6 @@ function AdminUsagePage() {
                 <strong className={`usage_admin_risk usage_admin_risk_${getRiskLevel(selectedRecord)}`}>{getRiskLevel(selectedRecord)}</strong>
               </div>
 
-              <div className="usage_admin_detail_actions">
-                <button type="button" onClick={() => openAction("review", selectedRecord)}><i className="ti-flag" /> Mark for review</button>
-                <button type="button" onClick={() => openAction("reset", selectedRecord)}><i className="ti-reload" /> Reset usage</button>
-                <button type="button" onClick={() => openAction("suspend", selectedRecord)}><i className="ti-lock" /> Suspend user</button>
-              </div>
             </>
           ) : (
             <div className="usage_admin_detail_empty">
@@ -453,25 +428,8 @@ function AdminUsagePage() {
       <section className="usage_admin_policy_bar">
         <div><span><i className="ti-alert" /></span><p><strong>Quota spike</strong> Storage usage reaches 80% of the account limit.</p></div>
         <div><span><i className="ti-bolt" /></span><p><strong>AI spike</strong> Token consumption approaches the daily threshold.</p></div>
-        <div><span><i className="ti-shield" /></span><p><strong>Admin policy</strong> Review first; suspend only when repeated abuse is clear.</p></div>
+        <div><span><i className="ti-shield" /></span><p><strong>Admin policy</strong> Use the Users page for account status changes.</p></div>
       </section>
-
-      {confirmAction && (
-        <div className="usage_admin_modal_overlay" role="dialog" aria-modal="true">
-          <div className="usage_admin_confirm">
-            <div className="usage_admin_confirm_icon"><i className="ti-alert" /></div>
-            <h2>Confirm admin action</h2>
-            <p>
-              You are about to <strong>{confirmAction.type}</strong>{" "}
-              <strong>{confirmAction.record.email}</strong>. This action is recorded for audit review.
-            </p>
-            <div>
-              <button type="button" onClick={() => setConfirmAction(null)}>Cancel</button>
-              <button type="button" onClick={applyAction}>Confirm</button>
-            </div>
-          </div>
-        </div>
-      )}
     </main>
   );
 }

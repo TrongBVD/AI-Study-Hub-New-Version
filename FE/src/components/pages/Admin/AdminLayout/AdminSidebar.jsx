@@ -8,7 +8,6 @@ const ADMIN_MENU_ITEMS = [
   { icon: "ti-user", label: "Users", path: "/admin/users" },
   { icon: "ti-list", label: "Activity Logs", path: "/admin/logs" },
   { icon: "ti-pie-chart", label: "Usage", path: "/admin/usage" },
-  { icon: "ti-settings", label: "System settings", path: "/admin/settings" },
 ];
 
 function AdminSidebar({ isOpen, onClose }) {

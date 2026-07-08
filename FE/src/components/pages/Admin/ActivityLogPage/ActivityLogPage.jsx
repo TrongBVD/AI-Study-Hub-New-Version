@@ -606,12 +606,6 @@ function ActivityLogPage() {
                 </section>
 
                 <div className="activity-log-page__detail-actions">
-                  <button
-                    type="button"
-                    onClick={() => setNotice("Log marked for review.")}
-                  >
-                    <i className="ti-flag" /> Mark for review
-                  </button>
                   <button type="button" onClick={copyEventId}>
                     <i className="ti-layers" /> Copy event ID
                   </button>

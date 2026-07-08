@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { getModerationDocuments, reviewDocument } from "../../../../utils/adminApi";
 import "./AIContentModerationPage.css";
 
-const FILTERS = ["All", "Pending review", "Flagged", "Approved", "Quarantined"];
+const FILTERS = ["All", "Pending review", "Flagged", "Rejected", "Retry"];
 
 function formatBytes(bytes) {
   const value = Number(bytes || 0);
@@ -48,6 +48,8 @@ function getSuspiciousContent(document) {
 function getStatusLabel(status) {
   if (status === "APPROVED") return "Approved";
   if (status === "FLAGGED") return "Flagged";
+  if (status === "REJECTED") return "Rejected";
+  if (status === "PENDING_RETRY") return "Retry";
   return "Pending review";
 }
 
@@ -132,13 +134,14 @@ function AIContentModerationPage() {
   const stats = useMemo(() => {
     const flagged = cases.filter((item) => item.status === "FLAGGED").length;
     const pending = cases.filter((item) => item.status !== "APPROVED").length;
+    const rejected = cases.filter((item) => item.status === "REJECTED").length;
     const highRisk = cases.filter((item) => getSeverity(item.status) === "High").length;
 
     return [
       { label: "Flagged files", value: flagged, note: "Require admin action" },
       { label: "Pending review", value: pending, note: "Waiting for decision" },
       { label: "High risk", value: highRisk, note: "Prioritize these first" },
-      { label: "AI confidence", value: "N/A", note: "Not stored in current schema" },
+      { label: "Rejected files", value: rejected, note: "Awaiting final review" },
     ];
   }, [cases]);
 
@@ -232,18 +235,6 @@ function AIContentModerationPage() {
           ))}
         </select>
 
-        <button type="button" className="ai-moderation-page__toolbar-btn">
-          <i className="ti-user" />
-          <span>Uploader</span>
-          <i className="ti-angle-down ai-moderation-page__toolbar-chevron" />
-        </button>
-
-        <button type="button" className="ai-moderation-page__toolbar-btn">
-          <i className="ti-calendar" />
-          <span>Date</span>
-          <i className="ti-angle-down ai-moderation-page__toolbar-chevron" />
-        </button>
-
         <button
           type="button"
           className="ai-moderation-page__reset-btn"
@@ -280,7 +271,6 @@ function AIContentModerationPage() {
             <span>Document</span>
             <span>Uploader &amp; Date</span>
             <span>Risk level</span>
-            <span>AI Confidence</span>
             <span>Status</span>
             <span />
           </div>
@@ -323,8 +313,6 @@ function AIContentModerationPage() {
                     <span className={`ai-moderation-page__severity ${getSeverityClass(severity)}`}>
                       {severity}
                     </span>
-
-                    <span className="ai-moderation-page__confidence">N/A</span>
 
                     <span className={`ai-moderation-page__status-pill is-${getStatusLabel(item.status).toLowerCase().replaceAll(" ", "-")}`}>
                       {getStatusLabel(item.status)}
@@ -371,11 +359,6 @@ function AIContentModerationPage() {
                 </span>
                 <div className="ai-moderation-page__detail-title">
                   <h2>{selectedCase.title}</h2>
-                  <div>
-                    <strong>N/A</strong>
-                    <span>AI confidence</span>
-                    <i><b style={{ width: "0%" }} /></i>
-                  </div>
                 </div>
                 <span className={`ai-moderation-page__severity ${getSeverityClass(getSeverity(selectedCase.status))}`}>
                   {getSeverity(selectedCase.status)}
@@ -427,10 +410,6 @@ function AIContentModerationPage() {
                     <span>Uploaded</span>
                     <strong>{formatDate(selectedCase.created_at)}</strong>
                   </div>
-                  <div>
-                    <span>Confidence</span>
-                    <strong>N/A</strong>
-                  </div>
                 </div>
               </section>
 
@@ -446,18 +425,10 @@ function AIContentModerationPage() {
                 <button
                   type="button"
                   className="quarantine"
-                  onClick={() => updateCaseStatus(selectedCase.id, "Quarantined")}
+                  onClick={() => updateCaseStatus(selectedCase.id, "Rejected")}
                 >
                   <i className="ti-lock" />
-                  Quarantine
-                </button>
-                <button
-                  type="button"
-                  className="flag"
-                  onClick={() => updateCaseStatus(selectedCase.id, "Flagged")}
-                >
-                  <i className="ti-flag-alt" />
-                  Keep flagged
+                  Keep rejected
                 </button>
               </div>
             </>
