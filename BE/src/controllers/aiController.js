@@ -196,6 +196,8 @@ exports.generateFlashcards = async (req, res) => {
 
     const rows = cards.map((card) => ({
       document_id: documentId,
+      workspace_id: document.workspace_id || null,
+      creator_id: userId,
       question: card.question,
       answer: card.answer,
     }));

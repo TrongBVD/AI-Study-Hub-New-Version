@@ -1,21 +1,29 @@
-// Nạp biến môi trường từ file .env vào bộ nhớ RAM ngay dòng đầu tiên
+// Load environment variables first
 require('dotenv').config();
 
 const express = require('express');
 const cors = require('cors');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
 
-// Import các tuyến đường (routes)
-const authRoutes = require('./src/routes/authRoutes');
-const documentRoutes = require("./src/routes/documentRoutes");
 const app = express();
-const aiRoutes = require("./src/routes/aiRoutes");
-const adminRoutes = require("./src/routes/adminRoutes");
-const workspaceRoutes = require("./src/routes/workspaceRoutes");
-const publicRoutes = require("./src/routes/publicRoutes");
-const profileRoutes = require("./src/routes/profileRoutes");
-// const userRoutes = require("./src/routes/userRoutes");
 
-// 1. Cấu hình Middleware CORS để cho phép Frontend (Vite - 5173) gọi API
+// Import routes
+const authRoutes = require('./src/routes/authRoutes');
+const documentRoutes = require('./src/routes/documentRoutes');
+const aiRoutes = require('./src/routes/aiRoutes');
+const adminRoutes = require('./src/routes/adminRoutes');
+const workspaceRoutes = require('./src/routes/workspaceRoutes');
+const publicRoutes = require('./src/routes/publicRoutes');
+const profileRoutes = require('./src/routes/profileRoutes');
+
+// ─── 1. Security headers (helmet) ─────────────────────────────────────────────
+app.use(helmet({
+    // Allow cross-origin embedding of Supabase signed-URL documents
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
+}));
+
+// ─── 2. CORS ──────────────────────────────────────────────────────────────────
 app.use(cors({
     origin: [
         ...(process.env.FRONTEND_URL ? [process.env.FRONTEND_URL] : []),
@@ -23,31 +31,57 @@ app.use(cors({
         'http://localhost:5174',
         'http://127.0.0.1:5173',
         'http://127.0.0.1:5174',
-    ], // Địa chỉ của Frontend
-    credentials: true // Cho phép gửi token/cookie nếu có
+    ],
+    credentials: true, // Allow cookies/tokens
 }));
 
-// 2. Middleware phân tích cú pháp JSON từ body của request
+// ─── 3. Body parsing ──────────────────────────────────────────────────────────
 app.use(express.json());
 
-// 3. Gắn các tuyến đường (Mount Routes)
-// Tất cả các request bắt đầu bằng /api/auth sẽ được chuyển cho authRoutes xử lý
-app.use('/api/auth', authRoutes);
-app.use("/api/documents", documentRoutes);
-app.use("/api/ai", aiRoutes);
-app.use("/api/admin", adminRoutes);
-app.use("/api/workspaces", workspaceRoutes);
-app.use("/api/public", publicRoutes);
-app.use("/api/profile", profileRoutes);
-// app.use("/api/users", userRoutes);
+// ─── 4. Rate limiters ─────────────────────────────────────────────────────────
 
-// Route test để kiểm tra xem server có sống không
-app.get('/', (req, res) => {
-    res.send('AI StudyHub Backend đang chạy!');
+// General API limiter – 200 requests per 15 minutes per IP
+const generalLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 200,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { status: 'error', message: 'Too many requests. Please try again later.' },
 });
 
-// 4. Khởi động Server và lắng nghe trên cổng 5000
+// Strict limiter for OTP and auth flows – 10 requests per 15 minutes per IP
+const authLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 10,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { status: 'error', message: 'Too many authentication attempts. Please wait 15 minutes and try again.' },
+});
+
+app.use('/api', generalLimiter);
+
+// Apply strict limiter to OTP / sensitive auth endpoints
+app.use('/api/auth/verify-otp', authLimiter);
+app.use('/api/auth/verify-reset-otp', authLimiter);
+app.use('/api/auth/forgot-password', authLimiter);
+app.use('/api/auth/google', authLimiter);
+
+// ─── 5. Mount routes ──────────────────────────────────────────────────────────
+app.use('/api/auth', authRoutes);
+app.use('/api/documents', documentRoutes);
+app.use('/api/ai', aiRoutes);
+app.use('/api/admin', adminRoutes);
+app.use('/api/workspaces', workspaceRoutes);
+app.use('/api/public', publicRoutes);
+app.use('/api/profile', profileRoutes);
+
+// Health check
+app.get('/', (req, res) => {
+    res.send('AI StudyHub Backend is running.');
+});
+
+// ─── 6. Start server ──────────────────────────────────────────────────────────
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
-    console.log(`[🚀 Server] Đã khởi động thành công. Đang lắng nghe tại http://localhost:${PORT}`);
+    console.log(`[🚀 Server] Listening at http://localhost:${PORT}`);
 });

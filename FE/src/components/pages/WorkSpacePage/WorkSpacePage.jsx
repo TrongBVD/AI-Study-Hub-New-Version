@@ -1,14 +1,23 @@
 import { Link, useLocation, useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { createAppNotification } from "../../../utils/notificationStore.js";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   addWorkspaceMember,
   getWorkspaceMembers,
+  removeWorkspaceMember,
   searchWorkspaceUsers,
   getWorkspace,
   updateWorkspace,
+  updateWorkspaceMemberRole,
   deleteWorkspace,
+  getWorkspaceMessages,
+  createWorkspaceMessage,
+  getWorkspaceFlashcards,
+  getWorkspaceDocuments,
+  reviewWorkspaceDocument,
+  generateWorkspaceDocumentFlashcards,
 } from "../../../utils/workspaceApi";
+import { uploadDocuments } from "../../../utils/documentApi";
 import "./WorkSpacePage.css";
 import "../../../assets/icons/themify-icons-font/themify-icons/themify-icons.css";
 
@@ -58,6 +67,19 @@ function getStoredUserProfile() {
   }
 }
 
+function getStoredUserId(user) {
+  return (
+    user?.id ||
+    user?._id ||
+    user?.userId ||
+    user?.user_id ||
+    user?.profile?.id ||
+    user?.user?.id ||
+    user?.data?.id ||
+    ""
+  );
+}
+
 function getWorkspaceMemberRole(member) {
   return (
     member?.role ||
@@ -87,6 +109,92 @@ function getWorkspaceMemberIdentities(member) {
   ]
     .map(normalizeIdentity)
     .filter(Boolean);
+}
+
+function formatWorkspaceMessageTime(createdAt) {
+  if (!createdAt) return "";
+
+  return `${new Date(createdAt).toLocaleTimeString([], {
+    hour: "2-digit",
+    minute: "2-digit",
+  })} · Sent`;
+}
+
+function formatWorkspaceStudyDate(createdAt) {
+  if (!createdAt) return "Recently updated";
+
+  return `Updated ${new Date(createdAt).toLocaleDateString([], {
+    month: "short",
+    day: "numeric",
+  })}`;
+}
+
+function formatWorkspaceFileSize(bytes) {
+  const value = Number(bytes) || 0;
+
+  if (value <= 0) return "0 KB";
+  if (value < 1024 * 1024) return `${Math.ceil(value / 1024)} KB`;
+
+  return `${(value / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function getDocumentStatusLabel(status) {
+  const value = String(status || "PENDING").toUpperCase();
+
+  if (value === "APPROVED") return "Approved";
+  if (value === "FLAGGED") return "Flagged";
+  if (value === "REJECTED") return "Rejected";
+  if (value === "DELETED") return "Deleted";
+
+  return "Pending";
+}
+
+function formatStudySessionDuration(totalSeconds) {
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+
+  return `${minutes}:${String(seconds).padStart(2, "0")}`;
+}
+
+function buildWorkspaceStudySets(flashcards) {
+  const groupedCards = new Map();
+
+  (flashcards || []).forEach((card) => {
+    const groupId = card.documentId || "workspace-flashcards";
+    const currentGroup = groupedCards.get(groupId) || {
+      id: groupId,
+      title: card.documentTitle || "Workspace flashcards",
+      subtitle: card.documentTitle
+        ? `Generated from ${card.documentTitle}`
+        : "Generated workspace study cards",
+      tag: card.documentStatus === "APPROVED" ? "Ready" : "",
+      updatedAt: card.createdAt,
+      cards: [],
+    };
+
+    currentGroup.cards.push({
+      id: card.id,
+      question: card.question,
+      answer: card.answer,
+    });
+
+    if (
+      card.createdAt &&
+      (!currentGroup.updatedAt ||
+        new Date(card.createdAt) > new Date(currentGroup.updatedAt))
+    ) {
+      currentGroup.updatedAt = card.createdAt;
+    }
+
+    groupedCards.set(groupId, currentGroup);
+  });
+
+  return Array.from(groupedCards.values()).map((studySet) => ({
+    ...studySet,
+    meta: `${studySet.cards.length} ${
+      studySet.cards.length === 1 ? "Card" : "Cards"
+    } · ${formatWorkspaceStudyDate(studySet.updatedAt)}`,
+  }));
 }
 
 function getPendingInvitationsStorageKey(workspaceId) {
@@ -154,6 +262,8 @@ const [isSubtaskPriorityOpen, setIsSubtaskPriorityOpen] = useState(false);
   const [isInviteSearching, setIsInviteSearching] = useState(false);
   const [isAddingMember, setIsAddingMember] = useState(false);
   const [backendMembers, setBackendMembers] = useState([]);
+  const [memberActionStatus, setMemberActionStatus] = useState("");
+  const [memberActionId, setMemberActionId] = useState("");
   const [pendingInvitations, setPendingInvitations] = useState(() =>
     loadPendingInvitations(workspaceId),
   );
@@ -220,11 +330,24 @@ const [isSubtaskPriorityOpen, setIsSubtaskPriorityOpen] = useState(false);
   }
   const [messageText, setMessageText] = useState("");
   const [messageAttachment, setMessageAttachment] = useState(null);
-  const [selectedStudySetId, setSelectedStudySetId] = useState(
-    "software-architecture",
-  );
+  const [messageStatus, setMessageStatus] = useState("");
+  const [isLoadingMessages, setIsLoadingMessages] = useState(false);
+  const [isSendingMessage, setIsSendingMessage] = useState(false);
+  const [workspaceFlashcards, setWorkspaceFlashcards] = useState([]);
+  const [workspaceDocuments, setWorkspaceDocuments] = useState([]);
+  const [workspaceUploadFiles, setWorkspaceUploadFiles] = useState([]);
+  const [workspaceDocumentStatus, setWorkspaceDocumentStatus] = useState("");
+  const [isUploadingWorkspaceDocuments, setIsUploadingWorkspaceDocuments] =
+    useState(false);
+  const [selectedStudyDocumentId, setSelectedStudyDocumentId] = useState("");
+  const [isLoadingStudySets, setIsLoadingStudySets] = useState(false);
+  const [isGeneratingStudyCards, setIsGeneratingStudyCards] = useState(false);
+  const [studySetStatus, setStudySetStatus] = useState("");
+  const [selectedStudySetId, setSelectedStudySetId] = useState("");
   const [currentStudyCardIndex, setCurrentStudyCardIndex] = useState(0);
   const [isStudyCardFlipped, setIsStudyCardFlipped] = useState(false);
+  const [studySessionSeconds, setStudySessionSeconds] = useState(0);
+  const [reviewedStudyCardIds, setReviewedStudyCardIds] = useState([]);
 
   const [workspace, setWorkspace] = useState(() => {
     return location.state?.workspace || null;
@@ -266,6 +389,7 @@ const [isSubtaskPriorityOpen, setIsSubtaskPriorityOpen] = useState(false);
   const [workspaceSettingMessage, setWorkspaceSettingMessage] = useState("");
 
   const storedUser = useMemo(() => getStoredUserProfile(), []);
+  const currentUserId = String(getStoredUserId(storedUser) || "");
   const profileName =
     workspace?.owner ||
     storedUser?.displayName ||
@@ -273,7 +397,21 @@ const [isSubtaskPriorityOpen, setIsSubtaskPriorityOpen] = useState(false);
     storedUser?.full_name ||
     storedUser?.name ||
     storedUser?.username ||
-    "Current user";
+      "Current user";
+
+  const loadWorkspaceMembers = useCallback(async () => {
+    if (!workspaceId) return;
+
+    try {
+      const members = await getWorkspaceMembers(workspaceId);
+      setBackendMembers(members || []);
+    } catch (error) {
+      console.error("Cannot load workspace members:", error);
+      setMemberActionStatus(
+        error.response?.data?.message || "Could not load workspace members.",
+      );
+    }
+  }, [workspaceId]);
 
   const currentUserIdentifiers = useMemo(
     () =>
@@ -326,7 +464,8 @@ const [isSubtaskPriorityOpen, setIsSubtaskPriorityOpen] = useState(false);
   }, [currentUserIdentifiers, workspace]);
 
   const currentWorkspaceRole = normalizeWorkspaceRole(
-    getWorkspaceMemberRole(currentWorkspaceMember) ||
+    workspace?.myRole ||
+      getWorkspaceMemberRole(currentWorkspaceMember) ||
       workspace?.currentUserRole ||
       workspace?.role ||
       workspace?.memberRole ||
@@ -351,7 +490,177 @@ const [isSubtaskPriorityOpen, setIsSubtaskPriorityOpen] = useState(false);
 
   const [discussionTopics, setDiscussionTopics] = useState([]);
 
-  
+  useEffect(() => {
+    if (!workspace?.name) return;
+    setWorkspaceNameInput(workspace.name);
+  }, [workspace?.name]);
+
+  useEffect(() => {
+    if (!workspaceId) return;
+
+    let isMounted = true;
+
+    async function loadWorkspaceMessages() {
+      try {
+        setIsLoadingMessages(true);
+        setMessageStatus("");
+        const messages = await getWorkspaceMessages(workspaceId);
+
+        if (!isMounted) return;
+
+        setChatMessages(
+          (messages || []).map((message) => ({
+            id: message.id,
+            senderName: message.senderName,
+            text: message.text,
+            time: formatWorkspaceMessageTime(message.createdAt),
+            isOwn: currentUserId
+              ? String(message.senderId) === currentUserId
+              : false,
+            avatar: message.senderAvatar || "",
+            file: null,
+          })),
+        );
+      } catch (error) {
+        console.error("Cannot load workspace messages:", error);
+        if (isMounted) {
+          setMessageStatus(
+            error.response?.data?.message ||
+              "Could not load workspace messages.",
+          );
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoadingMessages(false);
+        }
+      }
+    }
+
+    loadWorkspaceMessages();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [workspaceId, currentUserId]);
+
+  const studySets = useMemo(
+    () => buildWorkspaceStudySets(workspaceFlashcards),
+    [workspaceFlashcards],
+  );
+
+  const approvedWorkspaceDocuments = useMemo(
+    () =>
+      workspaceDocuments.filter(
+        (document) => String(document.status || "").toUpperCase() === "APPROVED",
+      ),
+    [workspaceDocuments],
+  );
+
+  const loadWorkspaceDocuments = useCallback(async () => {
+    if (!workspaceId) return;
+
+    try {
+      const documents = await getWorkspaceDocuments(workspaceId);
+      setWorkspaceDocuments(documents || []);
+    } catch (error) {
+      console.error("Cannot load workspace documents:", error);
+      setWorkspaceDocumentStatus(
+        error.response?.data?.message || "Could not load workspace documents.",
+      );
+      setWorkspaceDocuments([]);
+    }
+  }, [workspaceId]);
+
+  const loadWorkspaceFlashcards = useCallback(async () => {
+    if (!workspaceId) return;
+
+    setIsLoadingStudySets(true);
+    setStudySetStatus("");
+
+    try {
+      const cards = await getWorkspaceFlashcards(workspaceId);
+      setWorkspaceFlashcards(cards || []);
+    } catch (error) {
+      console.error("Cannot load workspace flashcards:", error);
+      setStudySetStatus(
+        error.response?.data?.message ||
+          "Could not load workspace flashcards.",
+      );
+      setWorkspaceFlashcards([]);
+    } finally {
+      setIsLoadingStudySets(false);
+    }
+  }, [workspaceId]);
+
+  useEffect(() => {
+    loadWorkspaceDocuments();
+  }, [loadWorkspaceDocuments]);
+
+  useEffect(() => {
+    loadWorkspaceFlashcards();
+  }, [loadWorkspaceFlashcards]);
+
+  useEffect(() => {
+    if (approvedWorkspaceDocuments.length === 0) {
+      setSelectedStudyDocumentId("");
+      return;
+    }
+
+    if (
+      !approvedWorkspaceDocuments.some(
+        (document) => document.id === selectedStudyDocumentId,
+      )
+    ) {
+      setSelectedStudyDocumentId(approvedWorkspaceDocuments[0].id);
+    }
+  }, [approvedWorkspaceDocuments, selectedStudyDocumentId]);
+
+  useEffect(() => {
+    if (studySets.length === 0) {
+      setSelectedStudySetId("");
+      setCurrentStudyCardIndex(0);
+      setIsStudyCardFlipped(false);
+      setReviewedStudyCardIds([]);
+      setStudySessionSeconds(0);
+      return;
+    }
+
+    if (!studySets.some((studySet) => studySet.id === selectedStudySetId)) {
+      setSelectedStudySetId(studySets[0].id);
+      setCurrentStudyCardIndex(0);
+      setIsStudyCardFlipped(false);
+      setReviewedStudyCardIds([]);
+      setStudySessionSeconds(0);
+    }
+  }, [selectedStudySetId, studySets]);
+
+  useEffect(() => {
+    if (activeTab !== "study" || !selectedStudySetId) return undefined;
+
+    const timerId = window.setInterval(() => {
+      setStudySessionSeconds((currentSeconds) => currentSeconds + 1);
+    }, 1000);
+
+    return () => window.clearInterval(timerId);
+  }, [activeTab, selectedStudySetId]);
+
+  const selectedStudySet =
+    studySets.find((studySet) => studySet.id === selectedStudySetId) ||
+    null;
+  const currentStudyCard =
+    selectedStudySet?.cards[currentStudyCardIndex] ||
+    selectedStudySet?.cards[0] ||
+    null;
+
+  useEffect(() => {
+    if (activeTab !== "study" || !currentStudyCard?.id) return;
+
+    setReviewedStudyCardIds((currentIds) =>
+      currentIds.includes(currentStudyCard.id)
+        ? currentIds
+        : [...currentIds, currentStudyCard.id],
+    );
+  }, [activeTab, currentStudyCard?.id]);
 
   const WORKSPACE_STORAGE_LIMIT_BYTES = 50 * 1024 * 1024;
 
@@ -406,7 +715,8 @@ const workspaceStorageUsedBytes = discussionStorageUsedBytes;
     (topic) => topic.id === selectedTopicId,
   );
 
-  const studySets = [
+  /*
+  const sampleStudySets = [
     {
       id: "software-architecture",
       title: "Software Architecture Basics",
@@ -481,22 +791,7 @@ const workspaceStorageUsedBytes = discussionStorageUsedBytes;
       ],
     },
   ];
-
-  const selectedStudySet =
-    studySets.find((studySet) => studySet.id === selectedStudySetId) ||
-    studySets[0];
-  const currentStudyCard =
-    selectedStudySet.cards[currentStudyCardIndex] || selectedStudySet.cards[0];
-
-  function formatMessageFileSize(size) {
-    if (!size) return "0 KB";
-
-    if (size < 1024 * 1024) {
-      return `${(size / 1024).toFixed(1)} KB`;
-    }
-
-    return `${(size / (1024 * 1024)).toFixed(1)} MB`;
-  }
+  */
 
   function getCurrentMessageTime() {
     return new Date().toLocaleTimeString([], {
@@ -976,6 +1271,7 @@ function getSubtaskPriorityIcon(priority) {
         ];
       });
       handleCloseInviteModal();
+      await loadWorkspaceMembers();
       const emailWasSent = inviteResult?.emailSent;
       setInviteSuccess(
         emailWasSent
@@ -1000,22 +1296,56 @@ function getSubtaskPriorityIcon(priority) {
     }
   }
 
+  async function handleUpdateMemberRole(userId, nextRole) {
+    if (!userId || !nextRole) return;
+
+    try {
+      setMemberActionId(userId);
+      setMemberActionStatus("");
+
+      await updateWorkspaceMemberRole(workspaceId, userId, { role: nextRole });
+      await loadWorkspaceMembers();
+
+      setMemberActionStatus(`Member role updated to ${nextRole}.`);
+    } catch (error) {
+      console.error("Cannot update workspace member role:", error);
+      setMemberActionStatus(
+        error.response?.data?.message || "Could not update member role.",
+      );
+    } finally {
+      setMemberActionId("");
+    }
+  }
+
+  async function handleRemoveWorkspaceMember(userId, memberName) {
+    if (!userId) return;
+
+    const isConfirmed = window.confirm(
+      `Remove ${memberName || "this member"} from the workspace?`,
+    );
+
+    if (!isConfirmed) return;
+
+    try {
+      setMemberActionId(userId);
+      setMemberActionStatus("");
+
+      await removeWorkspaceMember(workspaceId, userId);
+      await loadWorkspaceMembers();
+
+      setMemberActionStatus("Member removed from workspace.");
+    } catch (error) {
+      console.error("Cannot remove workspace member:", error);
+      setMemberActionStatus(
+        error.response?.data?.message || "Could not remove member.",
+      );
+    } finally {
+      setMemberActionId("");
+    }
+  }
+
   function handleMessageAttachmentChange(e) {
-    const selectedFile = e.target.files?.[0];
-
-    if (!selectedFile) return;
-
-    const isImage = selectedFile.type.startsWith("image/");
-
-    setMessageAttachment({
-      name: selectedFile.name,
-      size: selectedFile.size,
-      sizeLabel: formatMessageFileSize(selectedFile.size),
-      type: selectedFile.type,
-      isImage,
-      previewUrl: isImage ? URL.createObjectURL(selectedFile) : "",
-    });
-
+    setMessageStatus("Message attachments are not available until workspace file-message storage is added.");
     e.target.value = "";
   }
 
@@ -1027,15 +1357,23 @@ function getSubtaskPriorityIcon(priority) {
     setMessageAttachment(null);
   }
 
-  function handleSendMessage() {
+  async function handleSendMessage() {
     const trimmedMessage = messageText.trim();
 
-    if (trimmedMessage === "" && !messageAttachment) return;
+    if (trimmedMessage === "") return;
+
+    try {
+      setIsSendingMessage(true);
+      setMessageStatus("");
+
+      const savedMessage = await createWorkspaceMessage(workspaceId, {
+        content: trimmedMessage,
+      });
 
     const newMessage = {
-      id: `msg-${Date.now()}`,
-      senderName: profileName,
-      text: trimmedMessage,
+      id: savedMessage.id,
+      senderName: savedMessage.senderName || profileName,
+      text: savedMessage.text,
       time: `${getCurrentMessageTime()} · Sent`,
       isOwn: true,
       file: messageAttachment
@@ -1051,6 +1389,14 @@ function getSubtaskPriorityIcon(priority) {
     setChatMessages((currentMessages) => [...currentMessages, newMessage]);
     setMessageText("");
     setMessageAttachment(null);
+    } catch (error) {
+      console.error("Cannot send workspace message:", error);
+      setMessageStatus(
+        error.response?.data?.message || "Could not send workspace message.",
+      );
+    } finally {
+      setIsSendingMessage(false);
+    }
   }
 
   function handleMessageKeyDown(e) {
@@ -1114,9 +1460,127 @@ function getSubtaskPriorityIcon(priority) {
     setSelectedStudySetId(studySetId);
     setCurrentStudyCardIndex(0);
     setIsStudyCardFlipped(false);
+    setReviewedStudyCardIds([]);
+    setStudySessionSeconds(0);
+  }
+
+  async function handleGenerateWorkspaceFlashcards() {
+    if (!selectedStudyDocumentId || isGeneratingStudyCards) return;
+
+    try {
+      setIsGeneratingStudyCards(true);
+      setStudySetStatus("Generating flashcards from the selected document...");
+
+      const generatedCards = await generateWorkspaceDocumentFlashcards(
+        selectedStudyDocumentId,
+      );
+
+      await loadWorkspaceFlashcards();
+
+      setStudySetStatus(
+        `${generatedCards?.length || 0} flashcards generated successfully.`,
+      );
+    } catch (error) {
+      console.error("Cannot generate workspace flashcards:", error);
+      setStudySetStatus(
+        error.response?.data?.message ||
+          "Could not generate flashcards for this document.",
+      );
+    } finally {
+      setIsGeneratingStudyCards(false);
+    }
+  }
+
+  function handleWorkspaceDocumentFileChange(event) {
+    setWorkspaceUploadFiles(Array.from(event.target.files || []));
+    setWorkspaceDocumentStatus("");
+  }
+
+  async function handleUploadWorkspaceDocuments() {
+    if (workspaceUploadFiles.length === 0 || isUploadingWorkspaceDocuments) {
+      return;
+    }
+
+    try {
+      setIsUploadingWorkspaceDocuments(true);
+      setWorkspaceDocumentStatus("Uploading workspace documents...");
+
+      const uploadedDocuments = await uploadDocuments(
+        workspaceUploadFiles,
+        workspaceId,
+        null,
+        [],
+      );
+
+      setWorkspaceUploadFiles([]);
+      await loadWorkspaceDocuments();
+
+      const hasFlagged = (uploadedDocuments || []).some(
+        (document) => document.status === "FLAGGED",
+      );
+
+      setWorkspaceDocumentStatus(
+        hasFlagged
+          ? "Upload completed. Some documents were flagged for review."
+          : "Workspace documents uploaded and waiting for workspace admin review.",
+      );
+    } catch (error) {
+      console.error("Workspace document upload failed:", error);
+      setWorkspaceDocumentStatus(
+        error.response?.data?.message ||
+          error.response?.data?.error ||
+          "Could not upload workspace documents.",
+      );
+    } finally {
+      setIsUploadingWorkspaceDocuments(false);
+    }
+  }
+
+  async function handleReviewWorkspaceDocument(documentId, decision) {
+    if (!canManageWorkspace) {
+      setWorkspaceDocumentStatus(
+        "Only workspace admins can review workspace documents.",
+      );
+      return;
+    }
+
+    try {
+      const updatedDocument = await reviewWorkspaceDocument(
+        workspaceId,
+        documentId,
+        {
+          decision,
+          reason:
+            decision === "APPROVE"
+              ? "Approved by workspace admin."
+              : "Rejected by workspace admin.",
+        },
+      );
+
+      setWorkspaceDocuments((currentDocuments) =>
+        currentDocuments.map((document) =>
+          document.id === documentId ? updatedDocument : document,
+        ),
+      );
+      await loadWorkspaceDocuments();
+
+      setWorkspaceDocumentStatus(
+        decision === "APPROVE"
+          ? "Document approved for workspace study tools."
+          : "Document rejected by workspace admin.",
+      );
+    } catch (error) {
+      console.error("Workspace document review failed:", error);
+      setWorkspaceDocumentStatus(
+        error.response?.data?.message ||
+          "Could not save workspace document review.",
+      );
+    }
   }
 
   function handlePreviousStudyCard() {
+    if (!selectedStudySet?.cards?.length) return;
+
     setCurrentStudyCardIndex((currentIndex) =>
       currentIndex === 0 ? selectedStudySet.cards.length - 1 : currentIndex - 1,
     );
@@ -1124,6 +1588,8 @@ function getSubtaskPriorityIcon(priority) {
   }
 
   function handleNextStudyCard() {
+    if (!selectedStudySet?.cards?.length) return;
+
     setCurrentStudyCardIndex((currentIndex) =>
       currentIndex === selectedStudySet.cards.length - 1 ? 0 : currentIndex + 1,
     );
@@ -1140,7 +1606,8 @@ function getSubtaskPriorityIcon(priority) {
             </h2>
             <p>
               <span></span>
-              14 members online
+              {backendMembers.length || 1} member
+              {(backendMembers.length || 1) === 1 ? "" : "s"} in workspace
             </p>
           </div>
 
@@ -1155,7 +1622,7 @@ function getSubtaskPriorityIcon(priority) {
 
             <div className="workspace_message_admin">
               <span>{profileName}</span>
-              <img src="https://i.pravatar.cc/80?img=12" alt={profileName} />
+              <i className="ti-user"></i>
             </div>
           </div>
         </header>
@@ -1163,7 +1630,13 @@ function getSubtaskPriorityIcon(priority) {
         <div className="workspace_message_day">Today</div>
 
         <section className="workspace_message_body">
-          {chatMessages.length === 0 ? (
+          {isLoadingMessages ? (
+            <div className="workspace_message_empty">
+              <i className="ti-reload"></i>
+              <h3>Loading messages...</h3>
+              <p>Please wait while this workspace conversation loads.</p>
+            </div>
+          ) : chatMessages.length === 0 ? (
             <div className="workspace_message_empty">
               <i className="ti-comment-alt"></i>
               <h3>No messages yet</h3>
@@ -1258,6 +1731,7 @@ function getSubtaskPriorityIcon(priority) {
             onChange={(e) => setMessageText(e.target.value)}
             onKeyDown={handleMessageKeyDown}
             placeholder="Type your message here..."
+            disabled={isSendingMessage}
           />
 
           <div className="workspace_message_composer_actions">
@@ -1277,6 +1751,7 @@ function getSubtaskPriorityIcon(priority) {
               className="workspace_message_send_btn"
               onClick={handleSendMessage}
               aria-label="Send message"
+              disabled={isSendingMessage || messageText.trim() === ""}
             >
               <i className="ti-control-play"></i>
             </button>
@@ -1284,51 +1759,14 @@ function getSubtaskPriorityIcon(priority) {
         </section>
 
         <p className="workspace_message_hint">
-          Press Enter to send, Shift + Enter for new line
+          {messageStatus || "Press Enter to send, Shift + Enter for new line"}
         </p>
       </section>
     );
   }
 
   function renderMembersTab() {
-    const workspaceMembers = [
-      {
-        name: "TrongBVD",
-        email: "trongbvd@university.edu",
-        role: "Manager",
-        joinDate: "Oct 12, 2023",
-        avatar: "https://i.pravatar.cc/80?img=11",
-        isOnline: true,
-      },
-      {
-        name: profileName,
-        email: "d.khoa@academic.org",
-        role: "Member",
-        joinDate: "Jan 05, 2024",
-        avatar: "https://i.pravatar.cc/80?img=14",
-        isOnline: false,
-      },
-      {
-        name: "aikirokito",
-        email: "kito.ai@study.net",
-        role: "Member",
-        joinDate: "Mar 22, 2024",
-        avatar: "https://i.pravatar.cc/80?img=33",
-        isOnline: false,
-      },
-      {
-        name: "Sarah Jenkins",
-        email: "s.jenkins@university.edu",
-        role: "Member",
-        joinDate: "Jun 10, 2024",
-        avatar: "https://i.pravatar.cc/80?img=47",
-        isOnline: false,
-      },
-    ];
-    const visibleWorkspaceMembers =
-      backendMembers.length > 0
-        ? backendMembers
-            .map((member) => ({
+    const visibleWorkspaceMembers = backendMembers.map((member) => ({
               id: member.user?.id,
               profileId: member.user?.id,
               name:
@@ -1342,8 +1780,10 @@ function getSubtaskPriorityIcon(priority) {
                 : "Recently",
               avatar: "",
               isOnline: false,
-            }))
-        : workspaceMembers;
+            }));
+    const adminCount = visibleWorkspaceMembers.filter(
+      (member) => member.role === "Admin",
+    ).length;
 
     return (
       <section className="workspace_member_tab">
@@ -1383,6 +1823,16 @@ function getSubtaskPriorityIcon(priority) {
             </div>
           )}
 
+          {memberActionStatus && (
+            <div className="workspace_invite_success" role="status">
+              <i className="ti-info-alt"></i>
+              <span>{memberActionStatus}</span>
+              <button type="button" onClick={() => setMemberActionStatus("")}>
+                ×
+              </button>
+            </div>
+          )}
+
           <div className="workspace_member_table">
             <div className="workspace_member_table_header">
               <span>Member</span>
@@ -1391,10 +1841,20 @@ function getSubtaskPriorityIcon(priority) {
               <span>Actions</span>
             </div>
 
-            {visibleWorkspaceMembers.map((member) => {
+            {visibleWorkspaceMembers.length === 0 ? (
+              <div className="workspace_member_empty">
+                <i className="ti-user"></i>
+                <p>No members were returned for this workspace.</p>
+              </div>
+            ) : visibleWorkspaceMembers.map((member) => {
               const canViewProfile = Boolean(member.profileId || member.id);
               const profileId = member.profileId || member.id;
               const isProfileOptionActive = activeMemberProfileId === profileId;
+              const isCurrentUser = currentUserId
+                ? String(member.id) === currentUserId
+                : false;
+              const isLastAdmin = member.role === "Admin" && adminCount <= 1;
+              const isActionBusy = memberActionId === member.id;
 
               return (
                 <article
@@ -1452,7 +1912,11 @@ function getSubtaskPriorityIcon(priority) {
 
                   <span
                     className={`workspace_member_status ${
-                      member.role === "Manager" ? "manager" : "member"
+                      member.role === "Admin"
+                        ? "manager"
+                        : member.role === "Editor"
+                          ? "editor"
+                          : "member"
                     }`}
                   >
                     {member.role}
@@ -1463,9 +1927,30 @@ function getSubtaskPriorityIcon(priority) {
                   </span>
 
                   {canManageWorkspace ? (
-                    <button type="button" aria-label="Member settings">
-                      <i className="ti-settings"></i>
-                    </button>
+                    <div className="workspace_member_admin_actions">
+                      <select
+                        value={member.role}
+                        disabled={isActionBusy || isLastAdmin}
+                        onChange={(event) =>
+                          handleUpdateMemberRole(member.id, event.target.value)
+                        }
+                        aria-label={`Change role for ${member.name}`}
+                      >
+                        <option value="Admin">Admin</option>
+                        <option value="Editor">Editor</option>
+                        <option value="Viewer">Viewer</option>
+                      </select>
+
+                      <button
+                        type="button"
+                        disabled={isActionBusy || isCurrentUser || isLastAdmin}
+                        onClick={() =>
+                          handleRemoveWorkspaceMember(member.id, member.name)
+                        }
+                      >
+                        Remove
+                      </button>
+                    </div>
                   ) : (
                     <span className="workspace_member_readonly_action">
                       View only
@@ -2652,6 +3137,8 @@ const filteredDiscussionTopics = discussionTopics.filter((topic) => {
   }
 
   function renderStudyTab() {
+    const hasStudyCards = Boolean(selectedStudySet && currentStudyCard);
+
     return (
       <section className="workspace_study_tab">
         <aside className="workspace_study_sidebar">
@@ -2663,13 +3150,51 @@ const filteredDiscussionTopics = discussionTopics.filter((topic) => {
             </button>
           </div>
 
-          <button type="button" className="workspace_study_generate_btn">
+          <button
+            type="button"
+            className="workspace_study_generate_btn"
+            onClick={handleGenerateWorkspaceFlashcards}
+            disabled={isGeneratingStudyCards || !selectedStudyDocumentId}
+          >
             <i className="ti-plus"></i>
-            Generate New
+            {isGeneratingStudyCards ? "Generating..." : "Generate New"}
           </button>
 
+          <label className="workspace_study_document_picker">
+            <span>Approved document</span>
+            <select
+              value={selectedStudyDocumentId}
+              onChange={(event) =>
+                setSelectedStudyDocumentId(event.target.value)
+              }
+              disabled={
+                isGeneratingStudyCards || approvedWorkspaceDocuments.length === 0
+              }
+            >
+              {approvedWorkspaceDocuments.length === 0 && (
+                <option value="">No approved workspace documents</option>
+              )}
+
+              {approvedWorkspaceDocuments.map((document) => (
+                <option key={document.id} value={document.id}>
+                  {document.title}
+                </option>
+              ))}
+            </select>
+          </label>
+
           <div className="workspace_study_set_list">
-            {studySets.map((studySet) => (
+            {isLoadingStudySets && (
+              <p className="workspace_empty_text">Loading flashcards...</p>
+            )}
+
+            {!isLoadingStudySets && studySets.length === 0 && (
+              <p className="workspace_empty_text">
+                No generated flashcards found for this workspace.
+              </p>
+            )}
+
+            {!isLoadingStudySets && studySets.map((studySet) => (
               <button
                 type="button"
                 className={`workspace_study_set_card ${
@@ -2697,8 +3222,11 @@ const filteredDiscussionTopics = discussionTopics.filter((topic) => {
             </div>
 
             <section>
-              <strong>AI Extraction</strong>
-              <p>Analyzing System_Design_v2.pdf...</p>
+              <strong>Flashcards</strong>
+              <p>
+                {studySetStatus ||
+                  `${workspaceFlashcards.length} saved workspace cards`}
+              </p>
             </section>
           </section>
         </aside>
@@ -2706,8 +3234,11 @@ const filteredDiscussionTopics = discussionTopics.filter((topic) => {
         <section className="workspace_study_main">
           <header className="workspace_study_header">
             <div>
-              <h2>{selectedStudySet.title}</h2>
-              <p>{selectedStudySet.subtitle}</p>
+              <h2>{selectedStudySet?.title || "No flashcards yet"}</h2>
+              <p>
+                {selectedStudySet?.subtitle ||
+                  "Generate flashcards from an approved workspace document to study here."}
+              </p>
             </div>
 
             <div className="workspace_study_progress">
@@ -2715,9 +3246,11 @@ const filteredDiscussionTopics = discussionTopics.filter((topic) => {
                 <span
                   style={{
                     width: `${
-                      ((currentStudyCardIndex + 1) /
-                        selectedStudySet.cards.length) *
-                      100
+                      hasStudyCards
+                        ? ((currentStudyCardIndex + 1) /
+                            selectedStudySet.cards.length) *
+                          100
+                        : 0
                     }%`,
                   }}
                 ></span>
@@ -2725,7 +3258,8 @@ const filteredDiscussionTopics = discussionTopics.filter((topic) => {
 
               <p>
                 <strong>Session Progress</strong>
-                {currentStudyCardIndex + 1} of {selectedStudySet.cards.length}{" "}
+                {hasStudyCards ? currentStudyCardIndex + 1 : 0} of{" "}
+                {selectedStudySet?.cards?.length || 0}{" "}
                 cards
               </p>
             </div>
@@ -2737,12 +3271,16 @@ const filteredDiscussionTopics = discussionTopics.filter((topic) => {
               className={`workspace_flashcard ${
                 isStudyCardFlipped ? "flipped" : ""
               }`}
-              onClick={() => setIsStudyCardFlipped(!isStudyCardFlipped)}
+              onClick={() =>
+                hasStudyCards && setIsStudyCardFlipped(!isStudyCardFlipped)
+              }
             >
               <span>{isStudyCardFlipped ? "Answer" : "Question"}</span>
 
               <h3>
-                {isStudyCardFlipped
+                {!hasStudyCards
+                  ? "No flashcards are available for this workspace yet."
+                  : isStudyCardFlipped
                   ? currentStudyCard.answer
                   : currentStudyCard.question}
               </h3>
@@ -2754,20 +3292,31 @@ const filteredDiscussionTopics = discussionTopics.filter((topic) => {
             </button>
 
             <div className="workspace_study_controls">
-              <button type="button" onClick={handlePreviousStudyCard}>
+              <button
+                type="button"
+                onClick={handlePreviousStudyCard}
+                disabled={!hasStudyCards}
+              >
                 <i className="ti-arrow-left"></i>
               </button>
 
               <button
                 type="button"
                 className="workspace_study_flip_btn"
-                onClick={() => setIsStudyCardFlipped(!isStudyCardFlipped)}
+                onClick={() =>
+                  hasStudyCards && setIsStudyCardFlipped(!isStudyCardFlipped)
+                }
+                disabled={!hasStudyCards}
               >
                 <i className="ti-reload"></i>
                 Flip Card
               </button>
 
-              <button type="button" onClick={handleNextStudyCard}>
+              <button
+                type="button"
+                onClick={handleNextStudyCard}
+                disabled={!hasStudyCards}
+              >
                 <i className="ti-arrow-right"></i>
               </button>
             </div>
@@ -2781,7 +3330,7 @@ const filteredDiscussionTopics = discussionTopics.filter((topic) => {
 
               <section>
                 <span>Time Spent</span>
-                <strong>14:2</strong>
+                <strong>{formatStudySessionDuration(studySessionSeconds)}</strong>
                 <p>This session</p>
               </section>
             </article>
@@ -2792,9 +3341,11 @@ const filteredDiscussionTopics = discussionTopics.filter((topic) => {
               </div>
 
               <section>
-                <span>Recall Rate</span>
-                <strong>92%</strong>
-                <p>Higher than average</p>
+                <span>Cards Reviewed</span>
+                <strong>
+                  {reviewedStudyCardIds.length}/{selectedStudySet?.cards?.length || 0}
+                </strong>
+                <p>Unique cards opened</p>
               </section>
             </article>
 
@@ -2804,12 +3355,179 @@ const filteredDiscussionTopics = discussionTopics.filter((topic) => {
               </div>
 
               <section>
-                <span>Focus Level</span>
-                <strong>High</strong>
-                <p>Keep it up!</p>
+                <span>Current Card</span>
+                <strong>
+                  {hasStudyCards ? currentStudyCardIndex + 1 : 0}
+                </strong>
+                <p>{selectedStudySet?.cards?.length || 0} cards in this set</p>
               </section>
             </article>
           </section>
+        </section>
+      </section>
+    );
+  }
+
+  function renderDocumentsTab() {
+    return (
+      <section className="workspace_documents_tab">
+        <header className="workspace_documents_header">
+          <div>
+            <span>Workspace Files</span>
+            <h2>Documents</h2>
+            <p>Upload learning materials to this workspace and use approved files for AI study cards.</p>
+          </div>
+
+          <div className="workspace_documents_count">
+            <strong>{workspaceDocuments.length}</strong>
+            <span>Files</span>
+          </div>
+        </header>
+
+        <section className="workspace_documents_upload_card">
+          <div className="workspace_documents_upload_copy">
+            <div className="workspace_documents_upload_icon">
+              <i className="ti-upload"></i>
+            </div>
+
+            <div>
+              <h3>Upload workspace documents</h3>
+              <p>PDF, DOCX, and TXT files are supported. Files are checked before becoming available for study tools.</p>
+            </div>
+          </div>
+
+          <div className="workspace_documents_upload_actions">
+            <label className="workspace_documents_file_picker">
+              <i className="ti-folder"></i>
+              <span>
+                {workspaceUploadFiles.length > 0
+                  ? `${workspaceUploadFiles.length} selected`
+                  : "Choose files"}
+              </span>
+              <input
+                type="file"
+                multiple
+                accept=".pdf,.docx,.txt"
+                onChange={handleWorkspaceDocumentFileChange}
+                disabled={isUploadingWorkspaceDocuments}
+              />
+            </label>
+
+            <button
+              type="button"
+              onClick={handleUploadWorkspaceDocuments}
+              disabled={
+                isUploadingWorkspaceDocuments ||
+                workspaceUploadFiles.length === 0
+              }
+            >
+              {isUploadingWorkspaceDocuments ? "Uploading..." : "Upload"}
+            </button>
+          </div>
+
+          {workspaceUploadFiles.length > 0 && (
+            <div className="workspace_documents_selected_files">
+              {workspaceUploadFiles.map((file) => (
+                <span key={`${file.name}-${file.size}`}>
+                  {file.name} · {formatWorkspaceFileSize(file.size)}
+                </span>
+              ))}
+            </div>
+          )}
+
+          {workspaceDocumentStatus && (
+            <p className="workspace_documents_status">
+              {workspaceDocumentStatus}
+            </p>
+          )}
+        </section>
+
+        <section className="workspace_documents_list_card">
+          <div className="workspace_documents_list_header">
+            <h3>Workspace document list</h3>
+            <span>{approvedWorkspaceDocuments.length} approved</span>
+          </div>
+
+          {workspaceDocuments.length === 0 ? (
+            <div className="workspace_documents_empty">
+              <i className="ti-files"></i>
+              <h3>No workspace documents yet</h3>
+              <p>Upload a document here, then use approved documents in the Study tab.</p>
+            </div>
+          ) : (
+            <div className="workspace_documents_list">
+              {workspaceDocuments.map((document) => {
+                const status = String(document.status || "PENDING").toUpperCase();
+                const isApproved = status === "APPROVED";
+                const needsWorkspaceReview =
+                  canManageWorkspace &&
+                  ["PENDING", "FLAGGED", "PENDING_RETRY", "REJECTED"].includes(
+                    status,
+                  );
+
+                return (
+                  <article className="workspace_document_row" key={document.id}>
+                    <div className="workspace_document_icon">
+                      <i className="ti-file"></i>
+                    </div>
+
+                    <div className="workspace_document_info">
+                      <h3>{document.title}</h3>
+                      <p>
+                        {formatWorkspaceFileSize(document.file_size_bytes)} ·{" "}
+                        {document.created_at
+                          ? new Date(document.created_at).toLocaleDateString()
+                          : "Recently uploaded"}
+                      </p>
+                    </div>
+
+                    <span
+                      className={`workspace_document_status ${status.toLowerCase()}`}
+                    >
+                      {getDocumentStatusLabel(status)}
+                    </span>
+
+                    <div className="workspace_document_actions">
+                      {needsWorkspaceReview && (
+                        <>
+                          <button
+                            type="button"
+                            className="approve"
+                            onClick={() =>
+                              handleReviewWorkspaceDocument(document.id, "APPROVE")
+                            }
+                          >
+                            Approve
+                          </button>
+
+                          <button
+                            type="button"
+                            className="reject"
+                            onClick={() =>
+                              handleReviewWorkspaceDocument(document.id, "REJECT")
+                            }
+                          >
+                            Reject
+                          </button>
+                        </>
+                      )}
+
+                      <button
+                        type="button"
+                        disabled={!isApproved || isGeneratingStudyCards}
+                        onClick={() => {
+                          setSelectedStudyDocumentId(document.id);
+                          setActiveTab("study");
+                        }}
+                      >
+                        Study
+                      </button>
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+          )}
         </section>
       </section>
     );
@@ -2887,7 +3605,7 @@ const filteredDiscussionTopics = discussionTopics.filter((topic) => {
 
             <div>
               <h3>Delete workspace</h3>
-              <p>Remove this workspace from your local workspace list.</p>
+              <p>Remove this workspace for all members.</p>
             </div>
           </div>
 
@@ -3152,6 +3870,14 @@ const filteredDiscussionTopics = discussionTopics.filter((topic) => {
         </button>
 
         <button
+          className={activeTab === "documents" ? "active" : ""}
+          onClick={() => setActiveTab("documents")}
+        >
+          <i className="ti-files"></i>
+          Files
+        </button>
+
+        <button
           className={activeTab === "members" ? "active" : ""}
           onClick={() => setActiveTab("members")}
         >
@@ -3173,6 +3899,8 @@ const filteredDiscussionTopics = discussionTopics.filter((topic) => {
       {activeTab === "discussion" && renderDiscussionTab()}
 
       {activeTab === "study" && renderStudyTab()}
+
+      {activeTab === "documents" && renderDocumentsTab()}
 
       {activeTab === "members" && renderMembersTab()}
 

@@ -1,19 +1,58 @@
 const supabase = require("../config/supabase");
-const nodemailer = require("nodemailer");
+const { createMailTransporter } = require("../utils/mailerService");
 
 const MEMBER_ROLES = ["Editor", "Viewer"];
-
-function createMailTransporter() {
-  return nodemailer.createTransport({
-    host: process.env.EMAIL_HOST,
-    port: parseInt(process.env.EMAIL_PORT, 10) || 2525,
-    secure: String(process.env.EMAIL_PORT) === "465",
-    auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS,
-    },
-  });
-}
+const ALL_MEMBER_ROLES = ["Admin", "Editor", "Viewer"];
+const MESSAGE_SELECT = `
+  id,
+  workspace_id,
+  sender_id,
+  content,
+  is_edited,
+  created_at,
+  sender:profiles!workspace_messages_sender_id_fkey (
+    id,
+    email,
+    username,
+    full_name,
+    avatar_url
+  )
+`;
+const FLASHCARD_SELECT = `
+  id,
+  document_id,
+  workspace_id,
+  creator_id,
+  question,
+  answer,
+  created_at,
+  document:documents!flashcards_document_id_fkey (
+    id,
+    title,
+    status
+  )
+`;
+const WORKSPACE_DOCUMENT_SELECT = `
+  id,
+  uploader_id,
+  workspace_id,
+  library_id,
+  title,
+  file_size_bytes,
+  is_public,
+  status,
+  ai_reject_reason,
+  reviewed_by_admin_id,
+  reviewed_at,
+  admin_review_reason,
+  created_at,
+  uploader:profiles!documents_uploader_id_fkey (
+    id,
+    email,
+    username,
+    full_name
+  )
+`;
 
 function getFrontendUrl() {
   return (process.env.FRONTEND_URL || "http://localhost:5173").replace(/\/+$/, "");
@@ -95,6 +134,73 @@ async function getWorkspaceAccess(workspaceId, userId) {
   const isAdmin = isCreator || member?.role === "Admin";
 
   return { workspace, member, isAdmin };
+}
+
+async function countWorkspaceAdmins(workspaceId) {
+  const { count, error } = await supabase
+    .from("workspace_members")
+    .select("*", { count: "exact", head: true })
+    .eq("workspace_id", workspaceId)
+    .eq("role", "Admin");
+
+  if (error) throw error;
+
+  return count || 0;
+}
+
+function mapWorkspaceMessage(row) {
+  const sender = row.sender || {};
+  return {
+    id: row.id,
+    workspaceId: row.workspace_id,
+    senderId: row.sender_id,
+    senderName:
+      sender.full_name || sender.username || sender.email || "Workspace member",
+    senderEmail: sender.email || "",
+    senderAvatar: sender.avatar_url || "",
+    text: row.content,
+    isEdited: row.is_edited === true,
+    createdAt: row.created_at,
+  };
+}
+
+function mapWorkspaceFlashcard(row) {
+  return {
+    id: row.id,
+    documentId: row.document_id,
+    workspaceId: row.workspace_id,
+    creatorId: row.creator_id,
+    question: row.question,
+    answer: row.answer,
+    createdAt: row.created_at,
+    documentTitle: row.document?.title || "Workspace flashcards",
+    documentStatus: row.document?.status || "",
+  };
+}
+
+function mapWorkspaceDocument(row) {
+  const uploader = row.uploader || {};
+
+  return {
+    id: row.id,
+    uploaderId: row.uploader_id,
+    workspaceId: row.workspace_id,
+    libraryId: row.library_id,
+    title: row.title,
+    fileSizeBytes: row.file_size_bytes,
+    file_size_bytes: row.file_size_bytes,
+    isPublic: row.is_public === true,
+    status: row.status,
+    aiRejectReason: row.ai_reject_reason,
+    reviewedByAdminId: row.reviewed_by_admin_id,
+    reviewedAt: row.reviewed_at,
+    adminReviewReason: row.admin_review_reason,
+    createdAt: row.created_at,
+    created_at: row.created_at,
+    uploaderName:
+      uploader.full_name || uploader.username || uploader.email || "Unknown user",
+    uploaderEmail: uploader.email || "",
+  };
 }
 
 exports.createWorkspace = async (req, res) => {
@@ -180,12 +286,12 @@ exports.listMyWorkspaces = async (req, res) => {
 
 exports.getWorkspace = async (req, res) => {
   try {
-    const { workspace, member } = await getWorkspaceAccess(
+    const { workspace, member, isAdmin } = await getWorkspaceAccess(
       req.params.workspaceId,
       req.user.id,
     );
 
-    if (!workspace || !member) {
+    if (!workspace || (!member && !isAdmin)) {
       return res
         .status(404)
         .json({ status: "error", message: "Workspace not found." });
@@ -193,7 +299,7 @@ exports.getWorkspace = async (req, res) => {
 
     return res.status(200).json({
       status: "success",
-      data: { ...workspace, myRole: member.role },
+      data: { ...workspace, myRole: member?.role || "Admin" },
     });
   } catch (error) {
     return res
@@ -203,6 +309,90 @@ exports.getWorkspace = async (req, res) => {
         message: "Could not load workspace.",
         error: error.message,
       });
+  }
+};
+
+exports.listMessages = async (req, res) => {
+  try {
+    const { workspace, member, isAdmin } = await getWorkspaceAccess(
+      req.params.workspaceId,
+      req.user.id,
+    );
+
+    if (!workspace || (!member && !isAdmin)) {
+      return res.status(403).json({
+        status: "error",
+        message: "You cannot access this workspace.",
+      });
+    }
+
+    const { data, error } = await supabase
+      .from("workspace_messages")
+      .select(MESSAGE_SELECT)
+      .eq("workspace_id", req.params.workspaceId)
+      .is("deleted_at", null)
+      .order("created_at", { ascending: true })
+      .limit(200);
+
+    if (error) throw error;
+
+    return res.status(200).json({
+      status: "success",
+      data: (data || []).map(mapWorkspaceMessage),
+    });
+  } catch (error) {
+    return res.status(500).json({
+      status: "error",
+      message: "Could not load workspace messages.",
+      error: error.message,
+    });
+  }
+};
+
+exports.createMessage = async (req, res) => {
+  try {
+    const { workspace, member, isAdmin } = await getWorkspaceAccess(
+      req.params.workspaceId,
+      req.user.id,
+    );
+
+    if (!workspace || (!member && !isAdmin)) {
+      return res.status(403).json({
+        status: "error",
+        message: "You cannot access this workspace.",
+      });
+    }
+
+    const content = String(req.body.content || "").trim();
+    if (!content) {
+      return res.status(400).json({
+        status: "error",
+        message: "Message content is required.",
+      });
+    }
+
+    const { data: insertedMessage, error: insertError } = await supabase
+      .from("workspace_messages")
+      .insert({
+        workspace_id: req.params.workspaceId,
+        sender_id: req.user.id,
+        content,
+      })
+      .select(MESSAGE_SELECT)
+      .single();
+
+    if (insertError) throw insertError;
+
+    return res.status(201).json({
+      status: "success",
+      data: mapWorkspaceMessage(insertedMessage),
+    });
+  } catch (error) {
+    return res.status(500).json({
+      status: "error",
+      message: "Could not send workspace message.",
+      error: error.message,
+    });
   }
 };
 
@@ -441,6 +631,318 @@ exports.addMember = async (req, res) => {
   }
 };
 
+exports.updateMemberRole = async (req, res) => {
+  try {
+    const { workspaceId, userId } = req.params;
+    const { role } = req.body;
+
+    if (!ALL_MEMBER_ROLES.includes(role)) {
+      return res.status(400).json({
+        status: "error",
+        message: "Role must be Admin, Editor or Viewer.",
+      });
+    }
+
+    const access = await getWorkspaceAccess(workspaceId, req.user.id);
+    if (!access.workspace || !access.isAdmin) {
+      return res.status(403).json({
+        status: "error",
+        message: "Only workspace admins can update member roles.",
+      });
+    }
+
+    const { data: currentMember, error: currentMemberError } = await supabase
+      .from("workspace_members")
+      .select("role")
+      .eq("workspace_id", workspaceId)
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    if (currentMemberError) throw currentMemberError;
+
+    if (!currentMember) {
+      return res.status(404).json({
+        status: "error",
+        message: "Workspace member not found.",
+      });
+    }
+
+    if (
+      currentMember.role === "Admin" &&
+      role !== "Admin" &&
+      (await countWorkspaceAdmins(workspaceId)) <= 1
+    ) {
+      return res.status(400).json({
+        status: "error",
+        message: "A workspace must have at least one admin.",
+      });
+    }
+
+    const { data, error } = await supabase
+      .from("workspace_members")
+      .update({ role })
+      .eq("workspace_id", workspaceId)
+      .eq("user_id", userId)
+      .select(
+        `
+        role,
+        joined_at,
+        user:profiles!workspace_members_user_id_fkey (
+          id,
+          email,
+          username,
+          full_name,
+          status
+        )
+      `,
+      )
+      .single();
+
+    if (error) throw error;
+
+    return res.status(200).json({
+      status: "success",
+      data,
+    });
+  } catch (error) {
+    console.error("updateMemberRole error:", error);
+    return res.status(500).json({
+      status: "error",
+      message: "Could not update member role.",
+      error: error.message,
+    });
+  }
+};
+
+exports.removeMember = async (req, res) => {
+  try {
+    const { workspaceId, userId } = req.params;
+
+    const access = await getWorkspaceAccess(workspaceId, req.user.id);
+    if (!access.workspace || !access.isAdmin) {
+      return res.status(403).json({
+        status: "error",
+        message: "Only workspace admins can remove members.",
+      });
+    }
+
+    if (String(access.workspace.created_by) === String(userId)) {
+      return res.status(400).json({
+        status: "error",
+        message: "The workspace creator cannot be removed.",
+      });
+    }
+
+    const { data: currentMember, error: currentMemberError } = await supabase
+      .from("workspace_members")
+      .select("role")
+      .eq("workspace_id", workspaceId)
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    if (currentMemberError) throw currentMemberError;
+
+    if (!currentMember) {
+      return res.status(404).json({
+        status: "error",
+        message: "Workspace member not found.",
+      });
+    }
+
+    if (
+      currentMember.role === "Admin" &&
+      (await countWorkspaceAdmins(workspaceId)) <= 1
+    ) {
+      return res.status(400).json({
+        status: "error",
+        message: "A workspace must have at least one admin.",
+      });
+    }
+
+    const { error } = await supabase
+      .from("workspace_members")
+      .delete()
+      .eq("workspace_id", workspaceId)
+      .eq("user_id", userId);
+
+    if (error) throw error;
+
+    return res.status(200).json({
+      status: "success",
+      message: "Member removed from workspace.",
+    });
+  } catch (error) {
+    console.error("removeMember error:", error);
+    return res.status(500).json({
+      status: "error",
+      message: "Could not remove member.",
+      error: error.message,
+    });
+  }
+};
+
+exports.listFlashcards = async (req, res) => {
+  try {
+    const { workspaceId } = req.params;
+    const userId = req.user.id;
+
+    const { workspace, member, isAdmin } = await getWorkspaceAccess(
+      workspaceId,
+      userId,
+    );
+
+    if (!workspace) {
+      return res
+        .status(404)
+        .json({ status: "error", message: "Workspace not found." });
+    }
+
+    if (!member && !isAdmin) {
+      return res.status(403).json({
+        status: "error",
+        message: "You do not have access to this workspace.",
+      });
+    }
+
+    const { data, error } = await supabase
+      .from("flashcards")
+      .select(FLASHCARD_SELECT)
+      .eq("workspace_id", workspaceId)
+      .order("created_at", { ascending: false });
+
+    if (error) throw error;
+
+    return res.status(200).json({
+      status: "success",
+      data: (data || []).map(mapWorkspaceFlashcard),
+    });
+  } catch (error) {
+    console.error("listFlashcards error:", error);
+    return res.status(500).json({
+      status: "error",
+      message: "Could not load workspace flashcards.",
+    });
+  }
+};
+
+exports.listDocuments = async (req, res) => {
+  try {
+    const { workspaceId } = req.params;
+    const userId = req.user.id;
+
+    const { workspace, member, isAdmin } = await getWorkspaceAccess(
+      workspaceId,
+      userId,
+    );
+
+    if (!workspace || (!member && !isAdmin)) {
+      return res.status(403).json({
+        status: "error",
+        message: "You cannot access this workspace.",
+      });
+    }
+
+    const { data, error } = await supabase
+      .from("documents")
+      .select(WORKSPACE_DOCUMENT_SELECT)
+      .eq("workspace_id", workspaceId)
+      .is("deleted_at", null)
+      .order("created_at", { ascending: false });
+
+    if (error) throw error;
+
+    return res.status(200).json({
+      status: "success",
+      data: (data || []).map(mapWorkspaceDocument),
+    });
+  } catch (error) {
+    console.error("listWorkspaceDocuments error:", error);
+    return res.status(500).json({
+      status: "error",
+      message: "Could not load workspace documents.",
+      error: error.message,
+    });
+  }
+};
+
+exports.reviewDocument = async (req, res) => {
+  try {
+    const { workspaceId, documentId } = req.params;
+    const { decision, reason } = req.body;
+    const userId = req.user.id;
+
+    if (!["APPROVE", "REJECT"].includes(decision)) {
+      return res.status(400).json({
+        status: "error",
+        message: "decision must be APPROVE or REJECT.",
+      });
+    }
+
+    const { workspace, isAdmin } = await getWorkspaceAccess(workspaceId, userId);
+
+    if (!workspace) {
+      return res
+        .status(404)
+        .json({ status: "error", message: "Workspace not found." });
+    }
+
+    if (!isAdmin) {
+      return res.status(403).json({
+        status: "error",
+        message: "Only workspace admins can review workspace documents.",
+      });
+    }
+
+    const { data: document, error: documentError } = await supabase
+      .from("documents")
+      .select("*")
+      .eq("id", documentId)
+      .eq("workspace_id", workspaceId)
+      .is("deleted_at", null)
+      .maybeSingle();
+
+    if (documentError) throw documentError;
+
+    if (!document) {
+      return res.status(404).json({
+        status: "error",
+        message: "Workspace document not found.",
+      });
+    }
+
+    const newStatus = decision === "APPROVE" ? "APPROVED" : "REJECTED";
+
+    const { data: updatedDocument, error: updateError } = await supabase
+      .from("documents")
+      .update({
+        status: newStatus,
+        reviewed_by_admin_id: userId,
+        reviewed_at: new Date().toISOString(),
+        admin_review_reason:
+          String(reason || "").trim() ||
+          `${newStatus.toLowerCase()} by workspace admin.`,
+      })
+      .eq("id", documentId)
+      .eq("workspace_id", workspaceId)
+      .select(WORKSPACE_DOCUMENT_SELECT)
+      .single();
+
+    if (updateError) throw updateError;
+
+    return res.status(200).json({
+      status: "success",
+      data: mapWorkspaceDocument(updatedDocument),
+    });
+  } catch (error) {
+    console.error("reviewWorkspaceDocument error:", error);
+    return res.status(500).json({
+      status: "error",
+      message: "Could not review workspace document.",
+      error: error.message,
+    });
+  }
+};
+
 exports.updateWorkspace = async (req, res) => {
   try {
     const { workspaceId } = req.params;
@@ -455,9 +957,32 @@ exports.updateWorkspace = async (req, res) => {
       return res.status(403).json({ status: "error", message: "Only administrators can update this workspace." });
     }
 
+    const updatePayload = {};
+    if (typeof name === "string") {
+      const cleanName = name.trim();
+      if (!cleanName) {
+        return res.status(400).json({
+          status: "error",
+          message: "Workspace name is required.",
+        });
+      }
+      updatePayload.name = cleanName;
+    }
+
+    if (typeof description === "string") {
+      updatePayload.description = description.trim() || null;
+    }
+
+    if (Object.keys(updatePayload).length === 0) {
+      return res.status(400).json({
+        status: "error",
+        message: "No workspace fields were provided.",
+      });
+    }
+
     const { data, error } = await supabase
       .from("workspaces")
-      .update({ name: name?.trim(), description: description?.trim() })
+      .update(updatePayload)
       .eq("id", workspaceId)
       .select()
       .single();

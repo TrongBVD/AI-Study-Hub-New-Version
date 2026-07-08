@@ -1,4 +1,5 @@
 const authService = require('../services/authService');
+const { createMailTransporter } = require('../utils/mailerService');
 const supabase = require('../config/supabase');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
@@ -52,9 +53,8 @@ exports.googleLogin = async (req, res) => {
         }
         res.status(200).json({ status: 'success', data: result });
     } catch (error) {
-        // THÊM DÒNG NÀY ĐỂ BIẾT LỖI TẠI ĐÂU:
         console.error("🔴 LỖI BACKEND GOOGLE LOGIN:", error);
-        res.status(401).json({ status: 'error', message: 'Token Google không hợp lệ', error: error.message });
+        res.status(401).json({ status: 'error', message: 'Token Google không hợp lệ.' });
     }
 };
 
@@ -68,7 +68,6 @@ exports.verifyOTP = async (req, res) => {
         const cleanEmail = email.toLowerCase().trim();
         const cleanOtp = String(otp || "").trim();
 
-        console.log(`[DRY RUN] Đang kiểm tra: Email="${cleanEmail}", OTP="${cleanOtp}"`);
 
         // ======================================================
         // 2. KIỂM TRA TÀI KHOẢN CÓ ĐANG CHỜ COMPLETE PROFILE KHÔNG
@@ -107,8 +106,6 @@ exports.verifyOTP = async (req, res) => {
             console.error("🔴 Lỗi truy vấn Supabase:", error);
             throw error;
         }
-
-        console.log(`[DRY RUN] Record tìm thấy:`, otpRecord);
 
         if (!otpRecord) {
             return res.status(400).json({
@@ -154,7 +151,7 @@ exports.verifyOTP = async (req, res) => {
         console.error("🔴 Lỗi hệ thống verifyOTP:", error);
         res.status(500).json({
             status: 'error',
-            message: error.message
+            message: 'Internal server error. Please try again.'
         });
     }
 };
@@ -399,7 +396,7 @@ exports.login = async (req, res) => {
         });
     } catch (error) {
         console.error("🔴 Lỗi hệ thống Login:", error);
-        res.status(500).json({ status: 'error', message: error.message });
+        res.status(500).json({ status: 'error', message: 'Internal server error. Please try again.' });
     }
 };
 
@@ -432,12 +429,8 @@ exports.forgotPassword = async (req, res) => {
             expires_at: expiresAt.toISOString()
         }]);
 
-        // 3. Khởi tạo cấu trúc gửi Mail (Tái sử dụng config hiện có)
-        const transporter = require('nodemailer').createTransport({
-            host: process.env.EMAIL_HOST,
-            port: parseInt(process.env.EMAIL_PORT) || 2525,
-            auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS }
-        });
+        // 3. Gửi email OTP khôi phục mật khẩu
+        const transporter = createMailTransporter();
 
         await transporter.sendMail({
             from: process.env.EMAIL_USER,
@@ -453,7 +446,7 @@ exports.forgotPassword = async (req, res) => {
         });
     } catch (error) {
         console.error("🔴 Lỗi forgotPassword:", error);
-        res.status(500).json({ status: 'error', message: error.message });
+        res.status(500).json({ status: 'error', message: 'Internal server error. Please try again.' });
     }
 };
 
@@ -517,7 +510,7 @@ exports.verifyResetPasswordOTP = async (req, res) => {
         console.error("🔴 Lỗi verifyResetPasswordOTP:", error);
         return res.status(500).json({
             status: "error",
-            message: error.message
+            message: 'Internal server error. Please try again.'
         });
     }
 };
@@ -580,7 +573,7 @@ exports.resetPassword = async (req, res) => {
         console.error("🔴 Lỗi resetPassword:", error);
         res.status(500).json({
             status: "error",
-            message: error.message
+            message: 'Internal server error. Please try again.'
         });
     }
 };

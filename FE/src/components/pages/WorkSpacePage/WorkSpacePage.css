@@ -195,7 +195,7 @@
 .workspace_member_table_header,
 .workspace_member_row {
   display: grid;
-  grid-template-columns: minmax(300px, 1.65fr) 130px 160px 96px;
+  grid-template-columns: minmax(300px, 1.65fr) 130px 160px minmax(210px, auto);
   align-items: center;
   gap: 18px;
   padding: 0 26px;
@@ -369,6 +369,12 @@
   color: var(--sidebar-bg);
 }
 
+.workspace_member_status.editor {
+  background: var(--accent-soft);
+  border: 1px solid var(--border-color);
+  color: var(--accent-color, var(--accent-hover));
+}
+
 .workspace_member_join_date {
   color: var(--sidebar-bg);
   font-size: 14px;
@@ -404,6 +410,60 @@
 
 .workspace_member_row > button:hover {
   color: var(--text-primary) !important;
+}
+
+.workspace_member_admin_actions {
+  justify-self: end;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.workspace_member_admin_actions select,
+.workspace_member_admin_actions button {
+  min-height: 36px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.workspace_member_admin_actions select {
+  border: 1px solid var(--border-color);
+  background: var(--bg-card);
+  color: var(--text-primary);
+  padding: 0 10px;
+}
+
+.workspace_member_admin_actions button {
+  border: none;
+  background: var(--button-bg);
+  color: var(--button-text);
+  padding: 0 12px;
+  cursor: pointer;
+}
+
+.workspace_member_admin_actions select:disabled,
+.workspace_member_admin_actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.workspace_member_empty {
+  min-height: 180px;
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: var(--text-secondary);
+}
+
+.workspace_member_empty i {
+  color: var(--text-muted);
+  font-size: 28px;
 }
 
 .workspace_resend_btn {
@@ -1711,6 +1771,36 @@
   margin-bottom: 24px;
 }
 
+.workspace_study_generate_btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.workspace_study_document_picker {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+
+.workspace_study_document_picker span {
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.workspace_study_document_picker select {
+  width: 100%;
+  min-height: 42px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--bg-card);
+  color: var(--text-primary);
+  padding: 0 12px;
+  font: inherit;
+  font-size: 12px;
+}
+
 .workspace_study_set_list {
   display: flex;
   flex-direction: column;
@@ -1968,6 +2058,281 @@
   min-width: 150px;
   padding: 0 20px;
   gap: 8px;
+}
+
+.workspace_documents_tab {
+  width: min(1036px, 100%);
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.workspace_documents_header,
+.workspace_documents_upload_card,
+.workspace_documents_list_card {
+  border: 1px solid var(--border-color);
+  border-radius: 18px;
+  background: var(--bg-card);
+  box-shadow: var(--shadow-soft);
+}
+
+.workspace_documents_header {
+  padding: 34px 32px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.workspace_documents_header span {
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 1.6px;
+  text-transform: uppercase;
+}
+
+.workspace_documents_header h2 {
+  margin: 12px 0 8px;
+  color: var(--text-primary);
+  font-size: 32px;
+  line-height: 1.1;
+}
+
+.workspace_documents_header p {
+  margin: 0;
+  color: var(--text-secondary);
+}
+
+.workspace_documents_count {
+  min-width: 94px;
+  min-height: 74px;
+  border-radius: 14px;
+  background: var(--bg-secondary);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.workspace_documents_count strong {
+  color: var(--text-primary);
+  font-size: 28px;
+  line-height: 1;
+}
+
+.workspace_documents_count span {
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.workspace_documents_upload_card,
+.workspace_documents_list_card {
+  padding: 28px 32px;
+}
+
+.workspace_documents_upload_copy {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  margin-bottom: 22px;
+}
+
+.workspace_documents_upload_icon,
+.workspace_document_icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  background: var(--accent-soft);
+  color: var(--accent-color, var(--accent-hover));
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+}
+
+.workspace_documents_upload_copy h3,
+.workspace_documents_list_header h3,
+.workspace_document_info h3,
+.workspace_documents_empty h3 {
+  margin: 0;
+  color: var(--text-primary);
+}
+
+.workspace_documents_upload_copy p,
+.workspace_document_info p,
+.workspace_documents_empty p {
+  margin: 6px 0 0;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.workspace_documents_upload_actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.workspace_documents_file_picker,
+.workspace_documents_upload_actions button,
+.workspace_document_actions button {
+  min-height: 44px;
+  border-radius: 8px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.workspace_documents_file_picker {
+  border: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  padding: 0 16px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  position: relative;
+  overflow: hidden;
+}
+
+.workspace_documents_file_picker input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.workspace_documents_upload_actions button,
+.workspace_document_actions button {
+  border: none;
+  background: var(--button-bg);
+  color: var(--button-text);
+  padding: 0 18px;
+}
+
+.workspace_documents_upload_actions button:disabled,
+.workspace_document_actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.workspace_documents_selected_files {
+  margin-top: 16px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.workspace_documents_selected_files span {
+  border-radius: 999px;
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  padding: 7px 10px;
+  font-size: 12px;
+}
+
+.workspace_documents_status {
+  margin: 16px 0 0;
+  color: var(--accent-color, var(--accent-hover));
+  font-weight: 800;
+}
+
+.workspace_documents_list_header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.workspace_documents_list_header span {
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.workspace_documents_empty {
+  min-height: 220px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.workspace_documents_empty i {
+  color: var(--text-muted);
+  font-size: 32px;
+  margin-bottom: 14px;
+}
+
+.workspace_documents_list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.workspace_document_row {
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  background: var(--bg-secondary);
+  padding: 14px;
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr) auto minmax(180px, auto);
+  align-items: center;
+  gap: 14px;
+}
+
+.workspace_document_actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.workspace_document_actions button {
+  min-width: 72px;
+}
+
+.workspace_document_actions button.approve {
+  background: #15803d;
+  color: #ffffff;
+}
+
+.workspace_document_actions button.reject {
+  background: #b45309;
+  color: #ffffff;
+}
+
+.workspace_document_info {
+  min-width: 0;
+}
+
+.workspace_document_info h3 {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 15px;
+}
+
+.workspace_document_status {
+  border-radius: 999px;
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  padding: 7px 10px;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.workspace_document_status.approved {
+  color: #15803d;
+}
+
+.workspace_document_status.flagged,
+.workspace_document_status.rejected {
+  color: #b45309;
 }
 
 .workspace_study_stats {
