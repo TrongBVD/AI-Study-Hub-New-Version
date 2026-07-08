@@ -78,6 +78,7 @@ function PersonalProfile() {
   const [imgSize, setImgSize] = useState({ width: 0, height: 0 });
   const imgRef = useRef(null);
   const [libraries, setLibraries] = useState([]);
+  const [showAllLibraries, setShowAllLibraries] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -101,13 +102,14 @@ function PersonalProfile() {
 
         setUserName(nextName);
         setNewName(nextName);
-        setUserEmail(isOwnProfile ? profile?.email || "" : "");
+        setUserEmail(profile?.email || "");
         setDateOfBirth(profile?.date_of_birth || "");
         setIsDateOfBirthPublic(profile?.is_dob_public !== false);
         setProfileBio(profile?.bio || "");
         setDraftBio(profile?.bio || "");
         setAvatar(nextAvatar);
         setLibraries(sharedLibraries);
+        setShowAllLibraries(false);
 
         if (isOwnProfile) {
           window.dispatchEvent(
@@ -304,6 +306,12 @@ function PersonalProfile() {
       ? new Date(dateOfBirth).toDateString()
       : "Birthday unavailable";
   const bioWordCount = draftBio.trim() === "" ? 0 : draftBio.trim().split(/\s+/).length;
+  const sortedLibraries = [...libraries].sort(
+    (a, b) => getLibraryStars(b) - getLibraryStars(a),
+  );
+  const visibleLibraries = showAllLibraries
+    ? sortedLibraries
+    : sortedLibraries.slice(0, 2);
 
   return (
     <main className="profile_page">
@@ -334,6 +342,40 @@ function PersonalProfile() {
           </div>
         </div>
 
+      </aside>
+
+      <section className="profile_content">
+        <div className="libraries_section">
+          <div className="libraries_header">
+            <h3>Shared libraries</h3>
+            {libraries.length > 2 && (
+              <button
+                type="button"
+                className="show_all_libraries_btn"
+                onClick={() => setShowAllLibraries((current) => !current)}
+              >
+                {showAllLibraries ? "Show less" : "Show all library"}
+              </button>
+            )}
+          </div>
+
+          {libraries.length === 0 ? (
+            <div className="profile_empty_library">
+              <h3>No library upload</h3>
+            </div>
+          ) : (
+            <div className="library_grid">
+              {visibleLibraries.map((library) => (
+                <LibraryCard
+                  key={library.id || library.name}
+                  library={library}
+                  onView={() => navigate(`/dashboard/libraries/${library.id}`)}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+
         <div className="profile_bio_panel">
           <div className="profile_bio_header">
             <h3>About me</h3>
@@ -354,7 +396,7 @@ function PersonalProfile() {
 
               <div className="profile_bio_meta">
                 <span className={bioWordCount > 350 ? "over_limit" : ""}>
-                  {bioWordCount} / 350 chữ
+                  {bioWordCount} / 350 word
                 </span>
 
                 <div>
@@ -378,30 +420,6 @@ function PersonalProfile() {
           )}
 
           {bioStatus && <p className="profile_bio_status">{bioStatus}</p>}
-        </div>
-      </aside>
-
-      <section className="profile_content">
-        <div className="libraries_section">
-          <div className="libraries_header">
-            <h3>Shared libraries</h3>
-          </div>
-
-          {libraries.length === 0 ? (
-            <div className="profile_empty_library">
-              <h3>No library upload</h3>
-            </div>
-          ) : (
-            <div className="library_grid">
-              {libraries.map((library) => (
-                <LibraryCard
-                  key={library.id || library.name}
-                  library={library}
-                  onView={() => navigate(`/dashboard/libraries/${library.id}`)}
-                />
-              ))}
-            </div>
-          )}
         </div>
       </section>
 
@@ -463,6 +481,10 @@ function PersonalProfile() {
       )}
     </main>
   );
+}
+
+function getLibraryStars(library) {
+  return Number(library?.stars || library?.star_count || library?.starCount || 0);
 }
 
 function LibraryCard({ library, onView }) {

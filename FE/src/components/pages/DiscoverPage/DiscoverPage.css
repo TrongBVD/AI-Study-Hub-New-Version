@@ -80,6 +80,22 @@
   padding: 1.35rem;
 }
 
+.discover_user_link {
+  color: inherit;
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    border-color 180ms ease,
+    box-shadow 180ms ease,
+    transform 180ms ease;
+}
+
+.discover_user_link:hover {
+  border-color: rgba(180, 83, 26, 0.36);
+  box-shadow: 0 20px 42px rgba(74, 45, 24, 0.14);
+  transform: translateY(-3px);
+}
+
 .discover_user_avatar {
   width: 3.2rem;
   height: 3.2rem;

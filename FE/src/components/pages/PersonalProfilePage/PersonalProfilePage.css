@@ -108,7 +108,8 @@ body {
 
 .profile_bio_panel {
   width: 100%;
-  max-width: 360px;
+  max-width: none;
+  margin-top: 18px;
   padding: 18px;
   border: 1px solid rgba(117, 82, 48, 0.22);
   border-radius: 8px;
@@ -345,6 +346,10 @@ body {
 
 .libraries_section {
   width: 100%;
+  padding: 18px;
+  border: 1px solid rgba(117, 82, 48, 0.18);
+  border-radius: 16px;
+  background: rgba(255, 251, 239, 0.44);
 }
 
 .libraries_header {
@@ -362,10 +367,18 @@ body {
 }
 
 .libraries_header button {
-  background: transparent;
-  border: none;
-  color: var(--accent-color);
+  min-height: 36px;
+  border: 1px solid rgba(117, 82, 48, 0.25);
+  border-radius: 999px;
+  background: var(--bg-card);
+  color: var(--accent-hover);
+  padding: 0 14px;
+  font-weight: 800;
   cursor: pointer;
+}
+
+.libraries_header button:hover {
+  background: rgba(180, 83, 26, 0.1);
 }
 
 .library_grid {

@@ -60,6 +60,7 @@ function normalizeLibrary(library, index) {
     ? Math.max(1, (Date.now() - Date.parse(createdAt)) / 86400000)
     : getStableNumber(`${id}-age`, 2, 90);
   const owner = library.owner || library.user || {};
+  const ownerId = library.user_id || owner.id || owner.user_id || "";
   const ownerName =
     owner.full_name ||
     owner.fullName ||
@@ -75,6 +76,7 @@ function normalizeLibrary(library, index) {
     stars,
     downloads,
     trendingScore: stars / Math.sqrt(ageInDays),
+    ownerId,
     ownerName,
     description:
       library.description ||
@@ -88,9 +90,10 @@ function buildActiveUsers(libraries) {
   const users = new Map();
 
   libraries.forEach((library) => {
-    const key = library.user_id || library.owner?.id || library.ownerName;
+    const key = library.ownerId || library.ownerName;
     const current = users.get(key) || {
       id: key,
+      profileId: library.ownerId || "",
       name: library.ownerName,
       libraries: 0,
       stars: 0,
@@ -106,6 +109,21 @@ function buildActiveUsers(libraries) {
   return [...users.values()]
     .sort((a, b) => b.stars + b.downloads / 8 - (a.stars + a.downloads / 8))
     .slice(0, 5);
+}
+
+function DiscoverUserSurface({ user, className, children }) {
+  if (user?.profileId) {
+    return (
+      <Link
+        to={`/dashboard/profile/${user.profileId}`}
+        className={`${className} discover_user_link`}
+      >
+        {children}
+      </Link>
+    );
+  }
+
+  return <div className={className}>{children}</div>;
 }
 
 function formatNumber(value) {
@@ -225,7 +243,10 @@ function DiscoverPage() {
             </p>
           </div>
 
-          <aside className="discover_featured_user">
+          <DiscoverUserSurface
+            user={featuredUser}
+            className="discover_featured_user"
+          >
             <span>Most active user</span>
             {featuredUser ? (
               <>
@@ -245,7 +266,7 @@ function DiscoverPage() {
                 <p>Public activity will appear as libraries are shared.</p>
               </>
             )}
-          </aside>
+          </DiscoverUserSurface>
         </header>
 
         {error && <p className="discover_error">{error}</p>}
@@ -326,7 +347,11 @@ function DiscoverPage() {
               </div>
               <div className="discover_users">
                 {activeUsers.map((user, index) => (
-                  <article className="discover_user_card" key={user.id}>
+                  <DiscoverUserSurface
+                    user={user}
+                    className="discover_user_card"
+                    key={user.id}
+                  >
                     <span>{index + 1}</span>
                     <div className="discover_user_avatar">
                       {user.name.slice(0, 2).toUpperCase()}
@@ -338,7 +363,7 @@ function DiscoverPage() {
                         stars · {formatNumber(user.downloads)} downloads
                       </p>
                     </div>
-                  </article>
+                  </DiscoverUserSurface>
                 ))}
               </div>
             </section>
