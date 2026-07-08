@@ -14,5 +14,21 @@ router.delete("/:workspaceId", workspaceController.deleteWorkspace);
 router.get("/:workspaceId/members", workspaceController.listMembers);
 router.get("/:workspaceId/users/search", workspaceController.searchUsers);
 router.post("/:workspaceId/members", workspaceController.addMember);
+router.patch(
+  "/:workspaceId/members/:userId",
+  workspaceController.updateMemberRole
+);
+router.delete(
+  "/:workspaceId/members/:userId",
+  workspaceController.removeMember
+);
+router.get("/:workspaceId/messages", workspaceController.listMessages);
+router.post("/:workspaceId/messages", workspaceController.createMessage);
+router.get("/:workspaceId/flashcards", workspaceController.listFlashcards);
+router.get("/:workspaceId/documents", workspaceController.listDocuments);
+router.patch(
+  "/:workspaceId/documents/:documentId/review",
+  workspaceController.reviewDocument
+);
 
 module.exports = router;

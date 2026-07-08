@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import api from "../../../utils/api.js";
 import "./ChatBot.css";
 import aiChatbotIcon from "../../../assets/imgs/iconchatbot.svg";
 
@@ -40,19 +41,8 @@ function ChatBot() {
   useEffect(() => {
     async function loadApprovedDocuments() {
       try {
-        const token = localStorage.getItem("accessToken");
-
-        const response = await fetch("http://localhost:5000/api/documents", {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-
-        const result = await response.json();
-
-        if (!response.ok) {
-          throw new Error(result.message || "Could not load documents.");
-        }
+        const response = await api.get("/documents");
+        const result = response.data;
 
         const approvedDocs = (result.data || []).filter(
           (doc) => doc.status === "APPROVED",
@@ -89,10 +79,6 @@ function ChatBot() {
 
     const currentInput = input.trim();
 
-    const selectedDocument = documents.find(
-      (doc) => doc.id === selectedDocumentId,
-    );
-
     const userMessage = {
       id: Date.now(),
       role: "user",
@@ -107,25 +93,11 @@ function ChatBot() {
     setLoading(true);
 
     try {
-      const token = localStorage.getItem("accessToken");
-
-      const response = await fetch("http://localhost:5000/api/ai/chat", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          documentId: selectedDocumentId,
-          question: currentInput,
-        }),
+      const response = await api.post("/ai/chat", {
+        documentId: selectedDocumentId,
+        question: currentInput,
       });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.message || "AI request failed.");
-      }
+      const result = response.data;
 
       const aiMessage = {
         id: Date.now() + 1,
@@ -152,7 +124,10 @@ function ChatBot() {
       const aiMessage = {
         id: Date.now() + 1,
         role: "ai",
-        text: error.message || "Sorry, I could not answer using this document.",
+        text:
+          error.response?.data?.message ||
+          error.message ||
+          "Sorry, I could not answer using this document.",
       };
 
       setMessages((prev) => [...prev, aiMessage]);

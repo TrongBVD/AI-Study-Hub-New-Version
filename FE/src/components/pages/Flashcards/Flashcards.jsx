@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import api from "../../../utils/api.js";
 import "./Flashcards.css";
 
 function Flashcards() {
@@ -9,38 +10,27 @@ function Flashcards() {
   const [message, setMessage] = useState("");
 
   useEffect(() => {
+    async function loadDocuments() {
+      try {
+        const response = await api.get("/documents");
+        const result = response.data;
+
+        const approvedDocs = (result.data || []).filter(
+          (doc) => doc.status === "APPROVED"
+        );
+
+        setDocuments(approvedDocs);
+
+        if (approvedDocs.length > 0) {
+          setSelectedDocumentId(approvedDocs[0].id);
+        }
+      } catch (error) {
+        setMessage(error.response?.data?.message || error.message);
+      }
+    }
+
     loadDocuments();
   }, []);
-
-  async function loadDocuments() {
-    try {
-      const token = localStorage.getItem("accessToken");
-
-      const response = await fetch("http://localhost:5000/api/documents", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.message || "Could not load documents.");
-      }
-
-      const approvedDocs = (result.data || []).filter(
-        (doc) => doc.status === "APPROVED"
-      );
-
-      setDocuments(approvedDocs);
-
-      if (approvedDocs.length > 0) {
-        setSelectedDocumentId(approvedDocs[0].id);
-      }
-    } catch (error) {
-      setMessage(error.message);
-    }
-  }
 
   async function generateFlashcards() {
     if (!selectedDocumentId || loading) return;
@@ -50,23 +40,10 @@ function Flashcards() {
     setFlashcards([]);
 
     try {
-      const token = localStorage.getItem("accessToken");
-
-      const response = await fetch(
-        `http://localhost:5000/api/ai/documents/${selectedDocumentId}/flashcards`,
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
+      const response = await api.post(
+        `/ai/documents/${selectedDocumentId}/flashcards`
       );
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.message || "Could not generate flashcards.");
-      }
+      const result = response.data;
 
       setFlashcards(result.data || []);
       const selectedDocument = documents.find(
@@ -90,7 +67,7 @@ function Flashcards() {
       }
       setMessage("Flashcards generated successfully.");
     } catch (error) {
-      setMessage(error.message);
+      setMessage(error.response?.data?.message || error.message);
     } finally {
       setLoading(false);
     }

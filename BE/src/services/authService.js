@@ -8,8 +8,7 @@ const { OAuth2Client } = require('google-auth-library');
 // Supabase client để query database
 const supabase = require('../config/supabase');
 
-// Nodemailer để gửi OTP qua email
-const nodemailer = require('nodemailer');
+const { createMailTransporter } = require('../utils/mailerService');
 
 // Import các helper bảo mật dùng chung
 const {
@@ -30,24 +29,6 @@ const {
 
 // GOOGLE_CLIENT_ID nằm trong file .env
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
-
-
-// ======================================================
-// 3. TẠO MAIL TRANSPORTER ĐỂ GỬI OTP
-// ======================================================
-
-// Hàm này tạo transporter dựa trên thông tin email trong .env
-// Ví dụ dùng Mailtrap hoặc Gmail SMTP
-function createMailTransporter() {
-    return nodemailer.createTransport({
-        host: process.env.EMAIL_HOST,
-        port: parseInt(process.env.EMAIL_PORT, 10) || 2525,
-        auth: {
-            user: process.env.EMAIL_USER,
-            pass: process.env.EMAIL_PASS
-        }
-    });
-}
 
 
 // ======================================================

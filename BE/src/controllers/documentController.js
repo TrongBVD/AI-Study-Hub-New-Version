@@ -78,16 +78,17 @@ async function processDocumentWithAI(file, documentId, preExtractedText = null, 
         return { status: "REJECTED", reason: "No readable text chunks could be created.", chunkCount: 0 };
       }
 
-      const chunkRows = [];
-      for (let i = 0; i < chunks.length; i++) {
-        const embedding = await createEmbedding(chunks[i], "document");
-        chunkRows.push({
-          document_id: documentId,
-          chunk_index: i,
-          content: chunks[i],
-          embedding: toVectorLiteral(embedding),
-        });
-      }
+      const chunkRows = await Promise.all(
+        chunks.map(async (chunk, index) => {
+          const embedding = await createEmbedding(chunk, "document");
+          return {
+            document_id: documentId,
+            chunk_index: index,
+            content: chunk,
+            embedding: toVectorLiteral(embedding),
+          };
+        })
+      );
 
       await supabase.from("document_chunks").delete().eq("document_id", documentId);
 
@@ -299,7 +300,7 @@ exports.uploadDocuments = async (req, res) => {
       if (uploadError) throw uploadError;
 
       // Xác định status và reject reason dựa trên mức độ nhạy cảm
-      let status = "APPROVED";
+      let status = workspaceId ? "PENDING" : "APPROVED";
       let aiRejectReason = null;
 
       if (sensitivity.classification === "SEVERE" || sensitivity.classification === "MILD") {
