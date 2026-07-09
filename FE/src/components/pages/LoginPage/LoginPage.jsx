@@ -3,7 +3,12 @@ import FormInput from "../../common/FormInput/FormInput.jsx";
 import { GoogleLogin, GoogleOAuthProvider } from "@react-oauth/google";
 import api, { refreshAccessToken } from "../../../utils/api.js";
 import { useNavigate } from "react-router-dom";
-import { isTokenValid } from "../../../utils/authToken";
+import {
+  clearStoredSession,
+  getAccessToken,
+  isTokenValid,
+  storeAuthSession,
+} from "../../../utils/authToken";
 import "./LoginPage.css";
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
@@ -12,28 +17,35 @@ function LoginPage() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [loginNotice, setLoginNotice] = useState(null);
+  const [rememberMe, setRememberMe] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
     let isMounted = true;
-    // Kiểm tra xem token có tồn tại trong localStorage không
-    const token = localStorage.getItem("accessToken");
+    const token = getAccessToken();
+    const shouldRestoreRememberedSession =
+      localStorage.getItem("rememberMe") === "true";
     
-    // Nếu có token và token còn hạn, đá thẳng vào trang chủ Dashboard
     if (isTokenValid(token)) {
       navigate("/dashboard/home", { replace: true });
-    } else {
+    } else if (shouldRestoreRememberedSession) {
       refreshAccessToken()
         .then(() => {
           if (isMounted) navigate("/dashboard/home", { replace: true });
         })
         .catch(() => {
         // Nếu token đã hết hạn, dọn dẹp vùng nhớ tránh bị loop hoặc tự động log in lỗi
-          if (!isTokenValid(localStorage.getItem("accessToken"))) {
-            localStorage.removeItem("accessToken");
-            localStorage.removeItem("user");
+          if (!isTokenValid(getAccessToken())) {
+            clearStoredSession();
           }
         });
+    } else {
+      // Visiting the login page must not silently restore an old cookie.
+      // This lets the user deliberately choose a different account.
+      api.post("/auth/logout").catch(() => {
+        // The local login screen should remain usable if the backend is offline.
+      });
+      clearStoredSession();
     }
 
     return () => {
@@ -62,7 +74,7 @@ function LoginPage() {
     );
   }
 
-  function saveLoginData(responseData) {
+  function saveLoginData(responseData, shouldRemember = rememberMe) {
     const accessToken = extractAccessToken(responseData);
 
     if (!accessToken) {
@@ -72,15 +84,8 @@ function LoginPage() {
     }
 
     // Xóa sạch Local Storage cũ để tránh xung đột dữ liệu chéo giữa các tài khoản
-    localStorage.clear();
-
-    localStorage.setItem("accessToken", accessToken);
-
     const user = extractUserInfo(responseData);
-
-    if (user) {
-      localStorage.setItem("user", JSON.stringify(user));
-    }
+    storeAuthSession({ accessToken, user, rememberMe: shouldRemember });
 
     return user || {};
   }
@@ -95,7 +100,7 @@ function LoginPage() {
     }
 
     // 2. Xóa sạch Local Storage để tránh chồng lấp dữ liệu cũ
-    localStorage.clear();
+    clearStoredSession();
 
     // Tạo 1 Fake JWT Token để qua mặt hàm isTokenValid() trong authToken.js
     // Payload decode ra sẽ là {"exp": 9999999999} (Sống tới năm 2286)
@@ -111,8 +116,11 @@ function LoginPage() {
     };
 
     // Lưu vào LocalStorage
-    localStorage.setItem("accessToken", fakeGuestToken);
-    localStorage.setItem("user", JSON.stringify(guestUser));
+    storeAuthSession({
+      accessToken: fakeGuestToken,
+      user: guestUser,
+      rememberMe: false,
+    });
 
     // Chuyển hướng vào trang chủ
     navigate("/dashboard/home", { replace: true });
@@ -139,6 +147,7 @@ function LoginPage() {
         email: trimmedUsername,
         login: trimmedUsername,
         password,
+        rememberMe,
       });
 
       const user = saveLoginData(res.data);
@@ -183,6 +192,7 @@ function LoginPage() {
 
       const res = await api.post("/auth/google", {
         token: googleToken,
+        rememberMe,
       });
 
       const responseData = res.data?.data || res.data;
@@ -262,6 +272,15 @@ function LoginPage() {
             onChange={(e) => setPassword(e.target.value)}
           />
         </div>
+
+        <label className="login_remember">
+          <input
+            type="checkbox"
+            checked={rememberMe}
+            onChange={(event) => setRememberMe(event.target.checked)}
+          />
+          <span>Remember me on this device</span>
+        </label>
 
         <button className="login_submit" type="submit">
           Submit

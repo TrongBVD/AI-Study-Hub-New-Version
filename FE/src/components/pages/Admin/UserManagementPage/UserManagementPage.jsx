@@ -1,5 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
-import { getAdminUsers, updateUserStatus } from "../../../../utils/adminApi";
+import {
+  getAdminUsers,
+  updateUserRole,
+  updateUserStatus,
+} from "../../../../utils/adminApi";
+import { getStoredUser } from "../../../../utils/authToken";
 import "./UserManagementPage.css";
 
 function formatBytes(bytes) {
@@ -78,6 +83,10 @@ function UserManagementPage() {
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(true);
+  const [sortBy, setSortBy] = useState("last-active");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [roleDraft, setRoleDraft] = useState("USER");
+  const currentAdminId = getStoredUser()?.id;
 
   useEffect(() => {
     async function loadUsers() {
@@ -98,8 +107,14 @@ function UserManagementPage() {
     loadUsers();
   }, []);
 
+  useEffect(() => {
+    // Resetting pagination is intentional whenever the filter or sort changes.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setCurrentPage(1);
+  }, [query, statusFilter, roleFilter, sortBy]);
+
   const filteredUsers = useMemo(() => {
-    return users.filter((user) => {
+    const matched = users.filter((user) => {
       const text =
         `${user.name} ${user.email} ${user.role} ${user.department}`.toLowerCase();
       const matchesSearch = text.includes(query.trim().toLowerCase());
@@ -110,10 +125,36 @@ function UserManagementPage() {
 
       return matchesSearch && matchesStatus && matchesRole;
     });
-  }, [users, query, statusFilter, roleFilter]);
+
+    return [...matched].sort((a, b) => {
+      if (sortBy === "name") {
+        return a.name.localeCompare(b.name);
+      }
+      if (sortBy === "storage") {
+        return b.storageUsed - a.storageUsed;
+      }
+      const timeA = new Date(a.raw?.last_login_at || a.raw?.updated_at || 0).getTime();
+      const timeB = new Date(b.raw?.last_login_at || b.raw?.updated_at || 0).getTime();
+      return timeB - timeA;
+    });
+  }, [users, query, statusFilter, roleFilter, sortBy]);
+
+  const PAGE_SIZE = 10;
+  const totalPages = Math.ceil(filteredUsers.length / PAGE_SIZE) || 1;
+  const paginatedUsers = useMemo(() => {
+    return filteredUsers.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+  }, [filteredUsers, currentPage]);
 
   const selectedUser =
     users.find((user) => user.id === selectedUserId) || null;
+
+  useEffect(() => {
+    if (selectedUser) {
+      // Keep the editor aligned with the newly selected directory row.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setRoleDraft(selectedUser.role);
+    }
+  }, [selectedUser]);
 
   const stats = useMemo(() => {
     const active = users.filter((user) => user.status === "Active").length;
@@ -163,6 +204,29 @@ function UserManagementPage() {
       closeConfirmation();
     } catch (err) {
       setNotice(err.response?.data?.message || "Could not update user status.");
+    }
+  }
+
+  async function saveRole() {
+    if (!selectedUser || roleDraft === selectedUser.role) return;
+
+    try {
+      const updated = await updateUserRole(
+        selectedUser.id,
+        roleDraft,
+        "Role changed from admin user management page.",
+      );
+      setUsers((currentUsers) =>
+        currentUsers.map((item) =>
+          item.id === selectedUser.id
+            ? mapUser({ ...item.raw, ...updated })
+            : item,
+        ),
+      );
+      setNotice(`${selectedUser.name}'s role is now ${roleDraft}.`);
+    } catch (err) {
+      setNotice(err.response?.data?.message || "Could not update user role.");
+      setRoleDraft(selectedUser.role);
     }
   }
 
@@ -336,7 +400,11 @@ function UserManagementPage() {
                 <option value="system_admin">System admin</option>
               </select>
 
-              <select aria-label="Sort users" defaultValue="last-active">
+              <select
+                aria-label="Sort users"
+                value={sortBy}
+                onChange={(event) => setSortBy(event.target.value)}
+              >
                 <option value="last-active">Sort: Last active</option>
                 <option value="name">Sort: Name</option>
                 <option value="storage">Sort: Storage</option>
@@ -356,7 +424,7 @@ function UserManagementPage() {
                 </tr>
               </thead>
               <tbody>
-                {filteredUsers.map((user) => {
+                {paginatedUsers.map((user) => {
                   const storagePercent = getStoragePercent(user);
                   return (
                       <tr
@@ -406,17 +474,39 @@ function UserManagementPage() {
                         </td>
                         <td>{user.lastActive}</td>
                         <td>
+                          <div className="user-management-page__row-actions">
                           <button
                             type="button"
-                            className="user-management-page__more-button"
-                            aria-label={`Open actions for ${user.name}`}
+                            className="user-management-page__view-button"
                             onClick={(event) => {
                               event.stopPropagation();
                               setSelectedUserId(user.id);
                             }}
                           >
-                            <i className="ti-more-alt"></i>
+                            View
                           </button>
+                          {user.id !== currentAdminId && (
+                            <button
+                              type="button"
+                              className={
+                                user.status === "Disabled"
+                                  ? "user-management-page__activate-button"
+                                  : "user-management-page__disable-button"
+                              }
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                openConfirmation(
+                                  user.status === "Disabled"
+                                    ? "reactivate"
+                                    : "disable",
+                                  user,
+                                );
+                              }}
+                            >
+                              {user.status === "Disabled" ? "Activate" : "Disable"}
+                            </button>
+                          )}
+                          </div>
                         </td>
                       </tr>
                     );
@@ -434,16 +524,25 @@ function UserManagementPage() {
             ) : (
               <footer className="user-management-page__table-footer">
                 <span>
-                  Showing 1–{filteredUsers.length} of {filteredUsers.length} users
+                  Showing {filteredUsers.length ? (currentPage - 1) * PAGE_SIZE + 1 : 0}–
+                  {Math.min(currentPage * PAGE_SIZE, filteredUsers.length)} of {filteredUsers.length} users
                 </span>
                 <div>
-                  <button type="button" disabled>
+                  <button
+                    type="button"
+                    disabled={currentPage === 1}
+                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  >
                     <i className="ti-angle-left"></i>
                   </button>
-                  <button type="button" className="active">
-                    1
-                  </button>
-                  <button type="button" disabled>
+                  <span className="user-management-page__page-info" style={{ margin: '0 8px', fontSize: '13px' }}>
+                    Page {currentPage} of {totalPages}
+                  </span>
+                  <button
+                    type="button"
+                    disabled={currentPage === totalPages}
+                    onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                  >
                     <i className="ti-angle-right"></i>
                   </button>
                 </div>
@@ -502,6 +601,34 @@ function UserManagementPage() {
                     <dd>{selectedUser.lastActive}</dd>
                   </div>
                 </dl>
+
+                <section className="user-management-page__role-editor">
+                  <h3>System role</h3>
+                  <p>Controls access to platform administration features.</p>
+                  <div>
+                    <select
+                      value={roleDraft}
+                      disabled={selectedUser.id === currentAdminId}
+                      onChange={(event) => setRoleDraft(event.target.value)}
+                    >
+                      <option value="USER">User</option>
+                      <option value="SYSTEM_ADMIN">System Admin</option>
+                    </select>
+                    <button
+                      type="button"
+                      disabled={
+                        selectedUser.id === currentAdminId ||
+                        roleDraft === selectedUser.role
+                      }
+                      onClick={saveRole}
+                    >
+                      Save role
+                    </button>
+                  </div>
+                  {selectedUser.id === currentAdminId && (
+                    <small>You cannot change your own system role.</small>
+                  )}
+                </section>
 
                 <section className="user-management-page__detail-storage">
                   <h3>Storage usage</h3>
@@ -563,6 +690,7 @@ function UserManagementPage() {
                         selectedUser
                       )
                     }
+                    disabled={selectedUser.id === currentAdminId}
                   >
                     <i
                       className={
@@ -573,7 +701,9 @@ function UserManagementPage() {
                     ></i>
                     {selectedUser.status === "Disabled"
                       ? "Reactivate account"
-                      : "Disable account"}
+                      : selectedUser.id === currentAdminId
+                        ? "Cannot disable your own account"
+                        : "Disable account"}
                   </button>
                 </div>
               </>

@@ -32,11 +32,10 @@ function getCookie(req, name) {
     return cookie ? decodeURIComponent(cookie.slice(prefix.length)) : null;
 }
 
-function setRefreshCookie(res, refreshToken) {
-    res.cookie(REFRESH_COOKIE_NAME, refreshToken, {
-        ...getRefreshCookieOptions(),
-        maxAge: REFRESH_COOKIE_MAX_AGE,
-    });
+function setRefreshCookie(res, refreshToken, rememberMe = true) {
+    const options = getRefreshCookieOptions();
+    if (rememberMe) options.maxAge = REFRESH_COOKIE_MAX_AGE;
+    res.cookie(REFRESH_COOKIE_NAME, refreshToken, options);
 }
 
 function clearRefreshCookie(res) {
@@ -45,10 +44,15 @@ function clearRefreshCookie(res) {
 
 exports.googleLogin = async (req, res) => {
     try {
-        const { token } = req.body;
+        const { token, rememberMe = false } = req.body;
         const result = await authService.verifyAndLoginGoogle(token);
         if (result.refreshToken) {
-            setRefreshCookie(res, result.refreshToken);
+            const user = verifyRefreshToken(result.refreshToken);
+            setRefreshCookie(
+                res,
+                signRefreshToken({ id: user.userId, session_id: user.session_id }, rememberMe),
+                rememberMe,
+            );
             delete result.refreshToken;
         }
         res.status(200).json({ status: 'success', data: result });
@@ -324,7 +328,7 @@ exports.completeSetup = async (req, res) => {
 
 exports.login = async (req, res) => {
     try {
-        const { username, password } = req.body;
+        const { username, password, rememberMe = false } = req.body;
 
         // 1. Phân giải truy vấn: Tìm kiếm linh hoạt theo Username HOẶC Email
         const { data: user, error } = await supabase
@@ -385,7 +389,7 @@ exports.login = async (req, res) => {
 
         if (sessionError) throw sessionError;
 
-        setRefreshCookie(res, signRefreshToken(user));
+        setRefreshCookie(res, signRefreshToken(user, rememberMe), rememberMe);
             
         res.status(200).json({
             status: "success",
@@ -687,7 +691,11 @@ exports.refresh = async (req, res) => {
     }
 
     const accessToken = signAccessToken(user);
-    setRefreshCookie(res, signRefreshToken(user));
+    setRefreshCookie(
+      res,
+      signRefreshToken(user, payload.rememberMe),
+      payload.rememberMe,
+    );
 
     return res.status(200).json({
       status: "success",

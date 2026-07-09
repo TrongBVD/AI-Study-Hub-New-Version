@@ -65,6 +65,19 @@
 
 .ai-moderation-page__admin-tools {
   gap: 12px;
+  position: relative;
+}
+
+.ai-moderation-page__admin-profile {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: inherit;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  cursor: pointer;
+  text-align: left;
 }
 
 .ai-moderation-page__notification {
@@ -106,8 +119,46 @@
 }
 
 .ai-moderation-page__admin-name {
-  gap: 9px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
   font-size: 13px;
+}
+
+.ai-moderation-page__admin-name small {
+  color: var(--moderation-muted);
+  font-size: 10px;
+}
+
+.ai-moderation-page__profile-menu {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 190px;
+  padding: 6px;
+  border: 1px solid var(--moderation-line);
+  border-radius: 9px;
+  background: var(--moderation-surface);
+  box-shadow: 0 12px 30px rgba(44, 35, 27, 0.16);
+}
+
+.ai-moderation-page__profile-menu button {
+  width: 100%;
+  border: 0;
+  border-radius: 6px;
+  padding: 10px;
+  background: transparent;
+  color: var(--moderation-text);
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.ai-moderation-page__profile-menu button:hover {
+  background: var(--moderation-soft);
 }
 
 .ai-moderation-page__notice {
@@ -517,6 +568,7 @@
 
 .ai-moderation-page__queue-footer > div {
   display: flex;
+  align-items: center;
   gap: 6px;
 }
 

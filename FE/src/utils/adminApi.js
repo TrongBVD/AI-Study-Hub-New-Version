@@ -45,3 +45,12 @@ export async function getUsageStats() {
   const response = await api.get("/admin/usage");
   return response.data.data;
 }
+
+export async function updateUserRole(userId, role, reason = "") {
+  const response = await api.patch(`/admin/users/${userId}/role`, {
+    role,
+    reason,
+  });
+
+  return response.data.data;
+}

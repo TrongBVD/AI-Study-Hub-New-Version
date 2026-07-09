@@ -4,6 +4,7 @@ import "./AdminUsagePage.css";
 
 const QUOTA_LIMIT_BYTES = 50 * 1024 * 1024;
 const AI_TOKEN_LIMIT = 120000;
+const PAGE_SIZE = 10;
 
 function formatBytes(bytes) {
   const value = Number(bytes || 0);
@@ -111,6 +112,7 @@ function AdminUsagePage() {
   const [usageTypeFilter, setUsageTypeFilter] = useState("all");
   const [selectedRecord, setSelectedRecord] = useState(null);
   const [notice, setNotice] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
     async function loadUsage() {
@@ -155,6 +157,22 @@ function AdminUsagePage() {
       return matchesSearch && matchesRisk && matchesUsageType;
     });
   }, [riskFilter, searchText, usageRecords, usageTypeFilter]);
+
+  useEffect(() => {
+    // Resetting pagination is intentional whenever the filter result set changes.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setCurrentPage(1);
+  }, [searchText, riskFilter, usageTypeFilter]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredRecords.length / PAGE_SIZE));
+  const paginatedRecords = useMemo(
+    () =>
+      filteredRecords.slice(
+        (currentPage - 1) * PAGE_SIZE,
+        currentPage * PAGE_SIZE,
+      ),
+    [currentPage, filteredRecords],
+  );
 
   const stats = useMemo(() => {
     const totalUpload = usageRecords.reduce((sum, row) => sum + row.bytesUploaded, 0);
@@ -322,7 +340,7 @@ function AdminUsagePage() {
                 </tr>
               </thead>
               <tbody>
-                {filteredRecords.map((record) => {
+                {paginatedRecords.map((record) => {
                   const risk = getRiskLevel(record);
                   const quotaPercent = getPercent(record.bytesUploaded, QUOTA_LIMIT_BYTES);
                   const aiPercent = getPercent(record.tokensConsumed, AI_TOKEN_LIMIT);
@@ -379,8 +397,32 @@ function AdminUsagePage() {
             <div className="usage_admin_empty">No usage records match the current filters.</div>
           ) : (
             <footer className="usage_admin_table_footer">
-              <span>Showing 1–{filteredRecords.length} of {filteredRecords.length} records</span>
-              <div><button disabled><i className="ti-angle-left" /></button><button className="active">1</button><button disabled><i className="ti-angle-right" /></button></div>
+              <span>
+                Showing {(currentPage - 1) * PAGE_SIZE + 1}–
+                {Math.min(currentPage * PAGE_SIZE, filteredRecords.length)} of{" "}
+                {filteredRecords.length} records
+              </span>
+              <div>
+                <button
+                  type="button"
+                  aria-label="Previous page"
+                  disabled={currentPage === 1}
+                  onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
+                >
+                  <i className="ti-angle-left" />
+                </button>
+                <span>Page {currentPage} of {totalPages}</span>
+                <button
+                  type="button"
+                  aria-label="Next page"
+                  disabled={currentPage === totalPages}
+                  onClick={() =>
+                    setCurrentPage((page) => Math.min(totalPages, page + 1))
+                  }
+                >
+                  <i className="ti-angle-right" />
+                </button>
+              </div>
             </footer>
           )}
         </section>

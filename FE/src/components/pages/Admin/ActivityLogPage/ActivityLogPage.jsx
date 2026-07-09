@@ -131,6 +131,13 @@ function ActivityLogPage() {
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+
+  useEffect(() => {
+    // Resetting pagination is intentional whenever the filter result set changes.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setCurrentPage(1);
+  }, [searchTerm, userFilter, actionFilter, workspaceFilter, startDate, endDate]);
 
   useEffect(() => {
     async function loadLogs() {
@@ -221,6 +228,12 @@ function ActivityLogPage() {
     startDate,
     endDate,
   ]);
+
+  const PAGE_SIZE = 10;
+  const totalPages = Math.ceil(filteredLogs.length / PAGE_SIZE) || 1;
+  const paginatedLogs = useMemo(() => {
+    return filteredLogs.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+  }, [filteredLogs, currentPage]);
 
   const stats = useMemo(
     () => ({
@@ -431,7 +444,7 @@ function ActivityLogPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredLogs.map((log) => (
+                    {paginatedLogs.map((log) => (
                       <tr
                         key={log.id}
                         className={
@@ -514,16 +527,25 @@ function ActivityLogPage() {
               ) : (
                 <footer className="activity-log-page__table-footer">
                   <span>
-                    Showing 1–{filteredLogs.length} of {logs.length} events
+                    Showing {filteredLogs.length ? (currentPage - 1) * PAGE_SIZE + 1 : 0}–
+                    {Math.min(currentPage * PAGE_SIZE, filteredLogs.length)} of {filteredLogs.length} events
                   </span>
                   <div>
-                    <button type="button" disabled>
+                    <button
+                      type="button"
+                      disabled={currentPage === 1}
+                      onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                    >
                       <i className="ti-angle-left" />
                     </button>
-                    <button type="button" className="active">
-                      1
-                    </button>
-                    <button type="button" disabled>
+                    <span className="activity-log-page__page-info" style={{ margin: '0 8px', fontSize: '13px' }}>
+                      Page {currentPage} of {totalPages}
+                    </span>
+                    <button
+                      type="button"
+                      disabled={currentPage === totalPages}
+                      onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                    >
                       <i className="ti-angle-right" />
                     </button>
                   </div>

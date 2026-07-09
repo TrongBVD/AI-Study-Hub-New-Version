@@ -1,8 +1,16 @@
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { getModerationDocuments, reviewDocument } from "../../../../utils/adminApi";
+import { getMyProfile } from "../../../../utils/profileApi";
+import api from "../../../../utils/api";
+import {
+  clearStoredSession,
+  getStoredUser,
+} from "../../../../utils/authToken";
 import "./AIContentModerationPage.css";
 
 const FILTERS = ["All", "Pending review", "Flagged", "Rejected", "Retry"];
+const PAGE_SIZE = 10;
 
 function formatBytes(bytes) {
   const value = Number(bytes || 0);
@@ -63,6 +71,7 @@ function getSeverityClass(severity) {
 }
 
 function AIContentModerationPage() {
+  const navigate = useNavigate();
   const [cases, setCases] = useState([]);
   const [selectedCaseId, setSelectedCaseId] = useState(null);
   const [query, setQuery] = useState("");
@@ -71,6 +80,15 @@ function AIContentModerationPage() {
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
+  const [adminProfile, setAdminProfile] = useState(() => {
+    try {
+      return getStoredUser();
+    } catch {
+      return null;
+    }
+  });
 
   async function loadCases() {
     try {
@@ -106,6 +124,24 @@ function AIContentModerationPage() {
     loadInitialCases();
   }, []);
 
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadAdminProfile() {
+      try {
+        const profile = await getMyProfile();
+        if (isMounted) setAdminProfile(profile);
+      } catch {
+        // Keep the stored session profile when the optional refresh fails.
+      }
+    }
+
+    loadAdminProfile();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   const selectedCase =
     cases.find((item) => item.id === selectedCaseId) || null;
 
@@ -130,6 +166,22 @@ function AIContentModerationPage() {
       return matchesQuery && matchesStatus && matchesSeverity;
     });
   }, [cases, query, statusFilter, severityFilter]);
+
+  useEffect(() => {
+    // Resetting pagination is intentional whenever the filter result set changes.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setCurrentPage(1);
+  }, [query, statusFilter, severityFilter]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredCases.length / PAGE_SIZE));
+  const paginatedCases = useMemo(
+    () =>
+      filteredCases.slice(
+        (currentPage - 1) * PAGE_SIZE,
+        currentPage * PAGE_SIZE,
+      ),
+    [currentPage, filteredCases],
+  );
 
   const stats = useMemo(() => {
     const flagged = cases.filter((item) => item.status === "FLAGGED").length;
@@ -167,6 +219,19 @@ function AIContentModerationPage() {
     setSeverityFilter("All");
   }
 
+  async function handleLogout() {
+    try {
+      await api.post("/auth/logout");
+    } catch {
+      // Local session cleanup must still occur if the server is unavailable.
+    } finally {
+      clearStoredSession();
+      navigate("/login", { replace: true });
+    }
+  }
+
+  const adminName = getDisplayName(adminProfile);
+
   return (
     <section className="ai-moderation-page">
       <header className="ai-moderation-page__page-header">
@@ -185,11 +250,34 @@ function AIContentModerationPage() {
             <i className="ti-bell" />
             <span>{cases.length}</span>
           </button>
-          <div className="ai-moderation-page__admin-avatar">AD</div>
-          <div className="ai-moderation-page__admin-name">
-            <strong>Admin</strong>
+          <button
+            type="button"
+            className="ai-moderation-page__admin-profile"
+            aria-expanded={isProfileMenuOpen}
+            onClick={() => setIsProfileMenuOpen((isOpen) => !isOpen)}
+          >
+            <span className="ai-moderation-page__admin-avatar">
+              {getInitials(adminName)}
+            </span>
+            <span className="ai-moderation-page__admin-name">
+              <strong>{adminName}</strong>
+              <small>{adminProfile?.email || "System administrator"}</small>
+            </span>
             <i className="ti-angle-down" />
-          </div>
+          </button>
+          {isProfileMenuOpen && (
+            <div className="ai-moderation-page__profile-menu">
+              <button type="button" onClick={() => navigate("/admin/profile")}>
+                <i className="ti-user" /> My profile
+              </button>
+              <button type="button" onClick={() => navigate("/dashboard/home")}>
+                <i className="ti-home" /> User dashboard
+              </button>
+              <button type="button" onClick={handleLogout}>
+                <i className="ti-power-off" /> Log out
+              </button>
+            </div>
+          )}
         </div>
       </header>
 
@@ -277,7 +365,7 @@ function AIContentModerationPage() {
 
           <div className="ai-moderation-page__case-list">
             {filteredCases.length > 0 ? (
-              filteredCases.map((item) => {
+              paginatedCases.map((item) => {
                 const severity = getSeverity(item.status);
                 return (
                   <button
@@ -332,13 +420,29 @@ function AIContentModerationPage() {
           </div>
 
           <footer className="ai-moderation-page__queue-footer">
-            <span>Showing {filteredCases.length ? 1 : 0}–{filteredCases.length} of {filteredCases.length} items</span>
+            <span>
+              Showing {filteredCases.length ? (currentPage - 1) * PAGE_SIZE + 1 : 0}–
+              {Math.min(currentPage * PAGE_SIZE, filteredCases.length)} of{" "}
+              {filteredCases.length} items
+            </span>
             <div>
-              <button type="button" aria-label="Previous page" disabled>
+              <button
+                type="button"
+                aria-label="Previous page"
+                disabled={currentPage === 1}
+                onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
+              >
                 <i className="ti-angle-left" />
               </button>
-              <button type="button" className="is-current">1</button>
-              <button type="button" aria-label="Next page" disabled>
+              <span>Page {currentPage} of {totalPages}</span>
+              <button
+                type="button"
+                aria-label="Next page"
+                disabled={currentPage === totalPages}
+                onClick={() =>
+                  setCurrentPage((page) => Math.min(totalPages, page + 1))
+                }
+              >
                 <i className="ti-angle-right" />
               </button>
             </div>

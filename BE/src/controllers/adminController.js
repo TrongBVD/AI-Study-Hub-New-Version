@@ -1,8 +1,33 @@
 const supabase = require("../config/supabase");
 const { createActivityLog } = require("../services/activityLogService");
+const crypto = require("crypto");
 
 function getTodayDate() {
   return new Date().toISOString().slice(0, 10);
+}
+
+function getPagination(query) {
+  const page = Math.max(1, Number.parseInt(query.page, 10) || 1);
+  const pageSize = Math.min(
+    100,
+    Math.max(1, Number.parseInt(query.pageSize, 10) || 100),
+  );
+
+  return {
+    page,
+    pageSize,
+    from: (page - 1) * pageSize,
+    to: page * pageSize - 1,
+  };
+}
+
+function paginationPayload(count, page, pageSize) {
+  return {
+    page,
+    pageSize,
+    totalItems: count || 0,
+    totalPages: Math.max(1, Math.ceil((count || 0) / pageSize)),
+  };
 }
 
 exports.getDashboardStats = async (req, res) => {
@@ -88,7 +113,11 @@ exports.getDashboardStats = async (req, res) => {
 
 exports.getModerationDocuments = async (req, res) => {
   try {
-    const { data, error } = await supabase
+    const { page, pageSize, from, to } = getPagination(req.query);
+    const search = String(req.query.search || "").trim();
+    const requestedStatus = String(req.query.status || "").toUpperCase();
+    const allowedStatuses = ["REJECTED", "FLAGGED", "PENDING_RETRY"];
+    let query = supabase
       .from("documents")
       .select(`
         id,
@@ -109,16 +138,27 @@ exports.getModerationDocuments = async (req, res) => {
           username,
           full_name
         )
-      `)
-      .in("status", ["REJECTED", "FLAGGED", "PENDING_RETRY"])
+      `, { count: "exact" })
+      .in(
+        "status",
+        allowedStatuses.includes(requestedStatus)
+          ? [requestedStatus]
+          : allowedStatuses,
+      )
       .is("deleted_at", null)
-      .order("created_at", { ascending: false });
+      .order("created_at", { ascending: false })
+      .range(from, to);
+
+    if (search) query = query.ilike("title", `%${search}%`);
+
+    const { data, error, count } = await query;
 
     if (error) throw error;
 
     return res.status(200).json({
       status: "success",
       data: data || [],
+      pagination: paginationPayload(count, page, pageSize),
     });
   } catch (error) {
     console.error("Admin moderation list error:", error);
@@ -188,6 +228,9 @@ exports.reviewDocument = async (req, res) => {
       entityId: documentId,
       oldData: oldDocument,
       newData: updatedDocument,
+      request: req,
+      riskLevel: decision === "APPROVE" ? "MEDIUM" : "HIGH",
+      details: String(reason).trim(),
     });
 
     return res.status(200).json({
@@ -208,6 +251,16 @@ exports.reviewDocument = async (req, res) => {
 exports.getUsers = async (req, res) => {
   try {
     const search = String(req.query.search || "").trim();
+    const { page, pageSize, from, to } = getPagination(req.query);
+    const status = String(req.query.status || "").toUpperCase();
+    const role = String(req.query.role || "").toUpperCase();
+    const sortBy = String(req.query.sortBy || "last-active");
+    const sortColumn =
+      sortBy === "name"
+        ? "full_name"
+        : sortBy === "created"
+          ? "created_at"
+          : "last_login_at";
 
     let query = supabase
       .from("profiles")
@@ -221,14 +274,19 @@ exports.getUsers = async (req, res) => {
         created_at,
         updated_at,
         last_login_at
-      `)
-      .order("created_at", { ascending: false });
+      `, { count: "exact" })
+      .order(sortColumn, { ascending: sortBy === "name", nullsFirst: false })
+      .range(from, to);
 
     if (search) {
-      query = query.or(`username.ilike.%${search}%,email.ilike.%${search}%`);
+      query = query.or(
+        `username.ilike.%${search}%,email.ilike.%${search}%,full_name.ilike.%${search}%`,
+      );
     }
+    if (["ACTIVE", "DISABLED"].includes(status)) query = query.eq("status", status);
+    if (role) query = query.eq("role", role);
 
-    const { data, error } = await query;
+    const { data, error, count } = await query;
 
     if (error) throw error;
 
@@ -237,7 +295,7 @@ exports.getUsers = async (req, res) => {
     const [
       { data: workspaceRows, error: workspaceError },
       { data: libraryRows, error: libraryError },
-      { data: quotaRows, error: quotaError },
+      { data: documentRows, error: documentStorageError },
     ] = await Promise.all([
       userIds.length
         ? supabase
@@ -253,15 +311,16 @@ exports.getUsers = async (req, res) => {
         : Promise.resolve({ data: [], error: null }),
       userIds.length
         ? supabase
-            .from("daily_quota_usage")
-            .select("user_id, bytes_uploaded, bytes_downloaded")
-            .in("user_id", userIds)
+            .from("documents")
+            .select("uploader_id, file_size_bytes")
+            .in("uploader_id", userIds)
+            .is("deleted_at", null)
         : Promise.resolve({ data: [], error: null }),
     ]);
 
     if (workspaceError) throw workspaceError;
     if (libraryError) throw libraryError;
-    if (quotaError) throw quotaError;
+    if (documentStorageError) throw documentStorageError;
 
     const workspaceCounts = new Map();
     (workspaceRows || []).forEach((row) => {
@@ -277,12 +336,11 @@ exports.getUsers = async (req, res) => {
     });
 
     const storageTotals = new Map();
-    (quotaRows || []).forEach((row) => {
+    (documentRows || []).forEach((row) => {
       storageTotals.set(
-        row.user_id,
-        (storageTotals.get(row.user_id) || 0) +
-          Number(row.bytes_uploaded || 0) +
-          Number(row.bytes_downloaded || 0),
+        row.uploader_id,
+        (storageTotals.get(row.uploader_id) || 0) +
+          Number(row.file_size_bytes || 0),
       );
     });
 
@@ -295,6 +353,7 @@ exports.getUsers = async (req, res) => {
         storage_used_bytes: storageTotals.get(user.id) || 0,
         storage_quota_bytes: 50 * 1024 * 1024,
       })),
+      pagination: paginationPayload(count, page, pageSize),
     });
   } catch (error) {
     console.error("Admin get users error:", error);
@@ -362,6 +421,9 @@ exports.updateUserStatus = async (req, res) => {
         ...updatedUser,
         admin_reason: reason || null,
       },
+      request: req,
+      riskLevel: status === "DISABLED" ? "HIGH" : "MEDIUM",
+      details: reason || `Account status changed to ${status}.`,
     });
 
     return res.status(200).json({
@@ -381,7 +443,12 @@ exports.updateUserStatus = async (req, res) => {
 
 exports.getActivityLogs = async (req, res) => {
   try {
-    const { data, error } = await supabase
+    const { page, pageSize, from, to } = getPagination(req.query);
+    const action = String(req.query.action || "").trim();
+    const actorUserId = String(req.query.userId || "").trim();
+    const startDate = String(req.query.startDate || "").trim();
+    const endDate = String(req.query.endDate || "").trim();
+    let query = supabase
       .from("activity_logs")
       .select(`
         id,
@@ -391,6 +458,11 @@ exports.getActivityLogs = async (req, res) => {
         entity_id,
         old_data,
         new_data,
+        ip_address,
+        user_agent,
+        device,
+        risk_level,
+        details,
         created_at,
         actor:profiles!activity_logs_user_id_fkey (
           id,
@@ -398,15 +470,22 @@ exports.getActivityLogs = async (req, res) => {
           username,
           full_name
         )
-      `)
+      `, { count: "exact" })
       .order("created_at", { ascending: false })
-      .limit(100);
+      .range(from, to);
 
+    if (action) query = query.eq("action_type", action);
+    if (actorUserId) query = query.eq("user_id", actorUserId);
+    if (startDate) query = query.gte("created_at", startDate);
+    if (endDate) query = query.lte("created_at", `${endDate}T23:59:59.999Z`);
+
+    const { data, error, count } = await query;
     if (error) throw error;
 
     return res.status(200).json({
       status: "success",
       data: data || [],
+      pagination: paginationPayload(count, page, pageSize),
     });
   } catch (error) {
     console.error("Admin activity logs error:", error);
@@ -420,7 +499,11 @@ exports.getActivityLogs = async (req, res) => {
 
 exports.getUsage = async (req, res) => {
   try {
-    const { data: quotaUsage, error: quotaError } = await supabase
+    const { page, pageSize, from, to } = getPagination(req.query);
+    const userId = String(req.query.userId || "").trim();
+    const startDate = String(req.query.startDate || "").trim();
+    const endDate = String(req.query.endDate || "").trim();
+    let quotaQuery = supabase
       .from("daily_quota_usage")
       .select(`
         id,
@@ -434,13 +517,15 @@ exports.getUsage = async (req, res) => {
           username,
           full_name
         )
-      `)
+      `, { count: "exact" })
       .order("usage_date", { ascending: false })
-      .limit(100);
+      .range(from, to);
 
-    if (quotaError) throw quotaError;
+    if (userId) quotaQuery = quotaQuery.eq("user_id", userId);
+    if (startDate) quotaQuery = quotaQuery.gte("usage_date", startDate);
+    if (endDate) quotaQuery = quotaQuery.lte("usage_date", endDate);
 
-    const { data: aiUsage, error: aiError } = await supabase
+    let aiQuery = supabase
       .from("ai_usage_logs")
       .select(`
         id,
@@ -454,10 +539,20 @@ exports.getUsage = async (req, res) => {
           username,
           full_name
         )
-      `)
+      `, { count: "exact" })
       .order("usage_date", { ascending: false })
-      .limit(100);
+      .range(from, to);
 
+    if (userId) aiQuery = aiQuery.eq("user_id", userId);
+    if (startDate) aiQuery = aiQuery.gte("usage_date", startDate);
+    if (endDate) aiQuery = aiQuery.lte("usage_date", endDate);
+
+    const [
+      { data: quotaUsage, error: quotaError, count: quotaCount },
+      { data: aiUsage, error: aiError, count: aiCount },
+    ] = await Promise.all([quotaQuery, aiQuery]);
+
+    if (quotaError) throw quotaError;
     if (aiError) throw aiError;
 
     return res.status(200).json({
@@ -466,12 +561,112 @@ exports.getUsage = async (req, res) => {
         quotaUsage: quotaUsage || [],
         aiUsage: aiUsage || [],
       },
+      pagination: {
+        page,
+        pageSize,
+        quotaItems: quotaCount || 0,
+        aiItems: aiCount || 0,
+        totalPages: Math.max(
+          1,
+          Math.ceil(Math.max(quotaCount || 0, aiCount || 0) / pageSize),
+        ),
+      },
     });
   } catch (error) {
     console.error("Admin usage error:", error);
     return res.status(500).json({
       status: "error",
       message: "Could not load usage data.",
+      error: error.message,
+    });
+  }
+};
+
+exports.updateUserRole = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const role = String(req.body.role || "").toUpperCase();
+    const reason = String(req.body.reason || "").trim();
+
+    if (!["USER", "SYSTEM_ADMIN"].includes(role)) {
+      return res.status(400).json({
+        status: "error",
+        message: "role must be USER or SYSTEM_ADMIN.",
+      });
+    }
+
+    if (String(userId) === String(req.user.id)) {
+      return res.status(400).json({
+        status: "error",
+        message: "Administrators cannot change their own system role.",
+      });
+    }
+
+    const { data: oldUser, error: fetchError } = await supabase
+      .from("profiles")
+      .select("id, email, username, full_name, role, status, created_at, updated_at")
+      .eq("id", userId)
+      .maybeSingle();
+
+    if (fetchError) throw fetchError;
+    if (!oldUser) {
+      return res.status(404).json({
+        status: "error",
+        message: "User not found.",
+      });
+    }
+
+    if (oldUser.role === "SYSTEM_ADMIN" && role !== "SYSTEM_ADMIN") {
+      const { count, error: countError } = await supabase
+        .from("profiles")
+        .select("id", { count: "exact", head: true })
+        .eq("role", "SYSTEM_ADMIN")
+        .neq("status", "DISABLED");
+
+      if (countError) throw countError;
+      if ((count || 0) <= 1) {
+        return res.status(400).json({
+          status: "error",
+          message: "The final active System Admin cannot be demoted.",
+        });
+      }
+    }
+
+    const { data: updatedUser, error: updateError } = await supabase
+      .from("profiles")
+      .update({
+        role,
+        session_id: crypto.randomUUID(),
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", userId)
+      .select("id, email, username, full_name, role, status, created_at, updated_at, last_login_at")
+      .single();
+
+    if (updateError) throw updateError;
+
+    await createActivityLog({
+      actorUserId: req.user.id,
+      actionType: "ADMIN_UPDATE_USER_ROLE",
+      entityType: "profiles",
+      entityId: userId,
+      oldData: oldUser,
+      newData: { ...updatedUser, admin_reason: reason || null },
+      request: req,
+      riskLevel: "HIGH",
+      details: reason || `System role changed to ${role}.`,
+    });
+
+    return res.status(200).json({
+      status: "success",
+      message: "User role updated.",
+      data: updatedUser,
+    });
+  } catch (error) {
+    console.error("Admin update user role error:", error);
+    return res.status(500).json({
+      status: "error",
+      message: "Could not update user role.",
       error: error.message,
     });
   }

@@ -122,6 +122,8 @@ function AdminDashboardPage() {
   }
 
   useEffect(() => {
+    // Initial dashboard hydration is an intentional mount-time side effect.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadDashboard();
   }, []);
 
@@ -187,14 +189,6 @@ function AdminDashboardPage() {
     }
   }
 
-  function handleQuotaAction(owner) {
-    setNotice(`Quota review opened for ${owner}.`);
-  }
-
-  function handleAiAction(owner) {
-    setNotice(`AI usage investigation opened for ${owner}.`);
-  }
-
   return (
     <section className="admin-dashboard">
       <main className="admin-dashboard__inner">
@@ -222,9 +216,8 @@ function AdminDashboardPage() {
               <button type="button" aria-label="Refresh dashboard" onClick={loadDashboard}>
                 <i className="ti-reload" />
               </button>
-              <span className="admin-dashboard__auto-refresh">
-                Manual refresh
-                <i aria-hidden="true" />
+              <span className="admin-dashboard__auto-refresh-label" style={{ opacity: 0.7, fontSize: '13px', marginLeft: 'auto' }}>
+                Manual refresh mode
               </span>
             </footer>
           </article>

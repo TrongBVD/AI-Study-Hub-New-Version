@@ -342,8 +342,11 @@ exports.uploadDocuments = async (req, res) => {
             word: sensitivity.word,
             classification: sensitivity.classification,
             fileName: file.originalname
-          }
-        }).catch(err => console.error("Lỗi tạo log kiểm duyệt:", err));
+          },
+          request: req,
+          riskLevel: "HIGH",
+          details: `AI flagged ${file.originalname} for sensitive language.`,
+        });
       }
 
       // Lưu tags vào DB

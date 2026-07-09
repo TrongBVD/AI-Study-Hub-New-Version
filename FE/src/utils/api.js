@@ -1,4 +1,9 @@
 import axios from "axios";
+import {
+  clearStoredSession,
+  getAccessToken,
+  getAuthStorage,
+} from "./authToken";
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api",
@@ -6,11 +11,6 @@ const api = axios.create({
 });
 
 let refreshPromise = null;
-
-function clearStoredSession() {
-  localStorage.removeItem("accessToken");
-  localStorage.removeItem("user");
-}
 
 export async function refreshAccessToken() {
   if (!refreshPromise) {
@@ -28,9 +28,9 @@ export async function refreshAccessToken() {
           throw new Error("Refresh response did not include an access token.");
         }
 
-        localStorage.setItem("accessToken", accessToken);
+        getAuthStorage().setItem("accessToken", accessToken);
         if (user) {
-          localStorage.setItem("user", JSON.stringify(user));
+          getAuthStorage().setItem("user", JSON.stringify(user));
         }
 
         return accessToken;
@@ -45,7 +45,7 @@ export async function refreshAccessToken() {
 
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem("accessToken");
+    const token = getAccessToken();
 
     config.headers = config.headers || {};
 

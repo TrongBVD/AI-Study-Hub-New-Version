@@ -14,6 +14,7 @@ router.patch("/moderation/:documentId", adminController.reviewDocument);
 
 router.get("/users", adminController.getUsers);
 router.patch("/users/:userId/status", adminController.updateUserStatus);
+router.patch("/users/:userId/role", adminController.updateUserRole);
 
 router.get("/logs", adminController.getActivityLogs);
 router.get("/usage", adminController.getUsage);

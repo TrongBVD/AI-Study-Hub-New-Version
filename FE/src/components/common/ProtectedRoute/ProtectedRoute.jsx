@@ -1,6 +1,11 @@
 import { useEffect, useState } from "react";
 import { Navigate, useLocation } from "react-router-dom";
-import { isTokenValid } from "../../../utils/authToken";
+import {
+  clearStoredSession,
+  getAccessToken,
+  getStoredUser,
+  isTokenValid,
+} from "../../../utils/authToken";
 import { refreshAccessToken } from "../../../utils/api";
 
 const GUEST_ALLOWED_PATHS = [
@@ -11,20 +16,6 @@ const GUEST_ALLOWED_PATHS = [
   "/dashboard/search",
   "/dashboard/settings",
 ];
-
-function getStoredUser() {
-  try {
-    const rawUser = localStorage.getItem("user");
-
-    if (!rawUser) {
-      return null;
-    }
-
-    return JSON.parse(rawUser);
-  } catch {
-    return null;
-  }
-}
 
 function isGuestAllowedPath(pathname) {
   // Cho phép Guest xem catalog public và chi tiết thư viện công khai.
@@ -48,16 +39,16 @@ function isGuestAllowedPath(pathname) {
 function ProtectedRoute({ children, allowedRoles }) {
   const location = useLocation();
   const [authState, setAuthState] = useState(() =>
-    isTokenValid(localStorage.getItem("accessToken"))
+    isTokenValid(getAccessToken())
       ? "authenticated"
       : "checking",
   );
-  const token = localStorage.getItem("accessToken");
+  const token = getAccessToken();
   const user = getStoredUser();
   const role = String(user?.role || "").toUpperCase();
 
   useEffect(() => {
-    if (isTokenValid(localStorage.getItem("accessToken"))) {
+    if (isTokenValid(getAccessToken())) {
       return;
     }
 
@@ -82,8 +73,7 @@ function ProtectedRoute({ children, allowedRoles }) {
   // Not logged in or token is expired/invalid
   if (authState === "unauthenticated" || !token || !isTokenValid(token)) {
     if (token) {
-      localStorage.removeItem("accessToken");
-      localStorage.removeItem("user");
+      clearStoredSession();
     }
     return (
       <Navigate
