@@ -7,12 +7,22 @@ async function createActivityLog({
     entityId,
     oldData = null,
     newData = null,
+    request = null,
+    riskLevel = "INFO",
+    details = null,
 }) {
     if (!actorUserId || !actionType || !entityType || !entityId) {
-        console.error("Missing required activity log fields.");
-        return;
+        throw new Error("Missing required activity log fields.");
     }
-    
+
+    const forwardedFor = request?.headers?.["x-forwarded-for"];
+    const ipAddress = String(
+        Array.isArray(forwardedFor)
+            ? forwardedFor[0]
+            : forwardedFor?.split(",")[0] || request?.ip || "",
+    ).trim() || null;
+    const userAgent = request?.get?.("user-agent") || null;
+
     const { error } = await supabase.from("activity_logs").insert({
         user_id: actorUserId,
         action_type: actionType,
@@ -20,10 +30,15 @@ async function createActivityLog({
         entity_id: entityId,
         old_data: oldData,
         new_data: newData,
+        ip_address: ipAddress,
+        user_agent: userAgent,
+        device: userAgent,
+        risk_level: riskLevel,
+        details,
     });
 
     if (error) {
-        console.error("failed to write activity log:", error);
+        throw new Error(`Failed to write activity log: ${error.message}`);
     }
 }
 

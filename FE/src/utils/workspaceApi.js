@@ -46,6 +46,45 @@ export const createWorkspaceMessage = (workspaceId, payload) =>
 export const getWorkspaceFlashcards = (workspaceId) =>
   api.get(`/workspaces/${workspaceId}/flashcards`).then((res) => res.data.data);
 
+export const getWorkspaceDiscussionTopics = (workspaceId) =>
+  api.get(`/workspaces/${workspaceId}/discussion/topics`).then((res) => res.data.data);
+
+export const createWorkspaceDiscussionTopic = (workspaceId, payload) =>
+  api.post(`/workspaces/${workspaceId}/discussion/topics`, payload)
+    .then((res) => res.data.data);
+
+export const updateWorkspaceDiscussionTopic = (workspaceId, topicId, payload) =>
+  api.patch(`/workspaces/${workspaceId}/discussion/topics/${topicId}`, payload)
+    .then((res) => res.data.data);
+
+export const deleteWorkspaceDiscussionTopic = (workspaceId, topicId) =>
+  api.delete(`/workspaces/${workspaceId}/discussion/topics/${topicId}`)
+    .then((res) => res.data);
+
+export const addWorkspaceDiscussionComment = (workspaceId, topicId, payload) =>
+  api.post(`/workspaces/${workspaceId}/discussion/topics/${topicId}/comments`, payload)
+    .then((res) => res.data.data);
+
+export const addWorkspaceDiscussionAttachment = (workspaceId, topicId, payload) =>
+  api.post(`/workspaces/${workspaceId}/discussion/topics/${topicId}/attachments`, payload)
+    .then((res) => res.data.data);
+
+export const deleteWorkspaceDiscussionAttachment = (workspaceId, topicId, attachmentId) =>
+  api.delete(`/workspaces/${workspaceId}/discussion/topics/${topicId}/attachments/${attachmentId}`)
+    .then((res) => res.data);
+
+export const addWorkspaceDiscussionSubtask = (workspaceId, topicId, payload) =>
+  api.post(`/workspaces/${workspaceId}/discussion/topics/${topicId}/subtasks`, payload)
+    .then((res) => res.data.data);
+
+export const updateWorkspaceDiscussionSubtask = (workspaceId, topicId, subtaskId, payload) =>
+  api.patch(`/workspaces/${workspaceId}/discussion/topics/${topicId}/subtasks/${subtaskId}`, payload)
+    .then((res) => res.data.data);
+
+export const deleteWorkspaceDiscussionSubtask = (workspaceId, topicId, subtaskId) =>
+  api.delete(`/workspaces/${workspaceId}/discussion/topics/${topicId}/subtasks/${subtaskId}`)
+    .then((res) => res.data);
+
 export const getWorkspaceDocuments = (workspaceId) =>
   api.get(`/workspaces/${workspaceId}/documents`).then((res) => res.data.data);
 

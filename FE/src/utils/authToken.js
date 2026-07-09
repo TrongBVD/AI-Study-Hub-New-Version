@@ -1,9 +1,47 @@
+export function getAuthStorage() {
+  return localStorage.getItem("rememberMe") === "true" ||
+    localStorage.getItem("accessToken")
+    ? localStorage
+    : sessionStorage;
+}
+
+export function getStoredUser() {
+  try {
+    return JSON.parse(getAuthStorage().getItem("user") || "null");
+  } catch {
+    return null;
+  }
+}
+
+export function storeAuthSession({ accessToken, user, rememberMe }) {
+  localStorage.removeItem("accessToken");
+  localStorage.removeItem("user");
+  sessionStorage.removeItem("accessToken");
+  sessionStorage.removeItem("user");
+
+  const storage = rememberMe ? localStorage : sessionStorage;
+  storage.setItem("accessToken", accessToken);
+  if (user) storage.setItem("user", JSON.stringify(user));
+
+  if (rememberMe) localStorage.setItem("rememberMe", "true");
+  else localStorage.removeItem("rememberMe");
+}
+
+export function clearStoredSession() {
+  localStorage.removeItem("accessToken");
+  localStorage.removeItem("user");
+  localStorage.removeItem("rememberMe");
+  sessionStorage.removeItem("accessToken");
+  sessionStorage.removeItem("user");
+}
+
 export function getAccessToken() {
-  return localStorage.getItem("accessToken");
+  return getAuthStorage().getItem("accessToken");
 }
 
 export function clearAccessToken() {
   localStorage.removeItem("accessToken");
+  sessionStorage.removeItem("accessToken");
 }
 
 export function isTokenValid(token) {

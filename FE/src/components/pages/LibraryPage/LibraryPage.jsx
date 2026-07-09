@@ -11,7 +11,11 @@ import {
   updateLibrary,
   deleteLibrary,
 } from "../../../utils/documentApi";
-import { getAccessToken, isTokenValid } from "../../../utils/authToken";
+import {
+  getAccessToken,
+  getStoredUser,
+  isTokenValid,
+} from "../../../utils/authToken";
 import {
   downloadPublicDocument,
   getPublicLibrary,
@@ -22,7 +26,7 @@ import "../../../assets/icons/themify-icons-font/themify-icons/themify-icons.css
 
 function getStoredUserRole() {
   try {
-    const user = JSON.parse(localStorage.getItem("user") || "null");
+    const user = getStoredUser();
     return String(user?.role || "").toUpperCase();
   } catch {
     return "";

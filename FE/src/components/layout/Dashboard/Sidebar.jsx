@@ -1,11 +1,15 @@
 import { NavLink, useNavigate } from "react-router-dom";
 import Logo from "../../../assets/logo/Logo.jsx";
 import api from "../../../utils/api.js";
+import {
+  clearStoredSession,
+  getStoredUser,
+} from "../../../utils/authToken.js";
 import "../../../assets/icons/themify-icons-font/themify-icons/themify-icons.css";
 
 function getStoredUserRole() {
   try {
-    const storedUser = JSON.parse(localStorage.getItem("user") || "null");
+    const storedUser = getStoredUser();
     return String(storedUser?.role || "").toUpperCase();
   } catch {
     return "";
@@ -43,7 +47,7 @@ function Sidebar({ isOpen, onClose }) {
     } catch (error) {
       console.error("Logout request failed:", error);
     } finally {
-      localStorage.clear();
+      clearStoredSession();
       onClose();
       navigate("/login", { replace: true });
     }

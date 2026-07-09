@@ -1,8 +1,21 @@
 import { useEffect, useMemo, useState } from "react";
-import { getAdminUsers, updateUserStatus } from "../../../../utils/adminApi";
+import {
+  getAdminUsers,
+  updateUserRole,
+  updateUserStatus,
+} from "../../../../utils/adminApi";
+import { getStoredUser } from "../../../../utils/authToken";
 import "./UserManagementPage.css";
+
+function formatBytes(bytes) {
+  const value = Number(bytes || 0);
+  if (value < 1024) return `${value} B`;
+  if (value < 1024 * 1024) return `${(value / 1024).toFixed(1)} KB`;
+  return `${(value / 1024 / 1024).toFixed(1)} MB`;
+}
+
 function formatStorage(used, quota) {
-  return `${used} / ${quota} GB`;
+  return `${formatBytes(used)} / ${formatBytes(quota)}`;
 }
 
 function getStoragePercent(user) {
@@ -37,8 +50,8 @@ function mapUser(row) {
     email: row.email || "",
     role: row.role || "USER",
     status,
-    storageUsed: 0,
-    quota: 50,
+    storageUsed: Number(row.storage_used_bytes || 0),
+    quota: Number(row.storage_quota_bytes || 50 * 1024 * 1024),
     lastActive: formatDate(row.last_login_at || row.updated_at),
     memberSince: formatDate(row.created_at),
     workspaceAccess: Number(row.workspace_count || 0),
@@ -67,11 +80,13 @@ function UserManagementPage() {
   const [roleFilter, setRoleFilter] = useState("all");
   const [selectedUserId, setSelectedUserId] = useState(null);
   const [confirmAction, setConfirmAction] = useState(null);
-  const [inviteEmail, setInviteEmail] = useState("");
-  const [inviteOpen, setInviteOpen] = useState(false);
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(true);
+  const [sortBy, setSortBy] = useState("last-active");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [roleDraft, setRoleDraft] = useState("USER");
+  const currentAdminId = getStoredUser()?.id;
 
   useEffect(() => {
     async function loadUsers() {
@@ -92,8 +107,14 @@ function UserManagementPage() {
     loadUsers();
   }, []);
 
+  useEffect(() => {
+    // Resetting pagination is intentional whenever the filter or sort changes.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setCurrentPage(1);
+  }, [query, statusFilter, roleFilter, sortBy]);
+
   const filteredUsers = useMemo(() => {
-    return users.filter((user) => {
+    const matched = users.filter((user) => {
       const text =
         `${user.name} ${user.email} ${user.role} ${user.department}`.toLowerCase();
       const matchesSearch = text.includes(query.trim().toLowerCase());
@@ -104,10 +125,36 @@ function UserManagementPage() {
 
       return matchesSearch && matchesStatus && matchesRole;
     });
-  }, [users, query, statusFilter, roleFilter]);
+
+    return [...matched].sort((a, b) => {
+      if (sortBy === "name") {
+        return a.name.localeCompare(b.name);
+      }
+      if (sortBy === "storage") {
+        return b.storageUsed - a.storageUsed;
+      }
+      const timeA = new Date(a.raw?.last_login_at || a.raw?.updated_at || 0).getTime();
+      const timeB = new Date(b.raw?.last_login_at || b.raw?.updated_at || 0).getTime();
+      return timeB - timeA;
+    });
+  }, [users, query, statusFilter, roleFilter, sortBy]);
+
+  const PAGE_SIZE = 10;
+  const totalPages = Math.ceil(filteredUsers.length / PAGE_SIZE) || 1;
+  const paginatedUsers = useMemo(() => {
+    return filteredUsers.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+  }, [filteredUsers, currentPage]);
 
   const selectedUser =
     users.find((user) => user.id === selectedUserId) || null;
+
+  useEffect(() => {
+    if (selectedUser) {
+      // Keep the editor aligned with the newly selected directory row.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setRoleDraft(selectedUser.role);
+    }
+  }, [selectedUser]);
 
   const stats = useMemo(() => {
     const active = users.filter((user) => user.status === "Active").length;
@@ -137,17 +184,6 @@ function UserManagementPage() {
 
     const { type, user } = confirmAction;
 
-    if (type === "resetQuota") {
-      setUsers((currentUsers) =>
-        currentUsers.map((item) =>
-          item.id === user.id ? { ...item, storageUsed: 0, quota: 50 } : item,
-        ),
-      );
-      setNotice(`${user.name} quota was reset locally. Backend quota reset is not implemented yet.`);
-      closeConfirmation();
-      return;
-    }
-
     const nextBackendStatus = type === "disable" ? "DISABLED" : "ACTIVE";
 
     try {
@@ -171,18 +207,57 @@ function UserManagementPage() {
     }
   }
 
-  function handleInviteUser(event) {
-    event.preventDefault();
-    const email = inviteEmail.trim();
+  async function saveRole() {
+    if (!selectedUser || roleDraft === selectedUser.role) return;
 
-    if (!email) {
-      setNotice("Enter an email before sending an invite.");
-      return;
+    try {
+      const updated = await updateUserRole(
+        selectedUser.id,
+        roleDraft,
+        "Role changed from admin user management page.",
+      );
+      setUsers((currentUsers) =>
+        currentUsers.map((item) =>
+          item.id === selectedUser.id
+            ? mapUser({ ...item.raw, ...updated })
+            : item,
+        ),
+      );
+      setNotice(`${selectedUser.name}'s role is now ${roleDraft}.`);
+    } catch (err) {
+      setNotice(err.response?.data?.message || "Could not update user role.");
+      setRoleDraft(selectedUser.role);
     }
+  }
 
-    setInviteEmail("");
-    setInviteOpen(false);
-    setNotice(`Invite endpoint is not implemented yet. No database record was created for ${email}.`);
+  function exportUsersCsv() {
+    const rows = [
+      ["Name", "Email", "Role", "Status", "Storage used", "Quota", "Workspaces", "Libraries"],
+      ...filteredUsers.map((user) => [
+        user.name,
+        user.email,
+        user.role,
+        user.status,
+        user.storageUsed,
+        user.quota,
+        user.workspaceAccess,
+        user.libraryAccess,
+      ]),
+    ];
+    const csv = rows
+      .map((row) =>
+        row.map((cell) => `"${String(cell).replaceAll('"', '""')}"`).join(","),
+      )
+      .join("\n");
+    const url = URL.createObjectURL(
+      new Blob([csv], { type: "text/csv;charset=utf-8;" }),
+    );
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "admin-users.csv";
+    link.click();
+    URL.revokeObjectURL(url);
+    setNotice("User list exported.");
   }
 
   const confirmationContent = {
@@ -197,12 +272,6 @@ function UserManagementPage() {
       message:
         "This user will be able to sign in and continue using shared study resources.",
       button: "Reactivate account",
-    },
-    resetQuota: {
-      title: "Reset storage quota?",
-      message:
-        "This will reset the displayed used storage to 0 GB. A backend quota reset endpoint is still needed for persistence.",
-      button: "Reset quota",
     },
   };
 
@@ -248,11 +317,7 @@ function UserManagementPage() {
           </div>
 
           <div className="user-management-page__header-actions">
-            <button type="button" onClick={() => setInviteOpen(true)}>
-              <i className="ti-user"></i>
-              Invite user
-            </button>
-            <button type="button" aria-label="Export users">
+            <button type="button" aria-label="Export users" onClick={exportUsersCsv}>
               <i className="ti-download"></i>
             </button>
           </div>
@@ -313,8 +378,7 @@ function UserManagementPage() {
                   ["all", "All"],
                   ["active", "Active"],
                   ["disabled", "Disabled"],
-                  ["pending", "Pending"],
-                    ].map(([value, label]) => (
+                ].map(([value, label]) => (
                   <button
                     type="button"
                     key={value}
@@ -332,12 +396,15 @@ function UserManagementPage() {
                 aria-label="Filter by role"
               >
                 <option value="all">Role</option>
-                <option value="faculty">Faculty</option>
-                <option value="researcher">Researcher</option>
-                <option value="student">Student</option>
+                <option value="user">User</option>
+                <option value="system_admin">System admin</option>
               </select>
 
-              <select aria-label="Sort users" defaultValue="last-active">
+              <select
+                aria-label="Sort users"
+                value={sortBy}
+                onChange={(event) => setSortBy(event.target.value)}
+              >
                 <option value="last-active">Sort: Last active</option>
                 <option value="name">Sort: Name</option>
                 <option value="storage">Sort: Storage</option>
@@ -357,7 +424,7 @@ function UserManagementPage() {
                 </tr>
               </thead>
               <tbody>
-                {filteredUsers.map((user) => {
+                {paginatedUsers.map((user) => {
                   const storagePercent = getStoragePercent(user);
                   return (
                       <tr
@@ -407,17 +474,39 @@ function UserManagementPage() {
                         </td>
                         <td>{user.lastActive}</td>
                         <td>
+                          <div className="user-management-page__row-actions">
                           <button
                             type="button"
-                            className="user-management-page__more-button"
-                            aria-label={`Open actions for ${user.name}`}
+                            className="user-management-page__view-button"
                             onClick={(event) => {
                               event.stopPropagation();
                               setSelectedUserId(user.id);
                             }}
                           >
-                            <i className="ti-more-alt"></i>
+                            View
                           </button>
+                          {user.id !== currentAdminId && (
+                            <button
+                              type="button"
+                              className={
+                                user.status === "Disabled"
+                                  ? "user-management-page__activate-button"
+                                  : "user-management-page__disable-button"
+                              }
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                openConfirmation(
+                                  user.status === "Disabled"
+                                    ? "reactivate"
+                                    : "disable",
+                                  user,
+                                );
+                              }}
+                            >
+                              {user.status === "Disabled" ? "Activate" : "Disable"}
+                            </button>
+                          )}
+                          </div>
                         </td>
                       </tr>
                     );
@@ -435,16 +524,25 @@ function UserManagementPage() {
             ) : (
               <footer className="user-management-page__table-footer">
                 <span>
-                  Showing 1–{filteredUsers.length} of {filteredUsers.length} users
+                  Showing {filteredUsers.length ? (currentPage - 1) * PAGE_SIZE + 1 : 0}–
+                  {Math.min(currentPage * PAGE_SIZE, filteredUsers.length)} of {filteredUsers.length} users
                 </span>
                 <div>
-                  <button type="button" disabled>
+                  <button
+                    type="button"
+                    disabled={currentPage === 1}
+                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  >
                     <i className="ti-angle-left"></i>
                   </button>
-                  <button type="button" className="active">
-                    1
-                  </button>
-                  <button type="button" disabled>
+                  <span className="user-management-page__page-info" style={{ margin: '0 8px', fontSize: '13px' }}>
+                    Page {currentPage} of {totalPages}
+                  </span>
+                  <button
+                    type="button"
+                    disabled={currentPage === totalPages}
+                    onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                  >
                     <i className="ti-angle-right"></i>
                   </button>
                 </div>
@@ -504,6 +602,34 @@ function UserManagementPage() {
                   </div>
                 </dl>
 
+                <section className="user-management-page__role-editor">
+                  <h3>System role</h3>
+                  <p>Controls access to platform administration features.</p>
+                  <div>
+                    <select
+                      value={roleDraft}
+                      disabled={selectedUser.id === currentAdminId}
+                      onChange={(event) => setRoleDraft(event.target.value)}
+                    >
+                      <option value="USER">User</option>
+                      <option value="SYSTEM_ADMIN">System Admin</option>
+                    </select>
+                    <button
+                      type="button"
+                      disabled={
+                        selectedUser.id === currentAdminId ||
+                        roleDraft === selectedUser.role
+                      }
+                      onClick={saveRole}
+                    >
+                      Save role
+                    </button>
+                  </div>
+                  {selectedUser.id === currentAdminId && (
+                    <small>You cannot change your own system role.</small>
+                  )}
+                </section>
+
                 <section className="user-management-page__detail-storage">
                   <h3>Storage usage</h3>
                   <div>
@@ -526,18 +652,17 @@ function UserManagementPage() {
                     ></span>
                   </div>
                   <p>
-                    {Math.max(
-                      0,
-                      selectedUser.quota - selectedUser.storageUsed
+                    {formatBytes(
+                      Math.max(0, selectedUser.quota - selectedUser.storageUsed)
                     )}{" "}
-                    GB remaining
+                    remaining
                   </p>
                 </section>
 
                 <dl className="user-management-page__access-list">
                   <div>
                     <dt>Storage quota</dt>
-                    <dd>{selectedUser.quota} GB</dd>
+                    <dd>{formatBytes(selectedUser.quota)}</dd>
                   </div>
                   <div>
                     <dt>Workspace access</dt>
@@ -550,15 +675,6 @@ function UserManagementPage() {
                 </dl>
 
                 <div className="user-management-page__detail-actions">
-                  <button
-                    type="button"
-                    onClick={() =>
-                      openConfirmation("resetQuota", selectedUser)
-                    }
-                  >
-                    <i className="ti-reload"></i>
-                    Reset quota
-                  </button>
                   <button
                     type="button"
                     className={
@@ -574,6 +690,7 @@ function UserManagementPage() {
                         selectedUser
                       )
                     }
+                    disabled={selectedUser.id === currentAdminId}
                   >
                     <i
                       className={
@@ -584,7 +701,9 @@ function UserManagementPage() {
                     ></i>
                     {selectedUser.status === "Disabled"
                       ? "Reactivate account"
-                      : "Disable account"}
+                      : selectedUser.id === currentAdminId
+                        ? "Cannot disable your own account"
+                        : "Disable account"}
                   </button>
                 </div>
               </>
@@ -599,55 +718,6 @@ function UserManagementPage() {
         </section>
       </main>
 
-      {inviteOpen && (
-        <div
-          className="user-management-page__modal-overlay"
-          role="dialog"
-          aria-modal="true"
-        >
-          <form
-            className="user-management-page__invite-modal"
-            onSubmit={handleInviteUser}
-          >
-            <div className="user-management-page__modal-title">
-              <div>
-                <span>User administration</span>
-                <h2>Invite a new user</h2>
-              </div>
-              <button
-                type="button"
-                aria-label="Close invite dialog"
-                onClick={() => setInviteOpen(false)}
-              >
-                ×
-              </button>
-            </div>
-            <p>
-              Send an invitation with the default student role. Permissions can
-              be adjusted later.
-            </p>
-            <label>
-              Email address
-              <input
-                type="email"
-                value={inviteEmail}
-                onChange={(event) => setInviteEmail(event.target.value)}
-                placeholder="student@school.edu"
-                autoFocus
-              />
-            </label>
-            <div className="user-management-page__invite-actions">
-              <button type="button" onClick={() => setInviteOpen(false)}>
-                Cancel
-              </button>
-              <button type="submit">
-                <i className="ti-user"></i>
-                Send invite
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
 
       {confirmAction && (
         <div

@@ -11,10 +11,11 @@ import { getWorkspaces } from "../../../utils/workspaceApi.js";
 import { getMyProfile } from "../../../utils/profileApi.js";
 import { getPublicLibraries } from "../../../utils/publicApi.js";
 import defaultAvatar from "../../../assets/images/account.png";
+import { getStoredUser } from "../../../utils/authToken.js";
 
 function getStoredUserRole() {
   try {
-    const user = JSON.parse(localStorage.getItem("user") || "null");
+    const user = getStoredUser();
     return String(user?.role || "").toUpperCase();
   } catch {
     return "";

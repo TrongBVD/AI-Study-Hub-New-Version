@@ -65,6 +65,19 @@
 
 .ai-moderation-page__admin-tools {
   gap: 12px;
+  position: relative;
+}
+
+.ai-moderation-page__admin-profile {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: inherit;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  cursor: pointer;
+  text-align: left;
 }
 
 .ai-moderation-page__notification {
@@ -106,8 +119,46 @@
 }
 
 .ai-moderation-page__admin-name {
-  gap: 9px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
   font-size: 13px;
+}
+
+.ai-moderation-page__admin-name small {
+  color: var(--moderation-muted);
+  font-size: 10px;
+}
+
+.ai-moderation-page__profile-menu {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 190px;
+  padding: 6px;
+  border: 1px solid var(--moderation-line);
+  border-radius: 9px;
+  background: var(--moderation-surface);
+  box-shadow: 0 12px 30px rgba(44, 35, 27, 0.16);
+}
+
+.ai-moderation-page__profile-menu button {
+  width: 100%;
+  border: 0;
+  border-radius: 6px;
+  padding: 10px;
+  background: transparent;
+  color: var(--moderation-text);
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.ai-moderation-page__profile-menu button:hover {
+  background: var(--moderation-soft);
 }
 
 .ai-moderation-page__notice {
@@ -350,7 +401,7 @@
 .ai-moderation-page__table-head,
 .ai-moderation-page__case-row {
   display: grid;
-  grid-template-columns: 28px 34px minmax(180px, 1.35fr) minmax(130px, 1fr) 90px 100px 118px 16px;
+  grid-template-columns: 28px 34px minmax(180px, 1.35fr) minmax(130px, 1fr) 90px 118px 16px;
   gap: 10px;
   align-items: center;
 }
@@ -478,12 +529,6 @@
   color: #8b4a15;
 }
 
-.ai-moderation-page__confidence {
-  font-size: 11px;
-  font-weight: 800;
-  font-variant-numeric: tabular-nums;
-}
-
 .ai-moderation-page__status-pill {
   background: var(--accent-soft);
   color: var(--text-primary, var(--text-secondary));
@@ -523,6 +568,7 @@
 
 .ai-moderation-page__queue-footer > div {
   display: flex;
+  align-items: center;
   gap: 6px;
 }
 
@@ -791,7 +837,7 @@
 
   .ai-moderation-page__table-head,
   .ai-moderation-page__case-row {
-    grid-template-columns: 28px 34px minmax(180px, 1.4fr) minmax(130px, 1fr) 85px 90px 112px 16px;
+    grid-template-columns: 28px 34px minmax(180px, 1.4fr) minmax(130px, 1fr) 85px 112px 16px;
   }
 }
 
@@ -833,7 +879,6 @@
     grid-column: 3;
   }
 
-  .ai-moderation-page__confidence,
   .ai-moderation-page__status-pill {
     grid-column: auto;
   }
@@ -883,7 +928,6 @@
 
   .ai-moderation-page__uploader-cell,
   .ai-moderation-page__severity,
-  .ai-moderation-page__confidence,
   .ai-moderation-page__status-pill {
     grid-column: 3;
   }

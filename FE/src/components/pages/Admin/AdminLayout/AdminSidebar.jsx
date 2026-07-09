@@ -1,6 +1,7 @@
 import { NavLink, useNavigate } from "react-router-dom";
 import Logo from "../../../../assets/logo/Logo.jsx";
 import api from "../../../../utils/api.js";
+import { clearStoredSession } from "../../../../utils/authToken.js";
 
 const ADMIN_MENU_ITEMS = [
   { icon: "ti-dashboard", label: "Dashboard", path: "/admin/dashboard" },
@@ -8,7 +9,6 @@ const ADMIN_MENU_ITEMS = [
   { icon: "ti-user", label: "Users", path: "/admin/users" },
   { icon: "ti-list", label: "Activity Logs", path: "/admin/logs" },
   { icon: "ti-pie-chart", label: "Usage", path: "/admin/usage" },
-  { icon: "ti-settings", label: "System settings", path: "/admin/settings" },
 ];
 
 function AdminSidebar({ isOpen, onClose }) {
@@ -20,7 +20,7 @@ function AdminSidebar({ isOpen, onClose }) {
     } catch (error) {
       console.error("Logout request failed:", error);
     } finally {
-      localStorage.clear();
+      clearStoredSession();
       onClose();
       navigate("/login", { replace: true });
     }

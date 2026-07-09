@@ -91,12 +91,13 @@ function signAccessToken(user) {
   );
 }
 
-function signRefreshToken(user) {
+function signRefreshToken(user, rememberMe = true) {
   return jwt.sign(
     {
       userId: user.id,
       session_id: user.session_id,
       type: "refresh",
+      rememberMe: Boolean(rememberMe),
     },
     getJwtSecret(),
     { expiresIn: REFRESH_TOKEN_EXPIRY },
