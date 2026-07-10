@@ -4,12 +4,28 @@ import { getDocumentView } from "../../../utils/documentApi";
 import FileViewer from "../FileViewer/FileViewer";
 import "./DocumentViewerPage.css";
 
+const PENDING_DOCUMENT_CHAT_KEY = "aiStudyHubPendingDocumentChat";
+
+const QUICK_PROMPTS = [
+  {
+    label: "Summary",
+    icon: "ti-write",
+    prompt: "Summarize the key points in this document.",
+  },
+  {
+    label: "Quiz",
+    icon: "ti-help-alt",
+    prompt: "Create a quiz to help me review this document.",
+  },
+];
+
 function DocumentViewerPage() {
   const { documentId } = useParams();
   const navigate = useNavigate();
   const [documentData, setDocumentData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
+  const [question, setQuestion] = useState("");
 
   useEffect(() => {
     let isMounted = true;
@@ -70,12 +86,69 @@ function DocumentViewerPage() {
     );
   }
 
+  function openDocumentChat(nextQuestion = question) {
+    const trimmedQuestion = nextQuestion.trim();
+    if (!trimmedQuestion) return;
+
+    localStorage.setItem(
+      PENDING_DOCUMENT_CHAT_KEY,
+      JSON.stringify({
+        id: `${documentData.documentId}-${Date.now()}`,
+        documentId: documentData.documentId,
+        documentTitle: documentData.fileName,
+        question: trimmedQuestion,
+        createdAt: new Date().toISOString(),
+      }),
+    );
+
+    navigate("/dashboard/ai-chat");
+  }
+
   return (
-    <FileViewer
-      documentUrl={documentData.viewUrl}
-      documentName={documentData.fileName}
-      documentId={documentData.documentId}
-    />
+    <>
+      <FileViewer
+        documentUrl={documentData.viewUrl}
+        documentName={documentData.fileName}
+        documentId={documentData.documentId}
+      />
+
+      <section className="document_chat_assistant" aria-label="Document AI assistant">
+        <div className="document_chat_quick_actions">
+          {QUICK_PROMPTS.map((item) => (
+            <button
+              type="button"
+              key={item.label}
+              onClick={() => openDocumentChat(item.prompt)}
+            >
+              <i className={item.icon} />
+              {item.label}
+            </button>
+          ))}
+        </div>
+
+        <form
+          className="document_chat_input"
+          onSubmit={(event) => {
+            event.preventDefault();
+            openDocumentChat();
+          }}
+        >
+          <input
+            type="text"
+            value={question}
+            onChange={(event) => setQuestion(event.target.value)}
+            placeholder="Ask a question about this document"
+          />
+          <button
+            type="submit"
+            disabled={question.trim() === ""}
+            aria-label="Send question"
+          >
+            <i className="ti-arrow-right" />
+          </button>
+        </form>
+      </section>
+    </>
   );
 }
 
