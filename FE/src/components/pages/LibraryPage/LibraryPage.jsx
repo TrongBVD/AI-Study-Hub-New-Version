@@ -131,7 +131,9 @@ function LibraryPage() {
   const [isTagModalOpen, setIsTagModalOpen] = useState(false);
   const [hashtags, setHashtags] = useState(["", "", ""]);
   const [tagErrors, setTagErrors] = useState([]);
+  const [tagInputErrors, setTagInputErrors] = useState(["", "", ""]);
   const [aiRecommendedTags, setAiRecommendedTags] = useState([]);
+  const [uploadNotice, setUploadNotice] = useState(null);
 
   const [libraryItems, setLibraryItems] = useState([]);
   const [isLoadingDocuments, setIsLoadingDocuments] = useState(false);
@@ -553,6 +555,16 @@ function LibraryPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  useEffect(() => {
+    if (!uploadNotice) return undefined;
+
+    const timeoutId = window.setTimeout(() => {
+      setUploadNotice(null);
+    }, 4500);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [uploadNotice]);
+
   function handleUploadFile(e) {
     const files = Array.from(e.target.files || []);
 
@@ -621,6 +633,7 @@ function LibraryPage() {
     const updatedHashtags = [...hashtags];
     updatedHashtags[index] = value;
     setHashtags(updatedHashtags);
+    setTagInputErrors(["", "", ""]);
   }
 
   function handleCancelTaggedUpload() {
@@ -628,18 +641,50 @@ function LibraryPage() {
     setPendingFolderId(null);
     setHashtags(["", "", ""]);
     setTagErrors([]);
+    setTagInputErrors(["", "", ""]);
     setAiRecommendedTags([]);
     setIsTagModalOpen(false);
   }
 
   async function handleConfirmTaggedUpload() {
-    const validHashtags = hashtags
-      .map((tag) => tag.trim())
-      .filter((tag) => tag !== "")
-      .map((tag) => (tag.startsWith("#") ? tag : `#${tag}`));
+    const normalizedTags = hashtags.map((tag) =>
+      tag.trim().replace(/^#/, "").trim(),
+    );
+    const nextTagInputErrors = ["", "", ""];
+    const tagIndexesByValue = new Map();
+
+    normalizedTags.forEach((tag, index) => {
+      if (!tag) return;
+
+      if (/^\d/.test(tag)) {
+        nextTagInputErrors[index] = "A tag cannot start with a number.";
+      }
+
+      const normalizedValue = tag.toLocaleLowerCase();
+      const matchingIndexes = tagIndexesByValue.get(normalizedValue) || [];
+      matchingIndexes.push(index);
+      tagIndexesByValue.set(normalizedValue, matchingIndexes);
+    });
+
+    tagIndexesByValue.forEach((indexes) => {
+      if (indexes.length < 2) return;
+
+      indexes.forEach((index) => {
+        nextTagInputErrors[index] = "Tags must be unique.";
+      });
+    });
+
+    const validHashtags = normalizedTags
+      .filter(Boolean)
+      .map((tag) => `#${tag}`);
 
     if (validHashtags.length < 1 || validHashtags.length > 3) {
-      alert("Please enter 1-3 hashtags before uploading.");
+      nextTagInputErrors[0] =
+        nextTagInputErrors[0] || "Please enter at least one tag.";
+    }
+
+    if (nextTagInputErrors.some(Boolean)) {
+      setTagInputErrors(nextTagInputErrors);
       return;
     }
 
@@ -685,9 +730,19 @@ function LibraryPage() {
 
       const hasFlagged = (uploadedDocuments || []).some(doc => doc.status === "FLAGGED");
       if (hasFlagged) {
-        alert("Upload completed. However, documents suspected of containing sensitive content have been flagged and sent to the Admin for review.");
+        setUploadNotice({
+          type: "warning",
+          message:
+            "Upload completed, but sensitive documents were sent to Admin for review.",
+        });
       } else {
-        alert("Upload successful.");
+        setUploadNotice({
+          type: "success",
+          message:
+            uploadedItems.length === 1
+              ? "File uploaded successfully."
+              : `${uploadedItems.length} files uploaded successfully.`,
+        });
       }
     } catch (error) {
       console.error("Upload failed:", error);
@@ -1693,6 +1748,37 @@ function LibraryPage() {
         )}
       </section>
 
+      {uploadNotice && (
+        <div
+          className={`library_upload_notice is_${uploadNotice.type}`}
+          role="status"
+          aria-live="polite"
+        >
+          <span className="library_upload_notice_icon">
+            <i
+              className={
+                uploadNotice.type === "success" ? "ti-check" : "ti-alert"
+              }
+            ></i>
+          </span>
+          <div>
+            <strong>
+              {uploadNotice.type === "success"
+                ? "Upload complete"
+                : "Upload needs review"}
+            </strong>
+            <p>{uploadNotice.message}</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setUploadNotice(null)}
+            aria-label="Close upload notification"
+          >
+            ×
+          </button>
+        </div>
+      )}
+
       {isTagModalOpen && (
         <div className="hashtag_modal_overlay">
           <div className="hashtag_modal">
@@ -1715,6 +1801,7 @@ function LibraryPage() {
                     const apiTagNormalized = (v.tag || "").trim().toLowerCase().replace("#", "");
                     return userTagNormalized && userTagNormalized === apiTagNormalized && !v.isValid;
                   });
+                  const tagInputError = tagInputErrors[index];
 
                   return (
                     <div key={index} className="hashtag_input_wrapper">
@@ -1726,8 +1813,17 @@ function LibraryPage() {
                           setTagErrors([]);
                         }}
                         placeholder={`# tag${index + 1}`}
-                        className={tagError ? "input_has_error" : ""}
+                        className={
+                          tagError || tagInputError ? "input_has_error" : ""
+                        }
+                        aria-invalid={Boolean(tagError || tagInputError)}
                       />
+                      {tagInputError && (
+                        <div className="tag_error_message tag_input_error_message">
+                          <i className="ti-alert" aria-hidden="true"></i>
+                          <span>{tagInputError}</span>
+                        </div>
+                      )}
                       {tagError && (
                         <div className="tag_error_message">
                           <span className="error_icon">⚠️</span>

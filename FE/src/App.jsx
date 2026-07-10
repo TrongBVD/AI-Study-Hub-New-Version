@@ -29,6 +29,7 @@ import CreateWorkSpacePage from "./components/pages/CreateWorkSpacePage/CreateWo
 import SearchUserPage from "./components/pages/SearchUserPage/SearchUserPage";
 import SearchResultPage from "./components/pages/SearchResultPage/SearchResultPage.jsx";
 import DiscoverPage from "./components/pages/DiscoverPage/DiscoverPage.jsx";
+import ChatBot from "./components/pages/AIchatbot/ChatBot.jsx";
 
 
 // ================= PROTECTED ROUTE =================
@@ -80,6 +81,10 @@ function App() {
 
           <Route path="home" element={<HomePage />} />
           <Route path="discover" element={<DiscoverPage />} />
+          <Route
+            path="ai-chat"
+            element={<ChatBot defaultOpen={true} showBubble={false} />}
+          />
 
           <Route path="libraries" element={<MyLibraryPage />} />
           <Route path="create-library" element={<CreateLibraryPage />} />

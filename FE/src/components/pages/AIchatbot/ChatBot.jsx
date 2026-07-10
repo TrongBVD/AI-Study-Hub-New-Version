@@ -1,57 +1,214 @@
 import { useEffect, useRef, useState } from "react";
 import api from "../../../utils/api.js";
 import "./ChatBot.css";
-import aiChatbotIcon from "../../../assets/imgs/iconchatbot.svg";
+import aiChatbotIcon from "../../../assets/images/iconchatbot.svg";
 
 import { IoIosSend } from "react-icons/io";
 import { RiResetRightLine } from "react-icons/ri";
 import { IoMdClose } from "react-icons/io";
 import { IoChatbubbleEllipses } from "react-icons/io5";
-
-import { FaHistory } from "react-icons/fa";
+import {
+  FaCheck,
+  FaChevronDown,
+  FaHistory,
+  FaPlus,
+  FaSearch,
+  FaTrash,
+} from "react-icons/fa";
 import { RiRobot2Fill } from "react-icons/ri";
 import { FaUser } from "react-icons/fa6";
+import {
+  HiOutlineArchiveBox,
+  HiOutlineDocumentText,
+  HiOutlineFolder,
+  HiOutlineQuestionMarkCircle,
+} from "react-icons/hi2";
 
-function ChatBot() {
-  const [open, setOpen] = useState(false);
+const CHAT_HISTORY_KEY = "aiStudyHubChatHistory";
+const PENDING_DOCUMENT_CHAT_KEY = "aiStudyHubPendingDocumentChat";
+const ROOT_FOLDER_VALUE = "__library_root__";
+const INITIAL_MESSAGE = {
+  id: 1,
+  role: "ai",
+  text: "Hello 👋 Select an approved document and ask me something.",
+};
+
+const STARTER_PROMPTS = [
+  {
+    label: "Summarize document",
+    prompt: "Summarize the key points in this document.",
+    icon: HiOutlineDocumentText,
+  },
+  {
+    label: "Create a quiz",
+    prompt: "Create a short quiz based on this document.",
+    icon: HiOutlineQuestionMarkCircle,
+  },
+];
+
+function loadStoredHistory() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(CHAT_HISTORY_KEY) || "[]");
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function ChatBot({ defaultOpen = false, showBubble = true }) {
+  const [open, setOpen] = useState(defaultOpen);
   const [input, setInput] = useState("");
-  const [showHistory, setShowHistory] = useState(false);
-
+  const [showHistory, setShowHistory] = useState(() => {
+    if (typeof window === "undefined") return true;
+    return window.innerWidth > 900;
+  });
   const [loading, setLoading] = useState(false);
 
   const [documents, setDocuments] = useState([]);
+  const [libraries, setLibraries] = useState([]);
+  const [selectedLibraryId, setSelectedLibraryId] = useState("");
+  const [selectedFolderId, setSelectedFolderId] = useState("");
   const [selectedDocumentId, setSelectedDocumentId] = useState("");
+  const [isFileMenuOpen, setIsFileMenuOpen] = useState(false);
 
   const bottomRef = useRef(null);
+  const chatBodyRef = useRef(null);
+  const processedPendingChatRef = useRef("");
+  const fileSelectRef = useRef(null);
 
-  const [messages, setMessages] = useState([
-    {
-      id: 1,
-      role: "ai",
-      text: "Hello 👋 Select an approved document and ask me something.",
-    },
-  ]);
+  const [messages, setMessages] = useState([INITIAL_MESSAGE]);
 
-  const [history, setHistory] = useState([]);
+  const [history, setHistory] = useState(loadStoredHistory);
+  const selectedLibraryDocuments = documents.filter(
+    (doc) => String(getDocumentLibraryId(doc)) === String(selectedLibraryId),
+  );
+  const availableFolders = Array.from(
+    selectedLibraryDocuments.reduce((folders, doc) => {
+      const folderId = getDocumentFolderId(doc);
+
+      if (folderId && !folders.has(folderId)) {
+        folders.set(folderId, {
+          id: folderId,
+          name: getDocumentFolderName(doc),
+        });
+      }
+
+      return folders;
+    }, new Map()).values(),
+  );
+  const hasFolderDocuments = availableFolders.length > 0;
+  const visibleDocuments = selectedLibraryDocuments.filter((doc) => {
+    const folderId = getDocumentFolderId(doc);
+
+    if (!hasFolderDocuments) return true;
+    if (!selectedFolderId) return false;
+    if (selectedFolderId === ROOT_FOLDER_VALUE) return !folderId;
+
+    return folderId === selectedFolderId;
+  });
+  const selectedDocument = documents.find(
+    (doc) => String(doc.id) === String(selectedDocumentId),
+  );
+  const conversationItems = history.filter((message) => message.role === "user");
+  const isDefaultChat =
+    messages.length === 1 && messages[0].id === INITIAL_MESSAGE.id;
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    localStorage.setItem(CHAT_HISTORY_KEY, JSON.stringify(history));
+  }, [history]);
+
+  useEffect(() => {
+    chatBodyRef.current?.scrollTo({
+      top: chatBodyRef.current.scrollHeight,
+      behavior: "smooth",
+    });
   }, [messages]);
+
+  useEffect(() => {
+    const handlePointerDown = (event) => {
+      if (!fileSelectRef.current?.contains(event.target)) {
+        setIsFileMenuOpen(false);
+      }
+    };
+    const handleEscape = (event) => {
+      if (event.key === "Escape") {
+        setIsFileMenuOpen(false);
+      }
+    };
+
+    window.document.addEventListener("mousedown", handlePointerDown);
+    window.document.addEventListener("keydown", handleEscape);
+
+    return () => {
+      window.document.removeEventListener("mousedown", handlePointerDown);
+      window.document.removeEventListener("keydown", handleEscape);
+    };
+  }, []);
 
   useEffect(() => {
     async function loadApprovedDocuments() {
       try {
-        const response = await api.get("/documents");
-        const result = response.data;
+        const [documentsResponse, librariesResponse] = await Promise.all([
+          api.get("/documents"),
+          api.get("/documents/libraries"),
+        ]);
+        const result = documentsResponse.data;
 
         const approvedDocs = (result.data || []).filter(
           (doc) => doc.status === "APPROVED",
         );
+        const myLibraries = librariesResponse.data?.data || [];
 
         setDocuments(approvedDocs);
+        setLibraries(myLibraries);
 
-        if (approvedDocs.length > 0) {
-          setSelectedDocumentId(approvedDocs[0].id);
+        const pendingChat = getPendingDocumentChat();
+        const pendingDocument = pendingChat
+          ? approvedDocs.find(
+              (doc) => String(doc.id) === String(pendingChat.documentId),
+            )
+          : null;
+        const initialDocument =
+          pendingDocument ||
+          approvedDocs.find((doc) => Boolean(getDocumentLibraryId(doc))) ||
+          null;
+        const initialLibraryId = initialDocument
+          ? getDocumentLibraryId(initialDocument)
+          : myLibraries[0]?.id || "";
+        const initialLibraryDocuments = approvedDocs.filter(
+          (doc) =>
+            String(getDocumentLibraryId(doc)) === String(initialLibraryId),
+        );
+        const initialLibraryHasFolders = initialLibraryDocuments.some((doc) =>
+          Boolean(getDocumentFolderId(doc)),
+        );
+        const initialFolderId = pendingDocument
+          ? getDocumentFolderId(pendingDocument) || ROOT_FOLDER_VALUE
+          : initialLibraryHasFolders
+            ? ""
+            : ROOT_FOLDER_VALUE;
+
+        setSelectedLibraryId(initialLibraryId || "");
+        setSelectedFolderId(initialFolderId);
+        setSelectedDocumentId(
+          pendingDocument || !initialLibraryHasFolders
+            ? initialDocument?.id || ""
+            : "",
+        );
+
+        if (
+          pendingChat &&
+          pendingDocument &&
+          processedPendingChatRef.current !== pendingChat.id
+        ) {
+          processedPendingChatRef.current = pendingChat.id;
+          localStorage.removeItem(PENDING_DOCUMENT_CHAT_KEY);
+          setMessages([INITIAL_MESSAGE]);
+          submitChatQuestion(
+            pendingChat.question,
+            pendingDocument.id,
+            pendingDocument,
+          );
         }
       } catch (error) {
         console.error("Could not load approved documents:", error);
@@ -63,10 +220,15 @@ function ChatBot() {
     }
   }, [open]);
 
-  const sendMessage = async () => {
-    if (input.trim() === "" || loading) return;
+  const submitChatQuestion = async (
+    questionOverride = input,
+    documentIdOverride = selectedDocumentId,
+    documentOverride = selectedDocument,
+  ) => {
+    const currentInput = questionOverride.trim();
+    if (currentInput === "" || loading) return;
 
-    if (!selectedDocumentId) {
+    if (!documentIdOverride) {
       const aiMessage = {
         id: Date.now(),
         role: "ai",
@@ -77,8 +239,6 @@ function ChatBot() {
       return;
     }
 
-    const currentInput = input.trim();
-
     const userMessage = {
       id: Date.now(),
       role: "user",
@@ -86,7 +246,6 @@ function ChatBot() {
     };
 
     setMessages((prev) => [...prev, userMessage]);
-    setHistory((prev) => [...prev, userMessage]);
 
     setInput("");
 
@@ -94,7 +253,7 @@ function ChatBot() {
 
     try {
       const response = await api.post("/ai/chat", {
-        documentId: selectedDocumentId,
+        documentId: documentIdOverride,
         question: currentInput,
       });
       const result = response.data;
@@ -102,24 +261,24 @@ function ChatBot() {
       const aiMessage = {
         id: Date.now() + 1,
         role: "ai",
-        text: result.data.answer,
+        text: result.data?.answer || "I could not find an answer for that.",
       };
 
-      if (selectedDocument) {
+      if (documentOverride) {
         localStorage.setItem(
           "aiStudyHubLastChatDocument",
           JSON.stringify({
-            id: selectedDocument.id,
-            title: selectedDocument.title,
-            libraryId: selectedDocument.library_id,
-            workspaceId: selectedDocument.workspace_id,
+            id: documentOverride.id,
+            title: documentOverride.title,
+            libraryId: documentOverride.library_id,
+            workspaceId: documentOverride.workspace_id,
             chattedAt: new Date().toISOString(),
           }),
         );
       }
 
       setMessages((prev) => [...prev, aiMessage]);
-      setHistory((prev) => [...prev, aiMessage]);
+      setHistory((prev) => [userMessage, aiMessage, ...prev]);
     } catch (error) {
       const aiMessage = {
         id: Date.now() + 1,
@@ -131,131 +290,422 @@ function ChatBot() {
       };
 
       setMessages((prev) => [...prev, aiMessage]);
-      setHistory((prev) => [...prev, aiMessage]);
+      setHistory((prev) => [userMessage, aiMessage, ...prev]);
     } finally {
       setLoading(false);
     }
   };
 
+  const sendMessage = async () => {
+    await submitChatQuestion();
+  };
+
   const resetChat = () => {
-    setMessages([
-      {
-        id: 1,
-        role: "ai",
-        text: "Hello 👋 Select an approved document and ask me something.",
-      },
-    ]);
+    setMessages([INITIAL_MESSAGE]);
+  };
+
+  const clearHistory = () => {
+    setHistory([]);
+  };
+
+  const handleLibraryChange = (libraryId) => {
+    const libraryDocuments = documents.filter(
+      (doc) => String(getDocumentLibraryId(doc)) === String(libraryId),
+    );
+    const libraryHasFolders = libraryDocuments.some((doc) =>
+      Boolean(getDocumentFolderId(doc)),
+    );
+
+    setSelectedLibraryId(libraryId);
+    setIsFileMenuOpen(false);
+    setSelectedFolderId(libraryHasFolders ? "" : ROOT_FOLDER_VALUE);
+    setSelectedDocumentId(
+      libraryHasFolders ? "" : libraryDocuments[0]?.id || "",
+    );
+  };
+
+  const handleFolderChange = (folderId) => {
+    const folderDocuments = selectedLibraryDocuments.filter((doc) => {
+      const documentFolderId = getDocumentFolderId(doc);
+
+      return folderId === ROOT_FOLDER_VALUE
+        ? !documentFolderId
+        : documentFolderId === folderId;
+    });
+
+    setSelectedFolderId(folderId);
+    setIsFileMenuOpen(false);
+    setSelectedDocumentId(folderDocuments[0]?.id || "");
+  };
+
+  const handleDocumentChange = (documentId) => {
+    setSelectedDocumentId(documentId);
+    setIsFileMenuOpen(false);
+  };
+
+  const openHistoryItem = (message) => {
+    const itemIndex = history.findIndex((item) => item.id === message.id);
+    const nextAnswer = history
+      .slice(itemIndex + 1)
+      .find((item) => item.role === "ai");
+
+    setMessages([INITIAL_MESSAGE, message, ...(nextAnswer ? [nextAnswer] : [])]);
   };
 
   return (
-    <div>
-      <div id="bubble">
-        <button onClick={() => setOpen(!open)}>
-          <IoChatbubbleEllipses />
-        </button>
-      </div>
+    <div className={`ai-chat-page ${showBubble ? "ai-chat-floating" : ""}`}>
+      {showBubble && (
+        <div id="bubble">
+          <button
+            type="button"
+            onClick={() => setOpen(!open)}
+            aria-label="Open AI chat"
+          >
+            <IoChatbubbleEllipses />
+          </button>
+        </div>
+      )}
 
       {open && (
-        <div className="chat-box">
-          <div className="chat-header">
-            <img src={aiChatbotIcon} alt="AI Chatbot" />
-
-            <div className="header-actions">
-              <button onClick={() => setShowHistory(!showHistory)}>
-                <FaHistory />
-              </button>
-
-              <button onClick={resetChat}>
-                <RiResetRightLine />
-              </button>
-
-              <button onClick={() => setOpen(false)}>
-                <IoMdClose />
-              </button>
+        <div
+          className={`chat-box ${showHistory ? "history-open" : "history-closed"}`}
+        >
+          <aside className={`chat-sidebar ${showHistory ? "is-open" : ""}`}>
+            <div className="chat-brand">
+              <img src={aiChatbotIcon} alt="AI Chatbot" />
+              <span>CHAT A.I+</span>
             </div>
-          </div>
 
-          <div className="document-select-container">
-            <select
-              value={selectedDocumentId}
-              onChange={(e) => setSelectedDocumentId(e.target.value)}
-              className="document-select"
-              disabled={loading}
-            >
-              {documents.length === 0 && (
-                <option value="">No approved documents available</option>
-              )}
-
-              {documents.map((doc) => (
-                <option key={doc.id} value={doc.id}>
-                  {doc.title}
-                </option>
-              ))}
-            </select>
-          </div>
-          {showHistory && (
-            <div className="chat-history">
-              <h4>Chat History</h4>
-              {history.map((m) => (
-                <div key={m.id}>
-                  <b>{m.role}</b>: {m.text}
-                </div>
-              ))}
-            </div>
-          )}
-
-          <div className="chat-body">
-            {messages.map((m) => (
-              <div
-                key={m.id}
-                className={`msg-row ${
-                  m.role === "user" ? "user-row" : "ai-row"
-                }`}
+            <div className="chat-sidebar-actions">
+              <button type="button" className="new-chat-btn" onClick={resetChat}>
+                <FaPlus />
+                <span>New chat</span>
+              </button>
+              <button
+                type="button"
+                className="icon-search-btn"
+                aria-label="Search chat"
               >
-                <div className="avatar">
-                  {m.role === "user" ? <FaUser /> : <RiRobot2Fill />}
-                </div>
+                <FaSearch />
+              </button>
+            </div>
 
-                <div
-                  className={`message ${
-                    m.role === "user" ? "user-msg" : "ai-msg"
-                  }`}
+            <div className="document-select-container">
+              <label htmlFor="ai-chat-library">Library</label>
+              <div className="chat-select-shell">
+                <HiOutlineArchiveBox className="chat-select-leading-icon" />
+                <select
+                  id="ai-chat-library"
+                  value={selectedLibraryId}
+                  onChange={(event) => handleLibraryChange(event.target.value)}
+                  className="document-select"
+                  disabled={loading}
                 >
-                  {m.text}
-                </div>
-              </div>
-            ))}
+                  {libraries.length === 0 && (
+                    <option value="">No libraries available</option>
+                  )}
 
-            {loading && (
-              <div id="load-msg">
-                <b>StudyHub Assistant</b> is thinking...
+                  {libraries.map((library) => (
+                    <option key={library.id} value={library.id}>
+                      {library.name || library.libraryName || "Untitled library"}
+                    </option>
+                  ))}
+                </select>
+                <FaChevronDown className="chat-select-chevron" />
+              </div>
+            </div>
+
+            {selectedLibraryId && hasFolderDocuments && (
+              <div className="document-select-container chat-folder-select">
+                <label htmlFor="ai-chat-folder">Folder</label>
+                <div className="chat-select-shell">
+                  <HiOutlineFolder className="chat-select-leading-icon" />
+                  <select
+                    id="ai-chat-folder"
+                    value={selectedFolderId}
+                    onChange={(event) => handleFolderChange(event.target.value)}
+                    className="document-select"
+                    disabled={loading}
+                  >
+                    <option value="">Choose a folder</option>
+                    {selectedLibraryDocuments.some(
+                      (doc) => !getDocumentFolderId(doc),
+                    ) && (
+                      <option value={ROOT_FOLDER_VALUE}>
+                        Files in library root
+                      </option>
+                    )}
+                    {availableFolders.map((folder) => (
+                      <option key={folder.id} value={folder.id}>
+                        {folder.name}
+                      </option>
+                    ))}
+                  </select>
+                  <FaChevronDown className="chat-select-chevron" />
+                </div>
               </div>
             )}
 
-            <div ref={bottomRef}></div>
-          </div>
+            <div className="document-select-container chat-file-select">
+              <span className="chat-select-label" id="ai-chat-document-label">
+                File
+              </span>
+              <div
+                className={`chat-select-shell chat-custom-select ${
+                  isFileMenuOpen ? "is-open" : ""
+                }`}
+                ref={fileSelectRef}
+              >
+                <HiOutlineDocumentText className="chat-select-leading-icon" />
+                <button
+                  type="button"
+                  id="ai-chat-document"
+                  className="document-select chat-custom-select-trigger"
+                  aria-labelledby="ai-chat-document-label ai-chat-document"
+                  aria-haspopup="listbox"
+                  aria-expanded={isFileMenuOpen}
+                  onClick={() => setIsFileMenuOpen((current) => !current)}
+                  disabled={
+                    loading ||
+                    !selectedLibraryId ||
+                    (hasFolderDocuments && !selectedFolderId)
+                  }
+                >
+                  <span>
+                    {selectedDocument?.title ||
+                      (hasFolderDocuments && !selectedFolderId
+                        ? "Choose a folder first"
+                        : "Choose a file")}
+                  </span>
+                </button>
+                <FaChevronDown className="chat-select-chevron" />
 
-          <div className="chat-input">
-            <textarea
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder="Ask something about the selected document..."
-              disabled={loading}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault();
-                  sendMessage();
-                }
-              }}
-            />
+                {isFileMenuOpen && (
+                  <div
+                    className="chat-file-options"
+                    role="listbox"
+                    aria-labelledby="ai-chat-document-label"
+                  >
+                    {visibleDocuments.length === 0 ? (
+                      <div className="chat-file-option-empty">
+                        No approved files available
+                      </div>
+                    ) : (
+                      visibleDocuments.map((doc) => {
+                        const isSelected =
+                          String(doc.id) === String(selectedDocumentId);
 
-            <button onClick={sendMessage} disabled={loading}>
-              <IoIosSend />
-            </button>
-          </div>
+                        return (
+                          <button
+                            type="button"
+                            role="option"
+                            aria-selected={isSelected}
+                            className={`chat-file-option ${
+                              isSelected ? "is-selected" : ""
+                            }`}
+                            key={doc.id}
+                            onClick={() => handleDocumentChange(doc.id)}
+                          >
+                            <HiOutlineDocumentText />
+                            <span title={doc.title}>{doc.title}</span>
+                            {isSelected && <FaCheck />}
+                          </button>
+                        );
+                      })
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="conversation-heading">
+              <span>Your conversations</span>
+              <button type="button" onClick={clearHistory}>
+                Clear All
+              </button>
+            </div>
+
+            <div className="conversation-list">
+              {conversationItems.length === 0 ? (
+                <p className="chat-history-empty">No saved messages yet.</p>
+              ) : (
+                conversationItems.map((message) => (
+                  <button
+                    type="button"
+                    className="conversation-item"
+                    key={message.id}
+                    onClick={() => openHistoryItem(message)}
+                  >
+                    <FaHistory />
+                    <span>{message.text}</span>
+                    <FaTrash className="conversation-muted-icon" />
+                  </button>
+                ))
+              )}
+            </div>
+          </aside>
+
+          <section className="chat-main">
+            <header className="chat-header">
+              <button
+                type="button"
+                className="history-toggle"
+                onClick={() => setShowHistory(!showHistory)}
+                aria-label="Toggle chat history"
+              >
+                <FaHistory />
+              </button>
+
+              <div className="chat-thread-title">
+                <span>CHAT A.I+</span>
+                <strong>
+                  {selectedDocument?.title || "Select an approved document"}
+                </strong>
+              </div>
+
+              <div className="header-actions">
+                <button type="button" onClick={resetChat} aria-label="Reset chat">
+                  <RiResetRightLine />
+                </button>
+
+                {showBubble && (
+                  <button
+                    type="button"
+                    onClick={() => setOpen(false)}
+                    aria-label="Close chat"
+                  >
+                    <IoMdClose />
+                  </button>
+                )}
+              </div>
+            </header>
+
+            <div className="chat-body" ref={chatBodyRef}>
+              {isDefaultChat ? (
+                <section className="chat-welcome" aria-labelledby="chat-welcome-title">
+                  <div className="chat-welcome-mark">
+                    <RiRobot2Fill />
+                  </div>
+                  <h1 id="chat-welcome-title">Welcome to StudyHub AI</h1>
+                  <p>
+                    Choose a starting point or ask anything about the selected
+                    document.
+                  </p>
+
+                  <div className="chat-starter-grid">
+                    {STARTER_PROMPTS.map(({ label, prompt, icon: Icon }) => (
+                      <button
+                        type="button"
+                        key={label}
+                        onClick={() => setInput(prompt)}
+                      >
+                        <span className="chat-starter-icon">
+                          <Icon />
+                        </span>
+                        <strong>{label}</strong>
+                        <FaPlus className="chat-starter-plus" />
+                      </button>
+                    ))}
+                  </div>
+                </section>
+              ) : (
+                messages.map((m) => (
+                  <div
+                    key={m.id}
+                    className={`msg-row ${
+                      m.role === "user" ? "user-row" : "ai-row"
+                    }`}
+                  >
+                    <div className="avatar">
+                      {m.role === "user" ? <FaUser /> : <RiRobot2Fill />}
+                    </div>
+
+                    <div className="message-stack">
+                      <span>{m.role === "user" ? "You" : "StudyHub AI"}</span>
+                      <div
+                        className={`message ${
+                          m.role === "user" ? "user-msg" : "ai-msg"
+                        }`}
+                      >
+                        {m.text}
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+
+              {loading && (
+                <div id="load-msg">
+                  <b>StudyHub AI</b> is thinking...
+                </div>
+              )}
+
+              <div ref={bottomRef}></div>
+            </div>
+
+            <div className="chat-input">
+              <textarea
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                placeholder="Ask StudyHub AI about this document"
+                disabled={loading}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    sendMessage();
+                  }
+                }}
+              />
+
+              <button
+                type="button"
+                onClick={sendMessage}
+                disabled={loading}
+                aria-label="Send message"
+              >
+                <IoIosSend />
+              </button>
+            </div>
+          </section>
         </div>
       )}
     </div>
+  );
+}
+
+function getPendingDocumentChat() {
+  try {
+    const pendingChat = JSON.parse(
+      localStorage.getItem(PENDING_DOCUMENT_CHAT_KEY) || "null",
+    );
+
+    if (!pendingChat?.documentId || !pendingChat?.question) {
+      return null;
+    }
+
+    return pendingChat;
+  } catch {
+    return null;
+  }
+}
+
+function getDocumentLibraryId(document) {
+  return document?.library_id || document?.libraryId || "";
+}
+
+function getDocumentFolderId(document) {
+  const folderId =
+    document?.folder_id ?? document?.folderId ?? document?.folder?.id ?? "";
+
+  return folderId === null || folderId === undefined ? "" : String(folderId);
+}
+
+function getDocumentFolderName(document) {
+  return (
+    document?.folder?.name ||
+    document?.folder_name ||
+    document?.folderName ||
+    "Folder"
   );
 }
 
