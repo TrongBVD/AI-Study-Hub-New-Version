@@ -21,7 +21,6 @@ import {
   HiOutlineArchiveBox,
   HiOutlineDocumentText,
   HiOutlineFolder,
-  HiOutlineQuestionMarkCircle,
 } from "react-icons/hi2";
 
 const CHAT_HISTORY_KEY = "aiStudyHubChatHistory";
@@ -38,11 +37,6 @@ const STARTER_PROMPTS = [
     label: "Summarize document",
     prompt: "Summarize the key points in this document.",
     icon: HiOutlineDocumentText,
-  },
-  {
-    label: "Create a quiz",
-    prompt: "Create a short quiz based on this document.",
-    icon: HiOutlineQuestionMarkCircle,
   },
 ];
 
@@ -75,6 +69,8 @@ function ChatBot({ defaultOpen = false, showBubble = true }) {
   const chatBodyRef = useRef(null);
   const processedPendingChatRef = useRef("");
   const fileSelectRef = useRef(null);
+  const activeChatRequestRef = useRef(null);
+  const activeUserMessageRef = useRef(null);
 
   const [messages, setMessages] = useState([INITIAL_MESSAGE]);
 
@@ -246,16 +242,23 @@ function ChatBot({ defaultOpen = false, showBubble = true }) {
     };
 
     setMessages((prev) => [...prev, userMessage]);
+    activeUserMessageRef.current = userMessage;
 
     setInput("");
 
     setLoading(true);
+    const controller = new AbortController();
+    activeChatRequestRef.current = controller;
 
     try {
-      const response = await api.post("/ai/chat", {
-        documentId: documentIdOverride,
-        question: currentInput,
-      });
+      const response = await api.post(
+        "/ai/chat",
+        {
+          documentId: documentIdOverride,
+          question: currentInput,
+        },
+        { signal: controller.signal },
+      );
       const result = response.data;
 
       const aiMessage = {
@@ -279,7 +282,12 @@ function ChatBot({ defaultOpen = false, showBubble = true }) {
 
       setMessages((prev) => [...prev, aiMessage]);
       setHistory((prev) => [userMessage, aiMessage, ...prev]);
+      activeUserMessageRef.current = null;
     } catch (error) {
+      if (error.code === "ERR_CANCELED" || controller.signal.aborted) {
+        return;
+      }
+
       const aiMessage = {
         id: Date.now() + 1,
         role: "ai",
@@ -291,7 +299,11 @@ function ChatBot({ defaultOpen = false, showBubble = true }) {
 
       setMessages((prev) => [...prev, aiMessage]);
       setHistory((prev) => [userMessage, aiMessage, ...prev]);
+      activeUserMessageRef.current = null;
     } finally {
+      if (activeChatRequestRef.current === controller) {
+        activeChatRequestRef.current = null;
+      }
       setLoading(false);
     }
   };
@@ -300,12 +312,49 @@ function ChatBot({ defaultOpen = false, showBubble = true }) {
     await submitChatQuestion();
   };
 
+  const stopGenerating = () => {
+    const stoppedMessage = activeUserMessageRef.current;
+    activeChatRequestRef.current?.abort();
+    activeChatRequestRef.current = null;
+    activeUserMessageRef.current = null;
+
+    if (stoppedMessage) {
+      setMessages((currentMessages) =>
+        currentMessages.filter((message) => message.id !== stoppedMessage.id),
+      );
+      setInput(stoppedMessage.text);
+    }
+
+    setLoading(false);
+  };
+
   const resetChat = () => {
     setMessages([INITIAL_MESSAGE]);
   };
 
   const clearHistory = () => {
     setHistory([]);
+  };
+
+  const deleteHistoryItem = (event, message) => {
+    event.stopPropagation();
+
+    const itemIndex = history.findIndex((item) => item.id === message.id);
+    if (itemIndex === -1) return;
+
+    const answer = history[itemIndex + 1];
+    const deletedIds = new Set([
+      message.id,
+      ...(answer?.role === "ai" ? [answer.id] : []),
+    ]);
+
+    setHistory((currentHistory) =>
+      currentHistory.filter((item) => !deletedIds.has(item.id)),
+    );
+
+    if (messages.some((item) => deletedIds.has(item.id))) {
+      setMessages([INITIAL_MESSAGE]);
+    }
   };
 
   const handleLibraryChange = (libraryId) => {
@@ -538,7 +587,19 @@ function ChatBot({ defaultOpen = false, showBubble = true }) {
                   >
                     <FaHistory />
                     <span>{message.text}</span>
-                    <FaTrash className="conversation-muted-icon" />
+                    <FaTrash
+                      className="conversation-muted-icon"
+                      role="button"
+                      tabIndex={0}
+                      aria-label="Delete conversation"
+                      onClick={(event) => deleteHistoryItem(event, message)}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter" || event.key === " ") {
+                          event.preventDefault();
+                          deleteHistoryItem(event, message);
+                        }
+                      }}
+                    />
                   </button>
                 ))
               )}
@@ -659,11 +720,14 @@ function ChatBot({ defaultOpen = false, showBubble = true }) {
 
               <button
                 type="button"
-                onClick={sendMessage}
-                disabled={loading}
-                aria-label="Send message"
+                onClick={loading ? stopGenerating : sendMessage}
+                aria-label={loading ? "Stop generating" : "Send message"}
               >
-                <IoIosSend />
+                {loading ? (
+                  <i className="ti-control-pause" aria-hidden="true"></i>
+                ) : (
+                  <IoIosSend />
+                )}
               </button>
             </div>
           </section>
