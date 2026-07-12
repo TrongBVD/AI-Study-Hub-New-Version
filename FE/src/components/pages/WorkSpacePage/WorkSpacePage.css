@@ -195,10 +195,18 @@
 .workspace_member_table_header,
 .workspace_member_row {
   display: grid;
-  grid-template-columns: minmax(300px, 1.65fr) 130px 160px minmax(210px, auto);
+  grid-template-columns:
+    minmax(0, 1.65fr)
+    minmax(90px, 0.7fr)
+    minmax(110px, 0.8fr)
+    minmax(220px, 1fr);
   align-items: center;
   gap: 18px;
   padding: 0 26px;
+}
+
+.workspace_member_table_header > span:last-child {
+  text-align: center;
 }
 
 .workspace_member_table_header {
@@ -413,12 +421,14 @@
 }
 
 .workspace_member_admin_actions {
-  justify-self: end;
+  width: 100%;
+  min-width: 0;
+  justify-self: center;
   display: flex;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: center;
   gap: 8px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
 }
 
 .workspace_member_admin_actions select,
@@ -474,7 +484,8 @@
 }
 
 .workspace_member_readonly_action {
-  justify-self: end;
+  justify-self: center;
+  text-align: center;
   color: var(--text-secondary);
   font-size: 12px;
   font-weight: 800;
@@ -1337,8 +1348,26 @@
   width: 42px;
   height: 42px;
   border-radius: 50%;
-  object-fit: cover;
+  border: 1px solid var(--border-color);
+  background: var(--accent-soft);
+  color: var(--text-primary);
+  display: grid;
+  place-items: center;
+  position: relative;
+  overflow: hidden;
   flex-shrink: 0;
+  font-size: 15px;
+  font-weight: 850;
+}
+
+.workspace_message_avatar img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  object-fit: cover;
+  display: block;
 }
 
 .workspace_message_content_area {
@@ -1359,6 +1388,11 @@
   font-weight: 700;
 }
 
+.workspace_message_content_area h3.workspace_message_you {
+  color: var(--accent-color);
+  text-align: right;
+}
+
 .workspace_message_bubble {
   border-radius: 18px;
   padding: 18px 20px;
@@ -1376,6 +1410,7 @@
 
 .workspace_message_bubble.sent {
   max-width: 760px;
+  border: 1px solid var(--button-bg);
   background: var(--button-bg);
   color: var(--button-text);
   border-top-right-radius: 4px;
@@ -1500,7 +1535,7 @@
   border: none;
   outline: none;
   resize: none;
-  background: transparent;
+  background: inherit !important;
   color: var(--text-primary);
   font-size: 15px;
   font-family: inherit;

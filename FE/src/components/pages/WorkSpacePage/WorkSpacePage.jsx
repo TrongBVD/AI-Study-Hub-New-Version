@@ -27,6 +27,7 @@ import {
   createWorkspaceDiscussionTopic,
 } from "../../../utils/workspaceApi";
 import { uploadDocuments } from "../../../utils/documentApi";
+import { getStoredUser as getAuthStoredUser } from "../../../utils/authToken.js";
 import "./WorkSpacePage.css";
 import "../../../assets/icons/themify-icons-font/themify-icons/themify-icons.css";
 
@@ -68,12 +69,7 @@ function normalizeIdentity(value) {
 }
 
 function getStoredUserProfile() {
-  try {
-    return JSON.parse(localStorage.getItem("user") || "null");
-  } catch (error) {
-    console.error("Cannot read current user profile:", error);
-    return null;
-  }
+  return getAuthStoredUser();
 }
 
 function getStoredUserId(user) {
@@ -123,10 +119,10 @@ function getWorkspaceMemberIdentities(member) {
 function formatWorkspaceMessageTime(createdAt) {
   if (!createdAt) return "";
 
-  return `${new Date(createdAt).toLocaleTimeString([], {
+  return new Date(createdAt).toLocaleTimeString([], {
     hour: "2-digit",
     minute: "2-digit",
-  })} · Sent`;
+  });
 }
 
 function formatWorkspaceStudyDate(createdAt) {
@@ -584,17 +580,28 @@ const [isSubtaskPriorityOpen, setIsSubtaskPriorityOpen] = useState(false);
         if (!isMounted) return;
 
         setChatMessages(
-          (messages || []).map((message) => ({
+          (messages || []).map((message) => {
+            const senderMatchesCurrentUser = [
+              message.senderEmail,
+              message.senderName,
+            ]
+              .map(normalizeIdentity)
+              .some((identity) =>
+                identity && currentUserIdentifiers.includes(identity),
+              );
+
+            return {
             id: message.id,
             senderName: message.senderName,
             text: message.text,
             time: formatWorkspaceMessageTime(message.createdAt),
-            isOwn: currentUserId
-              ? String(message.senderId) === currentUserId
-              : false,
+            isOwn:
+              (currentUserId && String(message.senderId) === currentUserId) ||
+              senderMatchesCurrentUser,
             avatar: message.senderAvatar || "",
             file: null,
-          })),
+            };
+          }),
         );
       } catch (error) {
         console.error("Cannot load workspace messages:", error);
@@ -1562,7 +1569,7 @@ function getSubtaskPriorityIcon(priority) {
       id: savedMessage.id,
       senderName: savedMessage.senderName || profileName,
       text: savedMessage.text,
-      time: `${getCurrentMessageTime()} · Sent`,
+      time: getCurrentMessageTime(),
       isOwn: true,
       file: messageAttachment
         ? {
@@ -1808,10 +1815,6 @@ function getSubtaskPriorityIcon(priority) {
               <i className="ti-info-alt"></i>
             </button>
 
-            <div className="workspace_message_admin">
-              <span>{profileName}</span>
-              <i className="ti-user"></i>
-            </div>
           </div>
         </header>
 
@@ -1837,15 +1840,29 @@ function getSubtaskPriorityIcon(priority) {
               key={message.id}
             >
               {!message.isOwn && (
-                <img
+                <div
                   className="workspace_message_avatar"
-                  src={message.avatar}
-                  alt={message.senderName}
-                />
+                  aria-label={`${message.senderName} avatar`}
+                >
+                  <span aria-hidden="true">
+                    {(message.senderName || "U").trim().charAt(0).toUpperCase()}
+                  </span>
+                  {message.avatar && (
+                    <img
+                      src={message.avatar}
+                      alt=""
+                      onError={(event) => {
+                        event.currentTarget.style.display = "none";
+                      }}
+                    />
+                  )}
+                </div>
               )}
 
               <div className="workspace_message_content_area">
-                {!message.isOwn && <h3>{message.senderName}</h3>}
+                <h3 className={message.isOwn ? "workspace_message_you" : ""}>
+                  {message.isOwn ? "You" : message.senderName}
+                </h3>
 
                 {message.text && (
                   <div
@@ -1888,7 +1905,7 @@ function getSubtaskPriorityIcon(priority) {
                     message.isOwn ? "own" : ""
                   }`}
                 >
-                  {message.time}
+                  {message.time} · {message.isOwn ? "Sent" : "Received"}
                 </span>
               </div>
             </article>
@@ -3729,16 +3746,6 @@ const filteredDiscussionTopics = discussionTopics.filter((topic) => {
                         </>
                       )}
 
-                      <button
-                        type="button"
-                        disabled={!isApproved || isGeneratingStudyCards}
-                        onClick={() => {
-                          setSelectedStudyDocumentId(document.id);
-                          setActiveTab("study");
-                        }}
-                      >
-                        Study
-                      </button>
                     </div>
                   </article>
                 );
@@ -4079,14 +4086,6 @@ const filteredDiscussionTopics = discussionTopics.filter((topic) => {
         </button>
 
         <button
-          className={activeTab === "study" ? "active" : ""}
-          onClick={() => setActiveTab("study")}
-        >
-          <i className="ti-book"></i>
-          Study
-        </button>
-
-        <button
           className={activeTab === "documents" ? "active" : ""}
           onClick={() => setActiveTab("documents")}
         >
@@ -4114,8 +4113,6 @@ const filteredDiscussionTopics = discussionTopics.filter((topic) => {
       {activeTab === "messages" && renderMessagesTab()}
 
       {activeTab === "discussion" && renderDiscussionTab()}
-
-      {activeTab === "study" && renderStudyTab()}
 
       {activeTab === "documents" && renderDocumentsTab()}
 
