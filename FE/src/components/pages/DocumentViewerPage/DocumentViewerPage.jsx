@@ -13,9 +13,9 @@ const QUICK_PROMPTS = [
     prompt: "Summarize the key points in this document.",
   },
   {
-    label: "Quiz",
-    icon: "ti-help-alt",
-    prompt: "Create a quiz to help me review this document.",
+    label: "Generate Flashcards",
+    icon: "ti-layers",
+    action: "flashcards",
   },
 ];
 
@@ -104,6 +104,17 @@ function DocumentViewerPage() {
     navigate("/dashboard/ai-chat");
   }
 
+  function handleQuickAction(item) {
+    if (item.action === "flashcards") {
+      navigate(
+        `/dashboard/flashcards?documentId=${encodeURIComponent(documentData.documentId)}`,
+      );
+      return;
+    }
+
+    openDocumentChat(item.prompt);
+  }
+
   return (
     <>
       <FileViewer
@@ -118,7 +129,7 @@ function DocumentViewerPage() {
             <button
               type="button"
               key={item.label}
-              onClick={() => openDocumentChat(item.prompt)}
+              onClick={() => handleQuickAction(item)}
             >
               <i className={item.icon} />
               {item.label}

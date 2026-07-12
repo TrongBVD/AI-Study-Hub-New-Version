@@ -1,8 +1,11 @@
 import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import api from "../../../utils/api.js";
 import "./Flashcards.css";
 
 function Flashcards() {
+  const [searchParams] = useSearchParams();
+  const requestedDocumentId = searchParams.get("documentId");
   const [documents, setDocuments] = useState([]);
   const [selectedDocumentId, setSelectedDocumentId] = useState("");
   const [flashcards, setFlashcards] = useState([]);
@@ -22,7 +25,12 @@ function Flashcards() {
         setDocuments(approvedDocs);
 
         if (approvedDocs.length > 0) {
-          setSelectedDocumentId(approvedDocs[0].id);
+          const requestedDocument = approvedDocs.find(
+            (doc) => String(doc.id) === String(requestedDocumentId),
+          );
+          setSelectedDocumentId(
+            requestedDocument ? requestedDocument.id : approvedDocs[0].id,
+          );
         }
       } catch (error) {
         setMessage(error.response?.data?.message || error.message);
@@ -30,7 +38,7 @@ function Flashcards() {
     }
 
     loadDocuments();
-  }, []);
+  }, [requestedDocumentId]);
 
   async function generateFlashcards() {
     if (!selectedDocumentId || loading) return;

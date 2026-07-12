@@ -751,6 +751,12 @@ function LibraryPage() {
         setTagErrors(error.response.data.tagValidations || []);
         setAiRecommendedTags(error.response.data.aiRecommendedTags || []);
         alert("AI Hashtag Verification failed. Please check recommendations next to the input fields.");
+      } else if (error.response?.data?.code === "TAG_INPUT_INVALID") {
+        setTagInputErrors([
+          error.response.data.message || "Please check your tags.",
+          "",
+          "",
+        ]);
       } else {
         alert(error.response?.data?.message || error.response?.data?.error || "Upload failed. Please check backend and Supabase.");
       }

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 
 import "./LandingPage.css";
 import focusedStudyImage from "../../../assets/images/focused-study-time.jpg";
+import studyHubBookLogo from "../../../assets/images/StudyHubBookLogo.svg";
 
 const FEATURES = [
   {
@@ -120,27 +121,13 @@ const PLANS = [
 
 function Logo({ size = 36 }) {
   return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 40 40"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
+    <span
+      className="landing_brand_logo"
+      style={{ width: size, height: size }}
       aria-hidden="true"
     >
-      <rect width="40" height="40" rx="10" fill="var(--sidebar-bg)" />
-      <path
-        d="M12 14L20 10L28 14V20C28 24.4 24.4 28 20 28C15.6 28 12 24.4 12 20V14Z"
-        fill="var(--sidebar-text)"
-      />
-      <circle cx="20" cy="19" r="3" fill="var(--accent-color)" />
-      <path
-        d="M20 22V25"
-        stroke="var(--accent-color)"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-      />
-    </svg>
+      <img src={studyHubBookLogo} alt="" />
+    </span>
   );
 }
 

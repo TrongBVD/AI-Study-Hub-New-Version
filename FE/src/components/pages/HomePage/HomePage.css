@@ -15,20 +15,6 @@
   overflow-x: hidden;
 }
 
-.home_page::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-  opacity: 0.2;
-  background-image:
-    linear-gradient(var(--focus-ring) 1px, transparent 1px),
-    linear-gradient(90deg, var(--focus-ring) 1px, transparent 1px);
-  background-size: 38px 38px;
-  mask-image: linear-gradient(to bottom, var(--text-primary) 0%, transparent 78%);
-}
-
 .home_shell {
   width: 100%;
   max-width: 1120px;
