@@ -4,6 +4,11 @@ import {
   saveNotificationSettings,
 } from "../../../utils/notificationStore.js";
 import { useTheme } from "../../../context/ThemeContext.jsx";
+import api from "../../../utils/api.js";
+import {
+  clearStoredSession,
+  getAuthStorage,
+} from "../../../utils/authToken.js";
 import "./SettingPage.css";
 
 const SETTING_MENUS = [
@@ -12,22 +17,6 @@ const SETTING_MENUS = [
     items: [
       { icon: "ti-user", label: "Profile & appearance" },
       { icon: "ti-id-badge", label: "Account" },
-      { icon: "ti-eye", label: "Accessibility" },
-    ],
-  },
-  {
-    title: "Study",
-    items: [
-      { icon: "ti-target", label: "Study preferences" },
-      { icon: "ti-wand", label: "AI preferences" },
-      { icon: "ti-folder", label: "Documents & storage" },
-    ],
-  },
-  {
-    title: "Collaboration",
-    items: [
-      { icon: "ti-lock", label: "Privacy & discoverability" },
-      { icon: "ti-comments", label: "Collaboration" },
     ],
   },
   {
@@ -67,161 +56,6 @@ const PLANNED_SECTIONS = {
         description: "Review Google and other sign-in methods linked to your account.",
         impact: "Provides another secure way to access your study space.",
       },
-      {
-        title: "Account status",
-        description: "Temporarily deactivate your profile without deleting study data.",
-        impact: "Hides your account and pauses access until you return.",
-      },
-    ],
-  },
-  Accessibility: {
-    icon: "ti-eye",
-    eyebrow: "Personal",
-    title: "Accessibility",
-    description:
-      "Adjust reading comfort, motion, contrast, and keyboard visibility across the app.",
-    note: "These preferences will apply to the current device when implemented.",
-    items: [
-      {
-        title: "Text size",
-        description: "Choose a comfortable interface and reading scale.",
-        impact: "Makes long documents and study controls easier to read.",
-      },
-      {
-        title: "Reduced motion",
-        description: "Limit decorative movement and animated transitions.",
-        impact: "Creates a calmer experience and reduces motion discomfort.",
-      },
-      {
-        title: "High contrast focus",
-        description: "Use stronger outlines while navigating with a keyboard.",
-        impact: "Makes the currently focused control easier to identify.",
-      },
-    ],
-  },
-  "Study preferences": {
-    icon: "ti-target",
-    eyebrow: "Study",
-    title: "Study preferences",
-    description:
-      "Shape your daily study rhythm, reminders, and flashcard review sessions.",
-    note: "These controls need a saved user-preferences profile before activation.",
-    items: [
-      {
-        title: "Daily study goal",
-        description: "Set the number of focused minutes you want to complete each day.",
-        impact: "Changes progress targets and home-page study summaries.",
-      },
-      {
-        title: "Review schedule",
-        description: "Choose when flashcards and saved material should return for review.",
-        impact: "Controls spaced repetition reminders and study queues.",
-      },
-      {
-        title: "Time zone and week start",
-        description: "Align schedules with your local calendar.",
-        impact: "Keeps reminders and daily statistics on the correct date.",
-      },
-    ],
-  },
-  "AI preferences": {
-    icon: "ti-wand",
-    eyebrow: "Study",
-    title: "AI preferences",
-    description:
-      "Choose how the assistant explains material and which study resources it may use.",
-    note: "AI access rules must also be enforced by the backend before activation.",
-    items: [
-      {
-        title: "Explanation style",
-        description: "Choose concise, step-by-step, or academic explanations.",
-        impact: "Changes the structure and depth of AI responses.",
-      },
-      {
-        title: "Default response language",
-        description: "Set the language the assistant should use first.",
-        impact: "Keeps summaries, questions, and explanations consistent.",
-      },
-      {
-        title: "Library access",
-        description: "Select which libraries the assistant may reference.",
-        impact: "Limits the study material included in AI answers.",
-      },
-    ],
-  },
-  "Documents & storage": {
-    icon: "ti-folder",
-    eyebrow: "Study",
-    title: "Documents & storage",
-    description:
-      "Control upload processing, document defaults, and how storage is cleaned up.",
-    note: "Storage actions need backend quota and file-management APIs.",
-    items: [
-      {
-        title: "Default upload library",
-        description: "Choose where new documents are placed when no location is selected.",
-        impact: "Reduces repetitive sorting after every upload.",
-      },
-      {
-        title: "Automatic text extraction",
-        description: "Prepare uploaded PDFs and scans for search and AI use.",
-        impact: "Improves search results but can increase processing time.",
-      },
-      {
-        title: "Trash retention",
-        description: "Choose how long deleted files remain recoverable.",
-        impact: "Balances recovery time against available storage.",
-      },
-    ],
-  },
-  "Privacy & discoverability": {
-    icon: "ti-lock",
-    eyebrow: "Collaboration",
-    title: "Privacy & discoverability",
-    description:
-      "Decide how other students can find you and which profile details they may see.",
-    note: "Search and profile APIs must enforce these rules before activation.",
-    items: [
-      {
-        title: "Search visibility",
-        description: "Allow people to find your profile by name or username.",
-        impact: "Controls whether you appear in global user search results.",
-      },
-      {
-        title: "Email visibility",
-        description: "Keep your login email private outside your own account page.",
-        impact: "Prevents personal contact information from appearing in search.",
-      },
-      {
-        title: "Activity status",
-        description: "Choose whether collaborators can see when you were last active.",
-        impact: "Changes the presence information shown in shared workspaces.",
-      },
-    ],
-  },
-  Collaboration: {
-    icon: "ti-comments",
-    eyebrow: "Collaboration",
-    title: "Collaboration",
-    description:
-      "Set sensible defaults for invitations, shared libraries, comments, and downloads.",
-    note: "These controls need workspace permission APIs before activation.",
-    items: [
-      {
-        title: "Invitation permissions",
-        description: "Choose who may invite you to a workspace.",
-        impact: "Reduces unwanted invitations while keeping collaboration open.",
-      },
-      {
-        title: "Default sharing role",
-        description: "Start new collaborators as viewers or editors.",
-        impact: "Sets the initial access level when you share study material.",
-      },
-      {
-        title: "Comments and mentions",
-        description: "Control whether collaborators may comment or mention you.",
-        impact: "Changes how people can request your attention in shared work.",
-      },
     ],
   },
   "Email preferences": {
@@ -249,31 +83,6 @@ const PLANNED_SECTIONS = {
       },
     ],
   },
-  "Password & authentication": {
-    icon: "ti-key",
-    eyebrow: "Security",
-    title: "Password & authentication",
-    description:
-      "Protect your account with a strong password and additional verification.",
-    note: "Authentication changes need secure backend endpoints and re-verification.",
-    items: [
-      {
-        title: "Change password",
-        description: "Replace your current password after confirming your identity.",
-        impact: "Invalidates an exposed password and protects future sign-ins.",
-      },
-      {
-        title: "Two-step verification",
-        description: "Require a second verification step for new sign-ins.",
-        impact: "Protects your account even if someone learns your password.",
-      },
-      {
-        title: "Login alerts",
-        description: "Receive a warning when a new device signs in.",
-        impact: "Helps you respond quickly to unfamiliar account access.",
-      },
-    ],
-  },
   "Active sessions": {
     icon: "ti-desktop",
     eyebrow: "Security",
@@ -296,31 +105,6 @@ const PLANNED_SECTIONS = {
         title: "Sign out everywhere",
         description: "Revoke all sessions except the one currently in use.",
         impact: "Forces other devices to authenticate again.",
-      },
-    ],
-  },
-  "Data & account": {
-    icon: "ti-harddrives",
-    eyebrow: "Security",
-    title: "Data & account",
-    description:
-      "Export your information or permanently close your AI Study Hub account.",
-    note: "Destructive actions need confirmation, re-authentication, and backend jobs.",
-    items: [
-      {
-        title: "Export my data",
-        description: "Request a copy of your profile, libraries, and account activity.",
-        impact: "Creates a portable archive of information linked to your account.",
-      },
-      {
-        title: "Deactivate account",
-        description: "Temporarily stop access while keeping your data recoverable.",
-        impact: "Hides your account until you choose to return.",
-      },
-      {
-        title: "Delete account",
-        description: "Permanently remove your profile and eligible personal data.",
-        impact: "Cannot be reversed after the retention period ends.",
       },
     ],
   },
@@ -391,31 +175,49 @@ const PROFILE_NAME_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000;
 const PROFILE_NAME_MAX_LENGTH = 40;
 
 function getStoredUser() {
-  try {
-    return JSON.parse(localStorage.getItem("user") || "null") || {};
-  } catch (error) {
-    console.error("Cannot read user profile from localStorage:", error);
-    return {};
+  const storages = [getAuthStorage(), localStorage, sessionStorage];
+
+  for (const storage of [...new Set(storages)]) {
+    try {
+      const user = JSON.parse(storage.getItem("user") || "null");
+      if (
+        user &&
+        (user.full_name ||
+          user.fullName ||
+          user.display_name ||
+          user.displayName ||
+          user.name ||
+          user.username)
+      ) {
+        return user;
+      }
+    } catch (error) {
+      console.error("Cannot read the stored user profile:", error);
+    }
   }
+
+  return {};
 }
 
 function getInitialProfileName() {
   const storedUser = getStoredUser();
 
   return (
-    localStorage.getItem(PROFILE_NAME_KEY) ||
     storedUser.full_name ||
     storedUser.fullName ||
     storedUser.display_name ||
     storedUser.displayName ||
     storedUser.name ||
     storedUser.username ||
+    getAuthStorage().getItem(PROFILE_NAME_KEY) ||
     "AI Student Hub"
   );
 }
 
 function getProfileNameChangedAt() {
-  const timestamp = Number(localStorage.getItem(PROFILE_NAME_CHANGED_AT_KEY));
+  const timestamp = Number(
+    getAuthStorage().getItem(PROFILE_NAME_CHANGED_AT_KEY),
+  );
   return Number.isFinite(timestamp) ? timestamp : 0;
 }
 
@@ -516,9 +318,10 @@ function SettingPage() {
       name: nextName,
     };
 
-    localStorage.setItem(PROFILE_NAME_KEY, nextName);
-    localStorage.setItem(PROFILE_NAME_CHANGED_AT_KEY, String(nextChangedAt));
-    localStorage.setItem("user", JSON.stringify(nextUser));
+    const authStorage = getAuthStorage();
+    authStorage.setItem(PROFILE_NAME_KEY, nextName);
+    authStorage.setItem(PROFILE_NAME_CHANGED_AT_KEY, String(nextChangedAt));
+    authStorage.setItem("user", JSON.stringify(nextUser));
 
     setWorkspaceName(nextName);
     setSavedProfileName(nextName);
@@ -611,6 +414,12 @@ function SettingPage() {
               updateDoNotDisturb={updateDoNotDisturb}
             />
           )}
+
+          {activeSetting === "Password & authentication" && (
+            <PasswordSettings />
+          )}
+
+          {activeSetting === "Data & account" && <DataAccountSettings />}
 
           {PLANNED_SECTIONS[activeSetting] && (
             <PlannedSettingsSection config={PLANNED_SECTIONS[activeSetting]} />
@@ -1087,6 +896,224 @@ function DoNotDisturbSettings({
             </SettingRow>
           )}
         </div>
+      </SettingsPanel>
+    </>
+  );
+}
+
+function PasswordSettings() {
+  const [form, setForm] = useState({
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: "",
+  });
+  const [status, setStatus] = useState({ type: "", message: "" });
+  const [isSaving, setIsSaving] = useState(false);
+
+  function updateField(event) {
+    const { name, value } = event.target;
+    setForm((previous) => ({ ...previous, [name]: value }));
+    setStatus({ type: "", message: "" });
+  }
+
+  async function handleSubmit(event) {
+    event.preventDefault();
+
+    if (form.newPassword !== form.confirmPassword) {
+      setStatus({ type: "error", message: "New passwords do not match." });
+      return;
+    }
+
+    setIsSaving(true);
+    setStatus({ type: "", message: "" });
+
+    try {
+      const response = await api.post("/auth/change-password", {
+        currentPassword: form.currentPassword,
+        newPassword: form.newPassword,
+      });
+      setForm({ currentPassword: "", newPassword: "", confirmPassword: "" });
+      setStatus({
+        type: "success",
+        message: response.data?.message || "Password changed successfully.",
+      });
+    } catch (error) {
+      setStatus({
+        type: "error",
+        message:
+          error.response?.data?.message ||
+          "Unable to change password. Please try again.",
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  return (
+    <>
+      <SettingsHeader
+        icon="ti-key"
+        eyebrow="Security"
+        title="Password & authentication"
+        description="Change your password after confirming your current password."
+      />
+
+      <SettingsPanel
+        title="Change password"
+        description="Use at least 8 characters, including a lowercase letter, a number, and a special character."
+      >
+        <form className="settings_password_form" onSubmit={handleSubmit}>
+          <label className="settings_field">
+            <span>Current password</span>
+            <input
+              type="password"
+              name="currentPassword"
+              value={form.currentPassword}
+              onChange={updateField}
+              autoComplete="current-password"
+              required
+            />
+          </label>
+          <label className="settings_field">
+            <span>New password</span>
+            <input
+              type="password"
+              name="newPassword"
+              value={form.newPassword}
+              onChange={updateField}
+              autoComplete="new-password"
+              minLength={8}
+              required
+            />
+          </label>
+          <label className="settings_field">
+            <span>Confirm new password</span>
+            <input
+              type="password"
+              name="confirmPassword"
+              value={form.confirmPassword}
+              onChange={updateField}
+              autoComplete="new-password"
+              minLength={8}
+              required
+            />
+          </label>
+
+          {status.message && (
+            <p className={`settings_password_status ${status.type}`} role="status">
+              {status.message}
+            </p>
+          )}
+
+          <button
+            className="settings_save_name_btn settings_password_submit"
+            type="submit"
+            disabled={isSaving}
+          >
+            {isSaving ? "Changing..." : "Change password"}
+          </button>
+        </form>
+      </SettingsPanel>
+    </>
+  );
+}
+
+function DataAccountSettings() {
+  const [password, setPassword] = useState("");
+  const [confirmation, setConfirmation] = useState("");
+  const [status, setStatus] = useState("");
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  async function handleDeleteAccount(event) {
+    event.preventDefault();
+    setStatus("");
+
+    if (confirmation !== "DELETE") {
+      setStatus('Type "DELETE" exactly to confirm.');
+      return;
+    }
+
+    setIsDeleting(true);
+    try {
+      await api.delete("/auth/account", {
+        data: { password, confirmation },
+      });
+      clearStoredSession();
+      window.location.href = "/";
+    } catch (error) {
+      setStatus(
+        error.response?.data?.message ||
+          "Unable to delete your account. Please try again.",
+      );
+      setIsDeleting(false);
+    }
+  }
+
+  return (
+    <>
+      <SettingsHeader
+        icon="ti-harddrives"
+        eyebrow="Security"
+        title="Data & account"
+        description="Permanently delete your AI Study Hub account."
+      />
+
+      <SettingsPanel
+        title="Delete account"
+        description="This action is permanent and cannot be undone."
+      >
+        <form className="settings_delete_account" onSubmit={handleDeleteAccount}>
+          <div className="settings_delete_warning">
+            <i className="ti-alert" aria-hidden="true"></i>
+            <div>
+              <strong>Your account will be permanently deleted</strong>
+              <p>You will lose access to your profile and associated study data.</p>
+            </div>
+          </div>
+
+          <label className="settings_field">
+            <span>Current password</span>
+            <input
+              type="password"
+              value={password}
+              onChange={(event) => {
+                setPassword(event.target.value);
+                setStatus("");
+              }}
+              autoComplete="current-password"
+              placeholder="Enter your current password"
+            />
+          </label>
+
+          <label className="settings_field">
+            <span>Type DELETE to confirm</span>
+            <input
+              type="text"
+              value={confirmation}
+              onChange={(event) => {
+                setConfirmation(event.target.value);
+                setStatus("");
+              }}
+              autoComplete="off"
+              placeholder="DELETE"
+              required
+            />
+          </label>
+
+          {status && (
+            <p className="settings_password_status error" role="alert">
+              {status}
+            </p>
+          )}
+
+          <button
+            type="submit"
+            className="settings_delete_account_btn"
+            disabled={isDeleting || confirmation !== "DELETE"}
+          >
+            {isDeleting ? "Deleting account..." : "Delete my account"}
+          </button>
+        </form>
       </SettingsPanel>
     </>
   );
