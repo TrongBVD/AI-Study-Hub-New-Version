@@ -539,12 +539,6 @@ function HomePage() {
                 <h2>Your AI study status</h2>
               </div>
 
-              {!isGuest && (
-                <Link to="/dashboard/flashcards" className="home_text_link">
-                  Study flashcards
-                  <i className="ti-arrow-right"></i>
-                </Link>
-              )}
             </div>
 
             <div className="ai_overview_grid">
@@ -554,16 +548,16 @@ function HomePage() {
                 </div>
 
                 <div className="ai_overview_body">
-                  <span>Tokens remaining today</span>
+                  <span>AI chats remaining today</span>
                   <strong>
                     {isGuest
                       ? "0"
-                      : formatNumber(aiSummary?.tokensRemaining ?? aiSummary?.tokenLimit ?? 0)}
+                      : formatNumber(aiSummary?.chatsRemaining ?? 0)}
                   </strong>
                   <p>
                     {isGuest
                       ? "Sign in to use AI chat."
-                      : `${formatNumber(aiSummary?.chatsRemaining || 0)} of ${formatNumber(aiSummary?.chatLimit || 0)} AI chats left`}
+                      : `${formatNumber(aiSummary?.chatsUsed ?? 0)} of ${formatNumber(aiSummary?.chatLimit ?? 50)} AI chats used`}
                   </p>
                 </div>
               </article>
