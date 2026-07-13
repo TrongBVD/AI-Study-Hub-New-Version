@@ -34,31 +34,20 @@ function getLibraryTheme(index) {
   return libraryThemes[index % libraryThemes.length];
 }
 
-function getStableNumber(value, min, max) {
-  const source = String(value || "studyhub");
-  let hash = 0;
-
-  for (let index = 0; index < source.length; index += 1) {
-    hash = (hash * 31 + source.charCodeAt(index)) % 100000;
-  }
-
-  return min + (hash % (max - min + 1));
-}
-
 function normalizeLibrary(library, index) {
-  const id = library.id || library.libraryId || `library-${index}`;
+  const id = library.id || library.libraryId;
   const name = library.name || library.libraryName || "Untitled library";
   const documents = Number(library.documents || library.document_count || 0);
-  const stars =
-    Number(library.stars || library.star_count || library.starCount) ||
-    getStableNumber(`${id}-stars`, 48, 980);
-  const downloads =
-    Number(library.downloads || library.download_count || library.downloadCount) ||
-    documents * 17 + getStableNumber(`${id}-downloads`, 120, 4200);
+  const stars = Number(
+    library.stars ?? library.star_count ?? library.starCount ?? 0,
+  );
+  const downloads = Number(
+    library.downloads ?? library.download_count ?? library.downloadCount ?? 0,
+  );
   const createdAt = library.created_at || library.createdAt || "";
   const ageInDays = createdAt
     ? Math.max(1, (Date.now() - Date.parse(createdAt)) / 86400000)
-    : getStableNumber(`${id}-age`, 2, 90);
+    : null;
   const owner = library.owner || library.user || {};
   const ownerId = library.user_id || owner.id || owner.user_id || "";
   const ownerName =
@@ -66,7 +55,9 @@ function normalizeLibrary(library, index) {
     owner.fullName ||
     owner.username ||
     library.ownerName ||
-    `Creator ${String(library.user_id || id).slice(0, 4)}`;
+    "StudyHub member";
+  const ownerAvatar =
+    owner.avatar_url || owner.avatarUrl || library.ownerAvatar || "";
 
   return {
     ...library,
@@ -75,9 +66,10 @@ function normalizeLibrary(library, index) {
     documents,
     stars,
     downloads,
-    trendingScore: stars / Math.sqrt(ageInDays),
+    trendingScore: ageInDays ? stars / Math.sqrt(ageInDays) : 0,
     ownerId,
     ownerName,
+    ownerAvatar,
     description:
       library.description ||
       "A public study collection shared by the StudyHub community.",
@@ -95,6 +87,7 @@ function buildActiveUsers(libraries) {
       id: key,
       profileId: library.ownerId || "",
       name: library.ownerName,
+      avatar: library.ownerAvatar,
       libraries: 0,
       stars: 0,
       downloads: 0,
@@ -107,8 +100,32 @@ function buildActiveUsers(libraries) {
   });
 
   return [...users.values()]
-    .sort((a, b) => b.stars + b.downloads / 8 - (a.stars + a.downloads / 8))
+    .sort(
+      (a, b) =>
+        b.libraries - a.libraries ||
+        b.stars - a.stars ||
+        b.downloads - a.downloads,
+    )
     .slice(0, 5);
+}
+
+function DiscoverUserAvatar({ user }) {
+  const [imageFailed, setImageFailed] = useState(false);
+  const initials = user?.name?.slice(0, 2).toUpperCase() || "SH";
+
+  return (
+    <div className="discover_user_avatar">
+      {user?.avatar && !imageFailed ? (
+        <img
+          src={user.avatar}
+          alt={`${user.name} avatar`}
+          onError={() => setImageFailed(true)}
+        />
+      ) : (
+        initials
+      )}
+    </div>
+  );
 }
 
 function DiscoverUserSurface({ user, className, children }) {
@@ -133,7 +150,11 @@ function formatNumber(value) {
   }).format(Number(value) || 0);
 }
 
-function DiscoverLibraryCard({ library, rank, metricLabel, metricValue, wide }) {
+function DiscoverCategoryEmpty({ children }) {
+  return <p className="discover_category_empty">{children}</p>;
+}
+
+function DiscoverLibraryCard({ library, rank, metricLabel, wide }) {
   const theme = getLibraryTheme(library.coverIndex || 0);
 
   return (
@@ -188,9 +209,9 @@ function DiscoverPage() {
         if (!isMounted) return;
 
         setLibraries(
-          (Array.isArray(publicLibraries) ? publicLibraries : []).map(
-            normalizeLibrary,
-          ),
+          (Array.isArray(publicLibraries) ? publicLibraries : [])
+            .filter((library) => library?.id || library?.libraryId)
+            .map(normalizeLibrary),
         );
       } catch (requestError) {
         if (!isMounted) return;
@@ -213,18 +234,27 @@ function DiscoverPage() {
   }, []);
 
   const topLibraries = useMemo(
-    () => [...libraries].sort((a, b) => b.stars - a.stars).slice(0, 6),
+    () =>
+      libraries
+        .filter((library) => library.stars > 0)
+        .sort((a, b) => b.stars - a.stars)
+        .slice(0, 6),
     [libraries],
   );
   const trendingLibraries = useMemo(
     () =>
       [...libraries]
+        .filter((library) => library.stars > 0 && library.createdAt)
         .sort((a, b) => b.trendingScore - a.trendingScore)
         .slice(0, 5),
     [libraries],
   );
   const downloadedLibraries = useMemo(
-    () => [...libraries].sort((a, b) => b.downloads - a.downloads).slice(0, 5),
+    () =>
+      libraries
+        .filter((library) => library.downloads > 0)
+        .sort((a, b) => b.downloads - a.downloads)
+        .slice(0, 5),
     [libraries],
   );
   const activeUsers = useMemo(() => buildActiveUsers(libraries), [libraries]);
@@ -250,18 +280,15 @@ function DiscoverPage() {
             <span>Most active user</span>
             {featuredUser ? (
               <>
-                <div className="discover_user_avatar">
-                  {featuredUser.name.slice(0, 2).toUpperCase()}
-                </div>
+                <DiscoverUserAvatar user={featuredUser} />
                 <h2>{featuredUser.name}</h2>
                 <p>
-                  {featuredUser.libraries} public libraries ·{" "}
-                  {formatNumber(featuredUser.stars)} stars
+                  {featuredUser.libraries} public libraries shared
                 </p>
               </>
             ) : (
               <>
-                <div className="discover_user_avatar">SH</div>
+                <DiscoverUserAvatar />
                 <h2>StudyHub community</h2>
                 <p>Public activity will appear as libraries are shared.</p>
               </>
@@ -290,15 +317,20 @@ function DiscoverPage() {
                 <p>Popular public collections ranked by community stars.</p>
               </div>
               <div className="discover_card_grid">
-                {topLibraries.map((library, index) => (
-                  <DiscoverLibraryCard
-                    key={library.id}
-                    library={library}
-                    rank={index + 1}
-                    metricLabel="Stars"
-                    metricValue={formatNumber(library.stars)}
-                  />
-                ))}
+                {topLibraries.length > 0 ? (
+                  topLibraries.map((library, index) => (
+                    <DiscoverLibraryCard
+                      key={library.id}
+                      library={library}
+                      rank={index + 1}
+                      metricLabel="Stars"
+                    />
+                  ))
+                ) : (
+                  <DiscoverCategoryEmpty>
+                    No library has received a real star yet.
+                  </DiscoverCategoryEmpty>
+                )}
               </div>
             </section>
 
@@ -309,15 +341,20 @@ function DiscoverPage() {
                   <p>Libraries gaining stars quickly after publication.</p>
                 </div>
                 <div className="discover_list">
-                  {trendingLibraries.map((library, index) => (
-                    <DiscoverLibraryCard
-                      key={library.id}
-                      library={library}
-                      rank={index + 1}
-                      metricLabel="Heat"
-                      metricValue={formatNumber(library.trendingScore)}
-                    />
-                  ))}
+                  {trendingLibraries.length > 0 ? (
+                    trendingLibraries.map((library, index) => (
+                      <DiscoverLibraryCard
+                        key={library.id}
+                        library={library}
+                        rank={index + 1}
+                        metricLabel="Heat"
+                      />
+                    ))
+                  ) : (
+                    <DiscoverCategoryEmpty>
+                      No library has real rising activity yet.
+                    </DiscoverCategoryEmpty>
+                  )}
                 </div>
               </section>
 
@@ -327,15 +364,20 @@ function DiscoverPage() {
                   <p>Public libraries with the highest download activity.</p>
                 </div>
                 <div className="discover_list">
-                  {downloadedLibraries.map((library, index) => (
-                    <DiscoverLibraryCard
-                      key={library.id}
-                      library={library}
-                      rank={index + 1}
-                      metricLabel="Downloads"
-                      metricValue={formatNumber(library.downloads)}
-                    />
-                  ))}
+                  {downloadedLibraries.length > 0 ? (
+                    downloadedLibraries.map((library, index) => (
+                      <DiscoverLibraryCard
+                        key={library.id}
+                        library={library}
+                        rank={index + 1}
+                        metricLabel="Downloads"
+                      />
+                    ))
+                  ) : (
+                    <DiscoverCategoryEmpty>
+                      No library has a recorded download yet.
+                    </DiscoverCategoryEmpty>
+                  )}
                 </div>
               </section>
             </section>
@@ -353,14 +395,11 @@ function DiscoverPage() {
                     key={user.id}
                   >
                     <span>{index + 1}</span>
-                    <div className="discover_user_avatar">
-                      {user.name.slice(0, 2).toUpperCase()}
-                    </div>
+                    <DiscoverUserAvatar user={user} />
                     <div>
                       <strong>{user.name}</strong>
                       <p>
-                        {user.libraries} libraries · {formatNumber(user.stars)}{" "}
-                        stars · {formatNumber(user.downloads)} downloads
+                        {user.libraries} public libraries shared
                       </p>
                     </div>
                   </DiscoverUserSurface>
