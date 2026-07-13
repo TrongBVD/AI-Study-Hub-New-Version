@@ -3,6 +3,7 @@ import {
   clearStoredSession,
   getAccessToken,
   getAuthStorage,
+  getTokenExpiryMs,
 } from "./authToken";
 
 const api = axios.create({
@@ -11,6 +12,28 @@ const api = axios.create({
 });
 
 let refreshPromise = null;
+let refreshTimer = null;
+const REFRESH_EARLY_MS = 2 * 60 * 1000;
+
+function scheduleAccessRefresh(accessToken) {
+  if (refreshTimer) {
+    clearTimeout(refreshTimer);
+    refreshTimer = null;
+  }
+
+  const expiryMs = getTokenExpiryMs(accessToken);
+  if (!expiryMs) return;
+
+  const delay = expiryMs - Date.now() - REFRESH_EARLY_MS;
+  if (delay <= 0) return;
+
+  refreshTimer = setTimeout(() => {
+    refreshAccessToken().catch(() => {
+      // The response interceptor will handle user-facing logout on the next
+      // authenticated request. A background refresh should not interrupt work.
+    });
+  }, delay);
+}
 
 export async function refreshAccessToken() {
   if (!refreshPromise) {
@@ -32,6 +55,7 @@ export async function refreshAccessToken() {
         if (user) {
           getAuthStorage().setItem("user", JSON.stringify(user));
         }
+        scheduleAccessRefresh(accessToken);
 
         return accessToken;
       })
@@ -44,13 +68,27 @@ export async function refreshAccessToken() {
 }
 
 api.interceptors.request.use(
-  (config) => {
-    const token = getAccessToken();
+  async (config) => {
+    let token = getAccessToken();
 
     config.headers = config.headers || {};
 
+    const expiryMs = getTokenExpiryMs(token);
+    const shouldRefreshBeforeRequest =
+      expiryMs && expiryMs - Date.now() <= REFRESH_EARLY_MS;
+
+    if (shouldRefreshBeforeRequest) {
+      try {
+        token = await refreshAccessToken();
+      } catch {
+        // Let the original request continue. If the session is actually gone,
+        // the response interceptor will perform the normal cleanup flow.
+      }
+    }
+
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
+      scheduleAccessRefresh(token);
     }
 
     return config;

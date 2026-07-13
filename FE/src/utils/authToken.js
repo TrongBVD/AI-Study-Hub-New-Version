@@ -39,20 +39,15 @@ export function getAccessToken() {
   return getAuthStorage().getItem("accessToken");
 }
 
-export function clearAccessToken() {
-  localStorage.removeItem("accessToken");
-  sessionStorage.removeItem("accessToken");
-}
-
-export function isTokenValid(token) {
+export function getTokenExpiryMs(token) {
   if (!token) {
-    return false;
+    return null;
   }
 
   try {
     const payloadBase64 = token.split(".")[1];
     if (!payloadBase64) {
-      return false;
+      return null;
     }
 
     const normalizePayload = payloadBase64
@@ -62,21 +57,22 @@ export function isTokenValid(token) {
     const payloadJson = atob(normalizePayload);
     const payload = JSON.parse(payloadJson);
 
-    if (!payload.exp) {
-      return false;
-    }
-
-    return payload.exp * 1000 > Date.now();
+    return payload.exp ? payload.exp * 1000 : null;
   } catch {
-    return false;
+    return null;
   }
+}
+
+export function clearAccessToken() {
+  localStorage.removeItem("accessToken");
+  sessionStorage.removeItem("accessToken");
+}
+
+export function isTokenValid(token) {
+  const expiryMs = getTokenExpiryMs(token);
+  return Boolean(expiryMs && expiryMs > Date.now());
 }
 export function isLoggedIn() {
   const token = getAccessToken();
-
-  if (!isTokenValid(token)) {
-    clearAccessToken();
-    return false;
-  }
-  return true;
+  return isTokenValid(token);
 }
