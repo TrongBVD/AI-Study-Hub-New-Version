@@ -191,7 +191,9 @@ function MyWorkSpace() {
 
                 <div className="workspace_footer">
                   <span>{workspace.updatedAt || "Updated just now"}</span>
-                  <span className="workspace_arrow">›</span>
+                  <span className="workspace_arrow" aria-hidden="true">
+                    <i className="ti-arrow-right"></i>
+                  </span>
                 </div>
               </Link>
             ))}
