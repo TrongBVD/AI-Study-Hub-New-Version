@@ -658,7 +658,14 @@ function ChatBot({ defaultOpen = false, showBubble = true }) {
                       <button
                         type="button"
                         key={label}
-                        onClick={() => setInput(prompt)}
+                        onClick={() =>
+                          submitChatQuestion(
+                            prompt,
+                            selectedDocumentId,
+                            selectedDocument,
+                          )
+                        }
+                        disabled={loading}
                       >
                         <span className="chat-starter-icon">
                           <Icon />
