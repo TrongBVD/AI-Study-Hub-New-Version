@@ -140,6 +140,12 @@ body {
   background-repeat: no-repeat;
 }
 
+.profile_avatar {
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+}
+
 /* Main area */
 
 .main_area {
