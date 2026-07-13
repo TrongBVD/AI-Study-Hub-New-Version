@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { LuFileText } from "react-icons/lu";
+import { HiOutlineSquares2X2, HiOutlineSquaresPlus } from "react-icons/hi2";
 import { createWorkspace } from "../../../utils/workspaceApi";
 import { getMyProfile } from "../../../utils/profileApi";
 import "./CreateWorkSpacePage.css";
@@ -147,7 +147,7 @@ function CreateWorkSpacePage() {
             <div>
               <div className="workspace_preview_topline">
                 <span className="workspace_preview_icon">
-                  <LuFileText aria-hidden="true" />
+                  <HiOutlineSquares2X2 aria-hidden="true" />
                 </span>
 
                 <span className="workspace_private_badge">
@@ -286,7 +286,7 @@ function CreateWorkSpacePage() {
               className="create_workspace_btn"
               disabled={!canCreate}
             >
-              <i className="ti-plus" />
+              <HiOutlineSquaresPlus aria-hidden="true" />
               Create workspace
             </button>
           </div>

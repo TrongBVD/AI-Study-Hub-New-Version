@@ -494,6 +494,13 @@
   gap: 9px;
 }
 
+.create_workspace_btn svg {
+  width: 18px;
+  height: 18px;
+  stroke-width: 2.3;
+  flex-shrink: 0;
+}
+
 .create_workspace_btn:hover:not(:disabled) {
   background: var(--button-hover-bg);
   transform: translateY(-1px);

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import { HiOutlineSquares2X2, HiOutlineSquaresPlus } from "react-icons/hi2";
 import { getWorkspaces } from "../../../utils/workspaceApi";
 import "./MyWorkSpace.css";
 import "../../../assets/icons/themify-icons-font/themify-icons/themify-icons.css";
@@ -81,12 +82,12 @@ function MyWorkSpace() {
                 state={{ from: "/dashboard/workspaces" }}
                 className="create_workspace_link"
               >
-                <i className="ti-plus"></i>
+                <HiOutlineSquaresPlus aria-hidden="true" />
                 Create workspace
               </Link>
 
               <a href="#workspace-board" className="workspace_secondary_link">
-                <i className="ti-layout-grid2"></i>
+                <HiOutlineSquares2X2 aria-hidden="true" />
                 View board
               </a>
             </div>
@@ -94,7 +95,7 @@ function MyWorkSpace() {
 
           <aside className="workspace_focus_card">
             <div className="workspace_focus_icon">
-              <i className="ti-blackboard"></i>
+              <HiOutlineSquares2X2 aria-hidden="true" />
             </div>
 
             <span>Latest workspace</span>
@@ -146,7 +147,7 @@ function MyWorkSpace() {
         {workspaces.length === 0 ? (
           <section className="empty_workspace_state">
             <div className="empty_workspace_icon">
-              <i className="ti-layout-grid2"></i>
+              <HiOutlineSquares2X2 aria-hidden="true" />
             </div>
 
             <h2>You have no workspace here.</h2>
@@ -159,7 +160,7 @@ function MyWorkSpace() {
               to="/dashboard/create-workspace"
               state={{ from: "/dashboard/workspaces" }}
             >
-              <i className="ti-plus"></i>
+              <HiOutlineSquaresPlus aria-hidden="true" />
               Create workspace
             </Link>
           </section>
@@ -174,7 +175,7 @@ function MyWorkSpace() {
               >
                 <div className="workspace_card_top">
                   <div className="workspace_icon">
-                    <i className={workspace.icon || "ti-layout-grid2"}></i>
+                    <HiOutlineSquares2X2 aria-hidden="true" />
                   </div>
 
                   <span>{String((safeCurrentPage - 1) * ITEMS_PER_PAGE + index + 1).padStart(2, "0")}</span>
