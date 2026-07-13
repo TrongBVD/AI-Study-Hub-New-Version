@@ -1,10 +1,8 @@
 import { NavLink, useNavigate } from "react-router-dom";
+import { LuLogOut } from "react-icons/lu";
 import Logo from "../../../assets/logo/Logo.jsx";
 import api from "../../../utils/api.js";
-import {
-  clearStoredSession,
-  getStoredUser,
-} from "../../../utils/authToken.js";
+import { clearStoredSession, getStoredUser } from "../../../utils/authToken.js";
 import "../../../assets/icons/themify-icons-font/themify-icons/themify-icons.css";
 
 function getStoredUserRole() {
@@ -26,16 +24,24 @@ function Sidebar({ isOpen, onClose }) {
   const menuItems = [
     { icon: "ti-home", label: "Home", path: "/dashboard/home" },
     { icon: "ti-search", label: "Discover", path: "/dashboard/discover" },
-    { icon: "ti-folder", label: "My libraries", path: "/dashboard/libraries", hideForGuest: true },
-    { icon: "ti-layout-grid2", label: "My workspaces", path: "/dashboard/workspaces", hideForGuest: true },
+    {
+      icon: "ti-folder",
+      label: "My libraries",
+      path: "/dashboard/libraries",
+      hideForGuest: true,
+    },
+    {
+      icon: "ti-layout-grid2",
+      label: "My workspaces",
+      path: "/dashboard/workspaces",
+      hideForGuest: true,
+    },
     { icon: "ti-settings", label: "Settings", path: "/dashboard/settings" },
   ];
 
   // Guest chỉ được xem Discover và Settings.
   const visibleMenuItems = isGuest
-    ? menuItems.filter((item) =>
-        ["Discover", "Settings"].includes(item.label),
-      )
+    ? menuItems.filter((item) => ["Discover", "Settings"].includes(item.label))
     : menuItems;
 
   async function handleLogout() {
@@ -103,8 +109,8 @@ function Sidebar({ isOpen, onClose }) {
           )}
 
           <button type="button" className="logout_btn" onClick={handleLogout}>
-            <i className="ti-power-off"></i>
-            <span>Log out</span>
+            <LuLogOut aria-hidden="true" />
+            <span>Sign Out</span>
           </button>
         </div>
       </aside>

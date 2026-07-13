@@ -153,11 +153,26 @@
 
 .workspace_member_search input {
   width: 100%;
-  border: none;
-  outline: none;
-  background: transparent;
+  border: 0 !important;
+  outline: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  appearance: none;
   color: var(--text-primary);
   font-size: 14px;
+}
+
+.workspace_member_search:focus-within {
+  border-color: var(--input-border, var(--border-color));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--focus-ring) 60%, transparent);
+}
+
+.workspace_member_search input:focus,
+.workspace_member_search input:focus-visible {
+  border: 0 !important;
+  outline: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
 }
 
 .workspace_member_actions > button {
@@ -839,11 +854,26 @@
 
 .workspace_invite_search input {
   width: 100%;
-  border: none;
-  outline: none;
-  background: transparent;
+  border: 0 !important;
+  outline: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  appearance: none;
   color: var(--text-primary);
   font-size: 16px;
+}
+
+.workspace_invite_search:focus-within {
+  border-color: var(--input-border, var(--border-color));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--focus-ring) 60%, transparent);
+}
+
+.workspace_invite_search input:focus,
+.workspace_invite_search input:focus-visible {
+  border: 0 !important;
+  outline: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
 }
 
 .workspace_invite_error {
@@ -3370,11 +3400,26 @@
 
 .workspace_material_search input {
   width: 100%;
-  border: none;
-  outline: none;
-  background: transparent;
+  border: 0 !important;
+  outline: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  appearance: none;
   color: var(--text-primary);
   font-size: 15px;
+}
+
+.workspace_material_search:focus-within {
+  border-color: var(--input-border, var(--border-color));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--focus-ring) 60%, transparent);
+}
+
+.workspace_material_search input:focus,
+.workspace_material_search input:focus-visible {
+  border: 0 !important;
+  outline: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
 }
 
 .workspace_material_actions {

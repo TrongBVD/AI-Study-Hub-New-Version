@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { LuFileText } from "react-icons/lu";
 import { createWorkspace } from "../../../utils/workspaceApi";
 import { getMyProfile } from "../../../utils/profileApi";
 import "./CreateWorkSpacePage.css";
@@ -146,7 +147,7 @@ function CreateWorkSpacePage() {
             <div>
               <div className="workspace_preview_topline">
                 <span className="workspace_preview_icon">
-                  <i className="ti-briefcase" />
+                  <LuFileText aria-hidden="true" />
                 </span>
 
                 <span className="workspace_private_badge">

@@ -63,7 +63,7 @@ function DocumentViewerPage() {
     return (
       <main className="document_viewer_state">
         <div>
-          <i className="ti-reload" />
+          <i className="ti-reload document_viewer_spinner" />
           <h1>Opening document</h1>
           <p>Please wait while we prepare a secure viewing link.</p>
         </div>

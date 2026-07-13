@@ -1,6 +1,12 @@
 import { Link, useNavigate } from "react-router-dom";
 import { useEffect, useMemo, useState } from "react";
 import {
+  HiOutlineBell,
+  HiOutlineFolderPlus,
+  HiOutlinePlus,
+  HiOutlineSquares2X2,
+} from "react-icons/hi2";
+import {
   getNotificationSettings,
   getNotifications,
   markAllNotificationsAsRead,
@@ -402,12 +408,12 @@ function Navbar({
           <>
             <div className="create_dropdown">
               <button type="button" className="create_dropdown_btn">
-                <i className="ti-plus"></i>
+                <HiOutlinePlus aria-hidden="true" />
               </button>
 
               <div className="create_dropdown_menu">
                 <Link to="/dashboard/create-library">
-                  <i className="ti-folder"></i>
+                  <HiOutlineFolderPlus aria-hidden="true" />
                   Create library
                 </Link>
 
@@ -420,7 +426,7 @@ function Navbar({
                 </Link>
 
                 <Link to="/dashboard/create-workspace">
-                  <i className="ti-layout-grid2"></i>
+                  <HiOutlineFolderPlus aria-hidden="true" />
                   Create workspace
                 </Link>
               </div>
@@ -428,7 +434,7 @@ function Navbar({
 
             <div className="notification_dropdown">
               <button type="button" className="notification_btn">
-                <i className="ti-bell"></i>
+                <HiOutlineBell aria-hidden="true" />
                 {notificationSettings.showBadge &&
                   unreadNotificationCount > 0 && (
                     <span className="notification_badge">

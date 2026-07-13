@@ -53,7 +53,27 @@ function SearchUserPage() {
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           placeholder="Nhập tên hoặc username (VD: Đạt, Hương)..."
-          style={{ width: "100%", padding: "14px 14px 14px 45px", borderRadius: "10px", border: "1px solid var(--input-border)", fontSize: "16px", outline: "none" }}
+          style={{
+            width: "100%",
+            padding: "14px 14px 14px 45px",
+            borderRadius: "10px",
+            border: "1px solid var(--input-border)",
+            backgroundColor: "var(--input-bg)",
+            color: "var(--text-primary)",
+            fontSize: "16px",
+            outline: "none",
+            boxShadow: "none",
+          }}
+          onFocus={(e) => {
+            e.currentTarget.style.borderColor = "var(--input-border)";
+            e.currentTarget.style.backgroundColor = "var(--input-bg)";
+            e.currentTarget.style.boxShadow = "none";
+          }}
+          onBlur={(e) => {
+            e.currentTarget.style.borderColor = "var(--input-border)";
+            e.currentTarget.style.backgroundColor = "var(--input-bg)";
+            e.currentTarget.style.boxShadow = "none";
+          }}
           autoFocus
         />
       </div>

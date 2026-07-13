@@ -168,6 +168,12 @@
   box-shadow: var(--shadow-soft);
 }
 
+.workspace_preview_icon svg {
+  width: 24px;
+  height: 24px;
+  stroke-width: 2.2;
+}
+
 .workspace_private_badge {
   min-height: 32px;
   border-radius: 999px;

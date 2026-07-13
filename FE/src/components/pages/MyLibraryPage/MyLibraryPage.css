@@ -123,6 +123,14 @@
   transition: transform 220ms ease, background 220ms ease, border-color 220ms ease, box-shadow 220ms ease;
 }
 
+.create_library_btn svg,
+.empty_library_action svg {
+  width: 17px;
+  height: 17px;
+  stroke-width: 2.2;
+  flex-shrink: 0;
+}
+
 .my_library_import_btn {
   border-color: var(--hero-preview-border, var(--border-color));
   background: var(--collection-action-bg, var(--sidebar-active-bg));
@@ -162,6 +170,13 @@
   place-items: center;
   font-size: 18px;
   box-shadow: var(--shadow-soft);
+  margin-bottom: 8px;
+}
+
+.hero_card_icon svg {
+  width: 20px;
+  height: 20px;
+  stroke-width: 2.2;
 }
 
 .my_library_hero_card span {
@@ -318,6 +333,12 @@
   box-shadow: var(--shadow-soft);
 }
 
+.collection_icon svg {
+  width: 19px;
+  height: 19px;
+  stroke-width: 2.2;
+}
+
 .collection_icon.highlight {
   background: var(--accent-color);
   color: var(--button-text);
@@ -450,7 +471,16 @@
   color: var(--text-primary);
   cursor: pointer;
   font-weight: 900;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   transition: transform 180ms ease, background 180ms ease, color 180ms ease, border-color 180ms ease;
+}
+
+.library_pagination button svg {
+  width: 16px;
+  height: 16px;
+  stroke-width: 2.4;
 }
 
 .library_pagination button:hover:not(:disabled) {

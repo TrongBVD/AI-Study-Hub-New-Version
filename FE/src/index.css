@@ -150,6 +150,17 @@ body {
   color: var(--text-primary, #2f2015);
 }
 
+.ti-reload {
+  display: inline-block;
+  animation: app-reload-spin 900ms linear infinite;
+}
+
+@keyframes app-reload-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 body[data-theme="current"] .home_command_panel::after,
 body[data-theme="current"] .my_library_hero::after,
 body[data-theme="current"] .workspace_command_hero::after,
