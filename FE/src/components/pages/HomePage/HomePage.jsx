@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import "./HomePage.css";
 import "../../../assets/icons/themify-icons-font/themify-icons/themify-icons.css";
 import { Link } from "react-router-dom";
+import { LuFileText, LuFolderPlus } from "react-icons/lu";
 import studyHubLogo from "../../../assets/images/StudyHubLogo.svg";
 import { getMyLibraries } from "../../../utils/documentApi.js";
 import { getWorkspaces } from "../../../utils/workspaceApi.js";
@@ -248,14 +249,14 @@ function HomePage() {
     {
       title: "Create workspace",
       description: "Open a private room for topics, files and team discussion.",
-      icon: "ti-briefcase",
+      icon: LuFolderPlus,
       to: "/dashboard/create-workspace",
       primary: true,
     },
     {
       title: "Create library",
       description: "Build a clean collection for documents and study materials.",
-      icon: "ti-folder",
+      icon: LuFolderPlus,
       to: "/dashboard/create-library",
     },
   ];
@@ -343,7 +344,7 @@ function HomePage() {
         state={{ from: "/dashboard/home" }}
         className="home_btn home_btn_primary"
       >
-        <i className="ti-briefcase"></i>
+        <LuFolderPlus className="home_create_workspace_icon" aria-hidden="true" />
         Create workspace
       </Link>
 
@@ -352,7 +353,7 @@ function HomePage() {
         state={{ from: "/dashboard/home" }}
         className="home_btn home_btn_secondary"
       >
-        <i className="ti-folder"></i>
+        <LuFolderPlus aria-hidden="true" />
         Create library
       </Link>
 
@@ -376,6 +377,9 @@ function HomePage() {
             </div>
 
             <div className="focus_card focus_card_dark">
+              <div className="focus_card_icon" aria-hidden="true">
+                <LuFileText />
+              </div>
               <span>{isGuest ? "Newest public library" : "Latest library"}</span>
               <h2>
                 {latestLibrary?.name ||
@@ -480,7 +484,7 @@ function HomePage() {
                       <article className="recent_library_card" key={libraryId || index}>
                         <div className="library_card_header">
                           <div className="library_icon_cluster">
-                            <i className={library.icon || "ti-archive"}></i>
+                            <LuFileText aria-hidden="true" />
                           </div>
                           <span>{index === 0 ? "Newest" : "Public"}</span>
                         </div>

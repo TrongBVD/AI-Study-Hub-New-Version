@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
+import { LuFileText } from "react-icons/lu";
 import JSZip from "jszip";
 
 import {
@@ -1244,7 +1245,7 @@ function LibraryPage() {
                     className={!currentFolder ? "active" : ""}
                     onClick={handleBackToLibrary}
                   >
-                    <i className="ti-archive"></i>
+                    <LuFileText aria-hidden="true" />
                     {libraryName || libraryData.name || "Library"}
                   </button>
 

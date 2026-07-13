@@ -1,5 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import {
+  LuChevronLeft,
+  LuChevronRight,
+  LuFileText,
+  LuFolderPlus,
+} from "react-icons/lu";
 import { getPublicLibraries } from "../../../utils/publicApi";
 import { getMyLibraries } from "../../../utils/documentApi";
 import "./MyLibraryPage.css";
@@ -113,7 +119,7 @@ function MyLibraryPage() {
                     onClick={notifyGuestRegistrationRequired}
                     className="create_library_btn"
                   >
-                    <i className="ti-folder"></i>
+                    <LuFolderPlus aria-hidden="true" />
                     Create library
                   </button>
 
@@ -133,7 +139,7 @@ function MyLibraryPage() {
                     state={{ from: "/dashboard/libraries" }}
                     className="create_library_btn"
                   >
-                    <i className="ti-folder"></i>
+                    <LuFolderPlus aria-hidden="true" />
                     Create library
                   </Link>
 
@@ -152,7 +158,7 @@ function MyLibraryPage() {
 
           <aside className="my_library_hero_card" aria-label="Library overview">
             <div className="hero_card_icon">
-              <i className="ti-archive"></i>
+              <LuFileText aria-hidden="true" />
             </div>
 
             <div>
@@ -236,7 +242,7 @@ function MyLibraryPage() {
                 onClick={notifyGuestRegistrationRequired}
                 className="empty_library_action"
               >
-                <i className="ti-plus"></i>
+                <LuFolderPlus aria-hidden="true" />
                 Create first library
               </button>
             ) : (
@@ -245,7 +251,7 @@ function MyLibraryPage() {
                 state={{ from: "/dashboard/libraries" }}
                 className="empty_library_action"
               >
-                <i className="ti-plus"></i>
+                <LuFolderPlus aria-hidden="true" />
                 Create first library
               </Link>
             )}
@@ -274,7 +280,7 @@ function MyLibraryPage() {
                         library.highlight ? "highlight" : ""
                       }`}
                     >
-                      <i className={library.icon || "ti-archive"}></i>
+                      <LuFileText aria-hidden="true" />
                     </div>
 
                     <span className="collection_index">
@@ -312,7 +318,7 @@ function MyLibraryPage() {
               onClick={() => setCurrentPage((page) => Math.max(page - 1, 1))}
               aria-label="Previous page"
             >
-              ‹
+              <LuChevronLeft aria-hidden="true" />
             </button>
 
             {Array.from({ length: totalPages }, (_, index) => index + 1).map(
@@ -337,7 +343,7 @@ function MyLibraryPage() {
               }
               aria-label="Next page"
             >
-              ›
+              <LuChevronRight aria-hidden="true" />
             </button>
           </nav>
         )}

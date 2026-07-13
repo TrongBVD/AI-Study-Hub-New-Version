@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { LuFolderPlus } from "react-icons/lu";
 import "./CreateLibraryPage.css";
 import api from "../../../utils/api.js";
 import { getMyLibraries } from "../../../utils/documentApi.js";
@@ -371,7 +372,7 @@ function CreateLibraryPage() {
               Import library
             </button>
             <button type="submit" className="create_library_btn" disabled={!canCreate}>
-              <i className="ti-plus" />
+              <LuFolderPlus aria-hidden="true" />
               Create library
             </button>
           </div>
