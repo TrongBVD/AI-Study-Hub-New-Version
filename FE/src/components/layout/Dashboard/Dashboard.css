@@ -98,6 +98,13 @@ body {
   transition: 0.2s ease;
 }
 
+.sidebar_link svg {
+  width: 19px;
+  height: 19px;
+  stroke-width: 2.1;
+  flex-shrink: 0;
+}
+
 .sidebar_link:hover {
   background: var(--study-theme-surface-strong, #f1e3cc);
   color: var(--study-theme-text, var(--text-primary));
@@ -581,11 +588,13 @@ body {
 
 .logout_btn i,
 .logout_btn svg,
-.admin_dashboard_btn i {
+.admin_dashboard_btn i,
+.admin_dashboard_btn svg {
   font-size: 16px;
 }
 
-.logout_btn svg {
+.logout_btn svg,
+.admin_dashboard_btn svg {
   width: 17px;
   height: 17px;
   stroke-width: 2.4;

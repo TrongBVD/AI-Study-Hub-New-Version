@@ -118,6 +118,15 @@
     border-color 220ms ease, box-shadow 220ms ease;
 }
 
+.create_workspace_link svg,
+.workspace_secondary_link svg,
+.empty_workspace_state a svg {
+  width: 18px;
+  height: 18px;
+  stroke-width: 2.3;
+  flex-shrink: 0;
+}
+
 .create_workspace_link {
   background: var(--button-bg);
   color: var(--button-text);
@@ -168,6 +177,12 @@
   background: var(--hero-preview-icon-bg, var(--accent-soft));
   font-size: 19px;
   margin-bottom: 18px;
+}
+
+.workspace_focus_icon svg {
+  width: 24px;
+  height: 24px;
+  stroke-width: 2.2;
 }
 
 .workspace_focus_card > span {
@@ -312,6 +327,13 @@
   place-items: center;
   font-size: 18px;
   box-shadow: var(--shadow-soft);
+}
+
+.workspace_icon svg,
+.empty_workspace_icon svg {
+  width: 23px;
+  height: 23px;
+  stroke-width: 2.1;
 }
 
 .workspace_card_top span {

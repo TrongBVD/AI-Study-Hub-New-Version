@@ -2,10 +2,11 @@ import { Link, useNavigate } from "react-router-dom";
 import { useEffect, useMemo, useState } from "react";
 import {
   HiOutlineBell,
-  HiOutlineFolderPlus,
   HiOutlinePlus,
   HiOutlineSquares2X2,
+  HiOutlineSquaresPlus,
 } from "react-icons/hi2";
+import { LuBookPlus } from "react-icons/lu";
 import {
   getNotificationSettings,
   getNotifications,
@@ -413,7 +414,7 @@ function Navbar({
 
               <div className="create_dropdown_menu">
                 <Link to="/dashboard/create-library">
-                  <HiOutlineFolderPlus aria-hidden="true" />
+                  <LuBookPlus aria-hidden="true" />
                   Create library
                 </Link>
 
@@ -426,7 +427,7 @@ function Navbar({
                 </Link>
 
                 <Link to="/dashboard/create-workspace">
-                  <HiOutlineFolderPlus aria-hidden="true" />
+                  <HiOutlineSquaresPlus aria-hidden="true" />
                   Create workspace
                 </Link>
               </div>

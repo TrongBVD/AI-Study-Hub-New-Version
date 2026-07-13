@@ -4,17 +4,18 @@ function isOfficeDocument(fileName = "") {
   return /\.(docx|doc)$/i.test(fileName);
 }
 
-function FileViewer({ documentUrl, documentName }) {
+function FileViewer({ documentUrl, documentName, displayName }) {
   const iframeSrc = isOfficeDocument(documentName)
     ? `https://docs.google.com/gview?url=${encodeURIComponent(documentUrl)}&embedded=true`
     : documentUrl;
+  const shownName = displayName || documentName || "Document";
 
   return (
     <main className="file_viewer_container">
       <section className="file_preview_section">
         <header className="file_viewer_header">
           <div>
-            <h1>{documentName || "Document"}</h1>
+            <h1>{shownName}</h1>
           </div>
 
           <a
@@ -31,7 +32,7 @@ function FileViewer({ documentUrl, documentName }) {
         <div className="file_viewer_frame_shell">
           <iframe
             src={iframeSrc}
-            title={documentName || "Document preview"}
+            title={`${shownName} preview`}
             width="100%"
             height="100%"
           />

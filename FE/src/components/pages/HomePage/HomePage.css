@@ -387,6 +387,12 @@
   box-shadow: var(--shadow-soft);
 }
 
+.home_stat_icon svg {
+  width: 21px;
+  height: 21px;
+  stroke-width: 2.15;
+}
+
 .home_stat_item strong {
   display: block;
   color: var(--text-primary);
@@ -855,6 +861,12 @@
   color: var(--accent-color);
   background: var(--bg-secondary);
   font-size: 18px;
+}
+
+.home_empty_icon svg {
+  width: 24px;
+  height: 24px;
+  stroke-width: 2.1;
 }
 
 .home_empty_state h3 {

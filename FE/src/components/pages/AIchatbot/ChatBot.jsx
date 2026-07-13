@@ -49,6 +49,14 @@ function loadStoredHistory() {
   }
 }
 
+function formatDisplayFileName(fileName) {
+  return String(fileName || "Untitled document")
+    .replace(/\.(pdf|docx|txt)$/i, "")
+    .replace(/[-_.]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 function ChatBot({ defaultOpen = false, showBubble = true }) {
   const [open, setOpen] = useState(defaultOpen);
   const [input, setInput] = useState("");
@@ -272,7 +280,7 @@ function ChatBot({ defaultOpen = false, showBubble = true }) {
           "aiStudyHubLastChatDocument",
           JSON.stringify({
             id: documentOverride.id,
-            title: documentOverride.title,
+            title: formatDisplayFileName(documentOverride.title),
             libraryId: documentOverride.library_id,
             workspaceId: documentOverride.workspace_id,
             chattedAt: new Date().toISOString(),
@@ -521,7 +529,9 @@ function ChatBot({ defaultOpen = false, showBubble = true }) {
                   }
                 >
                   <span>
-                    {selectedDocument?.title ||
+                    {selectedDocument
+                      ? formatDisplayFileName(selectedDocument.title)
+                      :
                       (hasFolderDocuments && !selectedFolderId
                         ? "Choose a folder first"
                         : "Choose a file")}
@@ -556,7 +566,9 @@ function ChatBot({ defaultOpen = false, showBubble = true }) {
                             onClick={() => handleDocumentChange(doc.id)}
                           >
                             <HiOutlineDocumentText />
-                            <span title={doc.title}>{doc.title}</span>
+                            <span title={formatDisplayFileName(doc.title)}>
+                              {formatDisplayFileName(doc.title)}
+                            </span>
                             {isSelected && <FaCheck />}
                           </button>
                         );
@@ -620,7 +632,9 @@ function ChatBot({ defaultOpen = false, showBubble = true }) {
               <div className="chat-thread-title">
                 <span>CHAT A.I+</span>
                 <strong>
-                  {selectedDocument?.title || "Select an approved document"}
+                  {selectedDocument
+                    ? formatDisplayFileName(selectedDocument.title)
+                    : "Select an approved document"}
                 </strong>
               </div>
 
