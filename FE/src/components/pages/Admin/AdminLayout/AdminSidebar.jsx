@@ -1,14 +1,24 @@
 import { NavLink, useNavigate } from "react-router-dom";
+import {
+  LuChartPie,
+  LuLayoutDashboard,
+  LuListChecks,
+  LuLogOut,
+  LuShieldCheck,
+  LuUsers,
+  LuX,
+} from "react-icons/lu";
+import { HiOutlineHome } from "react-icons/hi2";
 import Logo from "../../../../assets/logo/Logo.jsx";
 import api from "../../../../utils/api.js";
 import { clearStoredSession } from "../../../../utils/authToken.js";
 
 const ADMIN_MENU_ITEMS = [
-  { icon: "ti-dashboard", label: "Dashboard", path: "/admin/dashboard" },
-  { icon: "ti-shield", label: "AI Moderation", path: "/admin/moderation" },
-  { icon: "ti-user", label: "Users", path: "/admin/users" },
-  { icon: "ti-list", label: "Activity Logs", path: "/admin/logs" },
-  { icon: "ti-pie-chart", label: "Usage", path: "/admin/usage" },
+  { icon: LuLayoutDashboard, label: "Dashboard", path: "/admin/dashboard" },
+  { icon: LuShieldCheck, label: "AI Moderation", path: "/admin/moderation" },
+  { icon: LuUsers, label: "Users", path: "/admin/users" },
+  { icon: LuListChecks, label: "Activity Logs", path: "/admin/logs" },
+  { icon: LuChartPie, label: "Usage", path: "/admin/usage" },
 ];
 
 function AdminSidebar({ isOpen, onClose }) {
@@ -47,24 +57,28 @@ function AdminSidebar({ isOpen, onClose }) {
               aria-label="Close admin sidebar"
               onClick={onClose}
             >
-              ×
+              <LuX aria-hidden="true" />
             </button>
           </div>
 
           <nav className="sidebar_nav">
-            {ADMIN_MENU_ITEMS.map((item) => (
-              <NavLink
-                to={item.path}
-                className={({ isActive }) =>
-                  `sidebar_link ${isActive ? "active" : ""}`
-                }
-                key={item.label}
-                onClick={onClose}
-              >
-                <i className={item.icon}></i>
-                <span>{item.label}</span>
-              </NavLink>
-            ))}
+            {ADMIN_MENU_ITEMS.map((item) => {
+              const Icon = item.icon;
+
+              return (
+                <NavLink
+                  to={item.path}
+                  className={({ isActive }) =>
+                    `sidebar_link ${isActive ? "active" : ""}`
+                  }
+                  key={item.label}
+                  onClick={onClose}
+                >
+                  <Icon aria-hidden="true" />
+                  <span>{item.label}</span>
+                </NavLink>
+              );
+            })}
           </nav>
         </div>
 
@@ -74,13 +88,13 @@ function AdminSidebar({ isOpen, onClose }) {
             className="admin_dashboard_btn"
             onClick={onClose}
           >
-            <i className="ti-home"></i>
+            <HiOutlineHome aria-hidden="true" />
             <span>User dashboard</span>
           </NavLink>
 
           <button type="button" className="logout_btn" onClick={handleLogout}>
-            <i className="ti-power-off"></i>
-            <span>Log out</span>
+            <LuLogOut aria-hidden="true" />
+            <span>Sign Out</span>
           </button>
         </div>
       </aside>

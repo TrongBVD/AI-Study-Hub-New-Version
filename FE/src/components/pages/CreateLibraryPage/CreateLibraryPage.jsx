@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { LuBookPlus, LuFileText } from "react-icons/lu";
+import { LuBookPlus, LuLibraryBig } from "react-icons/lu";
 import "./CreateLibraryPage.css";
 import api from "../../../utils/api.js";
 import { getMyLibraries } from "../../../utils/documentApi.js";
@@ -205,7 +205,7 @@ function CreateLibraryPage() {
           <aside className="create_library_preview" aria-label="Library preview">
             <div className="preview_topline">
               <div className="preview_icon">
-                <LuFileText aria-hidden="true" />
+                <LuLibraryBig aria-hidden="true" />
               </div>
               <span className={`preview_badge ${visibility === "private" ? "private" : ""}`}>
                 {visibility}
