@@ -38,6 +38,8 @@ function Sidebar({ isOpen, onClose }) {
       path: "/dashboard/libraries",
       hideForGuest: true,
     },
+        { icon: "ti-comments", label: "AI Chat", path: "/dashboard/ai-chat", hideForGuest: true },
+    { icon: "ti-layers", label: "Generate Flashcards", path: "/dashboard/flashcards", hideForGuest: true },
     {
       icon: HiOutlineSquares2X2,
       label: "My workspaces",
