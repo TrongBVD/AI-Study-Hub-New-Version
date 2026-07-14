@@ -54,6 +54,45 @@ function LibraryPage() {
   const location = useLocation();
   const isGuest = getStoredUserRole() === "GUEST";
 
+  function getLibraryOrganizationStorageKey() {
+    const user = getStoredUser();
+    const userId = user?.id || user?.user_id || user?.email || "anonymous";
+    const activeLibraryId = libraryId || location.state?.library?.id || "default-library";
+
+    return `aiStudyHubLibraryOrganization:${userId}:${activeLibraryId}`;
+  }
+
+  function readStoredLibraryItems() {
+    if (isGuest) return [];
+
+    try {
+      const storedOrganization = JSON.parse(
+        localStorage.getItem(getLibraryOrganizationStorageKey()) || "{}",
+      );
+      const storedFolders = Array.isArray(storedOrganization.folders)
+        ? storedOrganization.folders
+        : [];
+      const importedItems = Array.isArray(location.state?.importedItems)
+        ? location.state.importedItems
+        : JSON.parse(
+          localStorage.getItem(
+            `aiStudyHubImportedLibraryItems:${libraryId}`,
+          ) || "[]",
+        );
+
+      return [
+        ...storedFolders,
+        ...(Array.isArray(importedItems) ? importedItems : []),
+      ].filter(
+        (item, index, items) =>
+          items.findIndex((candidate) => candidate.id === item.id) === index,
+      );
+    } catch (error) {
+      console.error("Cannot restore library folders:", error);
+      return [];
+    }
+  }
+
   function handleToggleShareOnProfile() {
     if (libraryVisibility === "private") {
       setLibraryNameMessage(
@@ -143,8 +182,9 @@ function LibraryPage() {
   const [aiRecommendedTags, setAiRecommendedTags] = useState([]);
   const [uploadNotice, setUploadNotice] = useState(null);
 
-  const [libraryItems, setLibraryItems] = useState([]);
+  const [libraryItems, setLibraryItems] = useState(readStoredLibraryItems);
   const [isLoadingDocuments, setIsLoadingDocuments] = useState(false);
+  const hasFinishedInitialDocumentLoadRef = useRef(false);
   const [isUploadingDocuments, setIsUploadingDocuments] = useState(false);
   const [isExportingLibrary, setIsExportingLibrary] = useState(false);
 
@@ -508,6 +548,16 @@ function LibraryPage() {
       }
 
       const backendDocuments = await getMyDocuments(activeLibraryId);
+      let storedDocumentFolderIds = {};
+
+      try {
+        const storedOrganization = JSON.parse(
+          localStorage.getItem(getLibraryOrganizationStorageKey()) || "{}",
+        );
+        storedDocumentFolderIds = storedOrganization.documentFolderIds || {};
+      } catch (error) {
+        console.error("Cannot restore document folders:", error);
+      }
 
       setLibraryItems((currentItems) => {
         const savedBackendItems = new Map(
@@ -518,13 +568,12 @@ function LibraryPage() {
         const backendItems = (backendDocuments || []).map((document) => {
           const mappedItem = mapBackendDocumentToLibraryItem(document);
           const savedItem = savedBackendItems.get(String(document.id));
+          const storedFolderId = storedDocumentFolderIds[String(document.id)];
 
-          return savedItem
-            ? {
-              ...mappedItem,
-              folderId: savedItem.folderId ?? null,
-            }
-            : mappedItem;
+          return {
+            ...mappedItem,
+            folderId: savedItem?.folderId ?? storedFolderId ?? null,
+          };
         });
         const backendItemIds = new Set(
           backendItems.map((item) => String(item.id)),
@@ -564,6 +613,7 @@ function LibraryPage() {
           : "Cannot load documents. Please login again.",
       );
     } finally {
+      hasFinishedInitialDocumentLoadRef.current = true;
       setIsLoadingDocuments(false);
     }
   }
@@ -575,6 +625,25 @@ function LibraryPage() {
     fetchDocuments();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (isGuest || !hasFinishedInitialDocumentLoadRef.current) return;
+
+    const folders = libraryItems.filter((item) => item.type === "folder");
+    const documentFolderIds = Object.fromEntries(
+      libraryItems
+        .filter(
+          (item) => item.type !== "folder" && item.id && item.folderId != null,
+        )
+        .map((item) => [String(item.id), item.folderId]),
+    );
+
+    localStorage.setItem(
+      getLibraryOrganizationStorageKey(),
+      JSON.stringify({ folders, documentFolderIds }),
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [libraryItems, libraryId, isGuest, isLoadingDocuments]);
 
   useEffect(() => {
     if (!uploadNotice) return undefined;
