@@ -29,6 +29,7 @@ function Sidebar({ isOpen, onClose }) {
 
   // Thêm thuộc tính hideForGuest để ẩn menu với Guest
   const menuItems = [
+
     { icon: HiOutlineHome, label: "Home", path: "/dashboard/home" },
     { icon: LuSearch, label: "Discover", path: "/dashboard/discover" },
     {
