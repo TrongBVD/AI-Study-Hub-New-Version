@@ -1152,6 +1152,42 @@ function LibraryPage() {
     }
   }
 
+  function countFilesInFolder(folder) {
+    const descendantFolderIds = new Set([getFolderKey(folder)]);
+    let foundNestedFolder = true;
+
+    while (foundNestedFolder) {
+      foundNestedFolder = false;
+
+      libraryItems.forEach((item) => {
+        if (
+          item.type === "folder" &&
+          descendantFolderIds.has(item.folderId ?? null) &&
+          !descendantFolderIds.has(getFolderKey(item))
+        ) {
+          descendantFolderIds.add(getFolderKey(item));
+          foundNestedFolder = true;
+        }
+      });
+    }
+
+    return libraryItems.filter(
+      (item) =>
+        item.type !== "folder" &&
+        descendantFolderIds.has(item.folderId ?? null),
+    ).length;
+  }
+
+  function getFolderDetails(folder) {
+    const fileCount = countFilesInFolder(folder);
+    const savedDetail = String(folder.note || "Created recently")
+      .split("·")
+      .pop()
+      .trim();
+
+    return `${fileCount} ${fileCount === 1 ? "file" : "files"} · ${savedDetail}`;
+  }
+
 
   const visibleItems = libraryItems.filter((item) => {
     const itemFolderId = item.folderId ?? null;
@@ -1466,7 +1502,7 @@ function LibraryPage() {
                           <div className="document_size">Folder</div>
 
                           <div className="document_uploaded">
-                            <strong>{folder.note || "Created recently"}</strong>
+                            <strong>{getFolderDetails(folder)}</strong>
                             <span>Open to view contents</span>
                           </div>
 
