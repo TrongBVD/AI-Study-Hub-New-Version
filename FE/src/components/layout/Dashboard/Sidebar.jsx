@@ -26,6 +26,8 @@ function Sidebar({ isOpen, onClose }) {
   const menuItems = [
     { icon: "ti-home", label: "Home", path: "/dashboard/home" },
     { icon: "ti-search", label: "Discover", path: "/dashboard/discover" },
+    { icon: "ti-comments", label: "AI Chat", path: "/dashboard/ai-chat", hideForGuest: true },
+    { icon: "ti-layers", label: "Generate Flashcards", path: "/dashboard/flashcards", hideForGuest: true },
     { icon: "ti-folder", label: "My libraries", path: "/dashboard/libraries", hideForGuest: true },
     { icon: "ti-layout-grid2", label: "My workspaces", path: "/dashboard/workspaces", hideForGuest: true },
     { icon: "ti-settings", label: "Settings", path: "/dashboard/settings" },
