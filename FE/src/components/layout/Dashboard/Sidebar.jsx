@@ -7,6 +7,7 @@ import {
   LuSearch,
   LuSettings,
   LuLayers,
+  LuX,
 } from "react-icons/lu";
 import { HiOutlineHome, HiOutlineSquares2X2 } from "react-icons/hi2";
 import Logo from "../../../assets/logo/Logo.jsx";
@@ -96,8 +97,13 @@ function Sidebar({ isOpen, onClose }) {
           <div className="sidebar_header">
             <Logo />
 
-            <button className="close_btn" onClick={onClose}>
-              ×
+            <button
+              type="button"
+              className="close_btn"
+              aria-label="Close sidebar"
+              onClick={onClose}
+            >
+              <LuX aria-hidden="true" />
             </button>
           </div>
 
