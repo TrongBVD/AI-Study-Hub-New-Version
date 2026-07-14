@@ -3,8 +3,10 @@ import {
   LuLibraryBig,
   LuLayoutDashboard,
   LuLogOut,
+  LuMessageCircle,
   LuSearch,
   LuSettings,
+  LuLayers,
 } from "react-icons/lu";
 import { HiOutlineHome, HiOutlineSquares2X2 } from "react-icons/hi2";
 import Logo from "../../../assets/logo/Logo.jsx";
@@ -38,8 +40,18 @@ function Sidebar({ isOpen, onClose }) {
       path: "/dashboard/libraries",
       hideForGuest: true,
     },
-        { icon: "ti-comments", label: "AI Chat", path: "/dashboard/ai-chat", hideForGuest: true },
-    { icon: "ti-layers", label: "Generate Flashcards", path: "/dashboard/flashcards", hideForGuest: true },
+    {
+      icon: LuMessageCircle,
+      label: "AI Chat",
+      path: "/dashboard/ai-chat",
+      hideForGuest: true,
+    },
+    {
+      icon: LuLayers,
+      label: "Generate Flashcards",
+      path: "/dashboard/flashcards",
+      hideForGuest: true,
+    },
     {
       icon: HiOutlineSquares2X2,
       label: "My workspaces",
