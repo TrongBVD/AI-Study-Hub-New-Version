@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import "./HomePage.css";
 import "../../../assets/icons/themify-icons-font/themify-icons/themify-icons.css";
 import { Link } from "react-router-dom";
+import { HiOutlineSquaresPlus } from "react-icons/hi2";
+import { LuBookPlus, LuLibraryBig } from "react-icons/lu";
 import studyHubLogo from "../../../assets/images/StudyHubLogo.svg";
 import { getMyLibraries } from "../../../utils/documentApi.js";
 import { getWorkspaces } from "../../../utils/workspaceApi.js";
@@ -206,7 +208,7 @@ function HomePage() {
               title: "Public libraries",
               value: libraries.length,
               detail: "Open collections",
-              icon: "ti-folder",
+              icon: LuLibraryBig,
             },
             {
               title: "Public documents",
@@ -226,7 +228,7 @@ function HomePage() {
               title: "Libraries",
               value: libraries.length,
               detail: "Saved collections",
-              icon: "ti-folder",
+              icon: LuLibraryBig,
             },
             {
               title: "Workspaces",
@@ -248,14 +250,14 @@ function HomePage() {
     {
       title: "Create workspace",
       description: "Open a private room for topics, files and team discussion.",
-      icon: "ti-briefcase",
+      icon: HiOutlineSquaresPlus,
       to: "/dashboard/create-workspace",
       primary: true,
     },
     {
       title: "Create library",
       description: "Build a clean collection for documents and study materials.",
-      icon: "ti-folder",
+      icon: LuBookPlus,
       to: "/dashboard/create-library",
     },
   ];
@@ -343,7 +345,7 @@ function HomePage() {
         state={{ from: "/dashboard/home" }}
         className="home_btn home_btn_primary"
       >
-        <i className="ti-briefcase"></i>
+        <HiOutlineSquaresPlus className="home_create_workspace_icon" aria-hidden="true" />
         Create workspace
       </Link>
 
@@ -352,7 +354,7 @@ function HomePage() {
         state={{ from: "/dashboard/home" }}
         className="home_btn home_btn_secondary"
       >
-        <i className="ti-folder"></i>
+        <LuBookPlus aria-hidden="true" />
         Create library
       </Link>
 
@@ -376,6 +378,9 @@ function HomePage() {
             </div>
 
             <div className="focus_card focus_card_dark">
+              <div className="focus_card_icon" aria-hidden="true">
+                <LuLibraryBig />
+              </div>
               <span>{isGuest ? "Newest public library" : "Latest library"}</span>
               <h2>
                 {latestLibrary?.name ||
@@ -434,18 +439,26 @@ function HomePage() {
         </section>
 
         <section className="home_stats_strip" aria-label="Account summary">
-          {stats.map((stat) => (
-            <article className="home_stat_item" key={stat.title}>
-              <div className="home_stat_icon">
-                <i className={stat.icon}></i>
-              </div>
-              <div>
-                <strong>{stat.value}</strong>
-                <span>{stat.title}</span>
-                <p>{stat.detail}</p>
-              </div>
-            </article>
-          ))}
+          {stats.map((stat) => {
+            const StatIcon = stat.icon;
+
+            return (
+              <article className="home_stat_item" key={stat.title}>
+                <div className="home_stat_icon">
+                  {typeof StatIcon === "string" ? (
+                    <i className={StatIcon}></i>
+                  ) : (
+                    <StatIcon aria-hidden="true" />
+                  )}
+                </div>
+                <div>
+                  <strong>{stat.value}</strong>
+                  <span>{stat.title}</span>
+                  <p>{stat.detail}</p>
+                </div>
+              </article>
+            );
+          })}
         </section>
 
         {isGuest ? (
@@ -467,7 +480,7 @@ function HomePage() {
                 {recentLibraries.length === 0 ? (
                   <div className="home_empty_state home_empty_large">
                     <div className="home_empty_icon">
-                      <i className="ti-folder"></i>
+                      <LuLibraryBig aria-hidden="true" />
                     </div>
                     <h3>No public libraries yet</h3>
                     <p>Public study libraries will appear here when users share collections.</p>
@@ -480,7 +493,7 @@ function HomePage() {
                       <article className="recent_library_card" key={libraryId || index}>
                         <div className="library_card_header">
                           <div className="library_icon_cluster">
-                            <i className={library.icon || "ti-archive"}></i>
+                            <LuLibraryBig aria-hidden="true" />
                           </div>
                           <span>{index === 0 ? "Newest" : "Public"}</span>
                         </div>

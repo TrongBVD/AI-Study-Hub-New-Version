@@ -77,45 +77,28 @@ const TESTIMONIALS = [
   },
 ];
 
-const PLANS = [
+const STUDY_FLOW = [
   {
-    name: "Free",
-    price: "0",
-    description: "For casual learners",
-    features: [
-      "Up to 5 documents",
-      "Basic AI chat",
-      "1 subject folder",
-      "Community support",
-    ],
-    callToAction: "Start free",
+    number: "01",
+    title: "Create a library",
+    description:
+      "Collect PDFs, DOCX files, notes, and references in one organized study space.",
+    details: ["Folders and tags", "Document previews", "Clean storage board"],
   },
   {
-    name: "Pro",
-    price: "9.99",
-    description: "For serious students",
-    features: [
-      "Unlimited documents",
-      "Advanced AI models",
-      "Unlimited folders",
-      "Quiz generator",
-      "Priority support",
-    ],
-    callToAction: "Go Pro",
+    number: "02",
+    title: "Build a workspace",
+    description:
+      "Invite classmates, manage shared files, and keep project discussions connected.",
+    details: ["Member roles", "Shared materials", "Topic discussions"],
     highlighted: true,
   },
   {
-    name: "Team",
-    price: "24.99",
-    description: "For study groups",
-    features: [
-      "Everything in Pro",
-      "Up to 5 members",
-      "Shared libraries",
-      "Admin dashboard",
-      "API access",
-    ],
-    callToAction: "Contact us",
+    number: "03",
+    title: "Ask StudyHub AI",
+    description:
+      "Turn uploaded documents into summaries, explanations, and answers you can study from.",
+    details: ["Document Q&A", "Study summaries", "Focused review"],
   },
 ];
 
@@ -354,43 +337,35 @@ function TestimonialsSection() {
   );
 }
 
-function PricingSection() {
+function StudyFlowSection() {
   return (
-    <section className="landing_section landing_pricing" id="pricing">
+    <section className="landing_section landing_study_flow" id="workflow">
       <div className="landing_container">
         <SectionHeading
-          eyebrow="Pricing"
-          title="Simple, honest pricing"
-          description="Start free. Upgrade when you're ready."
+          eyebrow="Study workflow"
+          title="From scattered files to a focused study hub"
+          description="AI Student Hub helps you move from upload to organization to AI-powered review without leaving the dashboard."
           light
         />
-        <div className="landing_pricing_grid">
-          {PLANS.map((plan) => (
+        <div className="landing_flow_grid">
+          {STUDY_FLOW.map((step) => (
             <article
-              className={`landing_price_card ${
-                plan.highlighted ? "is-highlighted" : ""
+              className={`landing_flow_card ${
+                step.highlighted ? "is-highlighted" : ""
               }`}
-              key={plan.name}
+              key={step.title}
             >
-              {plan.highlighted && (
-                <span className="landing_popular_badge">Most popular</span>
-              )}
-              <h3>{plan.name}</h3>
-              <p>{plan.description}</p>
-              <div className="landing_price">
-                <sup>$</sup>
-                <strong>{plan.price}</strong>
-                <span>/month</span>
-              </div>
+              <strong>{step.number}</strong>
+              <h3>{step.title}</h3>
+              <p>{step.description}</p>
               <ul>
-                {plan.features.map((feature) => (
-                  <li key={feature}>
+                {step.details.map((detail) => (
+                  <li key={detail}>
                     <i>✓</i>
-                    {feature}
+                    {detail}
                   </li>
                 ))}
               </ul>
-              <a href="/register">{plan.callToAction}</a>
             </article>
           ))}
         </div>
@@ -449,7 +424,7 @@ function Footer() {
           </div>
           <FooterColumn
             title="Product"
-            links={["Features", "Pricing", "Changelog", "Docs"]}
+            links={["Features", "Workflow", "Changelog", "Docs"]}
           />
           <FooterColumn
             title="Company"
@@ -483,7 +458,7 @@ function LandingPage() {
       <ShowcaseSection />
       <StatsSection />
       <TestimonialsSection />
-      <PricingSection />
+      <StudyFlowSection />
       <CTASection />
       <Footer />
     </div>

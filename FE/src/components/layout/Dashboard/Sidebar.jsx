@@ -1,10 +1,15 @@
 import { NavLink, useNavigate } from "react-router-dom";
+import {
+  LuLibraryBig,
+  LuLayoutDashboard,
+  LuLogOut,
+  LuSearch,
+  LuSettings,
+} from "react-icons/lu";
+import { HiOutlineHome, HiOutlineSquares2X2 } from "react-icons/hi2";
 import Logo from "../../../assets/logo/Logo.jsx";
 import api from "../../../utils/api.js";
-import {
-  clearStoredSession,
-  getStoredUser,
-} from "../../../utils/authToken.js";
+import { clearStoredSession, getStoredUser } from "../../../utils/authToken.js";
 import "../../../assets/icons/themify-icons-font/themify-icons/themify-icons.css";
 
 function getStoredUserRole() {
@@ -24,20 +29,27 @@ function Sidebar({ isOpen, onClose }) {
 
   // Thêm thuộc tính hideForGuest để ẩn menu với Guest
   const menuItems = [
-    { icon: "ti-home", label: "Home", path: "/dashboard/home" },
-    { icon: "ti-search", label: "Discover", path: "/dashboard/discover" },
-    { icon: "ti-comments", label: "AI Chat", path: "/dashboard/ai-chat", hideForGuest: true },
-    { icon: "ti-layers", label: "Generate Flashcards", path: "/dashboard/flashcards", hideForGuest: true },
-    { icon: "ti-folder", label: "My libraries", path: "/dashboard/libraries", hideForGuest: true },
-    { icon: "ti-layout-grid2", label: "My workspaces", path: "/dashboard/workspaces", hideForGuest: true },
-    { icon: "ti-settings", label: "Settings", path: "/dashboard/settings" },
+
+    { icon: HiOutlineHome, label: "Home", path: "/dashboard/home" },
+    { icon: LuSearch, label: "Discover", path: "/dashboard/discover" },
+    {
+      icon: LuLibraryBig,
+      label: "My libraries",
+      path: "/dashboard/libraries",
+      hideForGuest: true,
+    },
+    {
+      icon: HiOutlineSquares2X2,
+      label: "My workspaces",
+      path: "/dashboard/workspaces",
+      hideForGuest: true,
+    },
+    { icon: LuSettings, label: "Settings", path: "/dashboard/settings" },
   ];
 
   // Guest chỉ được xem Discover và Settings.
   const visibleMenuItems = isGuest
-    ? menuItems.filter((item) =>
-        ["Discover", "Settings"].includes(item.label),
-      )
+    ? menuItems.filter((item) => ["Discover", "Settings"].includes(item.label))
     : menuItems;
 
   async function handleLogout() {
@@ -76,19 +88,23 @@ function Sidebar({ isOpen, onClose }) {
           </div>
 
           <nav className="sidebar_nav">
-            {visibleMenuItems.map((item) => (
-              <NavLink
-                to={item.path}
-                className={({ isActive }) =>
-                  `sidebar_link ${isActive ? "active" : ""}`
-                }
-                key={item.label}
-                onClick={onClose}
-              >
-                <i className={item.icon}></i>
-                <span>{item.label}</span>
-              </NavLink>
-            ))}
+            {visibleMenuItems.map((item) => {
+              const Icon = item.icon;
+
+              return (
+                <NavLink
+                  to={item.path}
+                  className={({ isActive }) =>
+                    `sidebar_link ${isActive ? "active" : ""}`
+                  }
+                  key={item.label}
+                  onClick={onClose}
+                >
+                  <Icon aria-hidden="true" />
+                  <span>{item.label}</span>
+                </NavLink>
+              );
+            })}
           </nav>
         </div>
 
@@ -99,14 +115,14 @@ function Sidebar({ isOpen, onClose }) {
               className="admin_dashboard_btn"
               onClick={onClose}
             >
-              <i className="ti-dashboard"></i>
+              <LuLayoutDashboard aria-hidden="true" />
               <span>Admin dashboard</span>
             </NavLink>
           )}
 
           <button type="button" className="logout_btn" onClick={handleLogout}>
-            <i className="ti-power-off"></i>
-            <span>Log out</span>
+            <LuLogOut aria-hidden="true" />
+            <span>Sign Out</span>
           </button>
         </div>
       </aside>

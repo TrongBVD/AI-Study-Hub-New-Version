@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { LuBookPlus, LuFileText } from "react-icons/lu";
 import "./CreateLibraryPage.css";
 import api from "../../../utils/api.js";
 import { getMyLibraries } from "../../../utils/documentApi.js";
@@ -204,7 +205,7 @@ function CreateLibraryPage() {
           <aside className="create_library_preview" aria-label="Library preview">
             <div className="preview_topline">
               <div className="preview_icon">
-                <i className="ti-archive" />
+                <LuFileText aria-hidden="true" />
               </div>
               <span className={`preview_badge ${visibility === "private" ? "private" : ""}`}>
                 {visibility}
@@ -371,7 +372,7 @@ function CreateLibraryPage() {
               Import library
             </button>
             <button type="submit" className="create_library_btn" disabled={!canCreate}>
-              <i className="ti-plus" />
+              <LuBookPlus aria-hidden="true" />
               Create library
             </button>
           </div>

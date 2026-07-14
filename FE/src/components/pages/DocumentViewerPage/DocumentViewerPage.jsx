@@ -19,6 +19,14 @@ const QUICK_PROMPTS = [
   },
 ];
 
+function formatDisplayFileName(fileName) {
+  return String(fileName || "Untitled document")
+    .replace(/\.(pdf|docx|txt)$/i, "")
+    .replace(/[-_.]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 function DocumentViewerPage() {
   const { documentId } = useParams();
   const navigate = useNavigate();
@@ -63,7 +71,7 @@ function DocumentViewerPage() {
     return (
       <main className="document_viewer_state">
         <div>
-          <i className="ti-reload" />
+          <i className="ti-reload document_viewer_spinner" />
           <h1>Opening document</h1>
           <p>Please wait while we prepare a secure viewing link.</p>
         </div>
@@ -95,7 +103,7 @@ function DocumentViewerPage() {
       JSON.stringify({
         id: `${documentData.documentId}-${Date.now()}`,
         documentId: documentData.documentId,
-        documentTitle: documentData.fileName,
+        documentTitle: formatDisplayFileName(documentData.fileName),
         question: trimmedQuestion,
         createdAt: new Date().toISOString(),
       }),
@@ -120,6 +128,7 @@ function DocumentViewerPage() {
       <FileViewer
         documentUrl={documentData.viewUrl}
         documentName={documentData.fileName}
+        displayName={formatDisplayFileName(documentData.fileName)}
         documentId={documentData.documentId}
       />
 

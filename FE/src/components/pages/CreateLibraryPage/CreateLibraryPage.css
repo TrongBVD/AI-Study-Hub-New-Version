@@ -166,6 +166,12 @@
   font-size: 17px;
 }
 
+.preview_icon svg {
+  width: 22px;
+  height: 22px;
+  stroke-width: 2.2;
+}
+
 .preview_badge {
   border: 1px solid var(--accent-soft);
   border-radius: 999px;
@@ -481,6 +487,13 @@
   gap: 9px;
   transition: transform 200ms ease, background 200ms ease, color 200ms ease,
     border-color 200ms ease, opacity 200ms ease;
+}
+
+.create_library_btn svg {
+  width: 17px;
+  height: 17px;
+  stroke-width: 2.2;
+  flex-shrink: 0;
 }
 
 .return_library_btn {

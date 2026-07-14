@@ -1,5 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
+import { LuLibraryBig } from "react-icons/lu";
+import {
+  TbFileText,
+  TbFileTypeDoc,
+  TbFileTypeDocx,
+  TbFileTypePdf,
+  TbFileTypeTxt,
+} from "react-icons/tb";
 import JSZip from "jszip";
 
 import {
@@ -374,16 +382,29 @@ function LibraryPage() {
     });
   }
 
-  function getFileIcon(fileName) {
+  function getFileIconComponent(fileName) {
     const name = String(fileName || "").toLowerCase();
 
-    if (name.endsWith(".pdf")) return "ti-file";
-    if (name.endsWith(".doc") || name.endsWith(".docx")) return "ti-write";
-    if (name.endsWith(".xls") || name.endsWith(".xlsx")) {
-      return "ti-layout-grid3";
-    }
+    if (name.endsWith(".pdf")) return TbFileTypePdf;
+    if (name.endsWith(".docx")) return TbFileTypeDocx;
+    if (name.endsWith(".doc")) return TbFileTypeDoc;
+    if (name.endsWith(".txt")) return TbFileTypeTxt;
 
-    return "ti-file";
+    return TbFileText;
+  }
+
+  function renderFileIcon(fileName) {
+    const FileIcon = getFileIconComponent(fileName);
+
+    return <FileIcon aria-hidden="true" />;
+  }
+
+  function formatDisplayFileName(fileName) {
+    return String(fileName || "Untitled document")
+      .replace(/\.(pdf|docx|txt)$/i, "")
+      .replace(/[-_.]+/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
   }
 
   function formatFileSize(size) {
@@ -419,7 +440,7 @@ function LibraryPage() {
         ? new Date(document.created_at).toLocaleString()
         : "Recently",
       uploadedBy: authorName,
-      icon: getFileIcon(document.title || ""),
+      icon: null,
       folderId: null,
       hashtags: apiTags,
       isBackendFile: true,
@@ -834,7 +855,7 @@ function LibraryPage() {
   }
 
   async function handleDeleteDocument(fileItem) {
-    if (!window.confirm(`Delete "${fileItem.name}"?`)) return;
+    if (!window.confirm(`Delete "${formatDisplayFileName(fileItem.name)}"?`)) return;
 
     try {
       if (fileItem.id && fileItem.isBackendFile) {
@@ -892,7 +913,7 @@ function LibraryPage() {
     navigate(`/dashboard/documents/${fileItem.id}`, {
       state: {
         from: `/dashboard/libraries/${libraryId}`,
-        fileName: fileItem.name,
+        fileName: formatDisplayFileName(fileItem.name),
       },
     });
   }
@@ -1244,7 +1265,7 @@ function LibraryPage() {
                     className={!currentFolder ? "active" : ""}
                     onClick={handleBackToLibrary}
                   >
-                    <i className="ti-archive"></i>
+                    <LuLibraryBig aria-hidden="true" />
                     {libraryName || libraryData.name || "Library"}
                   </button>
 
@@ -1343,7 +1364,7 @@ function LibraryPage() {
 
                     <div className="documents_table_header">
                       <span>Item</span>
-                      <span>Size / Type</span>
+                      <span>Size</span>
                       <span>Uploaded / Details</span>
                       <span>Actions</span>
                     </div>
@@ -1418,12 +1439,12 @@ function LibraryPage() {
                           key={document.id || `${document.name}-${document.uploadedTime || ""}`}
                         >
                           <div className="document_file_name">
-                            <div className="document_icon_shell">
-                              <i className={getFileIcon(document.name)}></i>
+                            <div className="document_icon_shell document_file_type_icon">
+                              {renderFileIcon(document.name)}
                             </div>
 
                             <div className="document_name_with_tags">
-                              <span>{document.name}</span>
+                              <span>{formatDisplayFileName(document.name)}</span>
 
                               {document.hashtags?.length > 0 && (
                                 <div className="document_tags">
