@@ -228,6 +228,21 @@ exports.uploadDocuments = async (req, res) => {
       console.error("Lỗi parse tags:", e);
     }
 
+    const normalizedTagValues = userTags.map((tag) => tag.toLocaleLowerCase());
+    const hasDuplicateTags =
+      new Set(normalizedTagValues).size !== normalizedTagValues.length;
+    const hasTagStartingWithNumber = userTags.some((tag) => /^\d/.test(tag));
+
+    if (hasDuplicateTags || hasTagStartingWithNumber) {
+      return res.status(400).json({
+        status: "error",
+        code: "TAG_INPUT_INVALID",
+        message: hasDuplicateTags
+          ? "Tags must be unique."
+          : "A tag cannot start with a number.",
+      });
+    }
+
     console.log("[uploadDocuments] userTags received:", userTags);
 
     if (files.length === 0) {

@@ -65,6 +65,38 @@ async function increaseChatUsage(userId) {
   if (insertError) throw insertError;
 }
 
+exports.getAiSummary = async (req, res) => {
+  try {
+    const chatLimit = 50;
+    const today = new Date().toISOString().slice(0, 10);
+    const { data: usage, error } = await supabase
+      .from("ai_usage_logs")
+      .select("chat_count, tokens_consumed")
+      .eq("user_id", req.user.id)
+      .eq("usage_date", today)
+      .maybeSingle();
+
+    if (error) throw error;
+
+    const chatsUsed = Math.max(0, Number(usage?.chat_count || 0));
+    return res.status(200).json({
+      status: "success",
+      data: {
+        chatLimit,
+        chatsUsed,
+        chatsRemaining: Math.max(0, chatLimit - chatsUsed),
+        tokensConsumed: Math.max(0, Number(usage?.tokens_consumed || 0)),
+      },
+    });
+  } catch (error) {
+    console.error("getAiSummary error:", error);
+    return res.status(500).json({
+      status: "error",
+      message: "Could not load AI usage summary.",
+    });
+  }
+};
+
 exports.chatWithDocument = async (req, res) => {
   try {
     const userId = req.user.id;

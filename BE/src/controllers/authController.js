@@ -582,6 +582,144 @@ exports.resetPassword = async (req, res) => {
     }
 };
 
+exports.changePassword = async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body || {};
+
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({
+        status: "error",
+        message: "Current password and new password are required.",
+      });
+    }
+
+    const passwordRegex = /^(?=.*[a-z])(?=.*\d)(?=.*[^A-Za-z0-9])\S{8,}$/;
+    if (!passwordRegex.test(newPassword)) {
+      return res.status(400).json({
+        status: "error",
+        message: "New password must contain at least 8 characters, one lowercase letter, one number, and one special character.",
+      });
+    }
+
+    const { data: user, error } = await supabase
+      .from("profiles")
+      .select("id, password_hash")
+      .eq("id", req.user.id)
+      .maybeSingle();
+
+    if (error) throw error;
+    if (!user || user.password_hash === "GOOGLE_SSO_NO_PASSWORD") {
+      return res.status(400).json({
+        status: "error",
+        message: "This account does not have a password to change.",
+      });
+    }
+
+    const currentPasswordMatches = await bcrypt.compare(
+      currentPassword,
+      user.password_hash,
+    );
+    if (!currentPasswordMatches) {
+      return res.status(400).json({
+        status: "error",
+        code: "WRONG_PASSWORD",
+        message: "Current password is incorrect.",
+      });
+    }
+
+    const reusesCurrentPassword = await bcrypt.compare(
+      newPassword,
+      user.password_hash,
+    );
+    if (reusesCurrentPassword) {
+      return res.status(400).json({
+        status: "error",
+        message: "New password must be different from the current password.",
+      });
+    }
+
+    const passwordHash = await bcrypt.hash(newPassword, 10);
+    const { error: updateError } = await supabase
+      .from("profiles")
+      .update({ password_hash: passwordHash, updated_at: new Date().toISOString() })
+      .eq("id", req.user.id);
+
+    if (updateError) throw updateError;
+
+    return res.status(200).json({
+      status: "success",
+      message: "Password changed successfully.",
+    });
+  } catch (error) {
+    console.error("Change password error:", error);
+    return res.status(500).json({
+      status: "error",
+      message: "Unable to change password. Please try again.",
+    });
+  }
+};
+
+exports.deleteAccount = async (req, res) => {
+  try {
+    const { password, confirmation } = req.body || {};
+
+    if (confirmation !== "DELETE") {
+      return res.status(400).json({
+        status: "error",
+        message: 'Type "DELETE" to confirm account deletion.',
+      });
+    }
+
+    const { data: user, error } = await supabase
+      .from("profiles")
+      .select("id, password_hash")
+      .eq("id", req.user.id)
+      .maybeSingle();
+
+    if (error) throw error;
+    if (!user) {
+      return res.status(404).json({ status: "error", message: "Account not found." });
+    }
+
+    if (user.password_hash !== "GOOGLE_SSO_NO_PASSWORD") {
+      if (!password) {
+        return res.status(400).json({
+          status: "error",
+          message: "Current password is required.",
+        });
+      }
+
+      const passwordMatches = await bcrypt.compare(password, user.password_hash);
+      if (!passwordMatches) {
+        return res.status(400).json({
+          status: "error",
+          code: "WRONG_PASSWORD",
+          message: "Current password is incorrect.",
+        });
+      }
+    }
+
+    const { error: deleteError } = await supabase
+      .from("profiles")
+      .delete()
+      .eq("id", req.user.id);
+
+    if (deleteError) throw deleteError;
+
+    clearRefreshCookie(res);
+    return res.status(200).json({
+      status: "success",
+      message: "Account deleted successfully.",
+    });
+  } catch (error) {
+    console.error("Delete account error:", error);
+    return res.status(500).json({
+      status: "error",
+      message: "Unable to delete the account. Related data may need to be removed first.",
+    });
+  }
+};
+
 exports.searchUsers = async (req, res) => {
   try {
     const { q } = req.query;
