@@ -128,32 +128,19 @@ const NOTIFICATION_CATEGORIES = [
     key: "discussion",
     icon: "ti-comments",
     title: "Discussion",
-    description: "Topics, replies, and solved discussions.",
+    description: "New, resolved, and deleted discussion topics.",
     options: [
       ["newTopic", "New topic"],
-      ["newReply", "New reply"],
+      ["topicDeleted", "Topic deleted"],
       ["solved", "Topic solved"],
-    ],
-  },
-  {
-    key: "task",
-    icon: "ti-check-box",
-    title: "Task",
-    description: "Assignments, completions, and deadlines.",
-    options: [
-      ["assigned", "Assigned to me"],
-      ["completed", "Task completed"],
-      ["deadlineReminder", "Deadline reminder"],
     ],
   },
   {
     key: "file",
     icon: "ti-folder",
     title: "File",
-    description: "Uploads, deletions, and storage alerts.",
+    description: "Storage capacity alerts for your libraries.",
     options: [
-      ["uploaded", "File uploaded"],
-      ["deleted", "File deleted"],
       ["storageWarning", "Storage warning"],
     ],
   },
@@ -167,7 +154,35 @@ const NOTIFICATION_CATEGORIES = [
       ["roleChanged", "Role changed"],
     ],
   },
+  {
+    key: "chat",
+    icon: "ti-comment-alt",
+    title: "Chat",
+    description: "Choose when workspace conversations notify you.",
+    selection: "single",
+    options: [
+      ["all", "All conversations"],
+      ["mentions", "Only when mentioned"],
+    ],
+  },
+  {
+    key: "workspace",
+    icon: "ti-layout-grid2",
+    title: "Workspace",
+    description: "Changes to workspace identity and availability.",
+    options: [
+      ["nameChanged", "Workspace name changed"],
+      ["deleted", "Workspace deleted"],
+    ],
+  },
 ];
+
+const LIBRARY_NOTIFICATION_CATEGORIES = NOTIFICATION_CATEGORIES.filter(
+  (category) => category.key === "file",
+);
+const WORKSPACE_NOTIFICATION_CATEGORIES = NOTIFICATION_CATEGORIES.filter(
+  (category) => category.key !== "file",
+);
 
 const PROFILE_NAME_KEY = "aiStudyHubProfileName";
 const PROFILE_NAME_CHANGED_AT_KEY = "aiStudyHubProfileNameChangedAt";
@@ -718,36 +733,15 @@ function NotificationSettings({
             />
           </SettingRow>
 
-          <SettingRow
-            title="Play notification sound"
-            description="Play a short sound when new activity arrives."
-          >
-            <SettingsSwitch
-              checked={notificationSettings.sound}
-              onClick={() => toggleNotificationSetting("sound")}
-              label="Toggle notification sound"
-            />
-          </SettingRow>
-
-          <SettingRow
-            title="Browser notifications"
-            description="Allow desktop notifications when the browser supports them."
-          >
-            <SettingsSwitch
-              checked={notificationSettings.browserNotification}
-              onClick={() => toggleNotificationSetting("browserNotification")}
-              label="Toggle browser notifications"
-            />
-          </SettingRow>
         </div>
       </SettingsPanel>
 
       <SettingsPanel
-        title="Activity categories"
-        description="Fine-tune which events are added to your notification feed."
+        title="Library notifications"
+        description="Choose which library and document events are added to your notification feed."
       >
-        <div className="notification_category_grid">
-          {NOTIFICATION_CATEGORIES.map((category) => (
+        <div className="notification_category_grid is_library">
+          {LIBRARY_NOTIFICATION_CATEGORIES.map((category) => (
             <article className="notification_category_card" key={category.key}>
               <header className="notification_category_header">
                 <i className={category.icon} aria-hidden="true"></i>
@@ -767,6 +761,60 @@ function NotificationSettings({
                       onChange={() =>
                         toggleNotificationCategory(category.key, key)
                       }
+                    />
+                  </label>
+                ))}
+              </div>
+            </article>
+          ))}
+        </div>
+      </SettingsPanel>
+
+      <SettingsPanel
+        title="Workspace notifications"
+        description="Choose which workspace collaboration events are added to your notification feed."
+      >
+        <div className="notification_category_grid">
+          {WORKSPACE_NOTIFICATION_CATEGORIES.map((category) => (
+            <article className="notification_category_card" key={category.key}>
+              <header className="notification_category_header">
+                <i className={category.icon} aria-hidden="true"></i>
+                <div>
+                  <h3>{category.title}</h3>
+                  <p>{category.description}</p>
+                </div>
+              </header>
+
+              <div className="notification_category_options">
+                {category.options.map(([key, label]) => (
+                  <label key={key}>
+                    <span>{label}</span>
+                    <input
+                      type={category.selection === "single" ? "radio" : "checkbox"}
+                      name={
+                        category.selection === "single"
+                          ? `notification-${category.key}`
+                          : undefined
+                      }
+                      checked={
+                        category.selection === "single"
+                          ? notificationSettings[category.key].mode === key
+                          : notificationSettings[category.key][key]
+                      }
+                      onChange={() => {
+                        if (category.selection === "single") {
+                          setNotificationSettings((previousSettings) => ({
+                            ...previousSettings,
+                            [category.key]: {
+                              ...previousSettings[category.key],
+                              mode: key,
+                            },
+                          }));
+                          return;
+                        }
+
+                        toggleNotificationCategory(category.key, key);
+                      }}
                     />
                   </label>
                 ))}
