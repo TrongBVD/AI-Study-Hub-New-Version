@@ -1181,7 +1181,7 @@ exports.createDiscussionTopic = async (req, res) => {
       title,
       content: String(req.body.content || "").trim() || null,
       topic_type: req.body.topicType || "Question",
-      status: req.body.status || "Open",
+      status: req.body.status || "In progress",
       priority: req.body.priority || "Normal",
       date_mode: req.body.dateMode || "none",
       start_date: req.body.startDate || null,
@@ -1596,11 +1596,17 @@ exports.addDiscussionAttachment = async (req, res) => {
   try {
     const { workspaceId, topicId } = req.params;
     const access = await getWorkspaceDiscussionAccess(workspaceId, req.user.id);
+    const isChatUpload = req.body.source === "chat";
+    const canAddAttachment = isChatUpload
+      ? access.canReadDiscussion
+      : access.canWriteDiscussion;
 
-    if (!access.workspace || !access.canWriteDiscussion) {
+    if (!access.workspace || !canAddAttachment) {
       return res.status(403).json({
         status: "error",
-        message: "Only workspace editors and admins can add discussion attachments.",
+        message: isChatUpload
+          ? "You cannot upload files to this topic chat."
+          : "Only workspace editors and admins can add discussion attachments.",
       });
     }
 
