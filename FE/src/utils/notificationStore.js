@@ -9,7 +9,7 @@ export const defaultNotificationSettings = {
 
   discussion: {
     newTopic: true,
-    newReply: true,
+    topicDeleted: true,
     solved: true,
   },
 
@@ -20,14 +20,21 @@ export const defaultNotificationSettings = {
   },
 
   file: {
-    uploaded: true,
-    deleted: true,
     storageWarning: true,
   },
 
   member: {
     joined: true,
     roleChanged: true,
+  },
+
+  chat: {
+    mode: "all",
+  },
+
+  workspace: {
+    nameChanged: true,
+    deleted: true,
   },
 
   deadlineReminder: "1_day_before",
@@ -67,6 +74,16 @@ export function getNotificationSettings() {
       member: {
         ...defaultNotificationSettings.member,
         ...(savedSettings.member || {}),
+      },
+
+      chat: {
+        ...defaultNotificationSettings.chat,
+        ...(savedSettings.chat || {}),
+      },
+
+      workspace: {
+        ...defaultNotificationSettings.workspace,
+        ...(savedSettings.workspace || {}),
       },
 
       doNotDisturb: {

@@ -269,12 +269,6 @@ function HomePage() {
   const latestChatLibrary = libraries.find(
     (library) => String(getItemId(library)) === String(latestChatDocument?.libraryId),
   );
-  const latestStudyWorkspace = workspaces.find(
-    (workspace) => String(getItemId(workspace)) === String(latestStudyCard?.workspaceId),
-  );
-  const latestStudyLibrary = libraries.find(
-    (library) => String(getItemId(library)) === String(latestStudyCard?.libraryId),
-  );
   const studyTotalCards = Number(latestStudyCard?.totalCards || 0);
   const studyDoneCards = Number(latestStudyCard?.studiedCards || 0);
   const studyProgress = studyTotalCards
@@ -611,11 +605,6 @@ function HomePage() {
                 <h2>Latest progress</h2>
               </div>
 
-              {!isGuest && (
-                <Link to="/dashboard/workspaces" className="home_text_link compact_link">
-                  Workspaces
-                </Link>
-              )}
             </div>
 
             {latestStudyCard ? (
@@ -635,17 +624,6 @@ function HomePage() {
                 <div className="study_progress_meter" aria-hidden="true">
                   <span style={{ width: `${studyProgress}%` }} />
                 </div>
-
-                <dl className="study_progress_meta">
-                  <div>
-                    <dt>Workspace</dt>
-                    <dd>{latestStudyWorkspace?.name || "No workspace"}</dd>
-                  </div>
-                  <div>
-                    <dt>Library</dt>
-                    <dd>{latestStudyLibrary?.name || "No library"}</dd>
-                  </div>
-                </dl>
 
                 <Link to="/dashboard/flashcards" className="home_open_btn">
                   Continue
