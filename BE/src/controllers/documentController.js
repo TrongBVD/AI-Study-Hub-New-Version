@@ -581,8 +581,21 @@ exports.deleteDocument = async (req, res) => {
     }
 
     const isOwner = String(document.uploader_id) === String(userID);
+    let isWorkspaceAdmin = false;
 
-    if (!isOwner) {
+    if (!isOwner && document.workspace_id) {
+      const { data: membership, error: membershipError } = await supabase
+        .from("workspace_members")
+        .select("role")
+        .eq("workspace_id", document.workspace_id)
+        .eq("user_id", userID)
+        .maybeSingle();
+
+      if (membershipError) throw membershipError;
+      isWorkspaceAdmin = String(membership?.role || "").toLowerCase() === "admin";
+    }
+
+    if (!isOwner && !isWorkspaceAdmin) {
       return res.status(403).json({
         status: "error",
         message: "Bạn không có quyền xóa tài liệu này.",
