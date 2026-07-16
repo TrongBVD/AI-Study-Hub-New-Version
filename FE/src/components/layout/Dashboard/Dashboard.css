@@ -586,6 +586,28 @@ body {
   color: var(--study-theme-text, var(--sidebar-bg));
 }
 
+body[data-theme="white"] .admin_dashboard_btn {
+  border-color: var(--border-color);
+  background: var(--bg-card);
+  color: var(--text-secondary);
+}
+
+body[data-theme="white"] .admin_dashboard_btn:hover {
+  border-color: var(--accent-color);
+  background: var(--accent-soft);
+  color: var(--accent-color);
+}
+
+body[data-theme="white"] .logout_btn {
+  background: var(--accent-color);
+  color: var(--button-text);
+}
+
+body[data-theme="white"] .logout_btn:hover {
+  background: var(--accent-hover);
+  color: var(--button-text);
+}
+
 .logout_btn i,
 .logout_btn svg,
 .admin_dashboard_btn i,
