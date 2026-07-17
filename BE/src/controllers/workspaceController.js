@@ -1,8 +1,9 @@
 const supabase = require("../config/supabase");
 const { createMailTransporter } = require("../utils/mailerService");
+const { createActivityLog } = require("../services/activityLogService");
 
 const MEMBER_ROLES = ["Editor", "Viewer"];
-const ALL_MEMBER_ROLES = ["Admin", "Editor", "Viewer"];
+const ASSIGNABLE_MEMBER_ROLES = ["Editor", "Viewer"];
 const MESSAGE_SELECT = `
   id,
   workspace_id,
@@ -129,6 +130,43 @@ const DISCUSSION_TOPIC_SELECT = `
 
 function getFrontendUrl() {
   return (process.env.FRONTEND_URL || "http://localhost:5173").replace(/\/+$/, "");
+}
+
+async function notifyWorkspaceMembers({
+  workspaceId,
+  actionType,
+  oldData,
+  newData,
+  details,
+  request,
+}) {
+  const { data: members, error } = await supabase
+    .from("workspace_members")
+    .select("user_id")
+    .eq("workspace_id", workspaceId);
+
+  if (error) throw error;
+
+  const results = await Promise.allSettled(
+    (members || []).map((member) =>
+      createActivityLog({
+        actorUserId: member.user_id,
+        actionType,
+        entityType: "workspace",
+        entityId: workspaceId,
+        oldData,
+        newData,
+        request,
+        details,
+      }),
+    ),
+  );
+
+  results.forEach((result) => {
+    if (result.status === "rejected") {
+      console.error("Workspace notification log failed:", result.reason);
+    }
+  });
 }
 
 function escapeHtml(value) {
@@ -425,7 +463,7 @@ exports.listMyWorkspaces = async (req, res) => {
         `
         role,
         joined_at,
-        workspace:workspaces!workspace_members_workspace_id_fkey (
+        workspace:workspaces!workspace_members_workspace_id_fkey!inner (
           id,
           name,
           description,
@@ -443,11 +481,13 @@ exports.listMyWorkspaces = async (req, res) => {
 
     return res.status(200).json({
       status: "success",
-      data: (data || []).map((row) => ({
-        ...row.workspace,
-        myRole: row.role,
-        joinedAt: row.joined_at,
-      })),
+      data: (data || [])
+        .filter((row) => row.workspace?.id)
+        .map((row) => ({
+          ...row.workspace,
+          myRole: row.role,
+          joinedAt: row.joined_at,
+        })),
     });
   } catch (error) {
     return res
@@ -812,10 +852,10 @@ exports.updateMemberRole = async (req, res) => {
     const { workspaceId, userId } = req.params;
     const { role } = req.body;
 
-    if (!ALL_MEMBER_ROLES.includes(role)) {
+    if (!ASSIGNABLE_MEMBER_ROLES.includes(role)) {
       return res.status(400).json({
         status: "error",
-        message: "Role must be Admin, Editor or Viewer.",
+        message: "Role must be Editor or Viewer.",
       });
     }
 
@@ -876,6 +916,23 @@ exports.updateMemberRole = async (req, res) => {
 
     if (error) throw error;
 
+    if (currentMember.role !== role) {
+      await createActivityLog({
+        actorUserId: userId,
+        actionType: "WORKSPACE_ROLE_CHANGED",
+        entityType: "workspace",
+        entityId: workspaceId,
+        oldData: { role: currentMember.role },
+        newData: {
+          role,
+          workspaceName: access.workspace.name,
+          changedBy: req.user.id,
+        },
+        request: req,
+        details: `Your role in ${access.workspace.name || "a workspace"} changed from ${currentMember.role} to ${role}.`,
+      });
+    }
+
     return res.status(200).json({
       status: "success",
       data,
@@ -886,6 +943,56 @@ exports.updateMemberRole = async (req, res) => {
       status: "error",
       message: "Could not update member role.",
       error: error.message,
+    });
+  }
+};
+
+exports.listMyWorkspaceNotifications = async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from("activity_logs")
+      .select("id, entity_id, old_data, new_data, details, created_at")
+      .eq("user_id", req.user.id)
+      .in("action_type", [
+        "WORKSPACE_ROLE_CHANGED",
+        "WORKSPACE_RENAMED",
+        "WORKSPACE_DELETED",
+      ])
+      .order("created_at", { ascending: false })
+      .limit(30);
+
+    if (error) throw error;
+
+    return res.status(200).json({
+      status: "success",
+      data: (data || []).map((item) => {
+        const actionType = item.new_data?.notificationType || "roleChanged";
+        const isDeleted = actionType === "deleted";
+        return {
+          id: `workspace-event-${item.id}`,
+          category: actionType === "roleChanged" ? "member" : "workspace",
+          action: actionType,
+          title:
+            actionType === "renamed"
+              ? "Workspace renamed"
+              : isDeleted
+                ? "Workspace deleted"
+                : "Workspace role changed",
+          message:
+            item.details ||
+            `Your workspace role changed from ${item.old_data?.role || "member"} to ${item.new_data?.role || "a new role"}.`,
+          icon: isDeleted ? "ti-trash" : actionType === "renamed" ? "ti-pencil" : "ti-user",
+          link: isDeleted ? "/dashboard/workspaces" : `/dashboard/workspaces/${item.entity_id}`,
+          createdAt: "Recently",
+          createdAtMs: new Date(item.created_at).getTime(),
+        };
+      }),
+    });
+  } catch (error) {
+    console.error("listMyWorkspaceNotifications error:", error);
+    return res.status(500).json({
+      status: "error",
+      message: "Could not load workspace notifications.",
     });
   }
 };
@@ -1762,6 +1869,21 @@ exports.updateWorkspace = async (req, res) => {
 
     if (error) throw error;
 
+    if (typeof updatePayload.name === "string" && updatePayload.name !== workspace.name) {
+      await notifyWorkspaceMembers({
+        workspaceId,
+        actionType: "WORKSPACE_RENAMED",
+        oldData: { name: workspace.name },
+        newData: {
+          name: updatePayload.name,
+          notificationType: "renamed",
+          changedBy: userId,
+        },
+        request: req,
+        details: `Workspace "${workspace.name}" was renamed to "${updatePayload.name}".`,
+      });
+    }
+
     return res.status(200).json({ status: "success", data });
   } catch (error) {
     console.error("Lỗi updateWorkspace:", error);
@@ -1788,6 +1910,19 @@ exports.deleteWorkspace = async (req, res) => {
       .eq("id", workspaceId);
 
     if (error) throw error;
+
+    await notifyWorkspaceMembers({
+      workspaceId,
+      actionType: "WORKSPACE_DELETED",
+      oldData: { name: workspace.name },
+      newData: {
+        name: workspace.name,
+        notificationType: "deleted",
+        changedBy: userId,
+      },
+      request: req,
+      details: `Workspace "${workspace.name}" was deleted.`,
+    });
 
     return res.status(200).json({ status: "success", message: "Xóa workspace thành công." });
   } catch (error) {

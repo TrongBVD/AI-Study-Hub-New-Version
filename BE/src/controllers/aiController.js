@@ -1,4 +1,7 @@
 const supabase = require("../config/supabase");
+const { createActivityLog } = require("../services/activityLogService");
+
+const DAILY_FLASHCARD_LIMIT = 3;
 
 const {
   createEmbedding,
@@ -6,6 +9,41 @@ const {
   answerWithContext,
   generateFlashcardsFromChunks,
 } = require("../services/aiService");
+
+function getVietnamDayRange() {
+  const now = new Date();
+  const vietnamNow = new Date(now.getTime() + 7 * 60 * 60 * 1000);
+  const startUtcMs =
+    Date.UTC(
+      vietnamNow.getUTCFullYear(),
+      vietnamNow.getUTCMonth(),
+      vietnamNow.getUTCDate(),
+    ) -
+    7 * 60 * 60 * 1000;
+
+  return {
+    start: new Date(startUtcMs).toISOString(),
+    end: new Date(startUtcMs + 24 * 60 * 60 * 1000).toISOString(),
+  };
+}
+
+async function getFlashcardsCreatedToday(userId) {
+  const { start, end } = getVietnamDayRange();
+  const { data, error } = await supabase
+    .from("activity_logs")
+    .select("new_data")
+    .eq("user_id", userId)
+    .eq("action_type", "FLASHCARDS_GENERATED")
+    .gte("created_at", start)
+    .lt("created_at", end);
+
+  if (error) throw error;
+
+  return (data || []).reduce(
+    (total, item) => total + Math.max(0, Number(item.new_data?.cardCount || 0)),
+    0,
+  );
+}
 
 async function getAllowedDocument(documentId, userId) {
   const { data: document, error } = await supabase
@@ -182,6 +220,24 @@ exports.generateFlashcards = async (req, res) => {
   try {
     const userId = req.user.id;
     const { documentId } = req.params;
+    const cardsCreatedToday = await getFlashcardsCreatedToday(userId);
+    const remainingCards = Math.max(
+      0,
+      DAILY_FLASHCARD_LIMIT - cardsCreatedToday,
+    );
+
+    if (remainingCards === 0) {
+      return res.status(429).json({
+        status: "error",
+        code: "DAILY_FLASHCARD_LIMIT_REACHED",
+        message: `You can create up to ${DAILY_FLASHCARD_LIMIT} flashcards per day. Please try again tomorrow.`,
+        data: {
+          dailyLimit: DAILY_FLASHCARD_LIMIT,
+          createdToday: cardsCreatedToday,
+          remainingToday: 0,
+        },
+      });
+    }
 
     const document = await getAllowedDocument(documentId, userId);
 
@@ -222,7 +278,8 @@ exports.generateFlashcards = async (req, res) => {
       });
     }
 
-    const cards = await generateFlashcardsFromChunks(chunks);
+    const generatedCards = await generateFlashcardsFromChunks(chunks);
+    const cards = generatedCards.slice(0, remainingCards);
 
     await supabase.from("flashcards").delete().eq("document_id", documentId);
 
@@ -241,14 +298,37 @@ exports.generateFlashcards = async (req, res) => {
 
     if (insertError) throw insertError;
 
+    if (insertedCards.length > 0) {
+      await createActivityLog({
+        actorUserId: userId,
+        actionType: "FLASHCARDS_GENERATED",
+        entityType: "document",
+        entityId: documentId,
+        newData: {
+          cardCount: insertedCards.length,
+          dailyLimit: DAILY_FLASHCARD_LIMIT,
+        },
+        request: req,
+        details: `Generated ${insertedCards.length} flashcard(s).`,
+      });
+    }
+
     return res.status(201).json({
       status: "success",
       data: insertedCards,
+      quota: {
+        dailyLimit: DAILY_FLASHCARD_LIMIT,
+        createdToday: cardsCreatedToday + insertedCards.length,
+        remainingToday: Math.max(
+          0,
+          DAILY_FLASHCARD_LIMIT - cardsCreatedToday - insertedCards.length,
+        ),
+      },
     });
   } catch (error) {
     console.error("generateFlashcards error:", error);
 
-    return res.status(500).json({
+    return res.status(error.statusCode || 500).json({
       status: "error",
       message: error.message || "Failed to generate flashcards.",
     });

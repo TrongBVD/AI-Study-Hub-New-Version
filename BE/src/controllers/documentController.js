@@ -436,6 +436,54 @@ exports.uploadDocuments = async (req, res) => {
   }
 };
 
+exports.suggestDocumentTags = async (req, res) => {
+  try {
+    const files = req.files || [];
+
+    if (files.length === 0) {
+      return res.status(400).json({
+        status: "error",
+        message: "Vui lòng chọn ít nhất một tệp để AI gợi ý tag.",
+      });
+    }
+
+    const suggestedTags = [];
+
+    for (const file of files) {
+      const extractedText = await extractTextFromFile(file);
+      const result = await validateTagsAndContent(
+        extractedText,
+        file.originalname,
+        [],
+      );
+
+      for (const tag of result.aiRecommendedTags || []) {
+        const normalizedTag = String(tag || "").trim();
+        if (
+          normalizedTag &&
+          !suggestedTags.some(
+            (existingTag) =>
+              existingTag.toLocaleLowerCase() === normalizedTag.toLocaleLowerCase(),
+          )
+        ) {
+          suggestedTags.push(normalizedTag.startsWith("#") ? normalizedTag : `#${normalizedTag}`);
+        }
+      }
+    }
+
+    return res.status(200).json({
+      status: "success",
+      data: suggestedTags.slice(0, 5),
+    });
+  } catch (error) {
+    console.error("Lỗi suggestDocumentTags:", error);
+    return res.status(500).json({
+      status: "error",
+      message: "AI không thể gợi ý tag cho tài liệu này.",
+    });
+  }
+};
+
 exports.downloadDocument = async (req, res) => {
   try {
     const userID = req.user.id;
