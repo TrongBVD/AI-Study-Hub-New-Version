@@ -24,7 +24,7 @@ describe("Black-box tests - authentication public functions", () => {
 
   test("BB-01 public user response follows the documented safe-field contract", () => {
     expect(buildPublicUser({ id: "u1", email: "a@test.com", username: "alice", full_name: "Alice" })).toEqual({
-      id: "u1", email: "a@test.com", username: "alice", full_name: "Alice", role: "USER", status: "ACTIVE",
+      id: "u1", email: "a@test.com", username: "alice", full_name: "Alice", bio: "", role: "USER", status: "ACTIVE",
     });
   });
 

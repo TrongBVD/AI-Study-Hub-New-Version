@@ -14,9 +14,26 @@ const {
   checkSensitiveContent,
   validateTagsAndContent,
 } = require("../services/aiService");
+const {
+  mapWithConcurrency,
+  normalizeConcurrency,
+} = require("../utils/asyncUtils");
+const { normalizeSuggestedTags } = require("../utils/tagUtils");
 
 const BUCKET = process.env.SUPABASE_DOCUMENT_BUCKET || "documents";
 const { createActivityLog } = require("../services/activityLogService");
+const FILE_VALIDATION_CONCURRENCY = Math.min(
+  normalizeConcurrency(process.env.FILE_VALIDATION_CONCURRENCY, 2),
+  4,
+);
+const FILE_UPLOAD_CONCURRENCY = Math.min(
+  normalizeConcurrency(process.env.FILE_UPLOAD_CONCURRENCY, 2),
+  4,
+);
+const EMBEDDING_CONCURRENCY = Math.min(
+  normalizeConcurrency(process.env.EMBEDDING_CONCURRENCY, 3),
+  8,
+);
 
 function sanitizeFileName(fileName) {
   const baseName = path.basename(fileName || "upload.bin");
@@ -78,8 +95,10 @@ async function processDocumentWithAI(file, documentId, preExtractedText = null, 
         return { status: "REJECTED", reason: "No readable text chunks could be created.", chunkCount: 0 };
       }
 
-      const chunkRows = await Promise.all(
-        chunks.map(async (chunk, index) => {
+      const chunkRows = await mapWithConcurrency(
+        chunks,
+        EMBEDDING_CONCURRENCY,
+        async (chunk, index) => {
           const embedding = await createEmbedding(chunk, "document");
           return {
             document_id: documentId,
@@ -87,7 +106,7 @@ async function processDocumentWithAI(file, documentId, preExtractedText = null, 
             content: chunk,
             embedding: toVectorLiteral(embedding),
           };
-        })
+        },
       );
 
       await supabase.from("document_chunks").delete().eq("document_id", documentId);
@@ -271,8 +290,10 @@ exports.uploadDocuments = async (req, res) => {
     // 1. Trích xuất text và chạy kiểm tra nhạy cảm + tag validation song song cho tất cả các file
     let processedFilesData = [];
     try {
-      processedFilesData = await Promise.all(
-        files.map(async (file) => {
+      processedFilesData = await mapWithConcurrency(
+        files,
+        FILE_VALIDATION_CONCURRENCY,
+        async (file) => {
           const extractedText = await extractTextFromFile(file);
 
           // Chạy song song kiểm tra nhạy cảm và kiểm duyệt tag để giảm thời gian xử lý (tối ưu hóa hiệu năng)
@@ -287,7 +308,7 @@ exports.uploadDocuments = async (req, res) => {
             sensitivity,
             tagValidationResult,
           };
-        })
+        },
       );
     } catch (err) {
       console.error("Lỗi song song AI:", err);
@@ -308,9 +329,41 @@ exports.uploadDocuments = async (req, res) => {
     }
 
     // 2. Nếu tất cả đều qua kiểm định, tiến hành upload và lưu database
-    const uploadedDocuments = [];
+    const tagPromiseCache = new Map();
 
-    for (const processedData of processedFilesData) {
+    function resolveTag(tagName) {
+      if (!tagPromiseCache.has(tagName)) {
+        tagPromiseCache.set(
+          tagName,
+          (async () => {
+            let { data: tagData } = await supabase
+              .from("tags")
+              .select("id")
+              .eq("name", tagName)
+              .maybeSingle();
+
+            if (!tagData) {
+              const { data: newTag, error: newTagError } = await supabase
+                .from("tags")
+                .insert({ name: tagName })
+                .select("id")
+                .single();
+
+              if (!newTagError) tagData = newTag;
+            }
+
+            return tagData;
+          })(),
+        );
+      }
+
+      return tagPromiseCache.get(tagName);
+    }
+
+    const uploadedDocuments = await mapWithConcurrency(
+      processedFilesData,
+      FILE_UPLOAD_CONCURRENCY,
+      async (processedData) => {
       const { file, extractedText, sensitivity } = processedData;
 
       const safeFileName = sanitizeFileName(file.originalname);
@@ -392,22 +445,7 @@ exports.uploadDocuments = async (req, res) => {
       for (const tagName of uniqueTags) {
         if (!tagName) continue;
 
-        let { data: tagData } = await supabase
-          .from("tags")
-          .select("id")
-          .eq("name", tagName)
-          .maybeSingle();
-
-        if (!tagData) {
-          const { data: newTag, error: newTagError } = await supabase
-            .from("tags")
-            .insert({ name: tagName })
-            .select("id")
-            .single();
-          if (!newTagError) {
-            tagData = newTag;
-          }
-        }
+        const tagData = await resolveTag(tagName);
 
         if (tagData && tagData.id) {
           const { error: documentTagInsertError } = await supabase.from("document_tags").insert({
@@ -436,8 +474,9 @@ exports.uploadDocuments = async (req, res) => {
         count: finalTagCount,
       });
 
-      uploadedDocuments.push({ ...document, status: aiResult.status });
-    }
+        return { ...document, status: aiResult.status };
+      },
+    );
 
     return res.status(201).json({ status: "success", data: uploadedDocuments });
   } catch (error) {
@@ -457,33 +496,25 @@ exports.suggestDocumentTags = async (req, res) => {
       });
     }
 
-    const suggestedTags = [];
+    const suggestedTagGroups = await mapWithConcurrency(
+      files,
+      FILE_VALIDATION_CONCURRENCY,
+      async (file) => {
+        const extractedText = await extractTextFromFile(file);
+        const result = await validateTagsAndContent(
+          extractedText,
+          file.originalname,
+          [],
+        );
 
-    for (const file of files) {
-      const extractedText = await extractTextFromFile(file);
-      const result = await validateTagsAndContent(
-        extractedText,
-        file.originalname,
-        [],
-      );
-
-      for (const tag of result.aiRecommendedTags || []) {
-        const normalizedTag = String(tag || "").trim();
-        if (
-          normalizedTag &&
-          !suggestedTags.some(
-            (existingTag) =>
-              existingTag.toLocaleLowerCase() === normalizedTag.toLocaleLowerCase(),
-          )
-        ) {
-          suggestedTags.push(normalizedTag.startsWith("#") ? normalizedTag : `#${normalizedTag}`);
-        }
-      }
-    }
+        return result.aiRecommendedTags || [];
+      },
+    );
+    const suggestedTags = normalizeSuggestedTags(suggestedTagGroups.flat(), 5);
 
     return res.status(200).json({
       status: "success",
-      data: suggestedTags.slice(0, 5),
+      data: suggestedTags,
     });
   } catch (error) {
     console.error("Lỗi suggestDocumentTags:", error);
@@ -527,7 +558,7 @@ exports.downloadDocument = async (req, res) => {
     }
 
     const { data: signedUrlData, error: signedUrlError } =
-      await supabase.storage.from(BUCKET).createSignedUrl(document.file_url, 60, {
+      await supabase.storage.from(BUCKET).createSignedUrl(document.file_url, 300, {
         download: document.title,
       });
 
