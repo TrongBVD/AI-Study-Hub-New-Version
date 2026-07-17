@@ -33,6 +33,17 @@ export async function uploadDocuments(files, workspaceId = null, libraryId = nul
   return response.data.data;
 }
 
+export async function suggestDocumentTags(files) {
+  const formData = new FormData();
+
+  files.forEach((file) => {
+    formData.append("files", file);
+  });
+
+  const response = await api.post("/documents/suggest-tags", formData);
+  return response.data.data || [];
+}
+
 export async function downloadDocument(documentId) {
   const response = await api.get(`/documents/${documentId}/download`);
   return response.data.data;

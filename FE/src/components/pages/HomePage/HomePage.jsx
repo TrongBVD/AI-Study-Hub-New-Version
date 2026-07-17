@@ -5,6 +5,8 @@ import { Link } from "react-router-dom";
 import { HiOutlineSquaresPlus } from "react-icons/hi2";
 import { LuBookPlus, LuLibraryBig } from "react-icons/lu";
 import studyHubLogo from "../../../assets/images/StudyHubLogo.svg";
+import studyHubWhiteLogo from "../../../assets/images/StudyHubWhiteLogo.svg";
+import { useTheme } from "../../../context/ThemeContext.jsx";
 import { getMyLibraries } from "../../../utils/documentApi.js";
 import { getWorkspaces } from "../../../utils/workspaceApi.js";
 import { getMyProfile } from "../../../utils/profileApi.js";
@@ -71,6 +73,7 @@ function getLibraryName(library) {
 }
 
 function HomePage() {
+  const { theme } = useTheme();
   const isGuest = getStoredUserRole() === "GUEST";
   const [profileName, setProfileName] = useState("User");
   const [libraries, setLibraries] = useState([]);
@@ -287,7 +290,11 @@ function HomePage() {
         <section className="home_intro_grid" aria-label="Home overview">
           <div className="home_command_panel">
             <div className="home_brand_row">
-              <img src={studyHubLogo} alt="Study Hub" />
+              <img
+                src={theme === "white" ? studyHubWhiteLogo : studyHubLogo}
+                className={theme === "white" ? "home_brand_logo_light" : ""}
+                alt="Study Hub"
+              />
             </div>
 
             <div className="home_headline_block">

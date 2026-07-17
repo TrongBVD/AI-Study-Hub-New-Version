@@ -3,7 +3,6 @@ import { useEffect, useMemo, useState } from "react";
 import {
   HiOutlineBell,
   HiOutlinePlus,
-  HiOutlineSquares2X2,
   HiOutlineSquaresPlus,
 } from "react-icons/hi2";
 import { LuBookPlus } from "react-icons/lu";
@@ -11,10 +10,11 @@ import {
   getNotificationSettings,
   getNotifications,
   markAllNotificationsAsRead,
+  mergeAppNotifications,
 } from "../../../utils/notificationStore.js";
 import { searchUsers } from "../../../utils/searchApi.js";
 import { getMyLibraries } from "../../../utils/documentApi.js";
-import { getWorkspaces } from "../../../utils/workspaceApi.js";
+import { getMyWorkspaceNotifications, getWorkspaces } from "../../../utils/workspaceApi.js";
 import { getMyProfile } from "../../../utils/profileApi.js";
 import { getPublicLibraries } from "../../../utils/publicApi.js";
 import defaultAvatar from "../../../assets/images/account.png";
@@ -122,6 +122,32 @@ function Navbar({
       window.removeEventListener("storage", syncNotifications);
     };
   }, []);
+
+  useEffect(() => {
+    if (isGuest) return undefined;
+
+    let isMounted = true;
+    async function syncServerNotifications() {
+      try {
+        const serverNotifications = await getMyWorkspaceNotifications();
+        if (isMounted) {
+          setNotifications(mergeAppNotifications(serverNotifications || []));
+        }
+      } catch (error) {
+        console.error("Failed to sync workspace notifications:", error);
+      }
+    }
+
+    syncServerNotifications();
+    const intervalId = window.setInterval(syncServerNotifications, 10000);
+    window.addEventListener("focus", syncServerNotifications);
+
+    return () => {
+      isMounted = false;
+      window.clearInterval(intervalId);
+      window.removeEventListener("focus", syncServerNotifications);
+    };
+  }, [isGuest]);
 
   useEffect(() => {
     const keyword = searchValue.trim();

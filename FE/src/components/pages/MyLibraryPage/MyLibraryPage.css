@@ -146,6 +146,19 @@
   transform: translateY(-2px);
 }
 
+body[data-theme="white"] .my_library_page .create_library_btn {
+  background: transparent;
+  border-color: #2563eb;
+  color: #2563eb;
+  box-shadow: none;
+}
+
+body[data-theme="white"] .my_library_page .create_library_btn:hover {
+  background: #eff6ff;
+  border-color: #1d4ed8;
+  color: #1d4ed8;
+}
+
 .my_library_hero_card {
   align-self: end;
   min-height: 190px;

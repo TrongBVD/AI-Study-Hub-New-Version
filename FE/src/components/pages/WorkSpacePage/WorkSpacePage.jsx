@@ -269,6 +269,7 @@ const [isSubtaskPriorityOpen, setIsSubtaskPriorityOpen] = useState(false);
   const [memberSearchQuery, setMemberSearchQuery] = useState("");
   const [memberActionStatus, setMemberActionStatus] = useState("");
   const [memberActionId, setMemberActionId] = useState("");
+  const [openRoleMenuId, setOpenRoleMenuId] = useState("");
   const [pendingInvitations, setPendingInvitations] = useState(() =>
     loadPendingInvitations(workspaceId),
   );
@@ -1158,6 +1159,11 @@ if (nextStorageUsed > WORKSPACE_STORAGE_LIMIT_BYTES) {
     }
   }
 
+  async function handleMarkSelectedTopicResolved() {
+    if (!selectedTopic || selectedTopic.status === "Solved") return;
+    await handleUpdateTopicField("status", "Solved");
+  }
+
   async function handleUpdateTopicDeadlineMode(value) {
     if (!requireTopicPermission("edit topic deadline")) return;
 
@@ -1475,6 +1481,7 @@ function getSubtaskPriorityIcon(priority) {
     if (!userId || !nextRole) return;
 
     try {
+      setOpenRoleMenuId("");
       setMemberActionId(userId);
       setMemberActionStatus("");
 
@@ -2123,18 +2130,54 @@ function getSubtaskPriorityIcon(priority) {
 
                   {canManageWorkspace ? (
                     <div className="workspace_member_admin_actions">
-                      <select
-                        value={member.role}
-                        disabled={isActionBusy || isLastAdmin}
-                        onChange={(event) =>
-                          handleUpdateMemberRole(member.id, event.target.value)
-                        }
-                        aria-label={`Change role for ${member.name}`}
-                      >
-                        <option value="Admin">Admin</option>
-                        <option value="Editor">Editor</option>
-                        <option value="Viewer">Viewer</option>
-                      </select>
+                      {member.role !== "Admin" && (
+                        <div
+                          className="workspace_role_dropdown"
+                          onBlur={(event) => {
+                            if (!event.currentTarget.contains(event.relatedTarget)) {
+                              setOpenRoleMenuId("");
+                            }
+                          }}
+                        >
+                          <button
+                            type="button"
+                            className={`workspace_role_trigger role_${member.role.toLowerCase()}`}
+                            disabled={isActionBusy}
+                            aria-haspopup="listbox"
+                            aria-expanded={openRoleMenuId === member.id}
+                            aria-label={`Change role for ${member.name}`}
+                            onClick={() =>
+                              setOpenRoleMenuId((currentId) =>
+                                currentId === member.id ? "" : member.id,
+                              )
+                            }
+                          >
+                            <span>{member.role}</span>
+                            <i className="ti-angle-down" aria-hidden="true"></i>
+                          </button>
+
+                          {openRoleMenuId === member.id && (
+                            <div className="workspace_role_menu" role="listbox">
+                              {["Editor", "Viewer"].map((role) => (
+                                <button
+                                  type="button"
+                                  role="option"
+                                  aria-selected={member.role === role}
+                                  className={member.role === role ? "selected" : ""}
+                                  key={role}
+                                  onClick={() => handleUpdateMemberRole(member.id, role)}
+                                >
+                                  <span className={`workspace_role_dot role_${role.toLowerCase()}`}></span>
+                                  <span>{role}</span>
+                                  {member.role === role && (
+                                    <i className="ti-check" aria-hidden="true"></i>
+                                  )}
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )}
 
                       <button
                         type="button"
@@ -2289,7 +2332,6 @@ const filteredDiscussionTopics = discussionTopics.filter((topic) => {
         selectedTopic.endDate || "No end date"
       }`
     : "No deadline";
-
   return (
     <section className="workspace_clickup_detail">
       <main className="workspace_clickup_main">
@@ -2312,86 +2354,30 @@ const filteredDiscussionTopics = discussionTopics.filter((topic) => {
           </div>
 
           {canManageTopics && (
-            <button
-              type="button"
-              className="workspace_clickup_attachment_delete"
-              onClick={handleDeleteSelectedTopic}
-              title="Delete topic"
-            >
-              <i className="ti-trash"></i>
-            </button>
+            <div className="workspace_topic_header_actions">
+              <button
+                type="button"
+                className="workspace_topic_resolve_btn"
+                onClick={handleMarkSelectedTopicResolved}
+                disabled={selectedTopic.status === "Solved"}
+              >
+                <i className="ti-check-box" aria-hidden="true"></i>
+                {selectedTopic.status === "Solved" ? "Resolved" : "Mark as resolved"}
+              </button>
+
+              <button
+                type="button"
+                className="workspace_topic_delete_btn"
+                onClick={handleDeleteSelectedTopic}
+              >
+                <i className="ti-trash" aria-hidden="true"></i>
+                Delete topic
+              </button>
+            </div>
           )}
         </header>
 
 <section className="workspace_topic_info_panel">
-  <button
-    type="button"
-    className={`workspace_topic_info_item ${
-      canManageTopics ? "editable" : "read_only"
-    }`}
-    onClick={() => canManageTopics && setEditingTopicField("type")}
-    disabled={!canManageTopics}
-  >
-    <span>
-      <i className="ti-bookmark-alt"></i>
-      Type
-    </span>
-
-    {canManageTopics && editingTopicField === "type" ? (
-      <select
-        value={selectedTopic.type || "Question"}
-        onClick={(e) => e.stopPropagation()}
-        onChange={(e) => {
-          handleUpdateTopicField("type", e.target.value);
-          setEditingTopicField(null);
-        }}
-        onBlur={() => setEditingTopicField(null)}
-        autoFocus
-      >
-        <option value="Question">Question</option>
-        <option value="Material">Material</option>
-        <option value="Announcement">Announcement</option>
-        <option value="Discussion">Discussion</option>
-      </select>
-    ) : (
-      <strong>{selectedTopic.type || "Question"}</strong>
-    )}
-  </button>
-
-  <button
-    type="button"
-    className={`workspace_topic_info_item ${
-      canManageTopics ? "editable" : "read_only"
-    }`}
-    onClick={() => canManageTopics && setEditingTopicField("status")}
-    disabled={!canManageTopics}
-  >
-    <span>
-      <i className="ti-target"></i>
-      Status
-    </span>
-
-    {canManageTopics && editingTopicField === "status" ? (
-      <select
-        value={selectedTopic.status || "Open"}
-        onClick={(e) => e.stopPropagation()}
-        onChange={(e) => {
-          handleUpdateTopicField("status", e.target.value);
-          setEditingTopicField(null);
-        }}
-        onBlur={() => setEditingTopicField(null)}
-        autoFocus
-      >
-        <option value="Open">Open</option>
-        <option value="In progress">In progress</option>
-        <option value="Solved">Solved</option>
-        <option value="Closed">Closed</option>
-      </select>
-    ) : (
-      <strong>{selectedTopic.status || "Open"}</strong>
-    )}
-  </button>
-
   <button
     type="button"
     className={`workspace_topic_info_item ${
@@ -3074,31 +3060,6 @@ const filteredDiscussionTopics = discussionTopics.filter((topic) => {
 </div>
 
 <div className="discussion_topic_form_grid">
-  <div className="discussion_form_group">
-    <label>Topic type</label>
-    <select
-      value={newTopicType}
-      onChange={(e) => setNewTopicType(e.target.value)}
-    >
-      <option value="Question">Question</option>
-      <option value="Material">Material</option>
-      <option value="Discussion">Discussion</option>
-      <option value="Announcement">Announcement</option>
-    </select>
-  </div>
-
-  <div className="discussion_form_group">
-    <label>Status</label>
-    <select
-      value={newTopicStatus}
-      onChange={(e) => setNewTopicStatus(e.target.value)}
-    >
-      <option value="Open">Open</option>
-      <option value="In progress">In progress</option>
-      <option value="Solved">Solved</option>
-    </select>
-  </div>
-
   <div className="discussion_form_group">
     <label>Priority</label>
     <select
