@@ -268,33 +268,43 @@ exports.uploadDocuments = async (req, res) => {
       }
     }
 
-    // 1. Trích xuất text và chạy kiểm tra nhạy cảm + tag validation cho tất cả các file trước
-    const processedFilesData = [];
+    // 1. Trích xuất text và chạy kiểm tra nhạy cảm + tag validation song song cho tất cả các file
+    let processedFilesData = [];
+    try {
+      processedFilesData = await Promise.all(
+        files.map(async (file) => {
+          const extractedText = await extractTextFromFile(file);
 
-    for (const file of files) {
-      const extractedText = await extractTextFromFile(file);
+          // Chạy song song kiểm tra nhạy cảm và kiểm duyệt tag để giảm thời gian xử lý (tối ưu hóa hiệu năng)
+          const [sensitivity, tagValidationResult] = await Promise.all([
+            checkSensitiveContent(extractedText),
+            validateTagsAndContent(extractedText, file.originalname, userTags),
+          ]);
 
-      // Kiểm tra ngôn từ nhạy cảm
-      const sensitivity = await checkSensitiveContent(extractedText);
+          return {
+            file,
+            extractedText,
+            sensitivity,
+            tagValidationResult,
+          };
+        })
+      );
+    } catch (err) {
+      console.error("Lỗi song song AI:", err);
+      return res.status(500).json({ status: "error", message: "Đã xảy ra lỗi khi kiểm duyệt tài liệu bằng AI." });
+    }
 
-      // Chạy AI validation cho hashtag do người dùng nhập vào
-      const tagValidationResult = await validateTagsAndContent(extractedText, file.originalname, userTags);
-
-      if (!tagValidationResult.isValid) {
+    // Kiểm tra tính hợp lệ của tag sau khi đã xử lý song song xong
+    for (const processedData of processedFilesData) {
+      if (!processedData.tagValidationResult.isValid) {
         return res.status(400).json({
           status: "error",
           code: "TAG_VALIDATION_FAILED",
-          message: `Hashtag kiểm duyệt không hợp lệ cho tài liệu "${file.originalname}".`,
-          tagValidations: tagValidationResult.tagValidations,
-          aiRecommendedTags: tagValidationResult.aiRecommendedTags
+          message: `Hashtag kiểm duyệt không hợp lệ cho tài liệu "${processedData.file.originalname}".`,
+          tagValidations: processedData.tagValidationResult.tagValidations,
+          aiRecommendedTags: processedData.tagValidationResult.aiRecommendedTags
         });
       }
-
-      processedFilesData.push({
-        file,
-        extractedText,
-        sensitivity
-      });
     }
 
     // 2. Nếu tất cả đều qua kiểm định, tiến hành upload và lưu database

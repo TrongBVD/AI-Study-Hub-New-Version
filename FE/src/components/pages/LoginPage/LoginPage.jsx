@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import axios from "axios";
 import FormInput from "../../common/FormInput/FormInput.jsx";
 import { GoogleLogin, GoogleOAuthProvider } from "@react-oauth/google";
 import api, { refreshAccessToken } from "../../../utils/api.js";
@@ -42,7 +43,7 @@ function LoginPage() {
     } else {
       // Visiting the login page must not silently restore an old cookie.
       // This lets the user deliberately choose a different account.
-      api.post("/auth/logout").catch(() => {
+      axios.post(`${api.defaults.baseURL || "http://localhost:5000/api"}/auth/logout`, {}, { withCredentials: true }).catch(() => {
         // The local login screen should remain usable if the backend is offline.
       });
       clearStoredSession();
@@ -94,7 +95,7 @@ function LoginPage() {
   const handleGuestLogin = async () => {
     // 1. Dọn dẹp session cookie của tài khoản cũ trên Backend
     try {
-      await api.post("/auth/logout");
+      await axios.post(`${api.defaults.baseURL || "http://localhost:5000/api"}/auth/logout`, {}, { withCredentials: true });
     } catch (err) {
       console.warn("Failed to clear backend session cookie for guest:", err);
     }
