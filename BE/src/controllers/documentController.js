@@ -19,6 +19,10 @@ const {
   normalizeConcurrency,
 } = require("../utils/asyncUtils");
 const { normalizeSuggestedTags } = require("../utils/tagUtils");
+const {
+  parseReplacementDocumentIds,
+  resolveDuplicateUploadDecisions,
+} = require("../utils/documentDuplicateUtils");
 
 const BUCKET = process.env.SUPABASE_DOCUMENT_BUCKET || "documents";
 const { createActivityLog } = require("../services/activityLogService");
@@ -44,6 +48,40 @@ function sanitizeFileName(fileName) {
     .replace(/[^a-zA-Z0-9._-]/g, "_")
     .replace(/_+/g, "_")
     .slice(0, 160);
+}
+
+async function getWorkspaceDocumentUploadAccess(workspaceId, userId) {
+  const { data: workspace, error: workspaceError } = await supabase
+    .from("workspaces")
+    .select("id, created_by")
+    .eq("id", workspaceId)
+    .is("deleted_at", null)
+    .maybeSingle();
+
+  if (workspaceError) throw workspaceError;
+  if (!workspace) {
+    return { exists: false, canUpload: false, canReplaceAny: false };
+  }
+
+  const { data: member, error: memberError } = await supabase
+    .from("workspace_members")
+    .select("role")
+    .eq("workspace_id", workspaceId)
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (memberError) throw memberError;
+
+  const normalizedRole = String(member?.role || "").trim().toLowerCase();
+  const isCreator = String(workspace.created_by) === String(userId);
+  const isAdmin = isCreator || normalizedRole === "admin";
+
+  return {
+    exists: true,
+    canUpload:
+      isAdmin || normalizedRole === "editor",
+    canReplaceAny: isAdmin,
+  };
 }
 
 async function processDocumentWithAI(file, documentId, preExtractedText = null, overrideStatus = null, overrideRejectReason = null) {
@@ -228,6 +266,10 @@ exports.uploadDocuments = async (req, res) => {
     const workspaceId = req.body?.workspaceId || null;
     const libraryId = req.body?.libraryId || null; // Hỗ trợ up lên Library
     const tagsString = req.body?.tags || "[]";
+    const requestedReplacementIds = parseReplacementDocumentIds(
+      req.body?.replacementDocumentIds,
+      files.length,
+    );
 
     let userTags = [];
     try {
@@ -269,6 +311,120 @@ exports.uploadDocuments = async (req, res) => {
     }
 
     // CHECK GIỚI HẠN 50MB NẾU UP VÀO WORKSPACE
+    const isDirectWorkspaceUpload = Boolean(workspaceId && !libraryId);
+    const workspaceAccess = workspaceId
+      ? await getWorkspaceDocumentUploadAccess(workspaceId, userID)
+      : null;
+
+    if (workspaceAccess && !workspaceAccess.exists) {
+      return res.status(404).json({
+        status: "error",
+        message: "Workspace not found.",
+      });
+    }
+
+    if (workspaceAccess && !workspaceAccess.canUpload) {
+      return res.status(403).json({
+        status: "error",
+        message: "Only workspace editors and admins can upload documents.",
+      });
+    }
+
+    let existingDocumentQuery = supabase
+      .from("documents")
+      .select("id, uploader_id, title, file_size_bytes, created_at")
+      .is("deleted_at", null);
+
+    if (!isDirectWorkspaceUpload) {
+      existingDocumentQuery = existingDocumentQuery.eq("uploader_id", userID);
+    }
+
+    existingDocumentQuery = libraryId
+      ? existingDocumentQuery.eq("library_id", libraryId)
+      : existingDocumentQuery.is("library_id", null);
+    existingDocumentQuery = workspaceId
+      ? existingDocumentQuery.eq("workspace_id", workspaceId)
+      : existingDocumentQuery.is("workspace_id", null);
+
+    const {
+      data: scopedExistingDocuments,
+      error: existingDocumentError,
+    } = await existingDocumentQuery.order("created_at", { ascending: false });
+
+    if (existingDocumentError) throw existingDocumentError;
+
+    const existingDocumentsById = new Map(
+      (scopedExistingDocuments || []).map((document) => [
+        String(document.id),
+        document,
+      ]),
+    );
+    const unauthorizedReplacementId =
+      isDirectWorkspaceUpload && !workspaceAccess?.canReplaceAny
+        ? requestedReplacementIds.find((documentId) => {
+            if (!documentId) return false;
+            const existingDocument = existingDocumentsById.get(
+              String(documentId),
+            );
+
+            return (
+              existingDocument &&
+              String(existingDocument.uploader_id) !== String(userID)
+            );
+          })
+        : null;
+
+    if (unauthorizedReplacementId) {
+      return res.status(403).json({
+        status: "error",
+        code: "DOCUMENT_REPLACEMENT_FORBIDDEN",
+        message:
+          "Only the original uploader or a workspace admin can replace this document.",
+      });
+    }
+
+    const duplicateDecision = resolveDuplicateUploadDecisions(
+      files,
+      scopedExistingDocuments || [],
+      requestedReplacementIds,
+    );
+
+    if (duplicateDecision.conflicts.length > 0) {
+      const duplicateConflicts = duplicateDecision.conflicts.map((conflict) => {
+        const existingDocument = conflict.documentId
+          ? existingDocumentsById.get(String(conflict.documentId))
+          : null;
+
+        return {
+          ...conflict,
+          canReplace:
+            !existingDocument ||
+            !isDirectWorkspaceUpload ||
+            workspaceAccess?.canReplaceAny === true ||
+            String(existingDocument.uploader_id) === String(userID),
+        };
+      });
+
+      return res.status(409).json({
+        status: "error",
+        code: "DUPLICATE_DOCUMENT",
+        message:
+          "One or more documents have already been uploaded. Confirm replacement before uploading again.",
+        duplicates: duplicateConflicts,
+      });
+    }
+
+    const replacementDocumentIds = new Set(
+      duplicateDecision.replacementTargetIds.flat(),
+    );
+    const replacementBytes = (scopedExistingDocuments || []).reduce(
+      (total, document) =>
+        replacementDocumentIds.has(String(document.id))
+          ? total + (Number(document.file_size_bytes) || 0)
+          : total,
+      0,
+    );
+
     if (workspaceId) {
       const { data: existingDocs } = await supabase
         .from("documents")
@@ -279,7 +435,7 @@ exports.uploadDocuments = async (req, res) => {
       const currentUsedBytes = (existingDocs || []).reduce((acc, doc) => acc + (Number(doc.file_size_bytes) || 0), 0);
       const incomingBytes = files.reduce((acc, file) => acc + file.size, 0);
 
-      if (currentUsedBytes + incomingBytes > 50 * 1024 * 1024) {
+      if (currentUsedBytes + incomingBytes - replacementBytes > 50 * 1024 * 1024) {
         return res.status(400).json({
           status: "error",
           message: "Workspace đã đạt giới hạn 50MB dung lượng tải lên."
@@ -293,7 +449,7 @@ exports.uploadDocuments = async (req, res) => {
       processedFilesData = await mapWithConcurrency(
         files,
         FILE_VALIDATION_CONCURRENCY,
-        async (file) => {
+        async (file, fileIndex) => {
           const extractedText = await extractTextFromFile(file);
 
           // Chạy song song kiểm tra nhạy cảm và kiểm duyệt tag để giảm thời gian xử lý (tối ưu hóa hiệu năng)
@@ -304,6 +460,7 @@ exports.uploadDocuments = async (req, res) => {
 
           return {
             file,
+            fileIndex,
             extractedText,
             sensitivity,
             tagValidationResult,
@@ -364,7 +521,7 @@ exports.uploadDocuments = async (req, res) => {
       processedFilesData,
       FILE_UPLOAD_CONCURRENCY,
       async (processedData) => {
-      const { file, extractedText, sensitivity } = processedData;
+      const { file, fileIndex, extractedText, sensitivity } = processedData;
 
       const safeFileName = sanitizeFileName(file.originalname);
       const storagePath = `${userID}/${Date.now()}-${crypto.randomUUID()}-${safeFileName}`;
@@ -474,7 +631,47 @@ exports.uploadDocuments = async (req, res) => {
         count: finalTagCount,
       });
 
-        return { ...document, status: aiResult.status };
+        const replacedDocumentIds =
+          duplicateDecision.replacementTargetIds[fileIndex] || [];
+
+        if (replacedDocumentIds.length > 0) {
+          const replacementTimestamp = new Date().toISOString();
+          let replacementDeleteQuery = supabase
+            .from("documents")
+            .update({ deleted_at: replacementTimestamp })
+            .in("id", replacedDocumentIds);
+
+          replacementDeleteQuery = workspaceId
+            ? replacementDeleteQuery.eq("workspace_id", workspaceId)
+            : replacementDeleteQuery.is("workspace_id", null);
+          replacementDeleteQuery = libraryId
+            ? replacementDeleteQuery.eq("library_id", libraryId)
+            : replacementDeleteQuery.is("library_id", null);
+
+          if (!isDirectWorkspaceUpload || !workspaceAccess?.canReplaceAny) {
+            replacementDeleteQuery = replacementDeleteQuery.eq(
+              "uploader_id",
+              userID,
+            );
+          }
+
+          const { error: replacementDeleteError } =
+            await replacementDeleteQuery;
+
+          if (replacementDeleteError) {
+            await supabase
+              .from("documents")
+              .update({ deleted_at: replacementTimestamp })
+              .eq("id", document.id);
+            throw replacementDeleteError;
+          }
+        }
+
+        return {
+          ...document,
+          status: aiResult.status,
+          replaced_document_ids: replacedDocumentIds,
+        };
       },
     );
 

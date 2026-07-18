@@ -15,6 +15,7 @@ export async function uploadDocuments(
   libraryId = null,
   tags = [],
   onProgress = null,
+  replacementDocumentIds = [],
 ) {
   const formData = new FormData();
 
@@ -32,6 +33,13 @@ export async function uploadDocuments(
 
   if (tags && tags.length > 0) {
     formData.append("tags", JSON.stringify(tags));
+  }
+
+  if (replacementDocumentIds.some(Boolean)) {
+    formData.append(
+      "replacementDocumentIds",
+      JSON.stringify(replacementDocumentIds),
+    );
   }
 
   const response = await api.post("/documents/upload", formData, {
