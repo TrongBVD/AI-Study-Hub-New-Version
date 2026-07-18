@@ -21,11 +21,6 @@ export const THEME_OPTIONS = [
     label: "White",
     description: "Clean bright surfaces, light grays, and high contrast text.",
   },
-  {
-    value: "black",
-    label: "Black",
-    description: "Low-light interface with dark panels and muted text.",
-  },
 ];
 
 const SUPPORTED_THEMES = new Set(THEME_OPTIONS.map((theme) => theme.value));
@@ -33,13 +28,12 @@ const SUPPORTED_THEMES = new Set(THEME_OPTIONS.map((theme) => theme.value));
 const LEGACY_THEME_MAP = {
   warm: "current",
   light: "white",
-  dark: "black",
+  dark: "current",
 };
 
 const STUDY_THEME_MAP = {
   current: "warm",
   white: "light",
-  black: "dark",
 };
 
 const ThemeContext = createContext(null);

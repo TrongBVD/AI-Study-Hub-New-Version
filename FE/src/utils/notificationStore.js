@@ -9,7 +9,7 @@ export const defaultNotificationSettings = {
 
   discussion: {
     newTopic: true,
-    topicDeleted: true,
+    newReply: true,
     solved: true,
   },
 
@@ -20,6 +20,8 @@ export const defaultNotificationSettings = {
   },
 
   file: {
+    uploaded: true,
+    deleted: true,
     storageWarning: true,
   },
 
@@ -28,12 +30,8 @@ export const defaultNotificationSettings = {
     roleChanged: true,
   },
 
-  chat: {
-    mode: "all",
-  },
-
   workspace: {
-    nameChanged: true,
+    renamed: true,
     deleted: true,
   },
 
@@ -74,11 +72,6 @@ export function getNotificationSettings() {
       member: {
         ...defaultNotificationSettings.member,
         ...(savedSettings.member || {}),
-      },
-
-      chat: {
-        ...defaultNotificationSettings.chat,
-        ...(savedSettings.chat || {}),
       },
 
       workspace: {
@@ -158,4 +151,31 @@ export function markAllNotificationsAsRead() {
   }));
 
   saveNotifications(nextNotifications);
+}
+
+export function mergeAppNotifications(incomingNotifications = []) {
+  const settings = getNotificationSettings();
+  if (!settings.enabled) return getNotifications();
+
+  const currentNotifications = getNotifications();
+  const existingById = new Map(
+    currentNotifications.map((notification) => [notification.id, notification]),
+  );
+
+  incomingNotifications.forEach((notification) => {
+    if (!notification?.id) return;
+    if (!settings[notification.category]?.[notification.action]) return;
+
+    const existing = existingById.get(notification.id);
+    existingById.set(notification.id, {
+      ...notification,
+      isRead: existing?.isRead ?? false,
+    });
+  });
+
+  const merged = [...existingById.values()]
+    .sort((a, b) => Number(b.createdAtMs || 0) - Number(a.createdAtMs || 0))
+    .slice(0, 30);
+  saveNotifications(merged);
+  return merged;
 }

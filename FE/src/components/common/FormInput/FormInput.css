@@ -10,7 +10,7 @@
 /* Định dạng ô input gốc của bạn */
 .form_input_group .form_input {
   background-color: var(--bg-card);
-  color: var(--sidebar-bg);
+  color: var(--text-primary);
   width: 100%;
   /* Padding phải 45px để nhường chỗ cho icon con mắt */
   padding: 20px 45px 5px 10px;
@@ -33,7 +33,7 @@
 
 .form_input_group .form_input {
   background-color: var(--bg-card);
-  color: var(--sidebar-bg);
+  color: var(--text-primary);
   width: 100%;
   padding: 12px 45px 12px 10px;
   outline: 0;
@@ -84,6 +84,18 @@
 .form_input:-webkit-autofill:focus,
 .form_input:-webkit-autofill:active {
   -webkit-box-shadow: 0 0 0 30px var(--bg-card) inset !important;
-  -webkit-text-fill-color: var(--sidebar-bg) !important;
+  -webkit-text-fill-color: var(--text-primary) !important;
   transition: background-color 5000s ease-in-out 0s;
+}
+
+body[data-theme="white"] .form_input_group .form_input {
+  color: #000;
+  caret-color: #000;
+}
+
+body[data-theme="white"] .form_input:-webkit-autofill,
+body[data-theme="white"] .form_input:-webkit-autofill:hover,
+body[data-theme="white"] .form_input:-webkit-autofill:focus,
+body[data-theme="white"] .form_input:-webkit-autofill:active {
+  -webkit-text-fill-color: #000 !important;
 }

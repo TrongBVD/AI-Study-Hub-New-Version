@@ -1,9 +1,19 @@
-import bookLogo from "../images/StudyHubBookLogo.svg";
+import currentThemeBookLogo from "../images/StudyHubBookLogo.svg";
+import whiteThemeBookLogo from "../images/StudyHubSidebarLogo.svg";
+import { useTheme } from "../../context/ThemeContext.jsx";
 
 function Logo({ className = "" }) {
+  const { theme } = useTheme();
+  const isWhiteTheme = theme === "white";
+
   return (
-    <span className={`github_logo ${className}`.trim()}>
-      <img src={bookLogo} alt="Study Hub" />
+    <span
+      className={`github_logo github_logo_${isWhiteTheme ? "white" : "current"} ${className}`.trim()}
+    >
+      <img
+        src={isWhiteTheme ? whiteThemeBookLogo : currentThemeBookLogo}
+        alt="Study Hub"
+      />
     </span>
   );
 }

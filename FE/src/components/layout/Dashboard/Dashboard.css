@@ -71,6 +71,15 @@ body {
   object-fit: contain;
 }
 
+.github_logo_white {
+  background: transparent;
+}
+
+.github_logo_white img {
+  width: 42px;
+  height: 42px;
+}
+
 .close_btn {
   display: block;
   background: transparent;
@@ -1239,7 +1248,39 @@ body[data-theme] .user_dashboard_layout .top_navbar {
 }
 
 body[data-theme="white"] .user_dashboard_layout .top_navbar {
-  background: var(--study-theme-surface);
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  border-bottom-color: #1d4ed8;
+  box-shadow: 0 8px 24px rgba(37, 99, 235, 0.2);
+}
+
+body[data-theme="white"] .user_dashboard_layout .top_navbar :is(
+  .menu_btn,
+  .create_dropdown > .create_dropdown_btn,
+  .notification_dropdown > .notification_btn
+) {
+  background: rgba(255, 255, 255, 0.14);
+  border-color: rgba(255, 255, 255, 0.42);
+  color: #ffffff;
+}
+
+body[data-theme="white"] .user_dashboard_layout .top_navbar :is(
+  .menu_btn,
+  .create_dropdown > .create_dropdown_btn,
+  .notification_dropdown > .notification_btn
+):hover {
+  background: rgba(255, 255, 255, 0.24);
+  border-color: rgba(255, 255, 255, 0.7);
+}
+
+body[data-theme="white"] .user_dashboard_layout .top_navbar .search_box input {
+  background: #ffffff;
+  border-color: rgba(255, 255, 255, 0.75);
+  color: #0f172a;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.1);
+}
+
+body[data-theme="white"] .user_dashboard_layout .top_navbar .profile_avatar {
+  border: 2px solid rgba(255, 255, 255, 0.85);
 }
 
 body[data-theme] .user_dashboard_layout .sidebar {

@@ -8,6 +8,7 @@ router.use(authMiddleware);
 
 router.get("/", workspaceController.listMyWorkspaces);
 router.post("/", workspaceController.createWorkspace);
+router.get("/notifications/me", workspaceController.listMyWorkspaceNotifications);
 router.get("/:workspaceId", workspaceController.getWorkspace);
 router.put("/:workspaceId", workspaceController.updateWorkspace);
 router.delete("/:workspaceId", workspaceController.deleteWorkspace);

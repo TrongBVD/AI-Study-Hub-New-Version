@@ -337,6 +337,8 @@ Nhiệm vụ của bạn:
    
 2. Gợi ý thêm 3-5 hashtags liên quan nhất dựa trên nội dung tài liệu (luôn bắt đầu bằng dấu #, viết liền và viết bằng tiếng Anh).
 
+IMPORTANT: Every value in the "reason" field MUST be written entirely in English. Do not return Vietnamese text in "reason".
+
 BẮT BUỘC trả về ĐÚNG định dạng JSON sau, không kèm bất kỳ đoạn văn bản giải thích nào khác ngoài JSON:
 {
   "tagValidations": [
@@ -344,14 +346,14 @@ BẮT BUỘC trả về ĐÚNG định dạng JSON sau, không kèm bất kỳ �
       "tag": "tên_tag_đang_kiểm_tra",
       "isValid": true hoặc false,
       "recommendedReplacement": "#tag_gợi_ý_thay_thế_nếu_sai_hoặc_không_phù_hợp_hoặc_cần_thêm_dấu_thăng_và_viết_liền_hoặc_dịch_sang_tiếng_anh",
-      "reason": "Lý do khuyên dùng tiếng Anh (nếu tag là tiếng Việt) hoặc lý do sai chính tả/không phù hợp (nếu isValid = false), ngược lại để rỗng"
+      "reason": "An English explanation of why the tag should be replaced; otherwise leave this empty"
     }
   ],
   "aiRecommendedTags": ["#goiy1", "#goiy2", "#goiy3"]
 }
 
 Ví dụ: Nếu người dùng nhập ["Software Testing", "lichsu12"] mà file nói về lịch sử Việt Nam lớp 12:
-- "Software Testing" sẽ có isValid = false, recommendedReplacement = "#vietnamhistory", reason = "Hashtag về phần mềm không liên quan đến nội dung lịch sử Việt Nam của file."
+- "Software Testing" sẽ có isValid = false, recommendedReplacement = "#vietnamhistory", reason = "This software-related hashtag is not relevant to the document about Vietnamese history."
 - "lichsu12" sẽ có isValid = true, recommendedReplacement = "#lichsu12", reason = ""
 `;
 

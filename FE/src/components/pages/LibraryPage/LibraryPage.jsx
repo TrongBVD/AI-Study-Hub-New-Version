@@ -13,6 +13,7 @@ import JSZip from "jszip";
 import {
   getMyDocuments,
   uploadDocuments,
+  suggestDocumentTags,
   downloadDocument,
   deleteDocument,
   getLibrary,
@@ -180,6 +181,9 @@ function LibraryPage() {
   const [tagErrors, setTagErrors] = useState([]);
   const [tagInputErrors, setTagInputErrors] = useState(["", "", ""]);
   const [aiRecommendedTags, setAiRecommendedTags] = useState([]);
+  const [isLoadingAiTags, setIsLoadingAiTags] = useState(false);
+  const [aiTagSuggestionError, setAiTagSuggestionError] = useState("");
+  const aiTagRequestIdRef = useRef(0);
   const [uploadNotice, setUploadNotice] = useState(null);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [isShareLinkCopied, setIsShareLinkCopied] = useState(false);
@@ -653,6 +657,33 @@ function LibraryPage() {
     return () => window.clearTimeout(timeoutId);
   }, [uploadNotice]);
 
+  async function loadAiRecommendedTags(files) {
+    const requestId = ++aiTagRequestIdRef.current;
+    setAiRecommendedTags([]);
+    setAiTagSuggestionError("");
+    setIsLoadingAiTags(true);
+
+    try {
+      const recommendedTags = await suggestDocumentTags(files);
+      if (requestId === aiTagRequestIdRef.current) {
+        setAiRecommendedTags(recommendedTags);
+        if (recommendedTags.length === 0) {
+          setAiTagSuggestionError("AI could not find suitable tags. You can try again.");
+        }
+      }
+    } catch (error) {
+      console.error("Cannot load AI tag suggestions:", error);
+      if (requestId === aiTagRequestIdRef.current) {
+        setAiRecommendedTags([]);
+        setAiTagSuggestionError("Unable to load AI suggestions. Please try again.");
+      }
+    } finally {
+      if (requestId === aiTagRequestIdRef.current) {
+        setIsLoadingAiTags(false);
+      }
+    }
+  }
+
   function handleUploadFile(e) {
     const files = Array.from(e.target.files || []);
 
@@ -713,6 +744,7 @@ function LibraryPage() {
     setPendingFolderId(currentFolder ? getFolderKey(currentFolder) : null);
     setHashtags(["", "", ""]);
     setIsTagModalOpen(true);
+    loadAiRecommendedTags(validFiles);
 
     e.target.value = "";
   }
@@ -725,12 +757,15 @@ function LibraryPage() {
   }
 
   function handleCancelTaggedUpload() {
+    aiTagRequestIdRef.current += 1;
     setPendingFiles([]);
     setPendingFolderId(null);
     setHashtags(["", "", ""]);
     setTagErrors([]);
     setTagInputErrors(["", "", ""]);
     setAiRecommendedTags([]);
+    setAiTagSuggestionError("");
+    setIsLoadingAiTags(false);
     setIsTagModalOpen(false);
   }
 
@@ -2006,11 +2041,13 @@ function LibraryPage() {
                         <div className="tag_error_message">
                           <span className="error_icon">⚠️</span>
                           <span>
-                            AI gợi ý đặt:{" "}
+                            AI suggestion:{" "}
                             <button
                               type="button"
                               className="apply_recommendation_btn"
+                              disabled={isUploadingDocuments}
                               onClick={() => {
+                                if (isUploadingDocuments) return;
                                 handleHashtagChange(index, tagError.recommendedReplacement);
                                 setTagErrors([]);
                               }}
@@ -2027,16 +2064,20 @@ function LibraryPage() {
                 })}
               </div>
 
-              {aiRecommendedTags.length > 0 && (
-                <div className="ai_recommended_tags_section">
-                  <strong>Gợi ý từ AI:</strong>
+              <div className="ai_recommended_tags_section">
+                <strong>AI suggestions:</strong>
+                {isLoadingAiTags ? (
+                  <span className="ai_tags_loading">AI is analyzing the document and suggesting tags...</span>
+                ) : aiRecommendedTags.length > 0 ? (
                   <div className="ai_tags_chips">
                     {aiRecommendedTags.map((recTag) => (
                       <button
                         key={recTag}
                         type="button"
                         className="ai_tag_chip"
+                        disabled={isUploadingDocuments}
                         onClick={() => {
+                          if (isUploadingDocuments) return;
                           const emptyIndex = hashtags.findIndex(h => h.trim() === "");
                           if (emptyIndex !== -1) {
                             handleHashtagChange(emptyIndex, recTag);
@@ -2049,8 +2090,21 @@ function LibraryPage() {
                       </button>
                     ))}
                   </div>
-                </div>
-              )}
+                ) : (
+                  <div className="ai_tags_error">
+                    <span>{aiTagSuggestionError || "AI is preparing tag suggestions..."}</span>
+                    {aiTagSuggestionError && pendingFiles.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => loadAiRecommendedTags(pendingFiles)}
+                        disabled={isUploadingDocuments}
+                      >
+                        Try again
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
 
               {pendingFiles.length > 0 && (
                 <div className="pending_file_preview">

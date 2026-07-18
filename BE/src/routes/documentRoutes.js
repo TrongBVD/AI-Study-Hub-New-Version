@@ -7,6 +7,7 @@ const authMiddleware = require("../middleware/authMiddleware");
 const {
     listMyDocuments,
     uploadDocuments,
+    suggestDocumentTags,
     downloadDocument,
     viewDocument,
     deleteDocument,
@@ -29,7 +30,7 @@ const allowedExtensions = new Set([".pdf", ".docx", ".txt"]);
 const upload = multer({
     storage: multer.memoryStorage(),
     limits: {
-        fileSize: 20 * 1024 * 1024,
+        fileSize: 50 * 1024 * 1024,
         files: 10,
     },
     fileFilter: (req, file, cb) => {
@@ -47,6 +48,13 @@ const upload = multer({
 });
 
 router.get("/", authMiddleware, listMyDocuments);
+
+router.post(
+    "/suggest-tags",
+    authMiddleware,
+    upload.array("files", 10),
+    suggestDocumentTags
+);
 
 router.post(
     "/upload",

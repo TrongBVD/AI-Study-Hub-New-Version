@@ -150,6 +150,11 @@ function formatNumber(value) {
   }).format(Number(value) || 0);
 }
 
+function getCreatedTimestamp(library) {
+  const timestamp = Date.parse(library?.createdAt || "");
+  return Number.isFinite(timestamp) ? timestamp : 0;
+}
+
 function DiscoverCategoryEmpty({ children }) {
   return <p className="discover_category_empty">{children}</p>;
 }
@@ -235,25 +240,37 @@ function DiscoverPage() {
 
   const topLibraries = useMemo(
     () =>
-      libraries
-        .filter((library) => library.stars > 0)
-        .sort((a, b) => b.stars - a.stars)
+      [...libraries]
+        .sort(
+          (a, b) =>
+            b.stars - a.stars ||
+            b.documents - a.documents ||
+            getCreatedTimestamp(b) - getCreatedTimestamp(a),
+        )
         .slice(0, 6),
     [libraries],
   );
   const trendingLibraries = useMemo(
     () =>
       [...libraries]
-        .filter((library) => library.stars > 0 && library.createdAt)
-        .sort((a, b) => b.trendingScore - a.trendingScore)
+        .sort(
+          (a, b) =>
+            b.trendingScore - a.trendingScore ||
+            getCreatedTimestamp(b) - getCreatedTimestamp(a) ||
+            b.documents - a.documents,
+        )
         .slice(0, 5),
     [libraries],
   );
   const downloadedLibraries = useMemo(
     () =>
-      libraries
-        .filter((library) => library.downloads > 0)
-        .sort((a, b) => b.downloads - a.downloads)
+      [...libraries]
+        .sort(
+          (a, b) =>
+            b.downloads - a.downloads ||
+            b.documents - a.documents ||
+            getCreatedTimestamp(b) - getCreatedTimestamp(a),
+        )
         .slice(0, 5),
     [libraries],
   );
@@ -314,7 +331,7 @@ function DiscoverPage() {
             <section className="discover_section">
               <div className="discover_section_title">
                 <h2>Most starred libraries</h2>
-                <p>Popular public collections ranked by community stars.</p>
+                <p>Public collections from every creator, ranked by community stars.</p>
               </div>
               <div className="discover_card_grid">
                 {topLibraries.length > 0 ? (
@@ -338,7 +355,7 @@ function DiscoverPage() {
               <section className="discover_section">
                 <div className="discover_section_title">
                   <h2>Rising libraries</h2>
-                  <p>Libraries gaining stars quickly after publication.</p>
+                  <p>Recently published libraries from across the StudyHub community.</p>
                 </div>
                 <div className="discover_list">
                   {trendingLibraries.length > 0 ? (
@@ -361,7 +378,7 @@ function DiscoverPage() {
               <section className="discover_section">
                 <div className="discover_section_title">
                   <h2>Most downloaded</h2>
-                  <p>Public libraries with the highest download activity.</p>
+                  <p>All public libraries ranked by recorded download activity.</p>
                 </div>
                 <div className="discover_list">
                   {downloadedLibraries.length > 0 ? (

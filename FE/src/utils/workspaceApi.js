@@ -3,6 +3,9 @@ import api from "./api";
 export const getWorkspaces = () =>
   api.get("/workspaces").then((res) => res.data.data);
 
+export const getMyWorkspaceNotifications = () =>
+  api.get("/workspaces/notifications/me").then((res) => res.data.data);
+
 export const createWorkspace = (payload) =>
   api.post("/workspaces", payload).then((res) => res.data.data);
 
