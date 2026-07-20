@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   LuChevronLeft,
@@ -66,7 +66,7 @@ function MyLibraryPage() {
     return () => {
       isMounted = false;
     };
-  }, [isGuest]);
+  }, [isGuest, isLoggedIn]);
 
   const ITEMS_PER_PAGE = 6;
   const totalPages = Math.ceil(libraries.length / ITEMS_PER_PAGE);

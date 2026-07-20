@@ -143,6 +143,47 @@ function formatWorkspaceFileSize(bytes) {
   return `${(value / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+function normalizeWorkspaceDocumentTitle(value) {
+  return String(value || "").trim().toLocaleLowerCase();
+}
+
+function buildWorkspaceUploadCandidates(files, documents) {
+  const seenFileNames = new Set();
+  const duplicateBatchFileNames = [];
+  const uniqueFiles = [];
+
+  (files || []).forEach((file) => {
+    const normalizedName = normalizeWorkspaceDocumentTitle(file?.name);
+
+    if (seenFileNames.has(normalizedName)) {
+      duplicateBatchFileNames.push(file?.name || "Unnamed file");
+      return;
+    }
+
+    seenFileNames.add(normalizedName);
+    uniqueFiles.push(file);
+  });
+
+  const replaceableDocuments = (documents || []).filter((document) => {
+    const documentLibraryId =
+      document?.libraryId ?? document?.library_id ?? null;
+
+    return documentLibraryId === null || documentLibraryId === "";
+  });
+
+  return {
+    duplicateBatchFileNames,
+    candidates: uniqueFiles.map((file) => ({
+      file,
+      existingDocument: replaceableDocuments.find(
+        (document) =>
+          normalizeWorkspaceDocumentTitle(document?.title) ===
+          normalizeWorkspaceDocumentTitle(file?.name),
+      ),
+    })),
+  };
+}
+
 function getDocumentStatusLabel(status) {
   const value = String(status || "PENDING").toUpperCase();
 
@@ -342,6 +383,8 @@ const [isSubtaskPriorityOpen, setIsSubtaskPriorityOpen] = useState(false);
   const [workspaceFlashcards, setWorkspaceFlashcards] = useState([]);
   const [workspaceDocuments, setWorkspaceDocuments] = useState([]);
   const [workspaceUploadFiles, setWorkspaceUploadFiles] = useState([]);
+  const [workspaceReplacementDocumentIds, setWorkspaceReplacementDocumentIds] =
+    useState([]);
   const [workspaceDocumentStatus, setWorkspaceDocumentStatus] = useState("");
   const [isUploadingWorkspaceDocuments, setIsUploadingWorkspaceDocuments] =
     useState(false);
@@ -1021,6 +1064,164 @@ async function handleDeleteTopicFile(fileId) {
     }
   }
 
+  function resolveWorkspaceUploadSelection(files) {
+    const { candidates, duplicateBatchFileNames } =
+      buildWorkspaceUploadCandidates(files, workspaceDocuments);
+
+    if (duplicateBatchFileNames.length > 0) {
+      alert(
+        `These files were selected more than once and will only be uploaded once:\n- ${duplicateBatchFileNames.join(
+          "\n- ",
+        )}`,
+      );
+    }
+
+    const acceptedFiles = [];
+    const replacementDocumentIds = [];
+    const keptExistingFileNames = [];
+
+    candidates.forEach(({ file, existingDocument }) => {
+      if (!existingDocument) {
+        acceptedFiles.push(file);
+        replacementDocumentIds.push(null);
+        return;
+      }
+
+      const existingUploaderId = String(
+        existingDocument.uploaderId || existingDocument.uploader_id || "",
+      );
+      const canReplaceExistingDocument =
+        canManageWorkspace ||
+        (currentUserId && existingUploaderId === currentUserId);
+
+      if (!canReplaceExistingDocument) {
+        alert(
+          `"${file.name}" has already been uploaded to this workspace by ${
+            existingDocument.uploaderName || "another member"
+          }. Only the original uploader or a workspace admin can replace it.`,
+        );
+        keptExistingFileNames.push(file.name);
+        return;
+      }
+
+      const shouldReplace = window.confirm(
+        `"${file.name}" has already been uploaded to this workspace.\n\nSelect OK to replace the existing document, or Cancel to keep the current version.`,
+      );
+
+      if (!shouldReplace) {
+        keptExistingFileNames.push(file.name);
+        return;
+      }
+
+      acceptedFiles.push(file);
+      replacementDocumentIds.push(String(existingDocument.id));
+    });
+
+    return {
+      acceptedFiles,
+      replacementDocumentIds,
+      keptExistingFileNames,
+    };
+  }
+
+  async function uploadWorkspaceFilesWithDuplicateConfirmation(
+    files,
+    initialReplacementDocumentIds = [],
+  ) {
+    let replacementDocumentIds = [...initialReplacementDocumentIds];
+
+    const submitUpload = (replacementIds) =>
+      uploadDocuments(
+        files,
+        workspaceId,
+        null,
+        [],
+        null,
+        replacementIds,
+      );
+
+    try {
+      const uploadedDocuments = await submitUpload(replacementDocumentIds);
+      return { uploadedDocuments, replacementDocumentIds, cancelled: false };
+    } catch (uploadError) {
+      const duplicateData = uploadError.response?.data;
+
+      if (duplicateData?.code !== "DUPLICATE_DOCUMENT") {
+        throw uploadError;
+      }
+
+      const duplicateDocuments = Array.isArray(duplicateData.duplicates)
+        ? duplicateData.duplicates
+        : [];
+      const duplicateInBatch = duplicateDocuments.find(
+        (duplicate) => !duplicate.documentId,
+      );
+
+      if (duplicateInBatch) {
+        alert(
+          `"${duplicateInBatch.fileName}" was selected more than once. Remove the duplicate selection and try again.`,
+        );
+        return {
+          uploadedDocuments: [],
+          replacementDocumentIds,
+          cancelled: true,
+          reason: "duplicate-batch",
+        };
+      }
+
+      const forbiddenReplacement = duplicateDocuments.find(
+        (duplicate) => duplicate.canReplace === false,
+      );
+
+      if (forbiddenReplacement) {
+        alert(
+          `"${forbiddenReplacement.fileName}" has already been uploaded by another workspace member. Only the original uploader or a workspace admin can replace it.`,
+        );
+        return {
+          uploadedDocuments: [],
+          replacementDocumentIds,
+          cancelled: true,
+          reason: "replacement-forbidden",
+        };
+      }
+
+      const duplicateNames = duplicateDocuments
+        .map((duplicate) => duplicate.fileName)
+        .filter(Boolean);
+      const shouldReplace = window.confirm(
+        `${duplicateNames.join(", ")} ${
+          duplicateNames.length === 1 ? "has" : "have"
+        } already been uploaded to this workspace.\n\nSelect OK to replace the existing ${
+          duplicateNames.length === 1 ? "document" : "documents"
+        }, or Cancel to keep the current version.`,
+      );
+
+      if (!shouldReplace) {
+        return {
+          uploadedDocuments: [],
+          replacementDocumentIds,
+          cancelled: true,
+          reason: "kept-existing",
+        };
+      }
+
+      replacementDocumentIds = files.map((_, fileIndex) => {
+        const duplicate = duplicateDocuments.find(
+          (item) => Number(item.fileIndex) === fileIndex,
+        );
+
+        return (
+          duplicate?.documentId ||
+          replacementDocumentIds[fileIndex] ||
+          null
+        );
+      });
+
+      const uploadedDocuments = await submitUpload(replacementDocumentIds);
+      return { uploadedDocuments, replacementDocumentIds, cancelled: false };
+    }
+  }
+
   async function handleTopicFileChange(e) {
     const selectedFiles = Array.from(e.target.files);
 
@@ -1030,7 +1231,23 @@ async function handleDeleteTopicFile(fileId) {
       return;
     }
 
-    const selectedFilesSize = selectedFiles.reduce(
+    const {
+      acceptedFiles,
+      replacementDocumentIds,
+      keptExistingFileNames,
+    } = resolveWorkspaceUploadSelection(selectedFiles);
+
+    if (acceptedFiles.length === 0) {
+      setDiscussionStatus(
+        keptExistingFileNames.length > 0
+          ? "The existing document was kept and was not uploaded again."
+          : "No new files were selected for upload.",
+      );
+      e.target.value = "";
+      return;
+    }
+
+    const selectedFilesSize = acceptedFiles.reduce(
       (total, file) => total + file.size,
       0,
     );
@@ -1056,7 +1273,21 @@ if (nextStorageUsed > WORKSPACE_STORAGE_LIMIT_BYTES) {
 }
 
     try {
-      const uploadedDocuments = await uploadDocuments(selectedFiles, workspaceId);
+      const uploadResult = await uploadWorkspaceFilesWithDuplicateConfirmation(
+        acceptedFiles,
+        replacementDocumentIds,
+      );
+
+      if (uploadResult.cancelled) {
+        setDiscussionStatus(
+          uploadResult.reason === "kept-existing"
+            ? "The existing document was kept and was not uploaded again."
+            : "Duplicate files were not uploaded.",
+        );
+        return;
+      }
+
+      const uploadedDocuments = uploadResult.uploadedDocuments;
       const attachments = await Promise.all(
         (uploadedDocuments || []).map((document) =>
           addWorkspaceDiscussionAttachment(workspaceId, selectedTopic.id, {
@@ -1075,6 +1306,7 @@ if (nextStorageUsed > WORKSPACE_STORAGE_LIMIT_BYTES) {
             : topic,
         ),
       );
+      await loadWorkspaceDocuments();
 
       createAppNotification({
         category: "file",
@@ -1694,8 +1926,31 @@ function getSubtaskPriorityIcon(priority) {
   }
 
   function handleWorkspaceDocumentFileChange(event) {
-    setWorkspaceUploadFiles(Array.from(event.target.files || []));
-    setWorkspaceDocumentStatus("");
+    const selectedFiles = Array.from(event.target.files || []);
+    const {
+      acceptedFiles,
+      replacementDocumentIds,
+      keptExistingFileNames,
+    } = resolveWorkspaceUploadSelection(selectedFiles);
+
+    setWorkspaceUploadFiles(acceptedFiles);
+    setWorkspaceReplacementDocumentIds(replacementDocumentIds);
+
+    if (keptExistingFileNames.length > 0) {
+      setWorkspaceDocumentStatus(
+        `${keptExistingFileNames.length} existing ${
+          keptExistingFileNames.length === 1 ? "document was" : "documents were"
+        } kept and will not be uploaded again.`,
+      );
+    } else if (replacementDocumentIds.some(Boolean)) {
+      setWorkspaceDocumentStatus(
+        "The selected duplicate will replace the existing document when you upload.",
+      );
+    } else {
+      setWorkspaceDocumentStatus("");
+    }
+
+    event.target.value = "";
   }
 
   async function handleUploadWorkspaceDocuments() {
@@ -1707,14 +1962,34 @@ function getSubtaskPriorityIcon(priority) {
       setIsUploadingWorkspaceDocuments(true);
       setWorkspaceDocumentStatus("Uploading workspace documents...");
 
-      const uploadedDocuments = await uploadDocuments(
+      const uploadResult = await uploadWorkspaceFilesWithDuplicateConfirmation(
         workspaceUploadFiles,
-        workspaceId,
-        null,
-        [],
+        workspaceReplacementDocumentIds,
       );
 
+      if (uploadResult.cancelled) {
+        setWorkspaceUploadFiles([]);
+        setWorkspaceReplacementDocumentIds([]);
+        setWorkspaceDocumentStatus(
+          uploadResult.reason === "kept-existing"
+            ? "The existing document was kept and no duplicate was uploaded."
+            : "Duplicate files were not uploaded.",
+        );
+        return;
+      }
+
+      const uploadedDocuments = uploadResult.uploadedDocuments;
+      const replacedDocumentIds = new Set([
+        ...uploadResult.replacementDocumentIds.filter(Boolean).map(String),
+        ...(uploadedDocuments || []).flatMap((document) =>
+          Array.isArray(document.replaced_document_ids)
+            ? document.replaced_document_ids.map(String)
+            : [],
+        ),
+      ]);
+
       setWorkspaceUploadFiles([]);
+      setWorkspaceReplacementDocumentIds([]);
       await loadWorkspaceDocuments();
 
       const hasFlagged = (uploadedDocuments || []).some(
@@ -1722,7 +1997,11 @@ function getSubtaskPriorityIcon(priority) {
       );
 
       setWorkspaceDocumentStatus(
-        hasFlagged
+        replacedDocumentIds.size > 0
+          ? `${replacedDocumentIds.size} existing ${
+              replacedDocumentIds.size === 1 ? "document was" : "documents were"
+            } replaced successfully.`
+          : hasFlagged
           ? "Upload completed. Some documents were flagged for review."
           : "Workspace documents uploaded and waiting for workspace admin review.",
       );

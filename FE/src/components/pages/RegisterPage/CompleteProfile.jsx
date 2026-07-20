@@ -29,6 +29,8 @@ function CompleteProfile() {
     : 0;
 
   useEffect(() => {
+    if (!email || !setupToken) return undefined;
+
     const delayDebounceFn = setTimeout(async () => {
       if (formData.username.trim() !== "") {
         try {
@@ -49,7 +51,7 @@ function CompleteProfile() {
     }, 500);
 
     return () => clearTimeout(delayDebounceFn);
-  }, [formData.username]);
+  }, [email, formData.username, setupToken]);
 
   if (!email || !setupToken) {
     return <Navigate to="/login" replace />;

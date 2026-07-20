@@ -175,6 +175,8 @@ function LibraryPage() {
   );
 
   const [pendingFiles, setPendingFiles] = useState([]);
+  const [pendingReplacementDocumentIds, setPendingReplacementDocumentIds] =
+    useState([]);
   const [pendingFolderId, setPendingFolderId] = useState(null);
   const [isTagModalOpen, setIsTagModalOpen] = useState(false);
   const [hashtags, setHashtags] = useState(["", "", ""]);
@@ -196,6 +198,7 @@ function LibraryPage() {
   const [isLoadingDocuments, setIsLoadingDocuments] = useState(false);
   const hasFinishedInitialDocumentLoadRef = useRef(false);
   const [isUploadingDocuments, setIsUploadingDocuments] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [isExportingLibrary, setIsExportingLibrary] = useState(false);
 
   const [shareOnProfile, setShareOnProfile] = useState(
@@ -293,7 +296,12 @@ function LibraryPage() {
         }
       });
 
-      for (const item of libraryItems.filter((entry) => entry.type !== "folder")) {
+      const downloadableItems = libraryItems.filter(
+        (entry) => entry.type !== "folder",
+      );
+      const downloadBatchSize = 4;
+
+      async function addItemToArchive(item) {
         const fileName = sanitizeArchiveName(item.name, "document");
         const folderPath = getArchiveFolderPath(item.folderId);
         const targetFolder = folderPath
@@ -302,7 +310,7 @@ function LibraryPage() {
 
         if (!item.isBackendFile || !item.id) {
           failedFiles.push(`${item.name}: file content is not available from backend`);
-          continue;
+          return;
         }
 
         try {
@@ -320,6 +328,14 @@ function LibraryPage() {
         } catch (error) {
           failedFiles.push(`${item.name}: ${error.message || "download failed"}`);
         }
+      }
+
+      for (let index = 0; index < downloadableItems.length; index += downloadBatchSize) {
+        await Promise.all(
+          downloadableItems
+            .slice(index, index + downloadBatchSize)
+            .map(addItemToArchive),
+        );
       }
 
       if (failedFiles.length > 0) {
@@ -586,6 +602,10 @@ function LibraryPage() {
         );
         const legacySavedBackendItems = Array.from(savedBackendItems.values())
           .filter((item) => !backendItemIds.has(String(item.id)))
+          .filter(
+            (item) =>
+              typeof item.name === "string" && item.name.trim().length > 0,
+          )
           .filter((item) => {
             if (!item.libraryId) return true;
             return String(item.libraryId) === activeLibraryId;
@@ -730,13 +750,96 @@ function LibraryPage() {
       return;
     }
 
-    const selectedFilesSize = validFiles.reduce(
+    const selectedNames = new Set();
+    const duplicateBatchFileNames = [];
+    const uniqueFiles = validFiles.filter((file) => {
+      const normalizedName = String(file.name || "").trim().toLocaleLowerCase();
+
+      if (selectedNames.has(normalizedName)) {
+        duplicateBatchFileNames.push(file.name);
+        return false;
+      }
+
+      selectedNames.add(normalizedName);
+      return true;
+    });
+
+    if (duplicateBatchFileNames.length > 0) {
+      alert(
+        `These files were selected more than once and will only be uploaded once:\n- ${duplicateBatchFileNames.join(
+          "\n- ",
+        )}`,
+      );
+    }
+
+    const acceptedFiles = [];
+    const replacementDocumentIds = [];
+    const declinedDuplicateNames = [];
+
+    uniqueFiles.forEach((file) => {
+      const normalizedName = String(file.name || "").trim().toLocaleLowerCase();
+      const existingDocument = libraryItems.find(
+        (item) =>
+          item.type !== "folder" &&
+          String(item.name || "").trim().toLocaleLowerCase() === normalizedName,
+      );
+
+      if (!existingDocument) {
+        acceptedFiles.push(file);
+        replacementDocumentIds.push(null);
+        return;
+      }
+
+      const shouldReplace = window.confirm(
+        `"${file.name}" has already been uploaded to this library.\n\nSelect OK to replace the existing document, or Cancel to keep the current version.`,
+      );
+
+      if (!shouldReplace) {
+        declinedDuplicateNames.push(file.name);
+        return;
+      }
+
+      if (!existingDocument.id || !existingDocument.isBackendFile) {
+        alert(`"${file.name}" cannot be replaced because its saved document record is incomplete.`);
+        return;
+      }
+
+      acceptedFiles.push(file);
+      replacementDocumentIds.push(String(existingDocument.id));
+    });
+
+    if (declinedDuplicateNames.length > 0) {
+      setUploadNotice({
+        type: "warning",
+        message: `${declinedDuplicateNames.length} existing ${
+          declinedDuplicateNames.length === 1 ? "document was" : "documents were"
+        } kept and not uploaded again.`,
+      });
+    }
+
+    if (acceptedFiles.length === 0) {
+      e.target.value = "";
+      return;
+    }
+
+    const replacementIdSet = new Set(
+      replacementDocumentIds.filter(Boolean).map(String),
+    );
+    const replacementSize = libraryItems.reduce(
+      (total, item) =>
+        replacementIdSet.has(String(item.id))
+          ? total + (Number(item.sizeBytes) || 0)
+          : total,
+      0,
+    );
+    const selectedFilesSize = acceptedFiles.reduce(
       (total, file) => total + (Number(file.size) || 0),
       0
     );
 
     const currentUsedStorage = countUsedStorageBytes(libraryItems);
-    const nextUsedStorage = currentUsedStorage + selectedFilesSize;
+    const nextUsedStorage =
+      currentUsedStorage - replacementSize + selectedFilesSize;
 
     if (nextUsedStorage > LIBRARY_STORAGE_LIMIT_BYTES) {
       setIsStorageLimitPopupOpen(true);
@@ -744,12 +847,16 @@ function LibraryPage() {
       return;
     }
 
-    setPendingFiles(validFiles);
+    setPendingFiles(acceptedFiles);
+    setPendingReplacementDocumentIds(replacementDocumentIds);
     setPendingFolderId(currentFolder ? getFolderKey(currentFolder) : null);
     setHashtags(["", "", ""]);
     setActiveHashtagIndex(0);
+    aiTagRequestIdRef.current += 1;
+    setAiRecommendedTags([]);
+    setAiTagSuggestionError("");
+    setIsLoadingAiTags(false);
     setIsTagModalOpen(true);
-    loadAiRecommendedTags(validFiles);
 
     e.target.value = "";
   }
@@ -761,9 +868,48 @@ function LibraryPage() {
     setTagInputErrors(["", "", ""]);
   }
 
+  function handleApplySuggestedTag(suggestedTag) {
+    setHashtags((currentTags) => {
+      const normalizedSuggestion = suggestedTag.trim().toLocaleLowerCase();
+      const alreadyApplied = currentTags.some(
+        (tag) => tag.trim().toLocaleLowerCase() === normalizedSuggestion,
+      );
+      const emptyIndex = currentTags.findIndex((tag) => tag.trim() === "");
+
+      if (alreadyApplied || emptyIndex === -1) return currentTags;
+
+      const nextTags = [...currentTags];
+      nextTags[emptyIndex] = suggestedTag;
+      return nextTags;
+    });
+    setTagInputErrors(["", "", ""]);
+  }
+
+  function handleApplyAllSuggestedTags() {
+    setHashtags((currentTags) => {
+      const nextTags = [...currentTags];
+
+      for (const suggestedTag of aiRecommendedTags) {
+        const normalizedSuggestion = suggestedTag.trim().toLocaleLowerCase();
+        const alreadyApplied = nextTags.some(
+          (tag) => tag.trim().toLocaleLowerCase() === normalizedSuggestion,
+        );
+        const emptyIndex = nextTags.findIndex((tag) => tag.trim() === "");
+
+        if (!alreadyApplied && emptyIndex !== -1) {
+          nextTags[emptyIndex] = suggestedTag;
+        }
+      }
+
+      return nextTags;
+    });
+    setTagInputErrors(["", "", ""]);
+  }
+
   function handleCancelTaggedUpload() {
     aiTagRequestIdRef.current += 1;
     setPendingFiles([]);
+    setPendingReplacementDocumentIds([]);
     setPendingFolderId(null);
     setHashtags(["", "", ""]);
     setActiveHashtagIndex(0);
@@ -824,14 +970,76 @@ function LibraryPage() {
 
     try {
       setIsUploadingDocuments(true);
+      setUploadProgress(0);
 
       const workspaceId = libraryData?.workspaceId || libraryData?.workspace_id;
-      const uploadedDocuments = await uploadDocuments(
-        pendingFiles, 
-        workspaceId, 
-        libraryData.id || libraryId,
-        validHashtags
-      );
+      let effectiveReplacementIds = [...pendingReplacementDocumentIds];
+
+      async function submitUpload(replacementIds) {
+        return uploadDocuments(
+          pendingFiles,
+          workspaceId,
+          libraryData.id || libraryId,
+          validHashtags,
+          setUploadProgress,
+          replacementIds,
+        );
+      }
+
+      let uploadedDocuments;
+
+      try {
+        uploadedDocuments = await submitUpload(effectiveReplacementIds);
+      } catch (uploadError) {
+        const duplicateData = uploadError.response?.data;
+
+        if (duplicateData?.code !== "DUPLICATE_DOCUMENT") {
+          throw uploadError;
+        }
+
+        const duplicateDocuments = Array.isArray(duplicateData.duplicates)
+          ? duplicateData.duplicates
+          : [];
+        const duplicateInBatch = duplicateDocuments.find(
+          (duplicate) => !duplicate.documentId,
+        );
+
+        if (duplicateInBatch) {
+          alert(
+            `"${duplicateInBatch.fileName}" was selected more than once. Remove the duplicate selection and try again.`,
+          );
+          return;
+        }
+
+        const duplicateNames = duplicateDocuments
+          .map((duplicate) => duplicate.fileName)
+          .filter(Boolean);
+        const shouldReplace = window.confirm(
+          `${duplicateNames.join(", ")} ${
+            duplicateNames.length === 1 ? "has" : "have"
+          } already been uploaded.\n\nSelect OK to replace the existing ${
+            duplicateNames.length === 1 ? "document" : "documents"
+          }, or Cancel to keep the current version.`,
+        );
+
+        if (!shouldReplace) {
+          setUploadNotice({
+            type: "warning",
+            message: "The existing document was kept and no duplicate was uploaded.",
+          });
+          return;
+        }
+
+        effectiveReplacementIds = pendingFiles.map((_, fileIndex) => {
+          const duplicate = duplicateDocuments.find(
+            (item) => item.fileIndex === fileIndex,
+          );
+          return duplicate?.documentId || effectiveReplacementIds[fileIndex] || null;
+        });
+        setPendingReplacementDocumentIds(effectiveReplacementIds);
+        setUploadProgress(0);
+        uploadedDocuments = await submitUpload(effectiveReplacementIds);
+      }
       
       const uploadedItems = (uploadedDocuments || []).map((document, index) => ({
         ...mapBackendDocumentToLibraryItem(document),
@@ -849,8 +1057,20 @@ function LibraryPage() {
         hashtags: validHashtags,
       }));
 
+      const replacedDocumentIds = new Set([
+        ...effectiveReplacementIds.filter(Boolean).map(String),
+        ...(uploadedDocuments || []).flatMap((document) =>
+          Array.isArray(document.replaced_document_ids)
+            ? document.replaced_document_ids.map(String)
+            : [],
+        ),
+      ]);
+
       setLibraryItems((currentItems) => {
-        const nextItems = [...uploadedItems, ...currentItems];
+        const retainedItems = currentItems.filter(
+          (item) => !replacedDocumentIds.has(String(item.id)),
+        );
+        const nextItems = [...uploadedItems, ...retainedItems];
         syncLibraryDocumentCount(nextItems);
         return nextItems;
       });
@@ -868,7 +1088,11 @@ function LibraryPage() {
         setUploadNotice({
           type: "success",
           message:
-            uploadedItems.length === 1
+            replacedDocumentIds.size > 0
+              ? `${replacedDocumentIds.size} ${
+                  replacedDocumentIds.size === 1 ? "document" : "documents"
+                } replaced successfully.`
+              : uploadedItems.length === 1
               ? "File uploaded successfully."
               : `${uploadedItems.length} files uploaded successfully.`,
         });
@@ -895,6 +1119,7 @@ function LibraryPage() {
       }
     } finally {
       setIsUploadingDocuments(false);
+      setUploadProgress(0);
     }
   }
 
@@ -2030,6 +2255,28 @@ function LibraryPage() {
             </div>
 
             <div className="hashtag_modal_body">
+              <section className="tag_generator_panel" aria-label="AI tag generator">
+                <div>
+                  <strong>Need help choosing tags?</strong>
+                  <p>
+                    Generate optional suggestions, then choose which ones to use.
+                    Your manual tags will not be replaced.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  className="generate_tags_btn"
+                  onClick={() => loadAiRecommendedTags(pendingFiles)}
+                  disabled={
+                    pendingFiles.length === 0 ||
+                    isLoadingAiTags ||
+                    isUploadingDocuments
+                  }
+                >
+                  {isLoadingAiTags ? "Generating..." : "Generate tags with AI"}
+                </button>
+              </section>
+
               <div className="hashtag_input_list">
                 {hashtags.map((tag, index) => {
                   const userTagNormalized = tag.trim().toLowerCase().replace("#", "");
@@ -2098,7 +2345,18 @@ function LibraryPage() {
               </div>
 
               <div className="ai_recommended_tags_section">
-                <strong>AI suggestions:</strong>
+                <div className="ai_recommended_tags_header">
+                  <strong>AI suggestions:</strong>
+                  {aiRecommendedTags.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={handleApplyAllSuggestedTags}
+                      disabled={isUploadingDocuments}
+                    >
+                      Apply suggestions
+                    </button>
+                  )}
+                </div>
                 {isLoadingAiTags ? (
                   <span className="ai_tags_loading">AI is analyzing the document and suggesting tags...</span>
                 ) : aiRecommendedTags.length > 0 ? (
@@ -2120,6 +2378,7 @@ function LibraryPage() {
                             hashtagInputRefs.current[targetIndex]?.focus();
                           });
                         }}
+                        onClick={() => handleApplySuggestedTag(recTag)}
                       >
                         {recTag}
                       </button>
@@ -2127,7 +2386,7 @@ function LibraryPage() {
                   </div>
                 ) : (
                   <div className="ai_tags_error">
-                    <span>{aiTagSuggestionError || "AI is preparing tag suggestions..."}</span>
+                    <span>{aiTagSuggestionError || "Generate tags when you want AI suggestions."}</span>
                     {aiTagSuggestionError && pendingFiles.length > 0 && (
                       <button
                         type="button"
@@ -2169,7 +2428,11 @@ function LibraryPage() {
                 onClick={handleConfirmTaggedUpload}
                 disabled={isUploadingDocuments}
               >
-                {isUploadingDocuments ? "Uploading" : "Save and upload"}
+                {isUploadingDocuments
+                  ? uploadProgress < 100
+                    ? `Uploading ${uploadProgress}%`
+                    : "Processing document"
+                  : "Save and upload"}
               </button>
             </div>
           </div>

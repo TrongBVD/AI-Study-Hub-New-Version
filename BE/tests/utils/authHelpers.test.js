@@ -39,6 +39,7 @@ describe("authHelpers", () => {
       email: "a@test.com",
       username: "alice",
       full_name: "Alice",
+      bio: "",
       role: "USER",
       status: "ACTIVE",
     });
