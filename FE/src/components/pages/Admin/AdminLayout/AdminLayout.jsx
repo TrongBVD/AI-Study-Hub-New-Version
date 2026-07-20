@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Outlet } from "react-router-dom";
-import Navbar from "../../../layout/Dashboard/Navbar.jsx";
 import AdminSidebar from "./AdminSidebar.jsx";
+import AdminNavbar from "./AdminNavbar.jsx";
 import "../../../layout/Dashboard/Dashboard.css";
 import "./AdminLayout.css";
 
@@ -16,10 +16,8 @@ function AdminLayout() {
       />
 
       <div className="main_area admin-layout__main-area">
-        <Navbar
+        <AdminNavbar
           onOpenSidebar={() => setIsSidebarOpen(true)}
-          profilePath="/admin/profile"
-          searchPlaceholder="Search users, documents, actions or logs..."
         />
 
         <main className="content admin-layout__content">

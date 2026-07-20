@@ -388,6 +388,21 @@ body[data-theme="black"] .user_dashboard_layout .settings_table {
   align-items: center;
 }
 
+.admin_settings_locked {
+  min-height: 29px;
+  border-radius: 999px;
+  padding: 0 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--accent-soft);
+  color: var(--accent-color);
+  font-size: 10px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+
 .settings_avatar {
   width: 2.8rem;
   height: 2.8rem;

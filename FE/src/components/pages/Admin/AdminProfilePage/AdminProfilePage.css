@@ -1,0 +1,66 @@
+.admin-profile-page {
+  min-height: 100%; padding: 32px; color: var(--text-primary);
+  background: radial-gradient(circle at 92% 2%, var(--focus-ring), transparent 25%), var(--bg-primary);
+  font-family: "Outfit", "Segoe UI", Arial, sans-serif;
+}
+.admin-profile-page * { box-sizing: border-box; }
+.admin-profile-page__heading { max-width: 1480px; margin: 0 auto; display: flex; align-items: flex-end; justify-content: space-between; gap: 22px; }
+.admin-profile-page__heading > div > span { color: var(--accent-color); font-size: 11px; font-weight: 900; letter-spacing: .12em; text-transform: uppercase; }
+.admin-profile-page__heading h1 { margin: 7px 0 0; font-size: 37px; line-height: 1; letter-spacing: -.045em; }
+.admin-profile-page__heading p { margin: 9px 0 0; color: var(--text-secondary); font-size: 13px; }
+.admin-profile-page__primary-action {
+  min-height: 42px; border: 1px solid var(--border-color); border-radius: 10px; padding: 0 15px; display: inline-flex; align-items: center;
+  justify-content: center; gap: 8px; background: var(--bg-card); color: var(--text-primary); text-decoration: none; font-size: 11px; font-weight: 850;
+}
+.admin-profile-page__notice { max-width: 1480px; margin: 16px auto 0; border: 1px solid var(--border-color); border-radius: 10px; padding: 12px; background: var(--bg-card); font-size: 11px; }
+.admin-profile-page__notice.is-error { color: var(--danger-color); background: var(--danger-bg); }
+.admin-profile-page__identity-card {
+  max-width: 1480px; margin: 20px auto 0; border: 1px solid var(--border-color); border-radius: 16px; padding: 22px;
+  display: flex; align-items: center; justify-content: space-between; gap: 24px; background: linear-gradient(120deg, var(--hero-card-bg), var(--bg-card)); box-shadow: var(--shadow-soft);
+}
+.admin-profile-page__identity-main { display: flex; align-items: center; gap: 17px; min-width: 0; }
+.admin-profile-page__identity-main > img { width: 82px; height: 82px; border: 3px solid var(--bg-card); border-radius: 18px; object-fit: cover; box-shadow: 0 8px 22px rgba(55,38,25,.13); }
+.admin-profile-page__identity-main h2 { margin: 9px 0 0; font-size: 25px; letter-spacing: -.035em; }
+.admin-profile-page__identity-main p { margin: 7px 0 0; display: flex; align-items: center; gap: 7px; color: var(--text-secondary); font-size: 11px; }
+.admin-profile-page__identity-badges { display: flex; flex-wrap: wrap; gap: 7px; }
+.admin-profile-page__identity-badges span { min-height: 25px; border-radius: 999px; padding: 0 9px; display: inline-flex; align-items: center; gap: 6px; background: var(--accent-soft); color: var(--accent-color); font-size: 9px; font-weight: 850; }
+.admin-profile-page__identity-badges .is-active { color: var(--success-color); background: color-mix(in srgb, var(--success-color) 12%, var(--bg-card)); }
+.admin-profile-page__identity-badges .is-active i { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.admin-profile-page__identity-meta { max-width: 310px; border-left: 1px solid var(--border-color); padding-left: 24px; display: grid; gap: 5px; }
+.admin-profile-page__identity-meta span { color: var(--text-muted); font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; }
+.admin-profile-page__identity-meta strong { overflow-wrap: anywhere; font-size: 11px; }
+.admin-profile-page__identity-meta small { margin-top: 5px; display: flex; gap: 6px; color: var(--text-secondary); font-size: 9px; }
+.admin-profile-page__layout { max-width: 1480px; margin: 14px auto 0; display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 14px; align-items: start; }
+.admin-profile-page__layout main, .admin-profile-page__layout aside { display: grid; gap: 14px; }
+.admin-profile-page__card { border: 1px solid var(--border-color); border-radius: 14px; padding: 18px; background: var(--hero-card-bg); }
+.admin-profile-page__card > header { display: flex; align-items: center; justify-content: space-between; gap: 14px; }
+.admin-profile-page__card > header > div { display: flex; align-items: center; gap: 10px; }
+.admin-profile-page__card > header > div > svg { width: 34px; height: 34px; border-radius: 9px; padding: 8px; color: var(--accent-color); background: var(--accent-soft); }
+.admin-profile-page__card h2 { margin: 0; font-size: 15px; letter-spacing: -.02em; }
+.admin-profile-page__card header p { margin: 4px 0 0; color: var(--text-muted); font-size: 9px; }
+.admin-profile-page__card header > a { color: var(--accent-color); font-size: 10px; font-weight: 800; text-decoration: none; }
+.admin-profile-page__activity-list { margin-top: 14px; display: grid; }
+.admin-profile-page__activity-list article { min-height: 62px; border-top: 1px solid var(--border-color); display: grid; grid-template-columns: 31px minmax(0,1fr) auto; align-items: center; gap: 10px; }
+.admin-profile-page__activity-list article > span { width: 29px; height: 29px; border-radius: 50%; display: grid; place-items: center; color: var(--success-color); background: var(--accent-soft); }
+.admin-profile-page__activity-list strong { font-size: 10px; }
+.admin-profile-page__activity-list p { margin: 4px 0 0; color: var(--text-muted); font-size: 8px; }
+.admin-profile-page__activity-list time { color: var(--text-muted); font-size: 8px; white-space: nowrap; }
+.admin-profile-page__empty { min-height: 90px; display: grid; place-items: center; color: var(--text-muted); font-size: 10px; }
+.admin-profile-page__role { margin-top: 15px; border-radius: 9px; padding: 11px; display: block; background: var(--accent-soft); color: var(--accent-color); font-size: 11px; }
+.admin-profile-page__access-card ul { margin: 13px 0 0; padding: 0; display: grid; gap: 10px; list-style: none; }
+.admin-profile-page__access-card li { display: flex; gap: 8px; color: var(--text-secondary); font-size: 9px; }
+.admin-profile-page__access-card li svg { color: var(--success-color); flex: 0 0 auto; }
+.admin-profile-page__security-row { min-height: 42px; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 9px; }
+.admin-profile-page__security-row span { display: flex; align-items: center; gap: 7px; }
+.admin-profile-page__security-row strong { color: var(--success-color); }
+.admin-profile-page__security-row em { color: var(--warning-color); font-style: normal; font-weight: 800; }
+.admin-profile-page__primary-action { width: 100%; margin-top: 14px; border-color: var(--accent-color); background: var(--accent-color); color: var(--button-text); }
+.admin-profile-page__toggle-row { margin-top: 15px; display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 12px; cursor: pointer; position: relative; }
+.admin-profile-page__toggle-row strong, .admin-profile-page__toggle-row small { display: block; }
+.admin-profile-page__toggle-row strong { font-size: 10px; }.admin-profile-page__toggle-row small { margin-top: 4px; color: var(--text-muted); font-size: 8px; }
+.admin-profile-page__toggle-row input { position: absolute; opacity: 0; pointer-events: none; }
+.admin-profile-page__toggle-row > i { width: 36px; height: 20px; border-radius: 999px; background: var(--border-color); position: relative; transition: .2s; }
+.admin-profile-page__toggle-row > i::after { content: ""; width: 14px; height: 14px; border-radius: 50%; background: var(--bg-card); position: absolute; top: 3px; left: 3px; transition: .2s; }
+.admin-profile-page__toggle-row input:checked + i { background: var(--accent-color); }.admin-profile-page__toggle-row input:checked + i::after { transform: translateX(16px); }
+@media (max-width: 1050px) { .admin-profile-page__layout { grid-template-columns: 1fr; }.admin-profile-page__layout aside { grid-template-columns: repeat(2, minmax(0,1fr)); }.admin-profile-page__layout aside section:last-child { grid-column: span 2; } }
+@media (max-width: 720px) { .admin-profile-page { padding: 22px 14px 40px; }.admin-profile-page__heading, .admin-profile-page__identity-card { align-items: stretch; flex-direction: column; }.admin-profile-page__identity-meta { max-width: none; border-left: 0; border-top: 1px solid var(--border-color); padding: 16px 0 0; }.admin-profile-page__layout aside { grid-template-columns: 1fr; }.admin-profile-page__layout aside section:last-child { grid-column: auto; }.admin-profile-page__activity-list time { display: none; } }

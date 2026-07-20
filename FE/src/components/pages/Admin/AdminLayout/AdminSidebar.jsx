@@ -4,6 +4,7 @@ import {
   LuLayoutDashboard,
   LuListChecks,
   LuLogOut,
+  LuSettings,
   LuShieldCheck,
   LuUsers,
   LuX,
@@ -19,6 +20,7 @@ const ADMIN_MENU_ITEMS = [
   { icon: LuUsers, label: "Users", path: "/admin/users" },
   { icon: LuListChecks, label: "Activity Logs", path: "/admin/logs" },
   { icon: LuChartPie, label: "Usage", path: "/admin/usage" },
+  { icon: LuSettings, label: "Settings", path: "/admin/settings" },
 ];
 
 function AdminSidebar({ isOpen, onClose }) {
