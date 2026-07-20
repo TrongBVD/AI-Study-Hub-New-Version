@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useLocation } from "react-router-dom";
 import {
   getNotificationSettings,
   saveNotificationSettings,
@@ -16,99 +17,45 @@ const SETTING_MENUS = [
     title: "Personal",
     items: [
       { icon: "ti-user", label: "Profile & appearance" },
-      { icon: "ti-id-badge", label: "Account" },
     ],
   },
   {
     title: "Notifications",
     items: [
       { icon: "ti-bell", label: "Notification settings" },
-      { icon: "ti-email", label: "Email preferences" },
-      { icon: "ti-time", label: "Do not disturb" },
     ],
   },
   {
     title: "Security",
     items: [
       { icon: "ti-key", label: "Password & authentication" },
-      { icon: "ti-desktop", label: "Active sessions" },
       { icon: "ti-harddrives", label: "Data & account" },
     ],
   },
 ];
 
-const PLANNED_SECTIONS = {
-  Account: {
-    icon: "ti-user",
-    eyebrow: "Personal",
-    title: "Account",
-    description:
-      "Manage the identity you use to sign in and where account messages are delivered.",
-    note: "These controls need account APIs before they can safely save changes.",
-    items: [
-      {
-        title: "Login email",
-        description: "Change your email after verifying the new address.",
-        impact: "Updates your sign-in identity and security email destination.",
-      },
-      {
-        title: "Connected accounts",
-        description: "Review Google and other sign-in methods linked to your account.",
-        impact: "Provides another secure way to access your study space.",
-      },
-    ],
-  },
-  "Email preferences": {
-    icon: "ti-email",
-    eyebrow: "Notifications",
-    title: "Email preferences",
-    description:
-      "Choose which collaboration and study updates should also reach your inbox.",
-    note: "Security emails will remain enabled. Optional emails need a delivery service.",
-    items: [
-      {
-        title: "Workspace invitations",
-        description: "Receive an email when someone invites you to collaborate.",
-        impact: "Helps you notice invitations when you are away from the app.",
-      },
-      {
-        title: "Mentions and replies",
-        description: "Receive email for direct mentions and discussion replies.",
-        impact: "Keeps important conversations visible outside the app.",
-      },
-      {
-        title: "Weekly study summary",
-        description: "Get a short report of study time and completed reviews.",
-        impact: "Provides a regular view of learning consistency.",
-      },
-    ],
-  },
-  "Active sessions": {
-    icon: "ti-desktop",
-    eyebrow: "Security",
-    title: "Active sessions",
-    description:
-      "Review browsers and devices that currently have access to your account.",
-    note: "Session management requires server-side token tracking before activation.",
-    items: [
-      {
-        title: "Current device",
-        description: "See the browser, location, and most recent activity.",
-        impact: "Helps you recognize the session you are using now.",
-      },
-      {
-        title: "Other devices",
-        description: "Review every device that still has an active session.",
-        impact: "Makes unfamiliar access easier to identify.",
-      },
-      {
-        title: "Sign out everywhere",
-        description: "Revoke all sessions except the one currently in use.",
-        impact: "Forces other devices to authenticate again.",
-      },
-    ],
-  },
+const ADMIN_SETTING_MENU = {
+  title: "Administration",
+  items: [{ icon: "ti-shield", label: "Admin controls" }],
 };
+
+const ADMIN_SETTINGS_KEY = "aiStudyHubAdminSettings";
+
+function getInitialAdminSettings() {
+  const defaults = {
+    moderationAlerts: true,
+    securityAlerts: true,
+  };
+
+  try {
+    return {
+      ...defaults,
+      ...JSON.parse(localStorage.getItem(ADMIN_SETTINGS_KEY) || "{}"),
+    };
+  } catch {
+    return defaults;
+  }
+}
 
 const NOTIFICATION_CATEGORIES = [
   {
@@ -233,6 +180,8 @@ function getProfileNameCooldownText(lastChangedAt) {
 }
 
 function SettingPage() {
+  const location = useLocation();
+  const isAdminSettings = location.pathname.startsWith("/admin/");
   const { theme, setTheme, availableThemes } = useTheme();
   const [workspaceName, setWorkspaceName] = useState(getInitialProfileName);
   const [savedProfileName, setSavedProfileName] =
@@ -245,10 +194,23 @@ function SettingPage() {
   const [notificationSettings, setNotificationSettings] = useState(() =>
     getNotificationSettings(),
   );
+  const [adminSettings, setAdminSettings] = useState(getInitialAdminSettings);
+
+  const settingMenus = isAdminSettings
+    ? [
+        ...SETTING_MENUS.filter((group) => group.title !== "Notifications"),
+        ADMIN_SETTING_MENU,
+      ]
+    : SETTING_MENUS;
 
   useEffect(() => {
     saveNotificationSettings(notificationSettings);
   }, [notificationSettings]);
+
+  useEffect(() => {
+    if (!isAdminSettings) return;
+    localStorage.setItem(ADMIN_SETTINGS_KEY, JSON.stringify(adminSettings));
+  }, [adminSettings, isAdminSettings]);
 
   function toggleNotificationSetting(key) {
     setNotificationSettings((previousSettings) => ({
@@ -263,16 +225,6 @@ function SettingPage() {
       [category]: {
         ...previousSettings[category],
         [key]: !previousSettings[category][key],
-      },
-    }));
-  }
-
-  function updateDoNotDisturb(key, value) {
-    setNotificationSettings((previousSettings) => ({
-      ...previousSettings,
-      doNotDisturb: {
-        ...previousSettings.doNotDisturb,
-        [key]: value,
       },
     }));
   }
@@ -334,12 +286,16 @@ function SettingPage() {
           </div>
           <div>
             <h1>Settings</h1>
-            <p>Shape how your study space works for you.</p>
+            <p>
+              {isAdminSettings
+                ? "Manage your account and administration preferences."
+                : "Shape how your study space works for you."}
+            </p>
           </div>
         </header>
 
         <nav className="settings_menu_groups" aria-label="Settings sections">
-          {SETTING_MENUS.map((group) => (
+          {settingMenus.map((group) => (
             <section className="settings_menu_group" key={group.title}>
               <h2>{group.title}</h2>
 
@@ -399,22 +355,19 @@ function SettingPage() {
             />
           )}
 
-          {activeSetting === "Do not disturb" && (
-            <DoNotDisturbSettings
-              notificationSettings={notificationSettings}
-              updateDoNotDisturb={updateDoNotDisturb}
-            />
-          )}
-
           {activeSetting === "Password & authentication" && (
             <PasswordSettings />
           )}
 
           {activeSetting === "Data & account" && <DataAccountSettings />}
 
-          {PLANNED_SECTIONS[activeSetting] && (
-            <PlannedSettingsSection config={PLANNED_SECTIONS[activeSetting]} />
+          {isAdminSettings && activeSetting === "Admin controls" && (
+            <AdminControlSettings
+              settings={adminSettings}
+              setSettings={setAdminSettings}
+            />
           )}
+
         </div>
       </section>
     </main>
@@ -474,6 +427,66 @@ function SettingsSwitch({ checked, onClick, label }) {
     >
       <span></span>
     </button>
+  );
+}
+
+function AdminControlSettings({ settings, setSettings }) {
+  function toggle(key) {
+    setSettings((current) => ({ ...current, [key]: !current[key] }));
+  }
+
+  return (
+    <div className="settings_section_stack">
+      <SettingsHeader
+        icon="ti-shield"
+        eyebrow="Administration"
+        title="Admin controls"
+        description="Configure moderation workflow, security alerts and operational thresholds for your administrator account."
+        badge="Admin only"
+      />
+
+      <SettingsPanel
+        title="Moderation workflow"
+        description="Choose how cases requiring administrator attention are handled."
+      >
+        <div className="settings_table">
+          <SettingRow
+            title="Moderation queue alerts"
+            description="Notify you when new documents enter the moderation queue."
+          >
+            <SettingsSwitch
+              checked={settings.moderationAlerts}
+              onClick={() => toggle("moderationAlerts")}
+              label="Toggle moderation queue alerts"
+            />
+          </SettingRow>
+        </div>
+      </SettingsPanel>
+
+      <SettingsPanel
+        title="Security & audit"
+        description="Control important administrative security notifications."
+      >
+        <div className="settings_table">
+          <SettingRow
+            title="Critical security alerts"
+            description="Receive alerts for account status, role and suspicious access changes."
+          >
+            <SettingsSwitch
+              checked={settings.securityAlerts}
+              onClick={() => toggle("securityAlerts")}
+              label="Toggle critical security alerts"
+            />
+          </SettingRow>
+          <SettingRow
+            title="Audit logging"
+            description="Administrative actions are recorded to protect accountability and system integrity."
+          >
+            <span className="admin_settings_locked"><i className="ti-lock" /> Always enabled</span>
+          </SettingRow>
+        </div>
+      </SettingsPanel>
+    </div>
   );
 }
 
@@ -650,17 +663,6 @@ function NotificationSettings({
           </SettingRow>
 
           <SettingRow
-            title="Play notification sound"
-            description="Play a short sound when new activity arrives."
-          >
-            <SettingsSwitch
-              checked={notificationSettings.sound}
-              onClick={() => toggleNotificationSetting("sound")}
-              label="Toggle notification sound"
-            />
-          </SettingRow>
-
-          <SettingRow
             title="Browser notifications"
             description="Allow desktop notifications when the browser supports them."
           >
@@ -736,96 +738,6 @@ function NotificationSettings({
               </select>
             </label>
           </SettingRow>
-        </div>
-      </SettingsPanel>
-    </>
-  );
-}
-
-function DoNotDisturbSettings({
-  notificationSettings,
-  updateDoNotDisturb,
-}) {
-  const doNotDisturb = notificationSettings.doNotDisturb;
-
-  return (
-    <>
-      <SettingsHeader
-        icon="ti-time"
-        eyebrow="Notifications"
-        title="Do not disturb"
-        description="Keep notifications available without letting them interrupt focused study."
-        badge={doNotDisturb.enabled ? "Quiet hours on" : "Quiet hours off"}
-      />
-
-      <div className="settings_quiet_summary">
-        <div className="settings_quiet_clock">
-          <i className="ti-time" aria-hidden="true"></i>
-        </div>
-        <div>
-          <span>Current quiet window</span>
-          <strong>
-            {doNotDisturb.enabled
-              ? `${doNotDisturb.from} to ${doNotDisturb.to}`
-              : "No quiet hours scheduled"}
-          </strong>
-          <p>
-            Notifications are still saved. Sounds and popups pause during this
-            window.
-          </p>
-        </div>
-      </div>
-
-      <SettingsPanel
-        title="Quiet hours"
-        description="Choose when notification sound and browser popups should pause."
-      >
-        <div className="settings_table">
-          <SettingRow
-            title="Enable do not disturb"
-            description="Continue collecting notifications without interrupting you."
-          >
-            <SettingsSwitch
-              checked={doNotDisturb.enabled}
-              onClick={() =>
-                updateDoNotDisturb("enabled", !doNotDisturb.enabled)
-              }
-              label="Toggle do not disturb"
-            />
-          </SettingRow>
-
-          {doNotDisturb.enabled && (
-            <SettingRow
-              title="Quiet window"
-              description="Set the beginning and end of your uninterrupted study time."
-            >
-              <div className="settings_time_range">
-                <label className="settings_field">
-                  <span>From</span>
-                  <input
-                    type="time"
-                    value={doNotDisturb.from}
-                    onChange={(event) =>
-                      updateDoNotDisturb("from", event.target.value)
-                    }
-                  />
-                </label>
-
-                <span className="settings_time_separator">to</span>
-
-                <label className="settings_field">
-                  <span>Until</span>
-                  <input
-                    type="time"
-                    value={doNotDisturb.to}
-                    onChange={(event) =>
-                      updateDoNotDisturb("to", event.target.value)
-                    }
-                  />
-                </label>
-              </div>
-            </SettingRow>
-          )}
         </div>
       </SettingsPanel>
     </>
@@ -1046,44 +958,6 @@ function DataAccountSettings() {
           </button>
         </form>
       </SettingsPanel>
-    </>
-  );
-}
-
-function PlannedSettingsSection({ config }) {
-  return (
-    <>
-      <SettingsHeader
-        icon={config.icon}
-        eyebrow={config.eyebrow}
-        title={config.title}
-        description={config.description}
-        badge="Interface preview"
-      />
-
-      <div className="settings_preview_notice">
-        <i className="ti-info-alt" aria-hidden="true"></i>
-        <div>
-          <strong>Preview only</strong>
-          <p>{config.note}</p>
-        </div>
-      </div>
-
-      <section className="settings_planned_list">
-        {config.items.map((item, index) => (
-          <article className="settings_planned_item" key={item.title}>
-            <span className="settings_planned_number">
-              {String(index + 1).padStart(2, "0")}
-            </span>
-            <div>
-              <h2>{item.title}</h2>
-              <p>{item.description}</p>
-              <small>{item.impact}</small>
-            </div>
-            <span className="settings_planned_status">Not connected</span>
-          </article>
-        ))}
-      </section>
     </>
   );
 }

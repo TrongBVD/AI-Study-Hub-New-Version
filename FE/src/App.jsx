@@ -28,6 +28,7 @@ import Flashcards from "./components/pages/Flashcards/Flashcards.jsx";
 import CreateWorkSpacePage from "./components/pages/CreateWorkSpacePage/CreateWorkSpacePage.jsx";
 import SearchUserPage from "./components/pages/SearchUserPage/SearchUserPage";
 import SearchResultPage from "./components/pages/SearchResultPage/SearchResultPage.jsx";
+import NotificationsPage from "./components/pages/NotificationsPage/NotificationsPage.jsx";
 import DiscoverPage from "./components/pages/DiscoverPage/DiscoverPage.jsx";
 import ChatBot from "./components/pages/AIchatbot/ChatBot.jsx";
 
@@ -42,6 +43,7 @@ import AdminModerationPage from "./components/pages/Admin/AiContentModerationPag
 import AdminUsersPage from "./components/pages/Admin/UserManagementPage/UserManagementPage.jsx";
 import AdminLogsPage from "./components/pages/Admin/ActivityLogPage/ActivityLogPage.jsx";
 import AdminUsagePage from "./components/pages/Admin/AdminUsagePage/AdminUsagePage.jsx";
+import AdminProfilePage from "./components/pages/Admin/AdminProfilePage/AdminProfilePage.jsx";
 
 function App() {
   return (
@@ -105,6 +107,7 @@ function App() {
           <Route path="flashcards" element={<Flashcards />} />
           <Route path="search-user" element={<SearchUserPage />} />
           <Route path="search" element={<SearchResultPage />} />
+          <Route path="notifications" element={<NotificationsPage />} />
         </Route>
 
         {/* ADMIN ROUTES - CHỈ SYSTEM_ADMIN TRUY CẬP ĐƯỢC */}
@@ -123,7 +126,7 @@ function App() {
           <Route path="logs" element={<AdminLogsPage />} />
           <Route path="usage" element={<AdminUsagePage />} />
           <Route path="settings" element={<SettingPage />} />
-          <Route path="profile" element={<PersonalProfilePage />} />
+          <Route path="profile" element={<AdminProfilePage />} />
         </Route>
 
         {/* NOT FOUND */}

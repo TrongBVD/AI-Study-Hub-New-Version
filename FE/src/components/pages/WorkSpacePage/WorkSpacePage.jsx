@@ -2812,18 +2812,6 @@ const filteredDiscussionTopics = discussionTopics.filter((topic) => {
 
     {isSubtaskEditing && (
       <div className="workspace_clickup_subtask_tools">
-        <button type="button" title="Subtask type">
-          <i className="ti-package"></i>
-        </button>
-
-        <button type="button" title="Magic">
-          <i className="ti-wand"></i>
-        </button>
-
-        <button type="button" title="Assignee">
-          <i className="ti-user"></i>
-        </button>
-
         <div className="workspace_clickup_subtask_tool_wrap">
           <button
             type="button"
@@ -2952,14 +2940,6 @@ const filteredDiscussionTopics = discussionTopics.filter((topic) => {
             </div>
           )}
         </div>
-
-        <button type="button" title="Tag">
-          <i className="ti-tag"></i>
-        </button>
-
-        <button type="button" title="Link">
-          <i className="ti-link"></i>
-        </button>
 
         <button
           type="button"

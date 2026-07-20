@@ -2233,6 +2233,11 @@
   width: 100%;
 }
 
+.hashtag_input_wrapper.is_active input:not(.input_has_error) {
+  border-color: var(--accent-color);
+  box-shadow: 0 0 0 3px var(--focus-ring);
+}
+
 .hashtag_input_list input.input_has_error {
   border-color: #ef4444;
   box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.14);
@@ -2364,6 +2369,61 @@
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+.library_confirm_overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1300;
+  padding: 20px;
+  display: grid;
+  place-items: center;
+  background: rgba(31, 22, 15, 0.58);
+  backdrop-filter: blur(4px);
+  animation: library_confirm_fade_in 180ms ease-out;
+}
+
+.library_confirm_modal {
+  width: min(440px, 100%);
+  border: 1px solid var(--border-color);
+  border-radius: 18px;
+  background: var(--bg-card);
+  color: var(--text-primary);
+  padding: 26px;
+  box-shadow: 0 24px 70px rgba(31, 22, 15, 0.28);
+  animation: library_confirm_slide_in 200ms ease-out;
+}
+
+.library_confirm_icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  background: var(--danger-bg, #fee2e2);
+  color: var(--danger-color, #b42318);
+  font-size: 20px;
+}
+
+.library_confirm_content h2 { margin: 18px 0 0; font-size: 22px; letter-spacing: -.025em; }
+.library_confirm_content p { margin: 9px 0 0; color: var(--text-secondary); font-size: 14px; line-height: 1.55; }
+.library_confirm_content strong { color: var(--text-primary); overflow-wrap: anywhere; }
+.library_confirm_actions { margin-top: 24px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.library_confirm_actions button {
+  min-height: 44px; border-radius: 10px; padding: 0 14px; cursor: pointer;
+  font: inherit; font-size: 13px; font-weight: 800;
+}
+.library_confirm_cancel { border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-primary); }
+.library_confirm_delete { border: 1px solid var(--danger-color, #b42318); background: var(--danger-color, #b42318); color: #fff; }
+.library_confirm_actions button:disabled { cursor: not-allowed; opacity: .62; }
+
+@keyframes library_confirm_fade_in { from { opacity: 0; } }
+@keyframes library_confirm_slide_in { from { opacity: 0; transform: translateY(10px) scale(.98); } }
+
+@media (max-width: 480px) {
+  .library_confirm_modal { padding: 21px; }
+  .library_confirm_actions { grid-template-columns: 1fr; }
+  .library_confirm_delete { grid-row: 1; }
 }
 
 .apply_recommendation_btn {

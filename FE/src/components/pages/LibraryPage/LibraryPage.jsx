@@ -180,6 +180,8 @@ function LibraryPage() {
   const [pendingFolderId, setPendingFolderId] = useState(null);
   const [isTagModalOpen, setIsTagModalOpen] = useState(false);
   const [hashtags, setHashtags] = useState(["", "", ""]);
+  const [activeHashtagIndex, setActiveHashtagIndex] = useState(0);
+  const hashtagInputRefs = useRef([]);
   const [tagErrors, setTagErrors] = useState([]);
   const [tagInputErrors, setTagInputErrors] = useState(["", "", ""]);
   const [aiRecommendedTags, setAiRecommendedTags] = useState([]);
@@ -187,6 +189,8 @@ function LibraryPage() {
   const [aiTagSuggestionError, setAiTagSuggestionError] = useState("");
   const aiTagRequestIdRef = useRef(0);
   const [uploadNotice, setUploadNotice] = useState(null);
+  const [documentPendingDelete, setDocumentPendingDelete] = useState(null);
+  const [isDeletingDocument, setIsDeletingDocument] = useState(false);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [isShareLinkCopied, setIsShareLinkCopied] = useState(false);
 
@@ -847,6 +851,7 @@ function LibraryPage() {
     setPendingReplacementDocumentIds(replacementDocumentIds);
     setPendingFolderId(currentFolder ? getFolderKey(currentFolder) : null);
     setHashtags(["", "", ""]);
+    setActiveHashtagIndex(0);
     aiTagRequestIdRef.current += 1;
     setAiRecommendedTags([]);
     setAiTagSuggestionError("");
@@ -907,6 +912,7 @@ function LibraryPage() {
     setPendingReplacementDocumentIds([]);
     setPendingFolderId(null);
     setHashtags(["", "", ""]);
+    setActiveHashtagIndex(0);
     setTagErrors([]);
     setTagInputErrors(["", "", ""]);
     setAiRecommendedTags([]);
@@ -1185,10 +1191,15 @@ function LibraryPage() {
     setDocumentSearch("");
   }
 
-  async function handleDeleteDocument(fileItem) {
-    if (!window.confirm(`Delete "${formatDisplayFileName(fileItem.name)}"?`)) return;
+  function handleDeleteDocument(fileItem) {
+    setDocumentPendingDelete(fileItem);
+  }
 
+  async function handleConfirmDeleteDocument() {
+    if (!documentPendingDelete || isDeletingDocument) return;
+    const fileItem = documentPendingDelete;
     try {
+      setIsDeletingDocument(true);
       if (fileItem.id && fileItem.isBackendFile) {
         await deleteDocument(fileItem.id);
       }
@@ -1203,10 +1214,22 @@ function LibraryPage() {
         return nextItems;
       });
 
-      alert("Document deleted successfully.");
+      setDocumentPendingDelete(null);
+      setUploadNotice({
+        type: "success",
+        title: "Document deleted",
+        message: `“${formatDisplayFileName(fileItem.name)}” was deleted successfully.`,
+      });
     } catch (error) {
       console.error("Delete failed:", error);
-      alert("Delete failed. Please try again.");
+      setDocumentPendingDelete(null);
+      setUploadNotice({
+        type: "error",
+        title: "Could not delete document",
+        message: "Delete failed. Please try again.",
+      });
+    } finally {
+      setIsDeletingDocument(false);
     }
   }
 
@@ -2264,10 +2287,20 @@ function LibraryPage() {
                   const tagInputError = tagInputErrors[index];
 
                   return (
-                    <div key={index} className="hashtag_input_wrapper">
+                    <div
+                      key={index}
+                      className={`hashtag_input_wrapper ${
+                        activeHashtagIndex === index ? "is_active" : ""
+                      }`}
+                    >
                       <input
+                        ref={(element) => {
+                          hashtagInputRefs.current[index] = element;
+                        }}
                         type="text"
                         value={tag}
+                        onFocus={() => setActiveHashtagIndex(index)}
+                        onClick={() => setActiveHashtagIndex(index)}
                         onChange={(e) => {
                           handleHashtagChange(index, e.target.value);
                           setTagErrors([]);
@@ -2334,6 +2367,17 @@ function LibraryPage() {
                         type="button"
                         className="ai_tag_chip"
                         disabled={isUploadingDocuments}
+                        onClick={() => {
+                          if (isUploadingDocuments) return;
+                          const targetIndex = Number.isInteger(activeHashtagIndex)
+                            ? activeHashtagIndex
+                            : Math.max(0, hashtags.findIndex((tag) => !tag.trim()));
+                          handleHashtagChange(targetIndex, recTag);
+                          setTagErrors([]);
+                          window.requestAnimationFrame(() => {
+                            hashtagInputRefs.current[targetIndex]?.focus();
+                          });
+                        }}
                         onClick={() => handleApplySuggestedTag(recTag)}
                       >
                         {recTag}
@@ -2392,6 +2436,56 @@ function LibraryPage() {
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {documentPendingDelete && (
+        <div
+          className="library_confirm_overlay"
+          role="presentation"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget && !isDeletingDocument) {
+              setDocumentPendingDelete(null);
+            }
+          }}
+        >
+          <section
+            className="library_confirm_modal"
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="delete-document-title"
+            aria-describedby="delete-document-description"
+          >
+            <span className="library_confirm_icon" aria-hidden="true">
+              <i className="ti-trash"></i>
+            </span>
+            <div className="library_confirm_content">
+              <h2 id="delete-document-title">Delete document?</h2>
+              <p id="delete-document-description">
+                You’re about to permanently delete
+                <strong> “{formatDisplayFileName(documentPendingDelete.name)}”</strong>.
+                This action cannot be undone.
+              </p>
+            </div>
+            <div className="library_confirm_actions">
+              <button
+                type="button"
+                className="library_confirm_cancel"
+                disabled={isDeletingDocument}
+                onClick={() => setDocumentPendingDelete(null)}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="library_confirm_delete"
+                disabled={isDeletingDocument}
+                onClick={handleConfirmDeleteDocument}
+              >
+                {isDeletingDocument ? "Deleting..." : "Delete document"}
+              </button>
+            </div>
+          </section>
         </div>
       )}
 

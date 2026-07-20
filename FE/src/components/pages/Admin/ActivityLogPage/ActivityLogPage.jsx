@@ -300,7 +300,7 @@ function ActivityLogPage() {
           </div>
 
           <div className="activity-log-page__filter-grid">
-            <label>
+            <label className="activity-log-page__filter-field activity-log-page__filter-field--search">
               <span>Search all fields</span>
               <div className="activity-log-page__input-shell">
                 <i className="ti-search" />
@@ -310,12 +310,16 @@ function ActivityLogPage() {
                   placeholder="Search logs..."
                 />
               </div>
+            </label>
+
+            <label className="activity-log-page__filter-field">
+              <span>User</span>
               <select value={userFilter} onChange={(event) => setUserFilter(event.target.value)}>
                 {uniqueUsers.map((user) => <option key={user}>{user}</option>)}
               </select>
             </label>
 
-            <label>
+            <label className="activity-log-page__filter-field">
               <span>Action</span>
               <select
                 value={actionFilter}
@@ -325,9 +329,17 @@ function ActivityLogPage() {
                   <option key={action}>{action}</option>
                 ))}
               </select>
+            </label>
+
+            <label className="activity-log-page__filter-field">
+              <span>Scope</span>
               <select value={workspaceFilter} onChange={(event) => setWorkspaceFilter(event.target.value)}>
                 {uniqueWorkspaces.map((scope) => <option key={scope}>{scope}</option>)}
               </select>
+            </label>
+
+            <label className="activity-log-page__filter-field activity-log-page__filter-field--date">
+              <span>Date range</span>
               <div className="activity-log-page__date-range">
                 <i className="ti-calendar" />
                 <input type="date" value={startDate} onChange={(event) => setStartDate(event.target.value)} />
@@ -426,13 +438,7 @@ function ActivityLogPage() {
                 </table>
               </div>
 
-              {filteredLogs.length === 0 ? (
-                <div className="activity-log-page__empty">
-                  <i className="ti-search" />
-                  <h3>No logs match these filters</h3>
-                  <p>Adjust the filters or reset the form.</p>
-                </div>
-              ) : (
+              {filteredLogs.length > 0 && (
                 <footer className="activity-log-page__table-footer">
                   <span>Showing 1–{filteredLogs.length} of {logs.length} events</span>
                   <div><button disabled><i className="ti-angle-left" /></button><button className="active">1</button><button disabled><i className="ti-angle-right" /></button></div>

@@ -13,3 +13,55 @@
   min-height: calc(100dvh - 74px);
   background: var(--bg-secondary);
 }
+
+.admin_command_bar {
+  min-height: 74px;
+  border-bottom: 2px solid #1d4ed8;
+  padding: 0 28px;
+  position: sticky;
+  top: 0;
+  z-index: 850;
+  display: grid;
+  grid-template-columns: minmax(245px, .75fr) minmax(300px, 650px) minmax(390px, 1fr);
+  align-items: center;
+  gap: 22px;
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  color: #fff7ec;
+  box-shadow: 0 8px 24px rgba(37, 99, 235, .2);
+}
+.admin_command_bar button, .admin_command_bar input { font: inherit; }
+.admin_command_bar__left, .admin_command_bar__right { display: flex; align-items: center; }
+.admin_command_bar__left { min-width: 0; gap: 13px; }
+.admin_command_bar__menu {
+  border: 1px solid rgba(255, 255, 255, .42); border-radius: 9px; background: rgba(255,255,255,.14); color: #ffffff; cursor: pointer;
+}
+.admin_command_bar__menu { width: 40px; height: 40px; flex: 0 0 auto; display: grid; place-items: center; font-size: 19px; }
+.admin_command_bar__menu:hover { border-color: rgba(255, 255, 255, .7); background: rgba(255,255,255,.24); }
+.admin_command_bar__context { min-width: 0; display: grid; gap: 4px; }
+.admin_command_bar__context > strong { color: #dbeafe; font-size: 9px; font-weight: 900; letter-spacing: .12em; text-transform: uppercase; }
+.admin_command_bar__context > span { min-width: 0; overflow: hidden; display: flex; align-items: center; gap: 6px; color: #e8f0ff; font-size: 11px; white-space: nowrap; text-overflow: ellipsis; }
+.admin_command_bar__context a { color: #ffffff; text-decoration: none; font-weight: 800; }.admin_command_bar__context i { color: #bfdbfe; font-style: normal; }
+.admin_command_bar__search {
+  height: 42px; border: 1px solid rgba(255, 255, 255, .78); border-radius: 9px; padding: 0 10px 0 13px;
+  display: flex; align-items: center; gap: 9px; background: #ffffff; color: #334155; box-shadow: 0 4px 14px rgba(15, 23, 42, .1); transition: border-color .18s, box-shadow .18s;
+}
+.admin_command_bar__search:focus-within { border-color: #bfdbfe; box-shadow: 0 0 0 3px rgba(191,219,254,.32), 0 4px 14px rgba(15,23,42,.1); }
+.admin_command_bar__search > svg { color: #2563eb; flex: 0 0 auto; }.admin_command_bar__search input { min-width: 0; width: 100%; border: 0; outline: 0; background: transparent; color: #0f172a; font-size: 12px; }
+.admin_command_bar__search input::placeholder { color: #64748b; }.admin_command_bar__search kbd { border: 1px solid #dbe3ef; border-radius: 5px; padding: 3px 6px; background: #f1f5f9; color: #64748b; font-family: inherit; font-size: 8px; white-space: nowrap; }
+.admin_command_bar__right { justify-content: flex-end; gap: 9px; }
+.admin_command_bar__health { min-height: 35px; border-right: 1px solid rgba(255,255,255,.3); padding-right: 13px; display: flex; align-items: center; gap: 7px; color: #ffffff; font-size: 10px; font-weight: 750; white-space: nowrap; }
+.admin_command_bar__health i { width: 8px; height: 8px; border-radius: 50%; background: #66bd85; box-shadow: 0 0 0 4px rgba(102,189,133,.13); }.admin_command_bar__health i.is-warning { background: #eda849; box-shadow: 0 0 0 4px rgba(237,168,73,.14); }
+.admin_command_bar__profile { width: 43px; height: 43px; border: 2px solid rgba(255,255,255,.85); border-radius: 12px; position: relative; display: block; background: #fff; }.admin_command_bar__profile img { width: 100%; height: 100%; border-radius: 9px; object-fit: cover; }.admin_command_bar__profile span { border-radius: 5px; padding: 2px 4px; position: absolute; right: -6px; bottom: -7px; background: #173fbd; color: white; font-size: 6px; font-weight: 900; letter-spacing: .06em; }
+
+@media (max-width: 1180px) {
+  .admin_command_bar { grid-template-columns: minmax(180px,.7fr) minmax(260px,1fr) auto; padding: 0 18px; gap: 14px; }
+  .admin_command_bar__health { display: none; }
+}
+@media (max-width: 760px) {
+  .admin_command_bar { grid-template-columns: auto 1fr auto; padding: 0 12px; gap: 9px; }
+  .admin_command_bar__context { display: none; }.admin_command_bar__search kbd { display: none; }
+}
+@media (max-width: 520px) {
+  .admin_command_bar { grid-template-columns: auto 1fr auto; }.admin_command_bar__profile span { display: none; }
+  .admin_command_bar__profile { width: 38px; height: 38px; }.admin_command_bar__right { gap: 6px; }
+}

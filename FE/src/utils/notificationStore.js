@@ -136,10 +136,7 @@ export function createAppNotification({
     createdAtMs: Date.now(),
   };
 
-  const nextNotifications = [newNotification, ...getNotifications()].slice(
-    0,
-    30,
-  );
+  const nextNotifications = [newNotification, ...getNotifications()];
 
   saveNotifications(nextNotifications);
 }
@@ -174,8 +171,7 @@ export function mergeAppNotifications(incomingNotifications = []) {
   });
 
   const merged = [...existingById.values()]
-    .sort((a, b) => Number(b.createdAtMs || 0) - Number(a.createdAtMs || 0))
-    .slice(0, 30);
+    .sort((a, b) => Number(b.createdAtMs || 0) - Number(a.createdAtMs || 0));
   saveNotifications(merged);
   return merged;
 }
