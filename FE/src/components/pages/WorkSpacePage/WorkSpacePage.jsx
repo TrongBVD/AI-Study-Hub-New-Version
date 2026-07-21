@@ -187,6 +187,7 @@ function getSolutionPreview(content, wordLimit = 15) {
   if (words.length <= wordLimit) return words.join(" ");
   return `${words.slice(0, wordLimit).join(" ")}...`;
 }
+<<<<<<< HEAD
 function normalizeWorkspaceDocumentTitle(value) {
   return String(value || "")
     .trim()
@@ -201,6 +202,23 @@ function buildWorkspaceUploadCandidates(files, documents) {
   (files || []).forEach((file) => {
     const normalizedName = normalizeWorkspaceDocumentTitle(file?.name);
 
+=======
+
+function normalizeWorkspaceDocumentTitle(value) {
+  return String(value || "")
+    .trim()
+    .toLocaleLowerCase();
+}
+
+function buildWorkspaceUploadCandidates(files, documents) {
+  const seenFileNames = new Set();
+  const duplicateBatchFileNames = [];
+  const uniqueFiles = [];
+
+  (files || []).forEach((file) => {
+    const normalizedName = normalizeWorkspaceDocumentTitle(file?.name);
+
+>>>>>>> e79a140c96d4a7b2262bc97740880db7c9281015
     if (seenFileNames.has(normalizedName)) {
       duplicateBatchFileNames.push(file?.name || "Unnamed file");
       return;
@@ -283,9 +301,14 @@ function buildWorkspaceStudySets(flashcards) {
 
   return Array.from(groupedCards.values()).map((studySet) => ({
     ...studySet,
+<<<<<<< HEAD
     meta: `${studySet.cards.length} ${
       studySet.cards.length === 1 ? "Card" : "Cards"
     } · ${formatWorkspaceStudyDate(studySet.updatedAt)}`,
+=======
+    meta: `${studySet.cards.length} ${studySet.cards.length === 1 ? "Card" : "Cards"
+      } · ${formatWorkspaceStudyDate(studySet.updatedAt)}`,
+>>>>>>> e79a140c96d4a7b2262bc97740880db7c9281015
   }));
 }
 
@@ -299,7 +322,11 @@ function loadPendingInvitations(workspaceId) {
   try {
     return JSON.parse(
       localStorage.getItem(getPendingInvitationsStorageKey(workspaceId)) ||
+<<<<<<< HEAD
         "[]",
+=======
+      "[]",
+>>>>>>> e79a140c96d4a7b2262bc97740880db7c9281015
     );
   } catch (error) {
     console.error("Cannot read pending workspace invitations:", error);
@@ -442,8 +469,15 @@ function WorkSpacePage() {
   const [workspaceFlashcards, setWorkspaceFlashcards] = useState([]);
   const [workspaceDocuments, setWorkspaceDocuments] = useState([]);
   const [workspaceUploadFiles, setWorkspaceUploadFiles] = useState([]);
+<<<<<<< HEAD
   const [workspaceReplacementDocumentIds, setWorkspaceReplacementDocumentIds] =
     useState([]);
+=======
+  const [
+    workspaceReplacementDocumentIds,
+    setWorkspaceReplacementDocumentIds,
+  ] = useState([]);
+>>>>>>> e79a140c96d4a7b2262bc97740880db7c9281015
   const [workspaceDocumentStatus, setWorkspaceDocumentStatus] = useState("");
   const [isUploadingWorkspaceDocuments, setIsUploadingWorkspaceDocuments] =
     useState(false);
@@ -573,11 +607,19 @@ function WorkSpacePage() {
 
   const currentWorkspaceRole = normalizeWorkspaceRole(
     workspace?.myRole ||
+<<<<<<< HEAD
       getWorkspaceMemberRole(currentWorkspaceMember) ||
       workspace?.currentUserRole ||
       workspace?.role ||
       workspace?.memberRole ||
       (isWorkspaceOwner || backendMembers.length === 0 ? "Admin" : "Viewer"),
+=======
+    getWorkspaceMemberRole(currentWorkspaceMember) ||
+    workspace?.currentUserRole ||
+    workspace?.role ||
+    workspace?.memberRole ||
+    (isWorkspaceOwner || backendMembers.length === 0 ? "Admin" : "Viewer"),
+>>>>>>> e79a140c96d4a7b2262bc97740880db7c9281015
   );
 
   const canManageTopics =
@@ -625,6 +667,7 @@ function WorkSpacePage() {
         .includes(normalizedMemberSearch),
     );
   }, [backendMembers, normalizedMemberSearch]);
+<<<<<<< HEAD
 
   useEffect(() => {
     if (!workspace?.name) return;
@@ -674,6 +717,57 @@ function WorkSpacePage() {
 
     async function loadWorkspaceMessages() {
       try {
+=======
+
+  useEffect(() => {
+    if (!workspace?.name) return;
+    setWorkspaceNameInput(workspace.name);
+  }, [workspace?.name]);
+
+  useEffect(() => {
+    if (!workspaceId) return;
+
+    let isMounted = true;
+
+    async function loadDiscussionTopics() {
+      try {
+        setIsLoadingDiscussion(true);
+        setDiscussionStatus("");
+        const topics = await getWorkspaceDiscussionTopics(workspaceId);
+
+        if (isMounted) {
+          setDiscussionTopics(topics || []);
+        }
+      } catch (error) {
+        console.error("Cannot load workspace discussion topics:", error);
+        if (isMounted) {
+          setDiscussionStatus(
+            error.response?.data?.message ||
+            "Could not load workspace discussion topics.",
+          );
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoadingDiscussion(false);
+        }
+      }
+    }
+
+    loadDiscussionTopics();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [workspaceId]);
+
+  useEffect(() => {
+    if (!workspaceId) return;
+
+    let isMounted = true;
+
+    async function loadWorkspaceMessages() {
+      try {
+>>>>>>> e79a140c96d4a7b2262bc97740880db7c9281015
         setIsLoadingMessages(true);
         setMessageStatus("");
         const messages = await getWorkspaceMessages(workspaceId);
@@ -698,7 +792,12 @@ function WorkSpacePage() {
               text: message.text,
               time: formatWorkspaceMessageTime(message.createdAt),
               isOwn:
+<<<<<<< HEAD
                 (currentUserId && String(message.senderId) === currentUserId) ||
+=======
+                (currentUserId &&
+                  String(message.senderId) === currentUserId) ||
+>>>>>>> e79a140c96d4a7b2262bc97740880db7c9281015
                 senderMatchesCurrentUser,
               avatar: message.senderAvatar || "",
               file: null,
@@ -710,7 +809,11 @@ function WorkSpacePage() {
         if (isMounted) {
           setMessageStatus(
             error.response?.data?.message ||
+<<<<<<< HEAD
               "Could not load workspace messages.",
+=======
+            "Could not load workspace messages.",
+>>>>>>> e79a140c96d4a7b2262bc97740880db7c9281015
           );
         }
       } finally {
@@ -750,7 +853,12 @@ function WorkSpacePage() {
     } catch (error) {
       console.error("Cannot load workspace documents:", error);
       setWorkspaceDocumentStatus(
+<<<<<<< HEAD
         error.response?.data?.message || "Could not load workspace documents.",
+=======
+        error.response?.data?.message ||
+        "Could not load workspace documents.",
+>>>>>>> e79a140c96d4a7b2262bc97740880db7c9281015
       );
       setWorkspaceDocuments([]);
     }
@@ -768,7 +876,12 @@ function WorkSpacePage() {
     } catch (error) {
       console.error("Cannot load workspace flashcards:", error);
       setStudySetStatus(
+<<<<<<< HEAD
         error.response?.data?.message || "Could not load workspace flashcards.",
+=======
+        error.response?.data?.message ||
+        "Could not load workspace flashcards.",
+>>>>>>> e79a140c96d4a7b2262bc97740880db7c9281015
       );
       setWorkspaceFlashcards([]);
     } finally {
@@ -847,6 +960,7 @@ function WorkSpacePage() {
 
   const WORKSPACE_STORAGE_LIMIT_BYTES = 50 * 1024 * 1024;
 
+<<<<<<< HEAD
   const discussionStorageUsedBytes = discussionTopics.reduce((total, topic) => {
     const topicFileSize = (topic.files || []).reduce(
       (fileTotal, file) =>
@@ -856,6 +970,20 @@ function WorkSpacePage() {
 
     return total + topicFileSize;
   }, 0);
+=======
+  const discussionStorageUsedBytes = discussionTopics.reduce(
+    (total, topic) => {
+      const topicFileSize = (topic.files || []).reduce(
+        (fileTotal, file) =>
+          fileTotal + (Number(file.fileSizeBytes || file.size) || 0),
+        0,
+      );
+
+      return total + topicFileSize;
+    },
+    0,
+  );
+>>>>>>> e79a140c96d4a7b2262bc97740880db7c9281015
 
   const workspaceStorageUsedBytes = discussionStorageUsedBytes;
   const workspaceStorageRemainingBytes = Math.max(
@@ -887,7 +1015,13 @@ function WorkSpacePage() {
           </div>
 
           <h1>Workspace not found</h1>
+<<<<<<< HEAD
           <p>This workspace may have been deleted or the link is incorrect.</p>
+=======
+          <p>
+            This workspace may have been deleted or the link is incorrect.
+          </p>
+>>>>>>> e79a140c96d4a7b2262bc97740880db7c9281015
 
           <Link to="/dashboard/workspaces">Back to My Workspaces</Link>
         </section>
@@ -900,6 +1034,7 @@ function WorkSpacePage() {
   );
 
   /*
+<<<<<<< HEAD
   const sampleStudySets = [
     {
       id: "software-architecture",
@@ -976,6 +1111,84 @@ function WorkSpacePage() {
     },
   ];
   */
+=======
+const sampleStudySets = [
+  {
+    id: "software-architecture",
+    title: "Software Architecture Basics",
+    meta: "20 Cards · Updated 2h ago",
+    tag: "Mastery",
+    subtitle: "Focusing on high-availability and distributed systems",
+    cards: [
+      {
+        question:
+          "What is the primary purpose of a Load Balancer in a distributed system?",
+        answer:
+          "It distributes incoming traffic across multiple servers to improve availability, performance, and fault tolerance.",
+      },
+      {
+        question:
+          "What does high availability mean in software architecture?",
+        answer:
+          "It means the system is designed to remain accessible and operational with minimal downtime.",
+      },
+      {
+        question: "Why do microservices usually need service discovery?",
+        answer:
+          "Because services can scale or move dynamically, so other services need a way to find their current network locations.",
+      },
+    ],
+  },
+  {
+    id: "react-hooks",
+    title: "React Hooks Mastery",
+    meta: "45 Cards · Updated 1d ago",
+    tag: "",
+    subtitle: "Review useState, useEffect, useRef, and useContext",
+    cards: [
+      {
+        question: "What is the main purpose of useEffect in React?",
+        answer:
+          "It runs side effects after render, such as fetching data, subscriptions, or DOM updates.",
+      },
+      {
+        question: "When should you use useRef?",
+        answer:
+          "Use it to access DOM elements directly or store mutable values that should not trigger re-render.",
+      },
+    ],
+  },
+  {
+    id: "database-normalization",
+    title: "Database Normalization",
+    meta: "12 Cards · Updated 3d ago",
+    tag: "",
+    subtitle: "Practice relational design and reducing redundancy",
+    cards: [
+      {
+        question: "What is the goal of database normalization?",
+        answer:
+          "To organize data to reduce duplication and improve data integrity.",
+      },
+    ],
+  },
+  {
+    id: "intro-algorithms",
+    title: "Intro to Algorithms",
+    meta: "30 Cards · Updated 1w ago",
+    tag: "",
+    subtitle: "Core algorithm concepts and complexity basics",
+    cards: [
+      {
+        question: "What does Big-O notation describe?",
+        answer:
+          "It describes how an algorithm's time or space usage grows as input size increases.",
+      },
+    ],
+  },
+];
+*/
+>>>>>>> e79a140c96d4a7b2262bc97740880db7c9281015
 
   function getCurrentMessageTime() {
     return new Date().toLocaleTimeString([], {
@@ -1066,6 +1279,7 @@ function WorkSpacePage() {
           console.error("Cannot upload new topic attachments:", error);
         }
       }
+<<<<<<< HEAD
 
       setDiscussionTopics((currentTopics) => [
         topicWithAttachments,
@@ -1147,10 +1361,447 @@ function WorkSpacePage() {
       );
 
       // Xóa file đã lưu trong topic
+=======
+
+      setDiscussionTopics((currentTopics) => [
+        topicWithAttachments,
+        ...currentTopics,
+      ]);
+      createAppNotification({
+        category: "discussion",
+        action: "newTopic",
+        title: "New discussion topic",
+        message: `${profileName} created topic "${createdTopic.title}".`,
+        icon: "ti-comments",
+        link: `/dashboard/workspaces/${workspaceId}`,
+      });
+      setSelectedTopicId(createdTopic.id);
+
+      setTopicTitle("");
+      setTopicContent(createdTopic.content || "");
+
+      setNewTopicDescription("");
+      setNewTopicType("Question");
+      setNewTopicStatus("Open");
+      setNewTopicPriority("Normal");
+      setNewTopicDateMode("none");
+      setNewTopicStartDate("");
+      setNewTopicEndDate("");
+      setNewTopicAttachments([]);
+
+      setIsTopicFormOpen(false);
+
+      if (attachmentError) {
+        alert(
+          attachmentError.response?.data?.message ||
+          "Topic was created, but its attachments could not be uploaded.",
+        );
+      }
+    } catch (error) {
+      console.error("Cannot create discussion topic:", error);
+      alert(
+        error.response?.data?.message || "Could not create discussion topic.",
+      );
+    } finally {
+      setIsCreatingTopic(false);
+    }
+  }
+
+  function handleNewTopicAttachmentsChange(event) {
+    const files = Array.from(event.target.files || []);
+    if (files.length > 10) {
+      alert("You can attach up to 10 files to a topic.");
+    }
+    setNewTopicAttachments(files.slice(0, 10));
+    event.target.value = "";
+  }
+
+  async function handleDeleteTopicFile(fileId) {
+    if (!selectedTopic) return;
+    if (!requireTopicPermission("delete topic files")) return;
+
+    const savedFile = (selectedTopic.files || []).find(
+      (file) => file.id === fileId,
+    );
+
+    const fileToDelete = savedFile;
+
+    if (!fileToDelete) return;
+
+    const confirmDelete = window.confirm(
+      `Delete "${fileToDelete.fileName || fileToDelete.name}" from this topic?`,
+    );
+
+    if (!confirmDelete) return;
+
+    // Xóa file đang chờ lưu
+    try {
+      await deleteWorkspaceDiscussionAttachment(
+        workspaceId,
+        selectedTopic.id,
+        fileId,
+      );
+
+      // Xóa file đã lưu trong topic
       setDiscussionTopics((currentTopics) =>
         currentTopics.map((topic) =>
           topic.id === selectedTopic.id
             ? {
+              ...topic,
+              files: (topic.files || []).filter(
+                (file) => file.id !== fileId,
+              ),
+            }
+            : topic,
+        ),
+      );
+    } catch (error) {
+      console.error("Cannot delete discussion attachment:", error);
+      alert(error.response?.data?.message || "Could not delete attachment.");
+    }
+  }
+
+  async function handleDeleteSelectedTopic() {
+    if (!selectedTopic) return;
+    if (!requireTopicPermission("delete topics")) return;
+
+    const confirmDelete = window.confirm(
+      `Delete topic "${selectedTopic.title}"?`,
+    );
+
+    if (!confirmDelete) return;
+
+    try {
+      await deleteWorkspaceDiscussionTopic(workspaceId, selectedTopic.id);
+      setDiscussionTopics((currentTopics) =>
+        currentTopics.filter((topic) => topic.id !== selectedTopic.id),
+      );
+      setSelectedTopicId(null);
+      setTopicContent("");
+    } catch (error) {
+      console.error("Cannot delete discussion topic:", error);
+      alert(error.response?.data?.message || "Could not delete topic.");
+    }
+  }
+
+  function resolveWorkspaceUploadSelection(files) {
+    const { candidates, duplicateBatchFileNames } =
+      buildWorkspaceUploadCandidates(files, workspaceDocuments);
+
+    if (duplicateBatchFileNames.length > 0) {
+      alert(
+        `These files were selected more than once and will only be uploaded once:\n- ${duplicateBatchFileNames.join(
+          "\n- ",
+        )}`,
+      );
+    }
+
+    const acceptedFiles = [];
+    const replacementDocumentIds = [];
+    const keptExistingFileNames = [];
+
+    candidates.forEach(({ file, existingDocument }) => {
+      if (!existingDocument) {
+        acceptedFiles.push(file);
+        replacementDocumentIds.push(null);
+        return;
+      }
+
+      const existingUploaderId = String(
+        existingDocument.uploaderId || existingDocument.uploader_id || "",
+      );
+      const canReplaceExistingDocument =
+        canManageWorkspace ||
+        (currentUserId && existingUploaderId === currentUserId);
+
+      if (!canReplaceExistingDocument) {
+        alert(
+          `"${file.name}" has already been uploaded to this workspace by ${existingDocument.uploaderName || "another member"
+          }. Only the original uploader or a workspace admin can replace it.`,
+        );
+        keptExistingFileNames.push(file.name);
+        return;
+      }
+
+      const shouldReplace = window.confirm(
+        `"${file.name}" has already been uploaded to this workspace.\n\nSelect OK to replace the existing document, or Cancel to keep the current version.`,
+      );
+
+      if (!shouldReplace) {
+        keptExistingFileNames.push(file.name);
+        return;
+      }
+
+      acceptedFiles.push(file);
+      replacementDocumentIds.push(String(existingDocument.id));
+    });
+
+    return {
+      acceptedFiles,
+      replacementDocumentIds,
+      keptExistingFileNames,
+    };
+  }
+
+  async function uploadWorkspaceFilesWithDuplicateConfirmation(
+    files,
+    initialReplacementDocumentIds = [],
+  ) {
+    let replacementDocumentIds = [...initialReplacementDocumentIds];
+
+    const submitUpload = (replacementIds) =>
+      uploadDocuments(files, workspaceId, null, [], null, replacementIds);
+
+    try {
+      const uploadedDocuments = await submitUpload(replacementDocumentIds);
+      return { uploadedDocuments, replacementDocumentIds, cancelled: false };
+    } catch (uploadError) {
+      const duplicateData = uploadError.response?.data;
+
+      if (duplicateData?.code !== "DUPLICATE_DOCUMENT") {
+        throw uploadError;
+      }
+
+      const duplicateDocuments = Array.isArray(duplicateData.duplicates)
+        ? duplicateData.duplicates
+        : [];
+      const duplicateInBatch = duplicateDocuments.find(
+        (duplicate) => !duplicate.documentId,
+      );
+
+      if (duplicateInBatch) {
+        alert(
+          `"${duplicateInBatch.fileName}" was selected more than once. Remove the duplicate selection and try again.`,
+        );
+        return {
+          uploadedDocuments: [],
+          replacementDocumentIds,
+          cancelled: true,
+          reason: "duplicate-batch",
+        };
+      }
+
+      const forbiddenReplacement = duplicateDocuments.find(
+        (duplicate) => duplicate.canReplace === false,
+      );
+
+      if (forbiddenReplacement) {
+        alert(
+          `"${forbiddenReplacement.fileName}" has already been uploaded by another workspace member. Only the original uploader or a workspace admin can replace it.`,
+        );
+        return {
+          uploadedDocuments: [],
+          replacementDocumentIds,
+          cancelled: true,
+          reason: "replacement-forbidden",
+        };
+      }
+
+      const duplicateNames = duplicateDocuments
+        .map((duplicate) => duplicate.fileName)
+        .filter(Boolean);
+      const shouldReplace = window.confirm(
+        `${duplicateNames.join(", ")} ${duplicateNames.length === 1 ? "has" : "have"
+        } already been uploaded to this workspace.\n\nSelect OK to replace the existing ${duplicateNames.length === 1 ? "document" : "documents"
+        }, or Cancel to keep the current version.`,
+      );
+
+      if (!shouldReplace) {
+        return {
+          uploadedDocuments: [],
+          replacementDocumentIds,
+          cancelled: true,
+          reason: "kept-existing",
+        };
+      }
+
+      replacementDocumentIds = files.map((_, fileIndex) => {
+        const duplicate = duplicateDocuments.find(
+          (item) => Number(item.fileIndex) === fileIndex,
+        );
+
+        return (
+          duplicate?.documentId || replacementDocumentIds[fileIndex] || null
+        );
+      });
+
+      const uploadedDocuments = await submitUpload(replacementDocumentIds);
+      return { uploadedDocuments, replacementDocumentIds, cancelled: false };
+    }
+  }
+
+  async function handleTopicFileChange(e) {
+    const selectedFiles = Array.from(e.target.files);
+
+    if (selectedFiles.length === 0 || !selectedTopic) return;
+    if (!requireTopicPermission("upload topic files")) {
+      e.target.value = "";
+      return;
+    }
+
+    const { acceptedFiles, replacementDocumentIds, keptExistingFileNames } =
+      resolveWorkspaceUploadSelection(selectedFiles);
+
+    if (acceptedFiles.length === 0) {
+      setDiscussionStatus(
+        keptExistingFileNames.length > 0
+          ? "The existing document was kept and was not uploaded again."
+          : "No new files were selected for upload.",
+      );
+      e.target.value = "";
+      return;
+    }
+
+    const selectedFilesSize = acceptedFiles.reduce(
+      (total, file) => total + file.size,
+      0,
+    );
+
+    const nextStorageUsed = workspaceStorageUsedBytes + selectedFilesSize;
+
+    if (nextStorageUsed > WORKSPACE_STORAGE_LIMIT_BYTES) {
+      createAppNotification({
+        category: "file",
+        action: "storageWarning",
+        title: "Workspace storage warning",
+        message: "This workspace has reached the 50MB storage limit.",
+        icon: "ti-alert",
+        link: `/dashboard/workspaces/${workspaceId}`,
+      });
+
+      alert(
+        "This workspace has reached the 50MB storage limit. You cannot upload more files.",
+      );
+
+      e.target.value = "";
+      return;
+    }
+
+    try {
+      const uploadResult =
+        await uploadWorkspaceFilesWithDuplicateConfirmation(
+          acceptedFiles,
+          replacementDocumentIds,
+        );
+
+      if (uploadResult.cancelled) {
+        setDiscussionStatus(
+          uploadResult.reason === "kept-existing"
+            ? "The existing document was kept and was not uploaded again."
+            : "Duplicate files were not uploaded.",
+        );
+        return;
+      }
+
+      const uploadedDocuments = uploadResult.uploadedDocuments;
+      const attachments = await Promise.all(
+        (uploadedDocuments || []).map((document) =>
+          addWorkspaceDiscussionAttachment(workspaceId, selectedTopic.id, {
+            fileName: document.title,
+            fileUrl: document.fileUrl || document.file_url,
+            fileSizeBytes:
+              document.fileSizeBytes || document.file_size_bytes || 0,
+            mimeType: document.mimeType || "",
+          }),
+        ),
+      );
+
+      setDiscussionTopics((currentTopics) =>
+        currentTopics.map((topic) =>
+          topic.id === selectedTopic.id
+            ? { ...topic, files: [...(topic.files || []), ...attachments] }
+            : topic,
+        ),
+      );
+      await loadWorkspaceDocuments();
+
+      createAppNotification({
+        category: "file",
+        action: "uploaded",
+        title: "File uploaded",
+        message: `${profileName} uploaded ${attachments.length} file(s) to ${selectedTopic.title}.`,
+        icon: "ti-folder",
+        link: `/dashboard/workspaces/${workspaceId}`,
+      });
+    } catch (error) {
+      console.error("Cannot upload discussion attachments:", error);
+      alert(
+        error.response?.data?.message || "Could not upload discussion files.",
+      );
+    } finally {
+      e.target.value = "";
+    }
+  }
+
+  function handleSolutionFileChange(event) {
+    const selectedFiles = Array.from(event.target.files || []).slice(0, 10);
+    event.target.value = "";
+    setSolutionAttachments(selectedFiles);
+  }
+
+  async function handleSubmitSolution(event) {
+    event.preventDefault();
+
+    if (!selectedTopic || isUploadingSolution) return;
+    if (!solutionContent.trim()) {
+      alert("Please describe your solution before submitting it.");
+      return;
+    }
+
+    const selectedFilesSize = solutionAttachments.reduce(
+      (total, file) => total + file.size,
+      0,
+    );
+
+    if (
+      workspaceStorageUsedBytes + selectedFilesSize >
+      WORKSPACE_STORAGE_LIMIT_BYTES
+    ) {
+      alert("These solution files exceed the workspace 50MB storage limit.");
+      return;
+    }
+
+    try {
+      setIsUploadingSolution(true);
+      const savedSolution = editingSolutionId
+        ? await updateWorkspaceDiscussionComment(
+          workspaceId,
+          selectedTopic.id,
+          editingSolutionId,
+          { content: solutionContent.trim() },
+        )
+        : await addWorkspaceDiscussionComment(workspaceId, selectedTopic.id, {
+          kind: "solution",
+          content: solutionContent.trim(),
+        });
+      let uploadedSolutions = [];
+
+      if (solutionAttachments.length > 0) {
+        const uploadedDocuments = await uploadDocuments(
+          solutionAttachments,
+          workspaceId,
+        );
+        uploadedSolutions = await Promise.all(
+          (uploadedDocuments || []).map((document) =>
+            addWorkspaceDiscussionAttachment(workspaceId, selectedTopic.id, {
+              kind: "solution",
+              solutionId: savedSolution.id,
+              fileName: document.title,
+              fileUrl: document.fileUrl || document.file_url,
+              fileSizeBytes:
+                document.fileSizeBytes || document.file_size_bytes || 0,
+              mimeType: document.mimeType || "",
+            }),
+          ),
+        );
+      }
+
+>>>>>>> e79a140c96d4a7b2262bc97740880db7c9281015
+      setDiscussionTopics((currentTopics) =>
+        currentTopics.map((topic) =>
+          topic.id === selectedTopic.id
+            ? {
+<<<<<<< HEAD
                 ...topic,
                 files: (topic.files || []).filter((file) => file.id !== fileId),
               }
@@ -1196,8 +1847,46 @@ function WorkSpacePage() {
           "\n- ",
         )}`,
       );
-    }
+=======
+              ...topic,
+              solutions: editingSolutionId
+                ? (topic.solutions || []).map((solution) =>
+                  solution.id === savedSolution.id
+                    ? savedSolution
+                    : solution,
+                )
+                : [...(topic.solutions || []), savedSolution],
+              files: [...(topic.files || []), ...uploadedSolutions],
+            }
+            : topic,
+        ),
+      );
 
+      setSolutionContent("");
+      setSolutionAttachments([]);
+      setIsSolutionFormOpen(false);
+      setEditingSolutionId(null);
+
+      createAppNotification({
+        category: "file",
+        action: "uploaded",
+        title: editingSolutionId ? "Solution updated" : "Solution uploaded",
+        message: `${profileName} ${editingSolutionId ? "updated" : "submitted"} a solution to ${selectedTopic.title}.`,
+        icon: "ti-light-bulb",
+        link: `/dashboard/workspaces/${workspaceId}?topic=${selectedTopic.id}`,
+      });
+    } catch (error) {
+      console.error("Cannot submit topic solution:", error);
+      alert(
+        error.response?.data?.message || "Could not submit your solution.",
+      );
+    } finally {
+      setIsUploadingSolution(false);
+>>>>>>> e79a140c96d4a7b2262bc97740880db7c9281015
+    }
+  }
+
+<<<<<<< HEAD
     const acceptedFiles = [];
     const replacementDocumentIds = [];
     const keptExistingFileNames = [];
@@ -1342,8 +2031,115 @@ function WorkSpacePage() {
     if (!requireTopicPermission("upload topic files")) {
       e.target.value = "";
       return;
-    }
+=======
+  async function handleDeleteSolutionFile(fileId) {
+    if (!selectedTopic) return;
 
+    try {
+      await deleteWorkspaceDiscussionAttachment(
+        workspaceId,
+        selectedTopic.id,
+        fileId,
+      );
+      setDiscussionTopics((currentTopics) =>
+        currentTopics.map((topic) =>
+          topic.id === selectedTopic.id
+            ? {
+              ...topic,
+              files: (topic.files || []).filter(
+                (file) => file.id !== fileId,
+              ),
+            }
+            : topic,
+        ),
+      );
+    } catch (error) {
+      console.error("Cannot delete solution attachment:", error);
+      alert(
+        error.response?.data?.message ||
+        "Could not delete solution attachment.",
+      );
+    }
+  }
+
+  async function handleSaveTopicNote(e) {
+    e.preventDefault();
+
+    if (!selectedTopic) return;
+    if (!requireTopicPermission("edit topic content")) return;
+
+    try {
+      const updatedTopic = await updateWorkspaceDiscussionTopic(
+        workspaceId,
+        selectedTopic.id,
+        {
+          content: topicContent,
+        },
+      );
+
+      setDiscussionTopics((currentTopics) =>
+        currentTopics.map((topic) =>
+          topic.id === updatedTopic.id ? updatedTopic : topic,
+        ),
+      );
+      setIsTopicDescriptionEditing(false);
+    } catch (error) {
+      console.error("Cannot update discussion topic:", error);
+      alert(
+        error.response?.data?.message || "Could not update discussion topic.",
+      );
+    }
+  }
+
+  async function handleUpdateTopicField(field, value) {
+    if (!requireTopicPermission("edit topic properties")) return;
+
+    const previousStatus = selectedTopic?.status;
+    const payloadFieldMap = {
+      type: "topicType",
+      status: "status",
+      priority: "priority",
+    };
+
+    try {
+      const updatedTopic = await updateWorkspaceDiscussionTopic(
+        workspaceId,
+        selectedTopic.id,
+        {
+          [payloadFieldMap[field] || field]: value,
+        },
+      );
+
+      setDiscussionTopics((currentTopics) =>
+        currentTopics.map((topic) =>
+          topic.id === updatedTopic.id ? updatedTopic : topic,
+        ),
+      );
+
+      if (
+        field === "status" &&
+        value === "Solved" &&
+        previousStatus !== "Solved"
+      ) {
+        createAppNotification({
+          category: "discussion",
+          action: "solved",
+          title: "Topic solved",
+          message: `Topic "${selectedTopic.title}" was marked as solved.`,
+          icon: "ti-check-box",
+          link: `/dashboard/workspaces/${workspaceId}`,
+        });
+      }
+    } catch (error) {
+      console.error("Cannot update discussion topic field:", error);
+      alert(
+        error.response?.data?.message || "Could not update discussion topic.",
+      );
+>>>>>>> e79a140c96d4a7b2262bc97740880db7c9281015
+    }
+  }
+
+<<<<<<< HEAD
     const { acceptedFiles, replacementDocumentIds, keptExistingFileNames } =
       resolveWorkspaceUploadSelection(selectedFiles);
 
@@ -1499,10 +2295,82 @@ function WorkSpacePage() {
           ),
         );
       }
+=======
+  async function handleMarkSelectedTopicResolved() {
+    if (!selectedTopic || selectedTopic.status === "Solved") return;
+    await handleUpdateTopicField("status", "Solved");
+  }
+
+  async function handleUpdateTopicDeadlineMode(value) {
+    if (!requireTopicPermission("edit topic deadline")) return;
+
+    try {
+      const updatedTopic = await updateWorkspaceDiscussionTopic(
+        workspaceId,
+        selectedTopic.id,
+        {
+          dateMode: value,
+          startDate: value === "deadline" ? selectedTopic.startDate : null,
+          endDate: value === "deadline" ? selectedTopic.endDate : null,
+        },
+      );
+
+      setDiscussionTopics((currentTopics) =>
+        currentTopics.map((topic) =>
+          topic.id === updatedTopic.id ? updatedTopic : topic,
+        ),
+      );
+    } catch (error) {
+      console.error("Cannot update discussion deadline mode:", error);
+      alert(
+        error.response?.data?.message || "Could not update discussion topic.",
+      );
+    }
+  }
+
+  async function handleUpdateTopicDate(field, value) {
+    if (!requireTopicPermission("edit topic deadline")) return;
+
+    try {
+      const updatedTopic = await updateWorkspaceDiscussionTopic(
+        workspaceId,
+        selectedTopic.id,
+        {
+          dateMode: "deadline",
+          [field]: value,
+        },
+      );
+
+      setDiscussionTopics((currentTopics) =>
+        currentTopics.map((topic) =>
+          topic.id === updatedTopic.id ? updatedTopic : topic,
+        ),
+      );
+    } catch (error) {
+      console.error("Cannot update discussion deadline date:", error);
+      alert(
+        error.response?.data?.message || "Could not update discussion topic.",
+      );
+    }
+  }
+
+  async function handleAddTopicComment(e) {
+    e.preventDefault();
+
+    if (topicCommentInput.trim() === "") return;
+
+    try {
+      const comment = await addWorkspaceDiscussionComment(
+        workspaceId,
+        selectedTopic.id,
+        { content: topicCommentInput.trim() },
+      );
+>>>>>>> e79a140c96d4a7b2262bc97740880db7c9281015
 
       setDiscussionTopics((currentTopics) =>
         currentTopics.map((topic) =>
           topic.id === selectedTopic.id
+<<<<<<< HEAD
             ? {
                 ...topic,
                 solutions: editingSolutionId
@@ -1752,6 +2620,44 @@ function WorkSpacePage() {
         ),
       );
 
+=======
+            ? { ...topic, comments: [...(topic.comments || []), comment] }
+            : topic,
+        ),
+      );
+      setTopicCommentInput("");
+    } catch (error) {
+      console.error("Cannot add discussion comment:", error);
+      alert(error.response?.data?.message || "Could not add comment.");
+    }
+  }
+
+  async function handleAddTopicSubtask(e) {
+    e.preventDefault();
+
+    if (!requireTopicPermission("create subtasks")) return;
+
+    if (topicSubtaskInput.trim() === "") return;
+
+    try {
+      const subtask = await addWorkspaceDiscussionSubtask(
+        workspaceId,
+        selectedTopic.id,
+        {
+          title: topicSubtaskInput.trim(),
+          sortOrder: 0,
+        },
+      );
+
+      setDiscussionTopics((currentTopics) =>
+        currentTopics.map((topic) =>
+          topic.id === selectedTopic.id
+            ? { ...topic, subtasks: [...(topic.subtasks || []), subtask] }
+            : topic,
+        ),
+      );
+
+>>>>>>> e79a140c96d4a7b2262bc97740880db7c9281015
       setTopicSubtaskInput("");
       setSubtaskPriority("");
       setSubtaskDateMode("none");
@@ -1797,11 +2703,19 @@ function WorkSpacePage() {
         currentTopics.map((topic) =>
           topic.id === selectedTopic.id
             ? {
+<<<<<<< HEAD
                 ...topic,
                 subtasks: (topic.subtasks || []).map((item) =>
                   item.id === subtaskId ? updatedSubtask : item,
                 ),
               }
+=======
+              ...topic,
+              subtasks: (topic.subtasks || []).map((item) =>
+                item.id === subtaskId ? updatedSubtask : item,
+              ),
+            }
+>>>>>>> e79a140c96d4a7b2262bc97740880db7c9281015
             : topic,
         ),
       );
@@ -1825,11 +2739,19 @@ function WorkSpacePage() {
         currentTopics.map((topic) =>
           topic.id === selectedTopic.id
             ? {
+<<<<<<< HEAD
                 ...topic,
                 subtasks: (topic.subtasks || []).filter(
                   (subtask) => subtask.id !== subtaskId,
                 ),
               }
+=======
+              ...topic,
+              subtasks: (topic.subtasks || []).filter(
+                (subtask) => subtask.id !== subtaskId,
+              ),
+            }
+>>>>>>> e79a140c96d4a7b2262bc97740880db7c9281015
             : topic,
         ),
       );
@@ -1892,7 +2814,13 @@ function WorkSpacePage() {
       setIsInviteSearching(true);
       setInviteError("");
       const users = await searchWorkspaceUsers(workspaceId, query);
+<<<<<<< HEAD
       const firstAvailableUser = users?.find((user) => !user.isWorkspaceMember);
+=======
+      const firstAvailableUser = users?.find(
+        (user) => !user.isWorkspaceMember,
+      );
+>>>>>>> e79a140c96d4a7b2262bc97740880db7c9281015
 
       setCandidateUsers(users || []);
       setSelectedUserId(firstAvailableUser?.id || "");
@@ -2036,10 +2964,17 @@ function WorkSpacePage() {
       currentInvitations.map((item) =>
         (item.id || item.email) === (invitation.id || invitation.email)
           ? {
+<<<<<<< HEAD
               ...item,
               time: "just now",
               resentAtMs: Date.now(),
             }
+=======
+            ...item,
+            time: "just now",
+            resentAtMs: Date.now(),
+          }
+>>>>>>> e79a140c96d4a7b2262bc97740880db7c9281015
           : item,
       ),
     );
@@ -2085,11 +3020,19 @@ function WorkSpacePage() {
         isOwn: true,
         file: messageAttachment
           ? {
+<<<<<<< HEAD
               name: messageAttachment.name,
               sizeLabel: messageAttachment.sizeLabel,
               isImage: messageAttachment.isImage,
               previewUrl: messageAttachment.previewUrl,
             }
+=======
+            name: messageAttachment.name,
+            sizeLabel: messageAttachment.sizeLabel,
+            isImage: messageAttachment.isImage,
+            previewUrl: messageAttachment.previewUrl,
+          }
+>>>>>>> e79a140c96d4a7b2262bc97740880db7c9281015
           : null,
       };
 
@@ -2140,7 +3083,13 @@ function WorkSpacePage() {
       setWorkspaceSettingMessage("Workspace name updated successfully.");
     } catch (err) {
       console.error("Failed to update workspace name:", err);
+<<<<<<< HEAD
       setWorkspaceSettingMessage("Failed to update workspace name on server.");
+=======
+      setWorkspaceSettingMessage(
+        "Failed to update workspace name on server.",
+      );
+>>>>>>> e79a140c96d4a7b2262bc97740880db7c9281015
     }
   }
 
@@ -2176,6 +3125,7 @@ function WorkSpacePage() {
 
     try {
       setIsGeneratingStudyCards(true);
+<<<<<<< HEAD
       setStudySetStatus("Generating flashcards from the selected document...");
 
       const generatedCards = await generateWorkspaceDocumentFlashcards(
@@ -2198,6 +3148,32 @@ function WorkSpacePage() {
     }
   }
 
+=======
+      setStudySetStatus(
+        "Generating flashcards from the selected document...",
+      );
+
+      const generatedCards = await generateWorkspaceDocumentFlashcards(
+        selectedStudyDocumentId,
+      );
+
+      await loadWorkspaceFlashcards();
+
+      setStudySetStatus(
+        `${generatedCards?.length || 0} flashcards generated successfully.`,
+      );
+    } catch (error) {
+      console.error("Cannot generate workspace flashcards:", error);
+      setStudySetStatus(
+        error.response?.data?.message ||
+        "Could not generate flashcards for this document.",
+      );
+    } finally {
+      setIsGeneratingStudyCards(false);
+    }
+  }
+
+>>>>>>> e79a140c96d4a7b2262bc97740880db7c9281015
   function handleWorkspaceDocumentFileChange(event) {
     const selectedFiles = Array.from(event.target.files || []);
     const { acceptedFiles, replacementDocumentIds, keptExistingFileNames } =
@@ -2208,8 +3184,14 @@ function WorkSpacePage() {
 
     if (keptExistingFileNames.length > 0) {
       setWorkspaceDocumentStatus(
+<<<<<<< HEAD
         `${keptExistingFileNames.length} existing ${
           keptExistingFileNames.length === 1 ? "document was" : "documents were"
+=======
+        `${keptExistingFileNames.length} existing ${keptExistingFileNames.length === 1
+          ? "document was"
+          : "documents were"
+>>>>>>> e79a140c96d4a7b2262bc97740880db7c9281015
         } kept and will not be uploaded again.`,
       );
     } else if (replacementDocumentIds.some(Boolean)) {
@@ -2232,10 +3214,18 @@ function WorkSpacePage() {
       setIsUploadingWorkspaceDocuments(true);
       setWorkspaceDocumentStatus("Uploading workspace documents...");
 
+<<<<<<< HEAD
       const uploadResult = await uploadWorkspaceFilesWithDuplicateConfirmation(
         workspaceUploadFiles,
         workspaceReplacementDocumentIds,
       );
+=======
+      const uploadResult =
+        await uploadWorkspaceFilesWithDuplicateConfirmation(
+          workspaceUploadFiles,
+          workspaceReplacementDocumentIds,
+        );
+>>>>>>> e79a140c96d4a7b2262bc97740880db7c9281015
 
       if (uploadResult.cancelled) {
         setWorkspaceUploadFiles([]);
@@ -2268,9 +3258,16 @@ function WorkSpacePage() {
 
       setWorkspaceDocumentStatus(
         replacedDocumentIds.size > 0
+<<<<<<< HEAD
           ? `${replacedDocumentIds.size} existing ${
               replacedDocumentIds.size === 1 ? "document was" : "documents were"
             } replaced successfully.`
+=======
+          ? `${replacedDocumentIds.size} existing ${replacedDocumentIds.size === 1
+            ? "document was"
+            : "documents were"
+          } replaced successfully.`
+>>>>>>> e79a140c96d4a7b2262bc97740880db7c9281015
           : hasFlagged
             ? "Upload completed. Some documents were flagged for review."
             : "Workspace documents uploaded and waiting for workspace admin review.",
@@ -2279,8 +3276,13 @@ function WorkSpacePage() {
       console.error("Workspace document upload failed:", error);
       setWorkspaceDocumentStatus(
         error.response?.data?.message ||
+<<<<<<< HEAD
           error.response?.data?.error ||
           "Could not upload workspace documents.",
+=======
+        error.response?.data?.error ||
+        "Could not upload workspace documents.",
+>>>>>>> e79a140c96d4a7b2262bc97740880db7c9281015
       );
     } finally {
       setIsUploadingWorkspaceDocuments(false);
@@ -2324,7 +3326,11 @@ function WorkSpacePage() {
       console.error("Workspace document review failed:", error);
       setWorkspaceDocumentStatus(
         error.response?.data?.message ||
+<<<<<<< HEAD
           "Could not save workspace document review.",
+=======
+        "Could not save workspace document review.",
+>>>>>>> e79a140c96d4a7b2262bc97740880db7c9281015
       );
     }
   }
@@ -2333,7 +3339,13 @@ function WorkSpacePage() {
     if (!selectedStudySet?.cards?.length) return;
 
     setCurrentStudyCardIndex((currentIndex) =>
+<<<<<<< HEAD
       currentIndex === 0 ? selectedStudySet.cards.length - 1 : currentIndex - 1,
+=======
+      currentIndex === 0
+        ? selectedStudySet.cards.length - 1
+        : currentIndex - 1,
+>>>>>>> e79a140c96d4a7b2262bc97740880db7c9281015
     );
     setIsStudyCardFlipped(false);
   }
@@ -2342,7 +3354,13 @@ function WorkSpacePage() {
     if (!selectedStudySet?.cards?.length) return;
 
     setCurrentStudyCardIndex((currentIndex) =>
+<<<<<<< HEAD
       currentIndex === selectedStudySet.cards.length - 1 ? 0 : currentIndex + 1,
+=======
+      currentIndex === selectedStudySet.cards.length - 1
+        ? 0
+        : currentIndex + 1,
+>>>>>>> e79a140c96d4a7b2262bc97740880db7c9281015
     );
     setIsStudyCardFlipped(false);
   }
@@ -2418,15 +3436,26 @@ function WorkSpacePage() {
                 )}
 
                 <div className="workspace_message_content_area">
+<<<<<<< HEAD
                   <h3 className={message.isOwn ? "workspace_message_you" : ""}>
+=======
+                  <h3
+                    className={message.isOwn ? "workspace_message_you" : ""}
+                  >
+>>>>>>> e79a140c96d4a7b2262bc97740880db7c9281015
                     {message.isOwn ? "You" : message.senderName}
                   </h3>
 
                   {message.text && (
                     <div
+<<<<<<< HEAD
                       className={`workspace_message_bubble ${
                         message.isOwn ? "sent" : "received"
                       }`}
+=======
+                      className={`workspace_message_bubble ${message.isOwn ? "sent" : "received"
+                        }`}
+>>>>>>> e79a140c96d4a7b2262bc97740880db7c9281015
                     >
                       {message.text}
                     </div>
@@ -2434,6 +3463,7 @@ function WorkSpacePage() {
 
                   {message.file && message.file.isImage && (
                     <div
+<<<<<<< HEAD
                       className={`workspace_message_bubble image ${
                         message.isOwn ? "sent" : "received"
                       }`}
@@ -2471,6 +3501,43 @@ function WorkSpacePage() {
           )}
         </section>
 
+=======
+                      className={`workspace_message_bubble image ${message.isOwn ? "sent" : "received"
+                        }`}
+                    >
+                      <img
+                        src={message.file.previewUrl}
+                        alt={message.file.name}
+                      />
+                    </div>
+                  )}
+
+                  {message.file && !message.file.isImage && (
+                    <div className="workspace_message_file">
+                      <div>
+                        <i className="ti-file"></i>
+                      </div>
+
+                      <section>
+                        <strong>{message.file.name}</strong>
+                        <span>{message.file.sizeLabel}</span>
+                      </section>
+                    </div>
+                  )}
+
+                  <span
+                    className={`workspace_message_time ${message.isOwn ? "own" : ""
+                      }`}
+                  >
+                    {message.time} · {message.isOwn ? "Sent" : "Received"}
+                  </span>
+                </div>
+              </article>
+            ))
+          )}
+        </section>
+
+>>>>>>> e79a140c96d4a7b2262bc97740880db7c9281015
         {messageAttachment && (
           <div className="workspace_message_selected_file">
             <div>
@@ -2608,7 +3675,12 @@ function WorkSpacePage() {
                 const isCurrentUser = currentUserId
                   ? String(member.id) === currentUserId
                   : false;
+<<<<<<< HEAD
                 const isLastAdmin = member.role === "Admin" && adminCount <= 1;
+=======
+                const isLastAdmin =
+                  member.role === "Admin" && adminCount <= 1;
+>>>>>>> e79a140c96d4a7b2262bc97740880db7c9281015
                 const isActionBusy = memberActionId === member.id;
 
                 return (
@@ -2618,9 +3690,14 @@ function WorkSpacePage() {
                   >
                     <div className="workspace_member_identity">
                       <div
+<<<<<<< HEAD
                         className={`workspace_member_profile_trigger ${
                           canViewProfile ? "" : "is-disabled"
                         } ${isProfileOptionActive ? "is-active" : ""}`}
+=======
+                        className={`workspace_member_profile_trigger ${canViewProfile ? "" : "is-disabled"
+                          } ${isProfileOptionActive ? "is-active" : ""}`}
+>>>>>>> e79a140c96d4a7b2262bc97740880db7c9281015
                         role={canViewProfile ? "button" : undefined}
                         tabIndex={canViewProfile ? 0 : undefined}
                         onClick={(event) =>
@@ -2666,13 +3743,21 @@ function WorkSpacePage() {
                     </div>
 
                     <span
+<<<<<<< HEAD
                       className={`workspace_member_status ${
                         member.role === "Admin"
+=======
+                      className={`workspace_member_status ${member.role === "Admin"
+>>>>>>> e79a140c96d4a7b2262bc97740880db7c9281015
                           ? "manager"
                           : member.role === "Editor"
                             ? "editor"
                             : "member"
+<<<<<<< HEAD
                       }`}
+=======
+                        }`}
+>>>>>>> e79a140c96d4a7b2262bc97740880db7c9281015
                     >
                       {getWorkspaceRoleLabel(member.role)}
                     </span>
@@ -2709,7 +3794,13 @@ function WorkSpacePage() {
                                 )
                               }
                             >
+<<<<<<< HEAD
                               <span>{getWorkspaceRoleLabel(member.role)}</span>
+=======
+                              <span>
+                                {getWorkspaceRoleLabel(member.role)}
+                              </span>
+>>>>>>> e79a140c96d4a7b2262bc97740880db7c9281015
                               <i
                                 className="ti-angle-down"
                                 aria-hidden="true"
@@ -2757,7 +3848,14 @@ function WorkSpacePage() {
                             isActionBusy || isCurrentUser || isLastAdmin
                           }
                           onClick={() =>
+<<<<<<< HEAD
                             handleRemoveWorkspaceMember(member.id, member.name)
+=======
+                            handleRemoveWorkspaceMember(
+                              member.id,
+                              member.name,
+                            )
+>>>>>>> e79a140c96d4a7b2262bc97740880db7c9281015
                           }
                         >
                           Remove
@@ -2832,7 +3930,12 @@ function WorkSpacePage() {
             <div className="workspace_role_item">
               <strong>Managers</strong>
               <p>
+<<<<<<< HEAD
                 Can edit library settings, upload documents, and manage members.
+=======
+                Can edit library settings, upload documents, and manage
+                members.
+>>>>>>> e79a140c96d4a7b2262bc97740880db7c9281015
               </p>
             </div>
 
@@ -2912,9 +4015,14 @@ function WorkSpacePage() {
       const subtasks = selectedTopic.subtasks || [];
       const topicDeadlineText =
         selectedTopic.dateMode === "deadline"
+<<<<<<< HEAD
           ? `${selectedTopic.startDate || "No start date"} → ${
               selectedTopic.endDate || "No end date"
             }`
+=======
+          ? `${selectedTopic.startDate || "No start date"} → ${selectedTopic.endDate || "No end date"
+          }`
+>>>>>>> e79a140c96d4a7b2262bc97740880db7c9281015
           : "No deadline";
       return (
         <section className="workspace_clickup_detail">
@@ -2989,9 +4097,14 @@ function WorkSpacePage() {
                 <section className="workspace_topic_info_panel">
                   <button
                     type="button"
+<<<<<<< HEAD
                     className={`workspace_topic_info_item ${
                       canManageTopics ? "editable" : "read_only"
                     }`}
+=======
+                    className={`workspace_topic_info_item ${canManageTopics ? "editable" : "read_only"
+                      }`}
+>>>>>>> e79a140c96d4a7b2262bc97740880db7c9281015
                     onClick={() =>
                       canManageTopics && setEditingTopicField("priority")
                     }
@@ -3025,9 +4138,14 @@ function WorkSpacePage() {
 
                   <button
                     type="button"
+<<<<<<< HEAD
                     className={`workspace_topic_info_item deadline ${
                       canManageTopics ? "editable" : "read_only"
                     }`}
+=======
+                    className={`workspace_topic_info_item deadline ${canManageTopics ? "editable" : "read_only"
+                      }`}
+>>>>>>> e79a140c96d4a7b2262bc97740880db7c9281015
                     onClick={() =>
                       canManageTopics && setEditingTopicField("deadline")
                     }
@@ -3071,7 +4189,14 @@ function WorkSpacePage() {
                               type="date"
                               value={selectedTopic.endDate || ""}
                               onChange={(e) =>
+<<<<<<< HEAD
                                 handleUpdateTopicDate("endDate", e.target.value)
+=======
+                                handleUpdateTopicDate(
+                                  "endDate",
+                                  e.target.value,
+                                )
+>>>>>>> e79a140c96d4a7b2262bc97740880db7c9281015
                               }
                             />
                           </div>
@@ -3091,9 +4216,14 @@ function WorkSpacePage() {
                   </button>
                 </section>
                 <form
+<<<<<<< HEAD
                   className={`workspace_clickup_description ${
                     isTopicDescriptionEditing ? "is_editing" : "is_read_only"
                   }`}
+=======
+                  className={`workspace_clickup_description ${isTopicDescriptionEditing ? "is_editing" : "is_read_only"
+                    }`}
+>>>>>>> e79a140c96d4a7b2262bc97740880db7c9281015
                   onSubmit={handleSaveTopicNote}
                 >
                   <textarea
@@ -3131,8 +4261,13 @@ function WorkSpacePage() {
                     </div>
                   ) : (
                     <p className="workspace_permission_hint">
+<<<<<<< HEAD
                       Contributor mode: you can read topics, comment, and submit
                       solutions.
+=======
+                      Contributor mode: you can read topics, comment, and
+                      submit solutions.
+>>>>>>> e79a140c96d4a7b2262bc97740880db7c9281015
                     </p>
                   )}
                 </form>
@@ -3157,9 +4292,14 @@ function WorkSpacePage() {
 
                       {canManageTopics ? (
                         <form
+<<<<<<< HEAD
                           className={`workspace_clickup_subtask_form ${
                             isSubtaskEditing ? "editing" : ""
                           }`}
+=======
+                          className={`workspace_clickup_subtask_form ${isSubtaskEditing ? "editing" : ""
+                            }`}
+>>>>>>> e79a140c96d4a7b2262bc97740880db7c9281015
                           onSubmit={handleAddTopicSubtask}
                         >
                           <div className="workspace_clickup_subtask_input_side">
@@ -3248,7 +4388,13 @@ function WorkSpacePage() {
                                             value={subtaskEndDate}
                                             min={subtaskStartDate}
                                             onChange={(e) =>
+<<<<<<< HEAD
                                               setSubtaskEndDate(e.target.value)
+=======
+                                              setSubtaskEndDate(
+                                                e.target.value,
+                                              )
+>>>>>>> e79a140c96d4a7b2262bc97740880db7c9281015
                                             }
                                           />
                                         </label>
@@ -3305,7 +4451,13 @@ function WorkSpacePage() {
                                           type="button"
                                           key={priorityOption}
                                           onClick={() => {
+<<<<<<< HEAD
                                             setSubtaskPriority(priorityOption);
+=======
+                                            setSubtaskPriority(
+                                              priorityOption,
+                                            );
+>>>>>>> e79a140c96d4a7b2262bc97740880db7c9281015
                                             setIsSubtaskPriorityOpen(false);
                                           }}
                                         >
@@ -3360,15 +4512,26 @@ function WorkSpacePage() {
                         <div className="workspace_clickup_subtask_list">
                           {subtasks.map((subtask) => (
                             <article
+<<<<<<< HEAD
                               className={`workspace_clickup_subtask_item ${
                                 subtask.isDone ? "completed" : ""
                               }`}
+=======
+                              className={`workspace_clickup_subtask_item ${subtask.isDone ? "completed" : ""
+                                }`}
+>>>>>>> e79a140c96d4a7b2262bc97740880db7c9281015
                               key={subtask.id}
                             >
                               <button
                                 type="button"
                                 className="workspace_clickup_subtask_check"
+<<<<<<< HEAD
                                 onClick={() => handleToggleSubtask(subtask.id)}
+=======
+                                onClick={() =>
+                                  handleToggleSubtask(subtask.id)
+                                }
+>>>>>>> e79a140c96d4a7b2262bc97740880db7c9281015
                                 disabled={!canManageTopics}
                               >
                                 {subtask.isDone ? (
@@ -3382,7 +4545,13 @@ function WorkSpacePage() {
                                 <div>
                                   {subtask.priority && (
                                     <span>
+<<<<<<< HEAD
                                       {getSubtaskPriorityIcon(subtask.priority)}{" "}
+=======
+                                      {getSubtaskPriorityIcon(
+                                        subtask.priority,
+                                      )}{" "}
+>>>>>>> e79a140c96d4a7b2262bc97740880db7c9281015
                                       {subtask.priority}
                                     </span>
                                   )}
@@ -3500,12 +4669,23 @@ function WorkSpacePage() {
 
                               <div className="workspace_clickup_attachment_info">
                                 <div>
+<<<<<<< HEAD
                                   <strong>{file.fileName || file.name}</strong>
                                   <span>
                                     {file.createdAt
                                       ? new Date(
                                           file.createdAt,
                                         ).toLocaleDateString()
+=======
+                                  <strong>
+                                    {file.fileName || file.name}
+                                  </strong>
+                                  <span>
+                                    {file.createdAt
+                                      ? new Date(
+                                        file.createdAt,
+                                      ).toLocaleDateString()
+>>>>>>> e79a140c96d4a7b2262bc97740880db7c9281015
                                       : "Just now"}
                                   </span>
                                 </div>
@@ -3596,7 +4776,13 @@ function WorkSpacePage() {
                           onChange={handleSolutionFileChange}
                         />
                       </label>
+<<<<<<< HEAD
                       <span>Optional · PDF, DOCX or TXT · up to 10 files</span>
+=======
+                      <span>
+                        Optional · PDF, DOCX or TXT · up to 10 files
+                      </span>
+>>>>>>> e79a140c96d4a7b2262bc97740880db7c9281015
                     </div>
 
                     {solutionAttachments.length > 0 && (
@@ -3687,7 +4873,11 @@ function WorkSpacePage() {
                               </strong>
                               {currentUserId &&
                                 String(solution.author?.id) ===
+<<<<<<< HEAD
                                   currentUserId && (
+=======
+                                currentUserId && (
+>>>>>>> e79a140c96d4a7b2262bc97740880db7c9281015
                                   <button
                                     type="button"
                                     onClick={() => {
@@ -3706,7 +4896,13 @@ function WorkSpacePage() {
                             </div>
                             <small>
                               {solution.createdAt
+<<<<<<< HEAD
                                 ? new Date(solution.createdAt).toLocaleString()
+=======
+                                ? new Date(
+                                  solution.createdAt,
+                                ).toLocaleString()
+>>>>>>> e79a140c96d4a7b2262bc97740880db7c9281015
                                 : "Just now"}
                             </small>
                             <p>{getSolutionPreview(solution.content)}</p>
@@ -3740,7 +4936,11 @@ function WorkSpacePage() {
                                     </a>
                                     {currentUserId &&
                                       String(solution.author?.id) ===
+<<<<<<< HEAD
                                         currentUserId && (
+=======
+                                      currentUserId && (
+>>>>>>> e79a140c96d4a7b2262bc97740880db7c9281015
                                         <button
                                           type="button"
                                           title="Remove attachment"
@@ -3807,7 +5007,13 @@ function WorkSpacePage() {
                             </strong>
                             <small>
                               {solution.createdAt
+<<<<<<< HEAD
                                 ? new Date(solution.createdAt).toLocaleString()
+=======
+                                ? new Date(
+                                  solution.createdAt,
+                                ).toLocaleString()
+>>>>>>> e79a140c96d4a7b2262bc97740880db7c9281015
                                 : "Just now"}
                             </small>
                             <p>{getSolutionPreview(solution.content)}</p>
@@ -3899,8 +5105,13 @@ function WorkSpacePage() {
                           <span>
                             {selectedSolutionDetail.createdAt
                               ? new Date(
+<<<<<<< HEAD
                                   selectedSolutionDetail.createdAt,
                                 ).toLocaleString()
+=======
+                                selectedSolutionDetail.createdAt,
+                              ).toLocaleString()
+>>>>>>> e79a140c96d4a7b2262bc97740880db7c9281015
                               : "Just now"}
                           </span>
                         </div>
@@ -3973,7 +5184,13 @@ function WorkSpacePage() {
                           .toUpperCase()}
                       </div>
 
+<<<<<<< HEAD
                       <strong>{comment.author?.name || comment.author}</strong>
+=======
+                      <strong>
+                        {comment.author?.name || comment.author}
+                      </strong>
+>>>>>>> e79a140c96d4a7b2262bc97740880db7c9281015
                       <span>
                         {comment.createdAt
                           ? new Date(comment.createdAt).toLocaleString()
@@ -4029,8 +5246,13 @@ function WorkSpacePage() {
             <span className="discussion_label">Student discussion</span>
             <h2>Discussion Board</h2>
             <p>
+<<<<<<< HEAD
               Ask questions, share learning materials, and discuss lessons with
               members in this workspace.
+=======
+              Ask questions, share learning materials, and discuss lessons
+              with members in this workspace.
+>>>>>>> e79a140c96d4a7b2262bc97740880db7c9281015
             </p>
           </div>
 
@@ -4221,7 +5443,13 @@ function WorkSpacePage() {
                           <i className="ti-file" aria-hidden="true"></i>
                           <span>
                             <strong>{file.name}</strong>
+<<<<<<< HEAD
                             <small>{formatWorkspaceFileSize(file.size)}</small>
+=======
+                            <small>
+                              {formatWorkspaceFileSize(file.size)}
+                            </small>
+>>>>>>> e79a140c96d4a7b2262bc97740880db7c9281015
                           </span>
                         </span>
                         <button
@@ -4410,8 +5638,13 @@ function WorkSpacePage() {
               <div className="workspace_storage_limit_row">
                 <strong>Storage limit</strong>
                 <span>
+<<<<<<< HEAD
                   {formatWorkspaceStorageSize(workspaceStorageUsedBytes)} / 50.0
                   MB
+=======
+                  {formatWorkspaceStorageSize(workspaceStorageUsedBytes)} /
+                  50.0 MB
+>>>>>>> e79a140c96d4a7b2262bc97740880db7c9281015
                 </span>
               </div>
 
@@ -4429,7 +5662,13 @@ function WorkSpacePage() {
 
                 <div>
                   <strong>
+<<<<<<< HEAD
                     {formatWorkspaceStorageSize(workspaceStorageRemainingBytes)}
+=======
+                    {formatWorkspaceStorageSize(
+                      workspaceStorageRemainingBytes,
+                    )}
+>>>>>>> e79a140c96d4a7b2262bc97740880db7c9281015
                   </strong>
                   <span>Remaining</span>
                 </div>
@@ -4535,9 +5774,14 @@ function WorkSpacePage() {
               studySets.map((studySet) => (
                 <button
                   type="button"
+<<<<<<< HEAD
                   className={`workspace_study_set_card ${
                     selectedStudySetId === studySet.id ? "active" : ""
                   }`}
+=======
+                  className={`workspace_study_set_card ${selectedStudySetId === studySet.id ? "active" : ""
+                    }`}
+>>>>>>> e79a140c96d4a7b2262bc97740880db7c9281015
                   key={studySet.id}
                   onClick={() => handleSelectStudySet(studySet.id)}
                 >
@@ -4583,6 +5827,7 @@ function WorkSpacePage() {
               <div>
                 <span
                   style={{
+<<<<<<< HEAD
                     width: `${
                       hasStudyCards
                         ? ((currentStudyCardIndex + 1) /
@@ -4590,6 +5835,14 @@ function WorkSpacePage() {
                           100
                         : 0
                     }%`,
+=======
+                    width: `${hasStudyCards
+                        ? ((currentStudyCardIndex + 1) /
+                          selectedStudySet.cards.length) *
+                        100
+                        : 0
+                      }%`,
+>>>>>>> e79a140c96d4a7b2262bc97740880db7c9281015
                   }}
                 ></span>
               </div>
@@ -4605,9 +5858,14 @@ function WorkSpacePage() {
           <section className="workspace_study_stage">
             <button
               type="button"
+<<<<<<< HEAD
               className={`workspace_flashcard ${
                 isStudyCardFlipped ? "flipped" : ""
               }`}
+=======
+              className={`workspace_flashcard ${isStudyCardFlipped ? "flipped" : ""
+                }`}
+>>>>>>> e79a140c96d4a7b2262bc97740880db7c9281015
               onClick={() =>
                 hasStudyCards && setIsStudyCardFlipped(!isStudyCardFlipped)
               }
@@ -4629,6 +5887,7 @@ function WorkSpacePage() {
             </button>
 
             <div className="workspace_study_controls">
+<<<<<<< HEAD
               <button
                 type="button"
                 onClick={handlePreviousStudyCard}
@@ -4639,6 +5898,18 @@ function WorkSpacePage() {
 
               <button
                 type="button"
+=======
+              <button
+                type="button"
+                onClick={handlePreviousStudyCard}
+                disabled={!hasStudyCards}
+              >
+                <i className="ti-arrow-left"></i>
+              </button>
+
+              <button
+                type="button"
+>>>>>>> e79a140c96d4a7b2262bc97740880db7c9281015
                 className="workspace_study_flip_btn"
                 onClick={() =>
                   hasStudyCards && setIsStudyCardFlipped(!isStudyCardFlipped)
@@ -4696,8 +5967,17 @@ function WorkSpacePage() {
 
               <section>
                 <span>Current Card</span>
+<<<<<<< HEAD
                 <strong>{hasStudyCards ? currentStudyCardIndex + 1 : 0}</strong>
                 <p>{selectedStudySet?.cards?.length || 0} cards in this set</p>
+=======
+                <strong>
+                  {hasStudyCards ? currentStudyCardIndex + 1 : 0}
+                </strong>
+                <p>
+                  {selectedStudySet?.cards?.length || 0} cards in this set
+                </p>
+>>>>>>> e79a140c96d4a7b2262bc97740880db7c9281015
               </section>
             </article>
           </section>
@@ -4714,8 +5994,13 @@ function WorkSpacePage() {
             <span>Workspace Files</span>
             <h2>Documents</h2>
             <p>
+<<<<<<< HEAD
               Upload learning materials to this workspace and use approved files
               for AI study cards.
+=======
+              Upload learning materials to this workspace and use approved
+              files for AI study cards.
+>>>>>>> e79a140c96d4a7b2262bc97740880db7c9281015
             </p>
           </div>
 
@@ -4734,8 +6019,13 @@ function WorkSpacePage() {
             <div>
               <h3>Upload workspace documents</h3>
               <p>
+<<<<<<< HEAD
                 PDF, DOCX, and TXT files are supported. Files are checked before
                 becoming available for study tools.
+=======
+                PDF, DOCX, and TXT files are supported. Files are checked
+                before becoming available for study tools.
+>>>>>>> e79a140c96d4a7b2262bc97740880db7c9281015
               </p>
             </div>
           </div>
@@ -4797,8 +6087,13 @@ function WorkSpacePage() {
               <i className="ti-files"></i>
               <h3>No workspace documents yet</h3>
               <p>
+<<<<<<< HEAD
                 Upload a document here, then use approved documents in the Study
                 tab.
+=======
+                Upload a document here, then use approved documents in the
+                Study tab.
+>>>>>>> e79a140c96d4a7b2262bc97740880db7c9281015
               </p>
             </div>
           ) : (
@@ -4810,12 +6105,27 @@ function WorkSpacePage() {
                 const isApproved = status === "APPROVED";
                 const needsWorkspaceReview =
                   canManageWorkspace &&
+<<<<<<< HEAD
                   ["PENDING", "FLAGGED", "PENDING_RETRY", "REJECTED"].includes(
                     status,
                   );
 
                 return (
                   <article className="workspace_document_row" key={document.id}>
+=======
+                  [
+                    "PENDING",
+                    "FLAGGED",
+                    "PENDING_RETRY",
+                    "REJECTED",
+                  ].includes(status);
+
+                return (
+                  <article
+                    className="workspace_document_row"
+                    key={document.id}
+                  >
+>>>>>>> e79a140c96d4a7b2262bc97740880db7c9281015
                     <div className="workspace_document_icon">
                       <i className="ti-file"></i>
                     </div>
@@ -4929,7 +6239,12 @@ function WorkSpacePage() {
                   : ""
               }
             >
+<<<<<<< HEAD
               {workspaceNameInput.length}/{WORKSPACE_NAME_MAX_LENGTH} characters
+=======
+              {workspaceNameInput.length}/{WORKSPACE_NAME_MAX_LENGTH}{" "}
+              characters
+>>>>>>> e79a140c96d4a7b2262bc97740880db7c9281015
             </small>
             <button type="submit">Save changes</button>
           </form>
@@ -5022,9 +6337,14 @@ function WorkSpacePage() {
             <section className="workspace_invite_result">
               {candidateUsers.map((user) => (
                 <label
+<<<<<<< HEAD
                   className={`workspace_invite_candidate ${
                     selectedUserId === user.id ? "is-selected" : ""
                   } ${user.isWorkspaceMember ? "is-existing-member" : ""}`}
+=======
+                  className={`workspace_invite_candidate ${selectedUserId === user.id ? "is-selected" : ""
+                    } ${user.isWorkspaceMember ? "is-existing-member" : ""}`}
+>>>>>>> e79a140c96d4a7b2262bc97740880db7c9281015
                   key={user.id}
                 >
                   <input
