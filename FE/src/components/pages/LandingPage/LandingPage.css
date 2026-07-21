@@ -235,6 +235,33 @@
   font-size: 14px;
 }
 
+body[data-theme="current"] .landing_ai_preview {
+  background-color: #3b2a1a !important;
+  background-image: none !important;
+  background-blend-mode: initial !important;
+  color: #fffaf0;
+}
+
+body[data-theme="current"] .landing_preview_header {
+  color: #fffaf0;
+}
+
+body[data-theme="current"] .landing_preview_message.is-user {
+  background: #c45117;
+  color: #ffffff;
+}
+
+body[data-theme="current"] .landing_preview_message.is-ai {
+  background: #4a3425;
+  color: #fffaf0;
+}
+
+body[data-theme="current"] .landing_preview_input {
+  border: 1px solid #735f4c;
+  background: #4a3425;
+  color: #efcbb0;
+}
+
 .landing_reveal {
   animation: landing-rise 700ms ease both;
 }

@@ -4,6 +4,10 @@ const { createActivityLog } = require("../services/activityLogService");
 
 const MEMBER_ROLES = ["Editor", "Viewer"];
 const ASSIGNABLE_MEMBER_ROLES = ["Editor", "Viewer"];
+
+function getWorkspaceRoleLabel(role) {
+  return String(role || "").toLowerCase() === "viewer" ? "Contributor" : role;
+}
 const MESSAGE_SELECT = `
   id,
   workspace_id,
@@ -262,13 +266,23 @@ async function countWorkspaceAdmins(workspaceId) {
 async function getWorkspaceDiscussionAccess(workspaceId, userId) {
   const access = await getWorkspaceAccess(workspaceId, userId);
   if (!access.workspace || !access.member) {
-    return { ...access, canReadDiscussion: false, canWriteDiscussion: false };
+    return {
+      ...access,
+      canReadDiscussion: false,
+      canWriteDiscussion: false,
+      canSubmitSolutions: false,
+    };
   }
 
   const canWriteDiscussion =
     access.isAdmin || ["Admin", "Editor"].includes(access.member?.role);
 
-  return { ...access, canReadDiscussion: true, canWriteDiscussion };
+  return {
+    ...access,
+    canReadDiscussion: true,
+    canWriteDiscussion,
+    canSubmitSolutions: true,
+  };
 }
 
 async function getDiscussionTopicInWorkspace(workspaceId, topicId) {
@@ -351,11 +365,15 @@ function mapDiscussionUser(user, fallback = "Workspace member") {
 }
 
 function mapDiscussionComment(row) {
+  const solutionPrefix = "[[SOLUTION]]";
+  const isSolution = String(row.content || "").startsWith(solutionPrefix);
+
   return {
     id: row.id,
     topicId: row.topic_id,
     userId: row.user_id,
-    content: row.content,
+    content: isSolution ? row.content.slice(solutionPrefix.length) : row.content,
+    kind: isSolution ? "solution" : "comment",
     isEdited: row.is_edited === true,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -378,6 +396,19 @@ function mapDiscussionSubtask(row) {
 }
 
 function mapDiscussionAttachment(row) {
+  const storedMimeType = row.mime_type || "";
+  const isSolution = storedMimeType.startsWith("solution:");
+  const solutionMetadata = isSolution
+    ? storedMimeType.slice("solution:".length)
+    : "";
+  const solutionSeparatorIndex = solutionMetadata.indexOf("|");
+  const solutionId = solutionSeparatorIndex >= 0
+    ? solutionMetadata.slice(0, solutionSeparatorIndex) || null
+    : null;
+  const cleanMimeType = solutionSeparatorIndex >= 0
+    ? solutionMetadata.slice(solutionSeparatorIndex + 1)
+    : solutionMetadata;
+
   return {
     id: row.id,
     topicId: row.topic_id,
@@ -385,7 +416,9 @@ function mapDiscussionAttachment(row) {
     fileName: row.file_name,
     fileUrl: row.file_url,
     fileSizeBytes: row.file_size_bytes || 0,
-    mimeType: row.mime_type || "",
+    mimeType: isSolution ? cleanMimeType : storedMimeType,
+    kind: isSolution ? "solution" : "attachment",
+    solutionId,
     createdAt: row.created_at,
     uploader: mapDiscussionUser(row.uploader),
   };
@@ -411,7 +444,12 @@ function mapDiscussionTopic(row) {
     isPinned: row.is_pinned === true,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
-    comments: (row.comments || []).map(mapDiscussionComment),
+    comments: (row.comments || [])
+      .map(mapDiscussionComment)
+      .filter((comment) => comment.kind === "comment"),
+    solutions: (row.comments || [])
+      .map(mapDiscussionComment)
+      .filter((comment) => comment.kind === "solution"),
     subtasks: (row.subtasks || []).map(mapDiscussionSubtask),
     files: (row.attachments || []).map(mapDiscussionAttachment),
   };
@@ -855,7 +893,7 @@ exports.updateMemberRole = async (req, res) => {
     if (!ASSIGNABLE_MEMBER_ROLES.includes(role)) {
       return res.status(400).json({
         status: "error",
-        message: "Role must be Editor or Viewer.",
+        message: "Role must be Editor or Contributor.",
       });
     }
 
@@ -929,7 +967,7 @@ exports.updateMemberRole = async (req, res) => {
           changedBy: req.user.id,
         },
         request: req,
-        details: `Your role in ${access.workspace.name || "a workspace"} changed from ${currentMember.role} to ${role}.`,
+        details: `Your role in ${access.workspace.name || "a workspace"} changed from ${getWorkspaceRoleLabel(currentMember.role)} to ${getWorkspaceRoleLabel(role)}.`,
       });
     }
 
@@ -978,9 +1016,10 @@ exports.listMyWorkspaceNotifications = async (req, res) => {
               : isDeleted
                 ? "Workspace deleted"
                 : "Workspace role changed",
-          message:
+          message: (
             item.details ||
-            `Your workspace role changed from ${item.old_data?.role || "member"} to ${item.new_data?.role || "a new role"}.`,
+            `Your workspace role changed from ${getWorkspaceRoleLabel(item.old_data?.role || "member")} to ${getWorkspaceRoleLabel(item.new_data?.role || "a new role")}.`
+          ).replace(/\bViewer\b/gi, "Contributor"),
           icon: isDeleted ? "ti-trash" : actionType === "renamed" ? "ti-pencil" : "ti-user",
           link: isDeleted ? "/dashboard/workspaces" : `/dashboard/workspaces/${item.entity_id}`,
           createdAt: "Recently",
@@ -1434,19 +1473,26 @@ exports.addDiscussionComment = async (req, res) => {
   try {
     const { workspaceId, topicId } = req.params;
     const access = await getWorkspaceDiscussionAccess(workspaceId, req.user.id);
+    const isSolution = req.body.kind === "solution";
 
-    if (!access.workspace || !access.canReadDiscussion) {
+    if (
+      !access.workspace ||
+      (isSolution ? !access.canSubmitSolutions : !access.canReadDiscussion)
+    ) {
       return res.status(403).json({
         status: "error",
         message: "You cannot access this workspace discussion.",
       });
     }
 
-    const content = String(req.body.content || "").trim();
-    if (!content) {
+    const rawContent = String(req.body.content || "").trim();
+    const content = isSolution ? `[[SOLUTION]]${rawContent}` : rawContent;
+    if (!rawContent) {
       return res.status(400).json({
         status: "error",
-        message: "Comment content is required.",
+        message: isSolution
+          ? "Solution content is required."
+          : "Comment content is required.",
       });
     }
 
@@ -1506,6 +1552,51 @@ exports.addDiscussionComment = async (req, res) => {
       message: "Could not add comment.",
       error: error.message,
     });
+  }
+};
+
+exports.updateDiscussionComment = async (req, res) => {
+  try {
+    const { workspaceId, topicId, commentId } = req.params;
+    const access = await getWorkspaceDiscussionAccess(workspaceId, req.user.id);
+    if (!access.workspace || !access.canSubmitSolutions) {
+      return res.status(403).json({ status: "error", message: "You cannot access this workspace discussion." });
+    }
+
+    const content = String(req.body.content || "").trim();
+    if (!content) {
+      return res.status(400).json({ status: "error", message: "Solution content is required." });
+    }
+
+    const { data: existing, error: findError } = await supabase
+      .from("workspace_discussion_comments")
+      .select("id, user_id, content")
+      .eq("id", commentId)
+      .eq("topic_id", topicId)
+      .maybeSingle();
+    if (findError) throw findError;
+    if (!existing) return res.status(404).json({ status: "error", message: "Solution not found." });
+    if (existing.user_id !== req.user.id || !String(existing.content || "").startsWith("[[SOLUTION]]")) {
+      return res.status(403).json({ status: "error", message: "You can only edit your own solution." });
+    }
+
+    const { data, error } = await supabase
+      .from("workspace_discussion_comments")
+      .update({
+        content: `[[SOLUTION]]${content}`,
+        is_edited: true,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", commentId)
+      .eq("topic_id", topicId)
+      .select(`id, topic_id, user_id, content, is_edited, created_at, updated_at,
+        author:profiles!workspace_discussion_comments_user_id_fkey (id, email, username, full_name, avatar_url)`)
+      .single();
+    if (error) throw error;
+    return res.status(200).json({ status: "success", data: mapDiscussionComment(data) });
+  } catch (error) {
+    console.error("updateDiscussionComment error:", error);
+    return res.status(500).json({ status: "error", message: "Could not update solution.", error: error.message });
   }
 };
 
@@ -1703,16 +1794,17 @@ exports.addDiscussionAttachment = async (req, res) => {
   try {
     const { workspaceId, topicId } = req.params;
     const access = await getWorkspaceDiscussionAccess(workspaceId, req.user.id);
-    const isChatUpload = req.body.source === "chat";
-    const canAddAttachment = isChatUpload
-      ? access.canReadDiscussion
+    const attachmentKind = req.body.kind === "solution" ? "solution" : "attachment";
+    const isMemberUpload = req.body.source === "chat" || attachmentKind === "solution";
+    const canAddAttachment = isMemberUpload
+      ? access.canSubmitSolutions
       : access.canWriteDiscussion;
 
     if (!access.workspace || !canAddAttachment) {
       return res.status(403).json({
         status: "error",
-        message: isChatUpload
-          ? "You cannot upload files to this topic chat."
+        message: isMemberUpload
+          ? "You cannot upload files to this topic."
           : "Only workspace editors and admins can add discussion attachments.",
       });
     }
@@ -1742,7 +1834,9 @@ exports.addDiscussionAttachment = async (req, res) => {
         file_name: fileName,
         file_url: fileUrl,
         file_size_bytes: Number(req.body.fileSizeBytes || 0),
-        mime_type: String(req.body.mimeType || "").trim() || null,
+        mime_type: attachmentKind === "solution"
+          ? `solution:${String(req.body.solutionId || "").trim()}|${String(req.body.mimeType || "").trim()}`
+          : String(req.body.mimeType || "").trim() || null,
       })
       .select(
         `
@@ -1786,10 +1880,10 @@ exports.deleteDiscussionAttachment = async (req, res) => {
     const { workspaceId, topicId, attachmentId } = req.params;
     const access = await getWorkspaceDiscussionAccess(workspaceId, req.user.id);
 
-    if (!access.workspace || !access.canWriteDiscussion) {
+    if (!access.workspace || !access.canReadDiscussion) {
       return res.status(403).json({
         status: "error",
-        message: "Only workspace editors and admins can delete discussion attachments.",
+        message: "You cannot access this workspace discussion.",
       });
     }
 
@@ -1799,6 +1893,18 @@ exports.deleteDiscussionAttachment = async (req, res) => {
         status: "error",
         message: "Discussion topic not found.",
       });
+    }
+
+    const { data: attachment, error: attachmentError } = await supabase
+      .from("workspace_discussion_attachments")
+      .select("id, uploaded_by")
+      .eq("id", attachmentId)
+      .eq("topic_id", topicId)
+      .maybeSingle();
+    if (attachmentError) throw attachmentError;
+    if (!attachment) return res.status(404).json({ status: "error", message: "Attachment not found." });
+    if (!access.canWriteDiscussion && attachment.uploaded_by !== req.user.id) {
+      return res.status(403).json({ status: "error", message: "You can only delete your own attachments." });
     }
 
     const { error } = await supabase
