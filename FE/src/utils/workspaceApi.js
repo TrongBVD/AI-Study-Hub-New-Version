@@ -68,6 +68,10 @@ export const addWorkspaceDiscussionComment = (workspaceId, topicId, payload) =>
   api.post(`/workspaces/${workspaceId}/discussion/topics/${topicId}/comments`, payload)
     .then((res) => res.data.data);
 
+export const updateWorkspaceDiscussionComment = (workspaceId, topicId, commentId, payload) =>
+  api.patch(`/workspaces/${workspaceId}/discussion/topics/${topicId}/comments/${commentId}`, payload)
+    .then((res) => res.data.data);
+
 export const addWorkspaceDiscussionAttachment = (workspaceId, topicId, payload) =>
   api.post(`/workspaces/${workspaceId}/discussion/topics/${topicId}/attachments`, payload)
     .then((res) => res.data.data);

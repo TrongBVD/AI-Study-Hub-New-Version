@@ -29,6 +29,10 @@ function getStoredUserRole() {
   }
 }
 
+function getNotificationMessage(message) {
+  return String(message || "").replace(/\bViewer\b/gi, "Contributor");
+}
+
 function saveRecentLibrary(library) {
   const currentRecentLibraries = JSON.parse(
     localStorage.getItem("aiStudyHubRecentLibraries") || "[]"
@@ -528,7 +532,7 @@ function Navbar({
 
                         <div>
                           <strong>{notification.title}</strong>
-                          <p>{notification.message}</p>
+                          <p>{getNotificationMessage(notification.message)}</p>
                           <span>{notification.createdAt}</span>
                         </div>
                       </button>

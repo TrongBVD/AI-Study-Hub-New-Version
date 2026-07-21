@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   addWorkspaceMember,
   addWorkspaceDiscussionComment,
+  updateWorkspaceDiscussionComment,
   addWorkspaceDiscussionAttachment,
   addWorkspaceDiscussionSubtask,
   getWorkspaceMembers,
@@ -143,6 +144,31 @@ function formatWorkspaceFileSize(bytes) {
   return `${(value / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+function getWorkspaceRoleLabel(role) {
+  return String(role || "").toLowerCase() === "viewer" ? "Contributor" : role;
+}
+
+function normalizeDisplayFileName(fileName) {
+  const value = String(fileName || "");
+  if (!value || [...value].some((character) => character.charCodeAt(0) > 255)) {
+    return value.normalize("NFC");
+  }
+
+  try {
+    const bytes = Uint8Array.from(value, (character) => character.charCodeAt(0));
+    const decoded = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+    return decoded.normalize("NFC");
+  } catch {
+    return value.normalize("NFC");
+  }
+}
+
+function getSolutionPreview(content, wordLimit = 15) {
+  const words = String(content || "").trim().split(/\s+/).filter(Boolean);
+  if (words.length <= wordLimit) return words.join(" ");
+  return `${words.slice(0, wordLimit).join(" ")}...`;
+}
+
 function getDocumentStatusLabel(status) {
   const value = String(status || "PENDING").toUpperCase();
 
@@ -228,9 +254,17 @@ function WorkSpacePage() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("discussion");
   const [isTopicFormOpen, setIsTopicFormOpen] = useState(false);
+  const [activeTopicSection, setActiveTopicSection] = useState("details");
+  const [isUploadingSolution, setIsUploadingSolution] = useState(false);
+  const [isSolutionFormOpen, setIsSolutionFormOpen] = useState(false);
+  const [solutionContent, setSolutionContent] = useState("");
+  const [solutionAttachments, setSolutionAttachments] = useState([]);
+  const [editingSolutionId, setEditingSolutionId] = useState(null);
+  const [selectedSolutionDetail, setSelectedSolutionDetail] = useState(null);
   const [topicTitle, setTopicTitle] = useState("");
   const [editingTopicField, setEditingTopicField] = useState(null);
   const [topicContent, setTopicContent] = useState("");
+  const [isTopicDescriptionEditing, setIsTopicDescriptionEditing] = useState(false);
   const [newTopicDescription, setNewTopicDescription] = useState("");
 const [newTopicType, setNewTopicType] = useState("Question");
 const [newTopicStatus, setNewTopicStatus] = useState("Open");
@@ -238,6 +272,8 @@ const [newTopicPriority, setNewTopicPriority] = useState("Normal");
 const [newTopicDateMode, setNewTopicDateMode] = useState("none");
 const [newTopicStartDate, setNewTopicStartDate] = useState("");
 const [newTopicEndDate, setNewTopicEndDate] = useState("");
+const [newTopicAttachments, setNewTopicAttachments] = useState([]);
+const [isCreatingTopic, setIsCreatingTopic] = useState(false);
   const [topicCommentInput, setTopicCommentInput] = useState("");
 const [topicSubtaskInput, setTopicSubtaskInput] = useState("");
 const [isSubtaskEditing, setIsSubtaskEditing] = useState(false);
@@ -251,6 +287,8 @@ const [isSubtaskPriorityOpen, setIsSubtaskPriorityOpen] = useState(false);
   const selectedTopicId = searchParams.get("topic");
   const setSelectedTopicId = (id) => {
     if (id) {
+      setActiveTopicSection("details");
+      setIsTopicDescriptionEditing(false);
       setSearchParams({ topic: id });
     } else {
       setSearchParams({});
@@ -913,7 +951,18 @@ const workspaceStorageUsedBytes = discussionStorageUsedBytes;
       return;
     }
 
+    const attachmentSize = newTopicAttachments.reduce(
+      (total, file) => total + file.size,
+      0,
+    );
+
+    if (workspaceStorageUsedBytes + attachmentSize > WORKSPACE_STORAGE_LIMIT_BYTES) {
+      alert("These attachments exceed the workspace 50MB storage limit.");
+      return;
+    }
+
     try {
+      setIsCreatingTopic(true);
       setDiscussionStatus("");
       const createdTopic = await createWorkspaceDiscussionTopic(workspaceId, {
         title: topicTitle.trim(),
@@ -926,7 +975,34 @@ const workspaceStorageUsedBytes = discussionStorageUsedBytes;
         endDate: newTopicDateMode === "deadline" ? newTopicEndDate : "",
       });
 
-      setDiscussionTopics((currentTopics) => [createdTopic, ...currentTopics]);
+      let topicWithAttachments = createdTopic;
+      let attachmentError = null;
+
+      if (newTopicAttachments.length > 0) {
+        try {
+          const uploadedDocuments = await uploadDocuments(
+            newTopicAttachments,
+            workspaceId,
+          );
+          const attachments = await Promise.all(
+            (uploadedDocuments || []).map((document) =>
+              addWorkspaceDiscussionAttachment(workspaceId, createdTopic.id, {
+                fileName: document.title,
+                fileUrl: document.fileUrl || document.file_url,
+                fileSizeBytes:
+                  document.fileSizeBytes || document.file_size_bytes || 0,
+                mimeType: document.mimeType || "",
+              }),
+            ),
+          );
+          topicWithAttachments = { ...createdTopic, files: attachments };
+        } catch (error) {
+          attachmentError = error;
+          console.error("Cannot upload new topic attachments:", error);
+        }
+      }
+
+      setDiscussionTopics((currentTopics) => [topicWithAttachments, ...currentTopics]);
       createAppNotification({
         category: "discussion",
         action: "newTopic",
@@ -947,12 +1023,31 @@ const workspaceStorageUsedBytes = discussionStorageUsedBytes;
       setNewTopicDateMode("none");
       setNewTopicStartDate("");
       setNewTopicEndDate("");
+      setNewTopicAttachments([]);
 
       setIsTopicFormOpen(false);
+
+      if (attachmentError) {
+        alert(
+          attachmentError.response?.data?.message ||
+            "Topic was created, but its attachments could not be uploaded.",
+        );
+      }
     } catch (error) {
       console.error("Cannot create discussion topic:", error);
       alert(error.response?.data?.message || "Could not create discussion topic.");
+    } finally {
+      setIsCreatingTopic(false);
     }
+  }
+
+  function handleNewTopicAttachmentsChange(event) {
+    const files = Array.from(event.target.files || []);
+    if (files.length > 10) {
+      alert("You can attach up to 10 files to a topic.");
+    }
+    setNewTopicAttachments(files.slice(0, 10));
+    event.target.value = "";
   }
 
 async function handleDeleteTopicFile(fileId) {
@@ -1092,6 +1187,118 @@ if (nextStorageUsed > WORKSPACE_STORAGE_LIMIT_BYTES) {
     }
   }
 
+  function handleSolutionFileChange(event) {
+    const selectedFiles = Array.from(event.target.files || []).slice(0, 10);
+    event.target.value = "";
+    setSolutionAttachments(selectedFiles);
+  }
+
+  async function handleSubmitSolution(event) {
+    event.preventDefault();
+
+    if (!selectedTopic || isUploadingSolution) return;
+    if (!solutionContent.trim()) {
+      alert("Please describe your solution before submitting it.");
+      return;
+    }
+
+    const selectedFilesSize = solutionAttachments.reduce(
+      (total, file) => total + file.size,
+      0,
+    );
+
+    if (workspaceStorageUsedBytes + selectedFilesSize > WORKSPACE_STORAGE_LIMIT_BYTES) {
+      alert("These solution files exceed the workspace 50MB storage limit.");
+      return;
+    }
+
+    try {
+      setIsUploadingSolution(true);
+      const savedSolution = editingSolutionId
+        ? await updateWorkspaceDiscussionComment(
+            workspaceId,
+            selectedTopic.id,
+            editingSolutionId,
+            { content: solutionContent.trim() },
+          )
+        : await addWorkspaceDiscussionComment(
+            workspaceId,
+            selectedTopic.id,
+            { kind: "solution", content: solutionContent.trim() },
+          );
+      let uploadedSolutions = [];
+
+      if (solutionAttachments.length > 0) {
+        const uploadedDocuments = await uploadDocuments(solutionAttachments, workspaceId);
+        uploadedSolutions = await Promise.all(
+          (uploadedDocuments || []).map((document) =>
+            addWorkspaceDiscussionAttachment(workspaceId, selectedTopic.id, {
+              kind: "solution",
+              solutionId: savedSolution.id,
+              fileName: document.title,
+              fileUrl: document.fileUrl || document.file_url,
+              fileSizeBytes: document.fileSizeBytes || document.file_size_bytes || 0,
+              mimeType: document.mimeType || "",
+            }),
+          ),
+        );
+      }
+
+      setDiscussionTopics((currentTopics) =>
+        currentTopics.map((topic) =>
+          topic.id === selectedTopic.id
+            ? {
+                ...topic,
+                solutions: editingSolutionId
+                  ? (topic.solutions || []).map((solution) =>
+                      solution.id === savedSolution.id ? savedSolution : solution,
+                    )
+                  : [...(topic.solutions || []), savedSolution],
+                files: [...(topic.files || []), ...uploadedSolutions],
+              }
+            : topic,
+        ),
+      );
+
+      setSolutionContent("");
+      setSolutionAttachments([]);
+      setIsSolutionFormOpen(false);
+      setEditingSolutionId(null);
+
+      createAppNotification({
+        category: "file",
+        action: "uploaded",
+        title: editingSolutionId ? "Solution updated" : "Solution uploaded",
+        message: `${profileName} ${editingSolutionId ? "updated" : "submitted"} a solution to ${selectedTopic.title}.`,
+        icon: "ti-light-bulb",
+        link: `/dashboard/workspaces/${workspaceId}?topic=${selectedTopic.id}`,
+      });
+    } catch (error) {
+      console.error("Cannot submit topic solution:", error);
+      alert(error.response?.data?.message || "Could not submit your solution.");
+    } finally {
+      setIsUploadingSolution(false);
+    }
+  }
+
+  async function handleDeleteSolutionFile(fileId) {
+    if (!selectedTopic) return;
+
+    try {
+      await deleteWorkspaceDiscussionAttachment(workspaceId, selectedTopic.id, fileId);
+      setDiscussionTopics((currentTopics) =>
+        currentTopics.map((topic) =>
+          topic.id === selectedTopic.id
+            ? { ...topic, files: (topic.files || []).filter((file) => file.id !== fileId) }
+            : topic,
+        ),
+      );
+    } catch (error) {
+      console.error("Cannot delete solution attachment:", error);
+      alert(error.response?.data?.message || "Could not delete solution attachment.");
+    }
+  }
+
   async function handleSaveTopicNote(e) {
     e.preventDefault();
 
@@ -1112,6 +1319,7 @@ if (nextStorageUsed > WORKSPACE_STORAGE_LIMIT_BYTES) {
           topic.id === updatedTopic.id ? updatedTopic : topic,
         ),
       );
+      setIsTopicDescriptionEditing(false);
     } catch (error) {
       console.error("Cannot update discussion topic:", error);
       alert(error.response?.data?.message || "Could not update discussion topic.");
@@ -2121,7 +2329,7 @@ function getSubtaskPriorityIcon(priority) {
                           : "member"
                     }`}
                   >
-                    {member.role}
+                    {getWorkspaceRoleLabel(member.role)}
                   </span>
 
                   <span className="workspace_member_join_date">
@@ -2152,7 +2360,7 @@ function getSubtaskPriorityIcon(priority) {
                               )
                             }
                           >
-                            <span>{member.role}</span>
+                            <span>{getWorkspaceRoleLabel(member.role)}</span>
                             <i className="ti-angle-down" aria-hidden="true"></i>
                           </button>
 
@@ -2168,7 +2376,7 @@ function getSubtaskPriorityIcon(priority) {
                                   onClick={() => handleUpdateMemberRole(member.id, role)}
                                 >
                                   <span className={`workspace_role_dot role_${role.toLowerCase()}`}></span>
-                                  <span>{role}</span>
+                                  <span>{getWorkspaceRoleLabel(role)}</span>
                                   {member.role === role && (
                                     <i className="ti-check" aria-hidden="true"></i>
                                   )}
@@ -2223,7 +2431,9 @@ function getSubtaskPriorityIcon(priority) {
                         <strong>{invitation.name || invitation.email}</strong>
                         <p>
                           Invited {invitation.time} by {invitation.invitedBy}
-                          {invitation.role ? ` as ${invitation.role}` : ""}
+                          {invitation.role
+                            ? ` as ${getWorkspaceRoleLabel(invitation.role)}`
+                            : ""}
                         </p>
                       </div>
 
@@ -2323,7 +2533,13 @@ const filteredDiscussionTopics = discussionTopics.filter((topic) => {
   return topic.type === topicFilter;
 });
     if (selectedTopic) {
-  const relatedFiles = selectedTopic.files || [];
+  const relatedFiles = (selectedTopic.files || []).filter(
+    (file) => file.kind !== "solution",
+  );
+  const solutionFiles = (selectedTopic.files || []).filter(
+    (file) => file.kind === "solution",
+  );
+  const solutions = selectedTopic.solutions || [];
   const comments = selectedTopic.comments || [];
   const subtasks = selectedTopic.subtasks || [];
   const topicDeadlineText =
@@ -2377,6 +2593,28 @@ const filteredDiscussionTopics = discussionTopics.filter((topic) => {
           )}
         </header>
 
+        <nav className="workspace_topic_section_tabs" aria-label="Topic sections">
+          <button
+            type="button"
+            className={activeTopicSection === "details" ? "active" : ""}
+            onClick={() => setActiveTopicSection("details")}
+          >
+            <i className="ti-info-alt" aria-hidden="true"></i>
+            Topic details
+          </button>
+          <button
+            type="button"
+            className={activeTopicSection === "solutions" ? "active" : ""}
+            onClick={() => setActiveTopicSection("solutions")}
+          >
+            <i className="ti-light-bulb" aria-hidden="true"></i>
+            Solutions
+            <span>{solutions.length}</span>
+          </button>
+        </nav>
+
+{activeTopicSection === "details" && (
+  <>
 <section className="workspace_topic_info_panel">
   <button
     type="button"
@@ -2473,27 +2711,52 @@ const filteredDiscussionTopics = discussionTopics.filter((topic) => {
   </button>
 </section>
         <form
-          className="workspace_clickup_description"
+          className={`workspace_clickup_description ${
+            isTopicDescriptionEditing ? "is_editing" : "is_read_only"
+          }`}
           onSubmit={handleSaveTopicNote}
         >
           <textarea
             value={topicContent}
             onChange={(e) => setTopicContent(e.target.value)}
             placeholder="Add topic description, information, note, or wiki..."
-            readOnly={!canManageTopics}
+            readOnly={!canManageTopics || !isTopicDescriptionEditing}
           />
 
           {canManageTopics ? (
             <div className="workspace_clickup_description_actions">
-              <button type="submit">Save update</button>
+              {isTopicDescriptionEditing ? (
+                <>
+                  <button
+                    type="button"
+                    className="workspace_topic_update_cancel"
+                    onClick={() => {
+                      setTopicContent(selectedTopic.content || "");
+                      setIsTopicDescriptionEditing(false);
+                    }}
+                  >
+                    Cancel
+                  </button>
+                  <button type="submit">Save update</button>
+                </>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setIsTopicDescriptionEditing(true)}
+                >
+                  <i className="ti-pencil" aria-hidden="true"></i>
+                  Update
+                </button>
+              )}
             </div>
           ) : (
             <p className="workspace_permission_hint">
-              Viewer mode: you can read topics and use the Message tab.
+              Contributor mode: you can read topics, comment, and submit solutions.
             </p>
           )}
         </form>
 
+        {false && <>
         <section className="workspace_clickup_section">
   <div className="workspace_clickup_subtask_header">
     <h2>Add subtask</h2>
@@ -2831,6 +3094,325 @@ const filteredDiscussionTopics = discussionTopics.filter((topic) => {
     </div>
   )}
 </section>
+        </>}
+  </>
+)}
+
+{activeTopicSection === "details" && (
+  <section className="workspace_topic_solutions">
+    <header>
+      <div>
+        <span>Community solutions</span>
+        <h2>Share your solution</h2>
+        <p>
+          Every workspace member can upload a solution for this topic and review
+          submissions from other members.
+        </p>
+      </div>
+      <button
+        type="button"
+        onClick={() => {
+          setEditingSolutionId(null);
+          setSolutionContent("");
+          setSolutionAttachments([]);
+          setIsSolutionFormOpen((isOpen) => !isOpen);
+        }}
+      >
+        <i className="ti-upload"></i>
+        Upload your solution
+      </button>
+    </header>
+
+    {isSolutionFormOpen && (
+      <form className="workspace_solution_form" onSubmit={handleSubmitSolution}>
+        <label htmlFor="solution-content">
+          {editingSolutionId ? "Edit your solution" : "Your solution"}
+        </label>
+        <textarea
+          id="solution-content"
+          value={solutionContent}
+          onChange={(event) => setSolutionContent(event.target.value)}
+          placeholder="Explain your approach and provide the steps for your solution..."
+          autoFocus
+        />
+
+        <div className="workspace_solution_form_files">
+          <label>
+            <i className="ti-clip"></i>
+            Attach files
+            <input
+              type="file"
+              accept=".pdf,.docx,.txt"
+              multiple
+              disabled={isUploadingSolution}
+              onChange={handleSolutionFileChange}
+            />
+          </label>
+          <span>Optional · PDF, DOCX or TXT · up to 10 files</span>
+        </div>
+
+        {solutionAttachments.length > 0 && (
+          <div className="workspace_solution_selected_files">
+            {solutionAttachments.map((file, index) => (
+              <div key={`${file.name}-${file.lastModified}-${index}`}>
+                <span>
+                  <i className="ti-file"></i>
+                  {file.name}
+                  <small>{formatWorkspaceFileSize(file.size)}</small>
+                </span>
+                <button
+                  type="button"
+                  aria-label={`Remove ${file.name}`}
+                  onClick={() =>
+                    setSolutionAttachments((files) =>
+                      files.filter((_, fileIndex) => fileIndex !== index),
+                    )
+                  }
+                >
+                  ×
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <footer>
+          <button
+            type="button"
+            disabled={isUploadingSolution}
+            onClick={() => {
+              setIsSolutionFormOpen(false);
+              setSolutionContent("");
+              setSolutionAttachments([]);
+              setEditingSolutionId(null);
+            }}
+          >
+            Cancel
+          </button>
+          <button type="submit" disabled={isUploadingSolution}>
+            {isUploadingSolution
+              ? "Saving..."
+              : editingSolutionId
+                ? "Save changes"
+                : "Submit solution"}
+          </button>
+        </footer>
+      </form>
+    )}
+
+    {solutions.length === 0 ? (
+      <div className="workspace_topic_solution_empty">
+        <i className="ti-light-bulb"></i>
+        <h3>No solutions yet</h3>
+        <p>Be the first member to upload a solution for this topic.</p>
+      </div>
+    ) : (
+      <div className="workspace_topic_solution_grid">
+        {solutions.map((solution) => {
+          const attachedFiles = solutionFiles.filter(
+            (file) => file.solutionId === solution.id,
+          );
+
+          return (
+          <article key={solution.id}>
+            <div className="workspace_topic_solution_avatar">
+              {solution.author?.avatarUrl ? (
+                <img src={solution.author.avatarUrl} alt="" />
+              ) : (
+                (solution.author?.name || "M").slice(0, 1).toUpperCase()
+              )}
+            </div>
+            <div className="workspace_topic_solution_info">
+              <div className="workspace_topic_solution_heading">
+                <strong>{solution.author?.name || "Workspace member"}</strong>
+                {currentUserId && String(solution.author?.id) === currentUserId && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditingSolutionId(solution.id);
+                      setSolutionContent(solution.content || "");
+                      setSolutionAttachments([]);
+                      setIsSolutionFormOpen(true);
+                    }}
+                  >
+                    <i className="ti-pencil"></i>
+                    Edit
+                  </button>
+                )}
+              </div>
+              <small>
+                {solution.createdAt
+                  ? new Date(solution.createdAt).toLocaleString()
+                  : "Just now"}
+              </small>
+              <p>{getSolutionPreview(solution.content)}</p>
+              <button
+                type="button"
+                className="workspace_solution_view_detail"
+                onClick={() => setSelectedSolutionDetail(solution)}
+              >
+                View detail
+              </button>
+              {attachedFiles.length > 0 && (
+                <div className="workspace_topic_solution_files">
+                  {attachedFiles.map((file) => (
+                    <span key={file.id}>
+                      <a href={file.fileUrl} target="_blank" rel="noreferrer">
+                        <i className="ti-clip"></i>
+                        {normalizeDisplayFileName(file.fileName || file.name)}
+                        <small>{formatWorkspaceFileSize(file.fileSizeBytes)}</small>
+                      </a>
+                      {currentUserId && String(solution.author?.id) === currentUserId && (
+                        <button
+                          type="button"
+                          title="Remove attachment"
+                          onClick={() => handleDeleteSolutionFile(file.id)}
+                        >
+                          ×
+                        </button>
+                      )}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+          </article>
+          );
+        })}
+      </div>
+    )}
+  </section>
+)}
+
+{activeTopicSection === "solutions" && (
+  <section className="workspace_topic_solutions workspace_topic_solutions_list_only">
+    <header>
+      <div>
+        <span>Community solutions</span>
+        <h2>Solutions from members</h2>
+        <p>Review the approaches and files submitted by workspace members.</p>
+      </div>
+    </header>
+
+    {solutions.length === 0 ? (
+      <div className="workspace_topic_solution_empty">
+        <i className="ti-light-bulb"></i>
+        <h3>No solutions yet</h3>
+        <p>Submitted solutions will appear here.</p>
+      </div>
+    ) : (
+      <div className="workspace_topic_solution_grid">
+        {solutions.map((solution) => {
+          const attachedFiles = solutionFiles.filter(
+            (file) => file.solutionId === solution.id,
+          );
+
+          return (
+            <article key={solution.id}>
+              <div className="workspace_topic_solution_avatar">
+                {solution.author?.avatarUrl ? (
+                  <img src={solution.author.avatarUrl} alt="" />
+                ) : (
+                  (solution.author?.name || "M").slice(0, 1).toUpperCase()
+                )}
+              </div>
+              <div className="workspace_topic_solution_info">
+                <strong>{solution.author?.name || "Workspace member"}</strong>
+                <small>
+                  {solution.createdAt
+                    ? new Date(solution.createdAt).toLocaleString()
+                    : "Just now"}
+                </small>
+                <p>{getSolutionPreview(solution.content)}</p>
+                <button
+                  type="button"
+                  className="workspace_solution_view_detail"
+                  onClick={() => setSelectedSolutionDetail(solution)}
+                >
+                  View detail
+                </button>
+                {attachedFiles.length > 0 && (
+                  <div className="workspace_topic_solution_files">
+                    {attachedFiles.map((file) => (
+                      <span key={file.id}>
+                        <a href={file.fileUrl} target="_blank" rel="noreferrer">
+                          <i className="ti-clip"></i>
+                          {normalizeDisplayFileName(file.fileName || file.name)}
+                          <small>{formatWorkspaceFileSize(file.fileSizeBytes)}</small>
+                        </a>
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </article>
+          );
+        })}
+      </div>
+    )}
+  </section>
+)}
+
+{selectedSolutionDetail && (() => {
+  const detailFiles = solutionFiles.filter(
+    (file) => file.solutionId === selectedSolutionDetail.id,
+  );
+
+  return (
+    <div
+      className="workspace_solution_detail_overlay"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Solution detail"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) setSelectedSolutionDetail(null);
+      }}
+    >
+      <article className="workspace_solution_detail_modal">
+        <button
+          type="button"
+          className="workspace_solution_detail_close"
+          onClick={() => setSelectedSolutionDetail(null)}
+          aria-label="Close solution detail"
+        >
+          ×
+        </button>
+        <header>
+          <div className="workspace_topic_solution_avatar">
+            {selectedSolutionDetail.author?.avatarUrl ? (
+              <img src={selectedSolutionDetail.author.avatarUrl} alt="" />
+            ) : (
+              (selectedSolutionDetail.author?.name || "M").slice(0, 1).toUpperCase()
+            )}
+          </div>
+          <div>
+            <h2>{selectedSolutionDetail.author?.name || "Workspace member"}</h2>
+            <span>
+              {selectedSolutionDetail.createdAt
+                ? new Date(selectedSolutionDetail.createdAt).toLocaleString()
+                : "Just now"}
+            </span>
+          </div>
+        </header>
+        <div className="workspace_solution_detail_content">
+          {selectedSolutionDetail.content}
+        </div>
+        {detailFiles.length > 0 && (
+          <div className="workspace_solution_detail_files">
+            <strong>Attachments</strong>
+            {detailFiles.map((file) => (
+              <a key={file.id} href={file.fileUrl} target="_blank" rel="noreferrer">
+                <i className="ti-clip"></i>
+                {normalizeDisplayFileName(file.fileName || file.name)}
+                <small>{formatWorkspaceFileSize(file.fileSizeBytes)}</small>
+              </a>
+            ))}
+          </div>
+        )}
+      </article>
+    </div>
+  );
+})()}
       </main>
 
       <aside className="workspace_clickup_activity">
@@ -2943,7 +3525,7 @@ const filteredDiscussionTopics = discussionTopics.filter((topic) => {
           ) : (
             <span className="workspace_permission_pill">
               <i className="ti-eye"></i>
-              Viewer mode
+              Contributor mode
             </span>
           )}
         </div>
@@ -3010,10 +3592,6 @@ const filteredDiscussionTopics = discussionTopics.filter((topic) => {
               </button>
 
               <div className="discussion_create_header">
-                <div className="discussion_creator_avatar">
-                  {profileName.slice(0, 2).toUpperCase()}
-                </div>
-
                 <div>
                   <h3>Create new topic</h3>
                   <p>Started by {profileName}</p>
@@ -3095,12 +3673,63 @@ const filteredDiscussionTopics = discussionTopics.filter((topic) => {
   </div>
 )}
 
+              <div className="discussion_form_group discussion_new_topic_attachments">
+                <label>Upload attachment</label>
+                <label className="discussion_attachment_picker">
+                  <input
+                    type="file"
+                    accept=".pdf,.docx,.txt"
+                    multiple
+                    onChange={handleNewTopicAttachmentsChange}
+                    disabled={isCreatingTopic}
+                  />
+                  <i className="ti-clip" aria-hidden="true"></i>
+                  <span>
+                    <strong>Choose files</strong>
+                    <small>PDF, DOCX or TXT · up to 10 files</small>
+                  </span>
+                </label>
+
+                {newTopicAttachments.length > 0 && (
+                  <div className="discussion_attachment_selection">
+                    {newTopicAttachments.map((file, index) => (
+                      <div key={`${file.name}-${file.lastModified}-${index}`}>
+                        <span>
+                          <i className="ti-file" aria-hidden="true"></i>
+                          <span>
+                            <strong>{file.name}</strong>
+                            <small>{formatWorkspaceFileSize(file.size)}</small>
+                          </span>
+                        </span>
+                        <button
+                          type="button"
+                          aria-label={`Remove ${file.name}`}
+                          onClick={() =>
+                            setNewTopicAttachments((files) =>
+                              files.filter((_, fileIndex) => fileIndex !== index),
+                            )
+                          }
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
               <div className="discussion_create_actions">
-                <button type="button" onClick={() => setIsTopicFormOpen(false)}>
+                <button
+                  type="button"
+                  onClick={() => setIsTopicFormOpen(false)}
+                  disabled={isCreatingTopic}
+                >
                   Cancel
                 </button>
 
-                <button type="submit">Create topic</button>
+                <button type="submit" disabled={isCreatingTopic}>
+                  {isCreatingTopic ? "Creating..." : "Create topic"}
+                </button>
               </div>
             </form>
           </div>
@@ -3952,7 +4581,7 @@ const filteredDiscussionTopics = discussionTopics.filter((topic) => {
                 onClick={() => setInviteRole("Viewer")}
               >
                 <i className="ti-eye"></i>
-                Viewer
+                Contributor
               </button>
 
               <button
