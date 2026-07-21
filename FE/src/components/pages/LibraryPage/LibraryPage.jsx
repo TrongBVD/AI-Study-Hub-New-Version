@@ -42,6 +42,28 @@ function getStoredUserRole() {
   }
 }
 
+function getAiTagFileCacheKey(files) {
+  return (files || [])
+    .map((file) => `${file.name}:${file.size}:${file.lastModified || 0}`)
+    .join("|");
+}
+
+function getRetryAfterSeconds(error) {
+  const retryAfter = error.response?.headers?.["retry-after"];
+  const seconds = Number(retryAfter);
+
+  if (Number.isFinite(seconds) && seconds > 0) {
+    return Math.ceil(seconds);
+  }
+
+  const retryDate = Date.parse(retryAfter);
+  if (Number.isFinite(retryDate)) {
+    return Math.max(1, Math.ceil((retryDate - Date.now()) / 1000));
+  }
+
+  return 60;
+}
+
 function LibraryPage() {
   const LIBRARY_NAME_MAX_LENGTH = 20;
   const LIBRARY_STORAGE_LIMIT_BYTES = 50 * 1024 * 1024;
@@ -187,7 +209,11 @@ function LibraryPage() {
   const [aiRecommendedTags, setAiRecommendedTags] = useState([]);
   const [isLoadingAiTags, setIsLoadingAiTags] = useState(false);
   const [aiTagSuggestionError, setAiTagSuggestionError] = useState("");
+  const [isAiTagRateLimited, setIsAiTagRateLimited] = useState(false);
   const aiTagRequestIdRef = useRef(0);
+  const aiTagRequestInFlightRef = useRef(false);
+  const aiTagCacheRef = useRef(new Map());
+  const aiTagRateLimitTimerRef = useRef(null);
   const [uploadNotice, setUploadNotice] = useState(null);
   const [documentPendingDelete, setDocumentPendingDelete] = useState(null);
   const [isDeletingDocument, setIsDeletingDocument] = useState(false);
@@ -681,14 +707,44 @@ function LibraryPage() {
     return () => window.clearTimeout(timeoutId);
   }, [uploadNotice]);
 
+  useEffect(
+    () => () => {
+      if (aiTagRateLimitTimerRef.current) {
+        window.clearTimeout(aiTagRateLimitTimerRef.current);
+      }
+    },
+    [],
+  );
+
   async function loadAiRecommendedTags(files) {
+    if (
+      !files?.length ||
+      aiTagRequestInFlightRef.current ||
+      isAiTagRateLimited
+    ) {
+      return;
+    }
+
+    const cacheKey = getAiTagFileCacheKey(files);
+    const cachedTags = aiTagCacheRef.current.get(cacheKey);
+
+    if (cachedTags?.length > 0) {
+      setAiRecommendedTags(cachedTags);
+      setAiTagSuggestionError("");
+      return;
+    }
+
     const requestId = ++aiTagRequestIdRef.current;
+    aiTagRequestInFlightRef.current = true;
     setAiRecommendedTags([]);
     setAiTagSuggestionError("");
     setIsLoadingAiTags(true);
 
     try {
       const recommendedTags = await suggestDocumentTags(files);
+      if (recommendedTags.length > 0) {
+        aiTagCacheRef.current.set(cacheKey, recommendedTags);
+      }
       if (requestId === aiTagRequestIdRef.current) {
         setAiRecommendedTags(recommendedTags);
         if (recommendedTags.length === 0) {
@@ -696,12 +752,40 @@ function LibraryPage() {
         }
       }
     } catch (error) {
-      console.error("Cannot load AI tag suggestions:", error);
+      const isRateLimited = error.response?.status === 429;
+
+      if (!isRateLimited) {
+        console.error("Cannot load AI tag suggestions:", error);
+      }
+
       if (requestId === aiTagRequestIdRef.current) {
         setAiRecommendedTags([]);
-        setAiTagSuggestionError("Unable to load AI suggestions. Please try again.");
+
+        if (isRateLimited) {
+          const retryAfterSeconds = getRetryAfterSeconds(error);
+          setIsAiTagRateLimited(true);
+          setAiTagSuggestionError(
+            `Too many AI requests. Please try again in ${retryAfterSeconds} seconds.`,
+          );
+
+          if (aiTagRateLimitTimerRef.current) {
+            window.clearTimeout(aiTagRateLimitTimerRef.current);
+          }
+
+          aiTagRateLimitTimerRef.current = window.setTimeout(() => {
+            setIsAiTagRateLimited(false);
+            setAiTagSuggestionError("");
+            aiTagRateLimitTimerRef.current = null;
+          }, retryAfterSeconds * 1000);
+        } else {
+          setAiTagSuggestionError(
+            error.response?.data?.message ||
+              "Unable to load AI suggestions. Please try again.",
+          );
+        }
       }
     } finally {
+      aiTagRequestInFlightRef.current = false;
       if (requestId === aiTagRequestIdRef.current) {
         setIsLoadingAiTags(false);
       }
@@ -2294,10 +2378,15 @@ function LibraryPage() {
                   disabled={
                     pendingFiles.length === 0 ||
                     isLoadingAiTags ||
+                    isAiTagRateLimited ||
                     isUploadingDocuments
                   }
                 >
-                  {isLoadingAiTags ? "Generating..." : "Generate tags with AI"}
+                  {isLoadingAiTags
+                    ? "Generating..."
+                    : isAiTagRateLimited
+                      ? "AI limit reached — please wait"
+                      : "Generate tags with AI"}
                 </button>
               </section>
 
@@ -2415,7 +2504,7 @@ function LibraryPage() {
                       <button
                         type="button"
                         onClick={() => loadAiRecommendedTags(pendingFiles)}
-                        disabled={isUploadingDocuments}
+                        disabled={isUploadingDocuments || isAiTagRateLimited}
                       >
                         Try again
                       </button>

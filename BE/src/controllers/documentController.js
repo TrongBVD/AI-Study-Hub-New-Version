@@ -732,6 +732,7 @@ exports.suggestDocumentTags = async (req, res) => {
           extractedText,
           file.originalname,
           [],
+          { throwOnError: true },
         );
 
         return result.aiRecommendedTags || [];
@@ -745,9 +746,14 @@ exports.suggestDocumentTags = async (req, res) => {
     });
   } catch (error) {
     console.error("Lỗi suggestDocumentTags:", error);
-    return res.status(500).json({
+    const isAiQuotaError = Number(error?.status) === 429;
+
+    return res.status(isAiQuotaError ? 503 : 500).json({
       status: "error",
-      message: "AI không thể gợi ý tag cho tài liệu này.",
+      code: isAiQuotaError ? "AI_QUOTA_EXHAUSTED" : "AI_TAG_SUGGESTION_FAILED",
+      message: isAiQuotaError
+        ? "AI tag suggestions are temporarily unavailable because the service quota was reached. Please try again later."
+        : "AI could not suggest tags for this document.",
     });
   }
 };

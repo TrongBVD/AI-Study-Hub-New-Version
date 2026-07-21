@@ -62,6 +62,7 @@ describe("documentController.suggestDocumentTags", () => {
       readableText,
       "notes.txt",
       [],
+      { throwOnError: true },
     );
     expect(response.status).toHaveBeenCalledWith(200);
     expect(response.json).toHaveBeenCalledWith({
@@ -92,5 +93,21 @@ describe("documentController.suggestDocumentTags", () => {
       status: "success",
       data: ["#math", "#algebra", "#geometry"],
     });
+  });
+
+  test("reports an unavailable AI quota instead of an empty list", async () => {
+    extractTextFromFile.mockResolvedValue("Readable educational content.");
+    validateTagsAndContent.mockRejectedValue({ status: 429 });
+    const response = createResponse();
+
+    await suggestDocumentTags(
+      { files: [{ originalname: "requirements.pdf" }] },
+      response,
+    );
+
+    expect(response.status).toHaveBeenCalledWith(503);
+    expect(response.json).toHaveBeenCalledWith(
+      expect.objectContaining({ code: "AI_QUOTA_EXHAUSTED" }),
+    );
   });
 });

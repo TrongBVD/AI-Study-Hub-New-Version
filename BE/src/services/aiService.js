@@ -60,13 +60,43 @@ function extractJson(text) {
  */
 async function generateText(prompt) {
   const ai = await getAiClient();
+  const configuredFallbackModels = String(
+    process.env.GEMINI_TEXT_FALLBACK_MODELS ||
+      "gemini-3.5-flash-lite,gemini-3.1-flash-lite",
+  )
+    .split(",")
+    .map((model) => model.trim())
+    .filter(Boolean);
+  const modelCandidates = [
+    process.env.GEMINI_TEXT_MODEL || "gemini-3.5-flash-lite",
+    ...configuredFallbackModels,
+  ].filter((model, index, models) => models.indexOf(model) === index);
+  let lastError;
 
-  const response = await ai.models.generateContent({
-    model: process.env.GEMINI_TEXT_MODEL || "gemini-2.5-flash",
-    contents: prompt,
-  });
+  for (const model of modelCandidates) {
+    try {
+      const response = await ai.models.generateContent({
+        model,
+        contents: prompt,
+      });
 
-  return response.text || "";
+      return response.text || "";
+    } catch (error) {
+      lastError = error;
+      const canTryFallback = [404, 429, 503].includes(Number(error?.status));
+      const hasAnotherModel = model !== modelCandidates.at(-1);
+
+      if (!canTryFallback || !hasAnotherModel) {
+        throw error;
+      }
+
+      console.warn(
+        `[Gemini] Model ${model} is unavailable (${error.status}); trying a fallback model.`,
+      );
+    }
+  }
+
+  throw lastError || new Error("No Gemini text model is available.");
 }
 
 /**
@@ -318,7 +348,12 @@ BẮT BUỘC trả về ĐÚNG định dạng JSON sau, không kèm bất kỳ g
   }
 }
 
-async function validateTagsAndContent(extractedText, originalName, userTags) {
+async function validateTagsAndContent(
+  extractedText,
+  originalName,
+  userTags,
+  options = {},
+) {
   const sampleText = String(extractedText || "").substring(0, 5000);
 
   const prompt = `Bạn là hệ thống kiểm duyệt và gợi ý hashtag cho tài liệu học tập của sinh viên.
@@ -381,6 +416,10 @@ Ví dụ: Nếu người dùng nhập ["Software Testing", "lichsu12"] mà file 
     };
   } catch (error) {
     console.error("Lỗi khi validateTagsAndContent với Gemini:", error);
+    if (options.throwOnError) {
+      throw error;
+    }
+
     return {
       isValid: true,
       tagValidations: userTags.map(t => ({
