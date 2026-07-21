@@ -18,6 +18,16 @@ const {
 const BUCKET = process.env.SUPABASE_DOCUMENT_BUCKET || "documents";
 const { createActivityLog } = require("../services/activityLogService");
 
+function normalizeUploadedFileName(fileName) {
+  const value = String(fileName || "");
+  if (!value || [...value].some((character) => character.charCodeAt(0) > 255)) {
+    return value.normalize("NFC");
+  }
+
+  const decoded = Buffer.from(value, "latin1").toString("utf8");
+  return decoded.includes("\uFFFD") ? value.normalize("NFC") : decoded.normalize("NFC");
+}
+
 function sanitizeFileName(fileName) {
   const baseName = path.basename(fileName || "upload.bin");
 
@@ -206,6 +216,9 @@ exports.uploadDocuments = async (req, res) => {
   try {
     const userID = req.user.id;
     const files = req.files || [];
+    files.forEach((file) => {
+      file.originalname = normalizeUploadedFileName(file.originalname);
+    });
     const workspaceId = req.body?.workspaceId || null;
     const libraryId = req.body?.libraryId || null; // Hỗ trợ up lên Library
     const tagsString = req.body?.tags || "[]";

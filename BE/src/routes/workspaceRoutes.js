@@ -31,6 +31,7 @@ router.post("/:workspaceId/discussion/topics", workspaceController.createDiscuss
 router.patch("/:workspaceId/discussion/topics/:topicId", workspaceController.updateDiscussionTopic);
 router.delete("/:workspaceId/discussion/topics/:topicId", workspaceController.deleteDiscussionTopic);
 router.post("/:workspaceId/discussion/topics/:topicId/comments", workspaceController.addDiscussionComment);
+router.patch("/:workspaceId/discussion/topics/:topicId/comments/:commentId", workspaceController.updateDiscussionComment);
 router.post("/:workspaceId/discussion/topics/:topicId/subtasks", workspaceController.addDiscussionSubtask);
 router.patch("/:workspaceId/discussion/topics/:topicId/subtasks/:subtaskId", workspaceController.updateDiscussionSubtask);
 router.delete("/:workspaceId/discussion/topics/:topicId/subtasks/:subtaskId", workspaceController.deleteDiscussionSubtask);
