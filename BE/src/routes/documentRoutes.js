@@ -1,6 +1,7 @@
 const express = require("express");
 const multer = require("multer");
 const path = require("path");
+const { rateLimit } = require("express-rate-limit");
 
 const authMiddleware = require("../middleware/authMiddleware");
 
@@ -47,11 +48,24 @@ const upload = multer({
     },
 });
 
+const suggestTagsLimiter = rateLimit({
+    windowMs: 60 * 1000,
+    limit: 5,
+    standardHeaders: true,
+    legacyHeaders: false,
+    keyGenerator: (req) => String(req.user.id),
+    message: {
+        status: "error",
+        message: "Too many AI tag requests. Please wait a minute and try again.",
+    },
+});
+
 router.get("/", authMiddleware, listMyDocuments);
 
 router.post(
     "/suggest-tags",
     authMiddleware,
+    suggestTagsLimiter,
     upload.array("files", 10),
     suggestDocumentTags
 );

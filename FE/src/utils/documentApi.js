@@ -9,7 +9,14 @@ export async function getMyDocuments(libraryId = null) {
   return response.data.data;
 }
 
-export async function uploadDocuments(files, workspaceId = null, libraryId = null, tags = []) {
+export async function uploadDocuments(
+  files,
+  workspaceId = null,
+  libraryId = null,
+  tags = [],
+  onProgress = null,
+  replacementDocumentIds = [],
+) {
   const formData = new FormData();
 
   files.forEach((file) => {
@@ -28,7 +35,26 @@ export async function uploadDocuments(files, workspaceId = null, libraryId = nul
     formData.append("tags", JSON.stringify(tags));
   }
 
-  const response = await api.post("/documents/upload", formData);
+  if (replacementDocumentIds.some(Boolean)) {
+    formData.append(
+      "replacementDocumentIds",
+      JSON.stringify(replacementDocumentIds),
+    );
+  }
+
+  const response = await api.post("/documents/upload", formData, {
+    onUploadProgress: (event) => {
+      if (typeof onProgress !== "function") return;
+
+      const progress = Number.isFinite(event.progress)
+        ? event.progress
+        : event.total
+          ? event.loaded / event.total
+          : 0;
+
+      onProgress(Math.min(100, Math.round(progress * 100)));
+    },
+  });
 
   return response.data.data;
 }
