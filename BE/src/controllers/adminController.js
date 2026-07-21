@@ -1,6 +1,7 @@
 const supabase = require("../config/supabase");
 const { createActivityLog } = require("../services/activityLogService");
 const crypto = require("crypto");
+const DOCUMENT_BUCKET = process.env.SUPABASE_DOCUMENT_BUCKET || "documents";
 
 function getTodayDate() {
   return new Date().toISOString().slice(0, 10);
@@ -205,21 +206,53 @@ exports.reviewDocument = async (req, res) => {
       });
     }
 
-    const newStatus = decision === "APPROVE" ? "APPROVED" : "REJECTED";
+    const reviewedAt = new Date().toISOString();
+    const reviewReason = String(reason).trim();
+    let updatedDocument;
 
-    const { data: updatedDocument, error: updateError } = await supabase
-      .from("documents")
-      .update({
-        status: newStatus,
-        reviewed_by_admin_id: req.user.id,
-        reviewed_at: new Date().toISOString(),
-        admin_review_reason: String(reason).trim(),
-      })
-      .eq("id", documentId)
-      .select("*")
-      .single();
+    if (decision === "APPROVE") {
+      const { data, error: updateError } = await supabase
+        .from("documents")
+        .update({
+          status: "APPROVED",
+          reviewed_by_admin_id: req.user.id,
+          reviewed_at: reviewedAt,
+          admin_review_reason: reviewReason,
+        })
+        .eq("id", documentId)
+        .select("*")
+        .single();
 
-    if (updateError) throw updateError;
+      if (updateError) throw updateError;
+      updatedDocument = data;
+    } else {
+      if (oldDocument.file_url) {
+        const { error: storageDeleteError } = await supabase.storage
+          .from(DOCUMENT_BUCKET)
+          .remove([oldDocument.file_url]);
+
+        if (storageDeleteError) throw storageDeleteError;
+      }
+
+      await supabase.from("document_chunks").delete().eq("document_id", documentId);
+      await supabase.from("document_tags").delete().eq("document_id", documentId);
+
+      const { data, error: updateError } = await supabase
+        .from("documents")
+        .update({
+          status: "REJECTED",
+          deleted_at: reviewedAt,
+          reviewed_by_admin_id: req.user.id,
+          reviewed_at: reviewedAt,
+          admin_review_reason: reviewReason,
+        })
+        .eq("id", documentId)
+        .select("*")
+        .single();
+
+      if (updateError) throw updateError;
+      updatedDocument = data;
+    }
 
     await createActivityLog({
       actorUserId: req.user.id,
@@ -230,12 +263,38 @@ exports.reviewDocument = async (req, res) => {
       newData: updatedDocument,
       request: req,
       riskLevel: decision === "APPROVE" ? "MEDIUM" : "HIGH",
-      details: String(reason).trim(),
+      details: reviewReason,
+    });
+
+    await createActivityLog({
+      actorUserId: oldDocument.uploader_id,
+      actionType:
+        decision === "APPROVE" ? "DOCUMENT_APPROVED" : "DOCUMENT_REJECTED",
+      entityType: "documents",
+      entityId: documentId,
+      oldData: oldDocument,
+      newData: {
+        notificationType:
+          decision === "APPROVE" ? "moderationApproved" : "moderationRejected",
+        documentTitle: oldDocument.title,
+        libraryId: oldDocument.library_id,
+        reviewedByAdminId: req.user.id,
+        reviewedAt,
+      },
+      request: req,
+      riskLevel: decision === "APPROVE" ? "INFO" : "MEDIUM",
+      details:
+        decision === "APPROVE"
+          ? `"${oldDocument.title}" was approved and is now visible in your library.`
+          : `"${oldDocument.title}" was rejected by admin and removed.`,
     });
 
     return res.status(200).json({
       status: "success",
-      message: "Document moderation decision saved.",
+      message:
+        decision === "APPROVE"
+          ? "Document approved and restored to the user's library."
+          : "Document rejected and removed.",
       data: updatedDocument,
     });
   } catch (error) {

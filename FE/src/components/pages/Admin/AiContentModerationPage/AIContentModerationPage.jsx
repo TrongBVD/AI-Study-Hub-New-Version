@@ -466,7 +466,7 @@ function AIContentModerationPage() {
                   onClick={() => updateCaseStatus(selectedCase.id, "Rejected")}
                 >
                   <i className="ti-lock" />
-                  Keep rejected
+                  Reject and delete
                 </button>
               </div>
             </>

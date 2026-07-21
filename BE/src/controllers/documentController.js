@@ -94,7 +94,21 @@ async function getWorkspaceDocumentUploadAccess(workspaceId, userId) {
   };
 }
 
-async function processDocumentWithAI(file, documentId, preExtractedText = null, overrideStatus = null, overrideRejectReason = null) {
+function isSensitiveClassification(classification) {
+  const normalizedClassification = String(classification || "")
+    .trim()
+    .toUpperCase();
+
+  return normalizedClassification === "SEVERE" || normalizedClassification === "MILD";
+}
+
+async function processDocumentWithAI(
+  file,
+  documentId,
+  preExtractedText = null,
+  overrideStatus = null,
+  overrideRejectReason = null,
+) {
   try {
     console.log("Starting AI processing for document:", documentId);
 
@@ -256,7 +270,9 @@ exports.listMyDocuments = async (req, res) => {
 
     return res.status(200).json({
       status: "success",
-      data: data || [],
+      data: (data || []).filter(
+        (document) => String(document.status || "").toUpperCase() === "APPROVED",
+      ),
     });
   } catch (error) {
     console.error("Lỗi listMyDocuments:", error);
@@ -551,7 +567,7 @@ exports.uploadDocuments = async (req, res) => {
       let status = workspaceId ? "PENDING" : "APPROVED";
       let aiRejectReason = null;
 
-      if (sensitivity.classification === "SEVERE" || sensitivity.classification === "MILD") {
+      if (isSensitiveClassification(sensitivity.classification)) {
         status = "FLAGGED";
         aiRejectReason = {
           reason: `Contains ${sensitivity.classification.toLowerCase()} inappropriate language`,
@@ -604,12 +620,13 @@ exports.uploadDocuments = async (req, res) => {
 
 
       // Gọi hàm xử lý AI (embedding và chunking)
+      const shouldKeepReviewStatus = status === "FLAGGED" || Boolean(workspaceId);
       const aiResult = await processDocumentWithAI(
         file,
         document.id,
         extractedText,
-        status,
-        aiRejectReason
+        shouldKeepReviewStatus ? status : null,
+        shouldKeepReviewStatus ? aiRejectReason : null
       );
 
       for (const tagName of uniqueTags) {
@@ -647,7 +664,7 @@ exports.uploadDocuments = async (req, res) => {
         const replacedDocumentIds =
           duplicateDecision.replacementTargetIds[fileIndex] || [];
 
-        if (replacedDocumentIds.length > 0) {
+        if (replacedDocumentIds.length > 0 && aiResult.status === "APPROVED") {
           const replacementTimestamp = new Date().toISOString();
           let replacementDeleteQuery = supabase
             .from("documents")

@@ -995,6 +995,8 @@ exports.listMyWorkspaceNotifications = async (req, res) => {
         "WORKSPACE_ROLE_CHANGED",
         "WORKSPACE_RENAMED",
         "WORKSPACE_DELETED",
+        "DOCUMENT_APPROVED",
+        "DOCUMENT_REJECTED",
       ])
       .order("created_at", { ascending: false })
       .limit(30);
@@ -1005,23 +1007,52 @@ exports.listMyWorkspaceNotifications = async (req, res) => {
       status: "success",
       data: (data || []).map((item) => {
         const actionType = item.new_data?.notificationType || "roleChanged";
+        const isDocumentModeration =
+          actionType === "moderationApproved" ||
+          actionType === "moderationRejected";
         const isDeleted = actionType === "deleted";
+        const documentTitle = item.new_data?.documentTitle || "Your document";
+        const libraryLink = item.new_data?.libraryId
+          ? `/dashboard/libraries/${item.new_data.libraryId}`
+          : "/dashboard/libraries";
         return {
           id: `workspace-event-${item.id}`,
-          category: actionType === "roleChanged" ? "member" : "workspace",
+          category: isDocumentModeration
+            ? "file"
+            : actionType === "roleChanged"
+              ? "member"
+              : "workspace",
           action: actionType,
           title:
-            actionType === "renamed"
+            actionType === "moderationApproved"
+              ? "Document approved"
+              : actionType === "moderationRejected"
+                ? "Document rejected"
+                : actionType === "renamed"
               ? "Workspace renamed"
               : isDeleted
                 ? "Workspace deleted"
                 : "Workspace role changed",
           message: (
             item.details ||
-            `Your workspace role changed from ${getWorkspaceRoleLabel(item.old_data?.role || "member")} to ${getWorkspaceRoleLabel(item.new_data?.role || "a new role")}.`
+            (isDocumentModeration
+              ? `${documentTitle} has been reviewed by admin.`
+              : `Your workspace role changed from ${getWorkspaceRoleLabel(item.old_data?.role || "member")} to ${getWorkspaceRoleLabel(item.new_data?.role || "a new role")}.`)
           ).replace(/\bViewer\b/gi, "Contributor"),
-          icon: isDeleted ? "ti-trash" : actionType === "renamed" ? "ti-pencil" : "ti-user",
-          link: isDeleted ? "/dashboard/workspaces" : `/dashboard/workspaces/${item.entity_id}`,
+          icon: isDocumentModeration
+            ? actionType === "moderationApproved"
+              ? "ti-check"
+              : "ti-trash"
+            : isDeleted
+              ? "ti-trash"
+              : actionType === "renamed"
+                ? "ti-pencil"
+                : "ti-user",
+          link: isDocumentModeration
+            ? libraryLink
+            : isDeleted
+              ? "/dashboard/workspaces"
+              : `/dashboard/workspaces/${item.entity_id}`,
           createdAt: "Recently",
           createdAtMs: new Date(item.created_at).getTime(),
         };

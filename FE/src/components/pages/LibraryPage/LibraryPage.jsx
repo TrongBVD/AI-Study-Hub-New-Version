@@ -1040,8 +1040,20 @@ function LibraryPage() {
         setUploadProgress(0);
         uploadedDocuments = await submitUpload(effectiveReplacementIds);
       }
-      
-      const uploadedItems = (uploadedDocuments || []).map((document, index) => ({
+
+      const uploadedDocumentEntries = (uploadedDocuments || []).map(
+        (document, index) => ({ document, index }),
+      );
+      const approvedDocumentEntries = uploadedDocumentEntries.filter(
+        ({ document }) =>
+          String(document.status || "").toUpperCase() === "APPROVED",
+      );
+      const reviewDocumentEntries = uploadedDocumentEntries.filter(
+        ({ document }) =>
+          String(document.status || "").toUpperCase() !== "APPROVED",
+      );
+
+      const uploadedItems = approvedDocumentEntries.map(({ document, index }) => ({
         ...mapBackendDocumentToLibraryItem(document),
         sizeBytes:
           Number(document.file_size_bytes) ||
@@ -1077,12 +1089,16 @@ function LibraryPage() {
 
       handleCancelTaggedUpload();
 
-      const hasFlagged = (uploadedDocuments || []).some(doc => doc.status === "FLAGGED");
-      if (hasFlagged) {
+      if (reviewDocumentEntries.length > 0) {
         setUploadNotice({
           type: "warning",
+          title: "Sent to admin review",
           message:
-            "Upload completed, but sensitive documents were sent to Admin for review.",
+            `${reviewDocumentEntries.length} ${
+              reviewDocumentEntries.length === 1 ? "document was" : "documents were"
+            } not added to the library yet because AI marked ${
+              reviewDocumentEntries.length === 1 ? "it" : "them"
+            } for admin review.`,
         });
       } else {
         setUploadNotice({
@@ -1107,6 +1123,14 @@ function LibraryPage() {
           type: "error",
           title: "AI hashtag verification failed",
           message: "Please check the recommendations next to the tag fields.",
+        });
+      } else if (error.response?.data?.code === "SENSITIVE_CONTENT_BLOCKED") {
+        setUploadNotice({
+          type: "error",
+          title: "Upload blocked",
+          message:
+            error.response.data.message ||
+            "This document contains inappropriate language and cannot be uploaded.",
         });
       } else if (error.response?.data?.code === "TAG_INPUT_INVALID") {
         setTagInputErrors([
