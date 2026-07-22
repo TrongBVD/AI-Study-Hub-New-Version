@@ -178,6 +178,8 @@ function LibraryPage() {
   const [pendingReplacementDocumentIds, setPendingReplacementDocumentIds] =
     useState([]);
   const [pendingFolderId, setPendingFolderId] = useState(null);
+  const [duplicateConfirm, setDuplicateConfirm] = useState(null);
+  const duplicateConfirmResolverRef = useRef(null);
   const [isTagModalOpen, setIsTagModalOpen] = useState(false);
   const [hashtags, setHashtags] = useState(["", "", ""]);
   const [activeHashtagIndex, setActiveHashtagIndex] = useState(0);
@@ -200,6 +202,19 @@ function LibraryPage() {
   const [isUploadingDocuments, setIsUploadingDocuments] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isExportingLibrary, setIsExportingLibrary] = useState(false);
+
+  function requestDuplicateConfirmation(fileNames) {
+    return new Promise((resolve) => {
+      duplicateConfirmResolverRef.current = resolve;
+      setDuplicateConfirm({ fileNames });
+    });
+  }
+
+  function closeDuplicateConfirmation(shouldReplace) {
+    duplicateConfirmResolverRef.current?.(shouldReplace);
+    duplicateConfirmResolverRef.current = null;
+    setDuplicateConfirm(null);
+  }
 
   const [shareOnProfile, setShareOnProfile] = useState(
     () => getInitialLibraryData().shareOnProfile ?? false
@@ -708,7 +723,7 @@ function LibraryPage() {
     }
   }
 
-  function handleUploadFile(e) {
+  async function handleUploadFile(e) {
     const files = Array.from(e.target.files || []);
 
     if (files.length === 0) return;
@@ -776,7 +791,7 @@ function LibraryPage() {
     const replacementDocumentIds = [];
     const declinedDuplicateNames = [];
 
-    uniqueFiles.forEach((file) => {
+    for (const file of uniqueFiles) {
       const normalizedName = String(file.name || "").trim().toLocaleLowerCase();
       const existingDocument = libraryItems.find(
         (item) =>
@@ -787,26 +802,24 @@ function LibraryPage() {
       if (!existingDocument) {
         acceptedFiles.push(file);
         replacementDocumentIds.push(null);
-        return;
+        continue;
       }
 
-      const shouldReplace = window.confirm(
-        `"${file.name}" has already been uploaded to this library.\n\nSelect OK to replace the existing document, or Cancel to keep the current version.`,
-      );
+      const shouldReplace = await requestDuplicateConfirmation([file.name]);
 
       if (!shouldReplace) {
         declinedDuplicateNames.push(file.name);
-        return;
+        continue;
       }
 
       if (!existingDocument.id || !existingDocument.isBackendFile) {
         alert(`"${file.name}" cannot be replaced because its saved document record is incomplete.`);
-        return;
+        continue;
       }
 
       acceptedFiles.push(file);
       replacementDocumentIds.push(String(existingDocument.id));
-    });
+    }
 
     if (declinedDuplicateNames.length > 0) {
       setUploadNotice({
@@ -1014,13 +1027,7 @@ function LibraryPage() {
         const duplicateNames = duplicateDocuments
           .map((duplicate) => duplicate.fileName)
           .filter(Boolean);
-        const shouldReplace = window.confirm(
-          `${duplicateNames.join(", ")} ${
-            duplicateNames.length === 1 ? "has" : "have"
-          } already been uploaded.\n\nSelect OK to replace the existing ${
-            duplicateNames.length === 1 ? "document" : "documents"
-          }, or Cancel to keep the current version.`,
-        );
+        const shouldReplace = await requestDuplicateConfirmation(duplicateNames);
 
         if (!shouldReplace) {
           setUploadNotice({
@@ -2512,6 +2519,62 @@ function LibraryPage() {
               I understand
             </button>
           </div>
+        </div>
+      )}
+
+      {duplicateConfirm && (
+        <div
+          className="duplicate_confirm_overlay"
+          role="presentation"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) {
+              closeDuplicateConfirmation(false);
+            }
+          }}
+        >
+          <section
+            className="duplicate_confirm_modal"
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="duplicate-confirm-title"
+            aria-describedby="duplicate-confirm-description"
+          >
+            <div className="duplicate_confirm_icon" aria-hidden="true">
+              <i className="ti-files"></i>
+            </div>
+            <div className="duplicate_confirm_content">
+              <span className="duplicate_confirm_eyebrow">Duplicate document</span>
+              <h2 id="duplicate-confirm-title">This file already exists</h2>
+              <p id="duplicate-confirm-description">
+                {duplicateConfirm.fileNames.length === 1 ? (
+                  <><strong>“{duplicateConfirm.fileNames[0]}”</strong> has already been uploaded to this library.</>
+                ) : (
+                  <><strong>{duplicateConfirm.fileNames.length} selected files</strong> have already been uploaded to this library.</>
+                )}
+              </p>
+              <p className="duplicate_confirm_hint">
+                Replacing will update the existing document with the newly selected file.
+              </p>
+            </div>
+            <div className="duplicate_confirm_actions">
+              <button
+                type="button"
+                className="duplicate_keep_button"
+                onClick={() => closeDuplicateConfirmation(false)}
+              >
+                Keep current
+              </button>
+              <button
+                type="button"
+                className="duplicate_replace_button"
+                autoFocus
+                onClick={() => closeDuplicateConfirmation(true)}
+              >
+                <i className="ti-reload" aria-hidden="true"></i>
+                Replace document
+              </button>
+            </div>
+          </section>
         </div>
       )}
     </main>

@@ -320,6 +320,12 @@ function WorkSpacePage() {
   const [isSolutionFormOpen, setIsSolutionFormOpen] = useState(false);
   const [solutionContent, setSolutionContent] = useState("");
   const [solutionAttachments, setSolutionAttachments] = useState([]);
+  const [solutionCommentDrafts, setSolutionCommentDrafts] = useState({});
+  const [openSolutionCommentId, setOpenSolutionCommentId] = useState(null);
+  const [selectedSolutionCommentsId, setSelectedSolutionCommentsId] =
+    useState(null);
+  const [submittingSolutionCommentId, setSubmittingSolutionCommentId] =
+    useState(null);
   const [editingSolutionId, setEditingSolutionId] = useState(null);
   const [selectedSolutionDetail, setSelectedSolutionDetail] = useState(null);
   const [topicTitle, setTopicTitle] = useState("");
@@ -1578,6 +1584,46 @@ const sampleStudySets = [
         error.response?.data?.message ||
         "Could not delete solution attachment.",
       );
+    }
+  }
+
+  async function handleSubmitSolutionComment(event, solutionId) {
+    event.preventDefault();
+    const content = String(solutionCommentDrafts[solutionId] || "").trim();
+    if (!selectedTopic || !content || submittingSolutionCommentId) return;
+
+    try {
+      setSubmittingSolutionCommentId(solutionId);
+      const savedComment = await addWorkspaceDiscussionComment(
+        workspaceId,
+        selectedTopic.id,
+        { kind: "solutionReply", solutionId, content },
+      );
+
+      setDiscussionTopics((currentTopics) =>
+        currentTopics.map((topic) =>
+          topic.id === selectedTopic.id
+            ? {
+              ...topic,
+              solutions: (topic.solutions || []).map((solution) =>
+                solution.id === solutionId
+                  ? {
+                    ...solution,
+                    replies: [...(solution.replies || []), savedComment],
+                  }
+                  : solution,
+              ),
+            }
+            : topic,
+        ),
+      );
+      setSolutionCommentDrafts((drafts) => ({ ...drafts, [solutionId]: "" }));
+      setOpenSolutionCommentId(null);
+    } catch (error) {
+      console.error("Cannot comment on solution:", error);
+      alert(error.response?.data?.message || "Could not post your comment.");
+    } finally {
+      setSubmittingSolutionCommentId(null);
     }
   }
 
@@ -2939,8 +2985,89 @@ const sampleStudySets = [
         (file) => file.kind === "solution",
       );
       const solutions = selectedTopic.solutions || [];
+      const hasCurrentUserSubmittedSolution = Boolean(
+        currentUserId &&
+        solutions.some(
+          (solution) =>
+            String(solution.userId || solution.author?.id || "") ===
+            currentUserId,
+        ),
+      );
       const comments = selectedTopic.comments || [];
       const subtasks = selectedTopic.subtasks || [];
+      const selectedCommentsSolution = solutions.find(
+        (solution) => solution.id === selectedSolutionCommentsId,
+      );
+      const renderSolutionComments = (solution) => {
+        const replies = solution.replies || [];
+        const isCommentFormOpen = openSolutionCommentId === solution.id;
+
+        return (
+          <div className="workspace_solution_comments">
+            <div className="workspace_solution_comments_heading">
+              <button
+                type="button"
+                className="workspace_solution_comments_toggle"
+                onClick={() => setSelectedSolutionCommentsId(solution.id)}
+                aria-haspopup="dialog"
+              >
+                <i className="ti-comment-alt" aria-hidden="true"></i>
+                <strong>
+                  {replies.length} {replies.length === 1 ? "comment" : "comments"}
+                </strong>
+                <i className="ti-angle-right" aria-hidden="true"></i>
+              </button>
+              <button
+                type="button"
+                className="workspace_solution_comment_action"
+                onClick={() =>
+                  setOpenSolutionCommentId((currentId) =>
+                    currentId === solution.id ? null : solution.id,
+                  )
+                }
+                aria-expanded={isCommentFormOpen}
+              >
+                <i className={isCommentFormOpen ? "ti-close" : "ti-comment"}></i>
+                {isCommentFormOpen ? "Cancel" : "Leave a comment"}
+              </button>
+            </div>
+
+            {isCommentFormOpen && (
+              <form
+                className="workspace_solution_comment_form"
+                onSubmit={(event) =>
+                  handleSubmitSolutionComment(event, solution.id)
+                }
+              >
+                <input
+                  type="text"
+                  value={solutionCommentDrafts[solution.id] || ""}
+                  onChange={(event) =>
+                    setSolutionCommentDrafts((drafts) => ({
+                      ...drafts,
+                      [solution.id]: event.target.value,
+                    }))
+                  }
+                  maxLength={1000}
+                  placeholder="Comment on this solution..."
+                  aria-label="Comment on this solution"
+                  disabled={submittingSolutionCommentId === solution.id}
+                />
+                <button
+                  type="submit"
+                  disabled={
+                    submittingSolutionCommentId === solution.id ||
+                    !String(solutionCommentDrafts[solution.id] || "").trim()
+                  }
+                  aria-label="Post comment"
+                >
+                  <i className="ti-arrow-right" aria-hidden="true"></i>
+                </button>
+              </form>
+            )}
+          </div>
+        );
+      };
       const topicDeadlineText =
         selectedTopic.dateMode === "deadline"
           ? `${selectedTopic.startDate || "No start date"} → ${selectedTopic.endDate || "No end date"
@@ -3597,8 +3724,16 @@ const sampleStudySets = [
                       setIsSolutionFormOpen((isOpen) => !isOpen);
                     }}
                   >
-                    <i className="ti-upload"></i>
-                    Upload your solution
+                    <i
+                      className={
+                        hasCurrentUserSubmittedSolution
+                          ? "ti-check"
+                          : "ti-upload"
+                      }
+                    ></i>
+                    {hasCurrentUserSubmittedSolution
+                      ? "Solution submitted"
+                      : "Upload your solution"}
                   </button>
                 </header>
 
@@ -3797,6 +3932,7 @@ const sampleStudySets = [
                                 ))}
                               </div>
                             )}
+                            {renderSolutionComments(solution)}
                           </div>
                         </article>
                       );
@@ -3887,6 +4023,7 @@ const sampleStudySets = [
                                 ))}
                               </div>
                             )}
+                            {renderSolutionComments(solution)}
                           </div>
                         </article>
                       );
@@ -3977,6 +4114,73 @@ const sampleStudySets = [
                   </div>
                 );
               })()}
+
+            {selectedCommentsSolution && (
+              <div
+                className="workspace_solution_detail_overlay"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="solution-comments-title"
+                onMouseDown={(event) => {
+                  if (event.target === event.currentTarget) {
+                    setSelectedSolutionCommentsId(null);
+                  }
+                }}
+              >
+                <article className="workspace_solution_comments_modal">
+                  <button
+                    type="button"
+                    className="workspace_solution_detail_close"
+                    onClick={() => setSelectedSolutionCommentsId(null)}
+                    aria-label="Close comments"
+                  >
+                    ×
+                  </button>
+                  <header>
+                    <span className="workspace_solution_comments_modal_icon">
+                      <i className="ti-comment-alt" aria-hidden="true"></i>
+                    </span>
+                    <div>
+                      <h2 id="solution-comments-title">Solution comments</h2>
+                      <p>
+                        Comments on {selectedCommentsSolution.author?.name || "this member"}&apos;s solution
+                      </p>
+                    </div>
+                  </header>
+
+                  {(selectedCommentsSolution.replies || []).length > 0 ? (
+                    <div className="workspace_solution_comments_modal_list">
+                      {(selectedCommentsSolution.replies || []).map((reply) => (
+                        <div className="workspace_solution_comment" key={reply.id}>
+                          <span className="workspace_solution_comment_avatar">
+                            {reply.author?.avatarUrl ? (
+                              <img src={reply.author.avatarUrl} alt="" />
+                            ) : (
+                              (reply.author?.name || "M").slice(0, 1).toUpperCase()
+                            )}
+                          </span>
+                          <div>
+                            <strong>{reply.author?.name || "Workspace member"}</strong>
+                            <small>
+                              {reply.createdAt
+                                ? new Date(reply.createdAt).toLocaleString()
+                                : "Just now"}
+                            </small>
+                            <p>{reply.content}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="workspace_solution_comments_empty">
+                      <i className="ti-comment-alt" aria-hidden="true"></i>
+                      <h3>No comments yet</h3>
+                      <p>Be the first to leave a comment on this solution.</p>
+                    </div>
+                  )}
+                </article>
+              </div>
+            )}
           </main>
 
           <aside className="workspace_clickup_activity">
