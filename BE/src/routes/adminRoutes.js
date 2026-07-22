@@ -10,6 +10,7 @@ router.use(requireAdmin);
 
 router.get("/dashboard", adminController.getDashboardStats);
 router.get("/moderation", adminController.getModerationDocuments);
+router.get("/moderation/:documentId/view", adminController.viewModerationDocument);
 router.patch("/moderation/:documentId", adminController.reviewDocument);
 
 router.get("/users", adminController.getUsers);

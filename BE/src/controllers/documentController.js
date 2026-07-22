@@ -25,6 +25,7 @@ const {
 } = require("../utils/documentDuplicateUtils");
 
 const BUCKET = process.env.SUPABASE_DOCUMENT_BUCKET || "documents";
+const WAITING_BUCKET = process.env.SUPABASE_DOCUMENT_WAITING_ADMIN_APPROVED || "document_waiting_admin";
 const { createActivityLog } = require("../services/activityLogService");
 const FILE_VALIDATION_CONCURRENCY = Math.min(
   normalizeConcurrency(process.env.FILE_VALIDATION_CONCURRENCY, 2),
@@ -555,8 +556,11 @@ exports.uploadDocuments = async (req, res) => {
       const safeFileName = sanitizeFileName(file.originalname);
       const storagePath = `${userID}/${Date.now()}-${crypto.randomUUID()}-${safeFileName}`;
 
+      const isFlagged = isSensitiveClassification(sensitivity.classification);
+      const targetBucket = isFlagged ? WAITING_BUCKET : BUCKET;
+
       const { error: uploadError } = await supabase.storage
-        .from(BUCKET)
+        .from(targetBucket)
         .upload(storagePath, file.buffer, {
           contentType: file.mimetype || "application/octet-stream"
         });
@@ -567,12 +571,14 @@ exports.uploadDocuments = async (req, res) => {
       let status = workspaceId ? "PENDING" : "APPROVED";
       let aiRejectReason = null;
 
-      if (isSensitiveClassification(sensitivity.classification)) {
+      if (isFlagged) {
         status = "FLAGGED";
         aiRejectReason = {
           reason: `Contains ${sensitivity.classification.toLowerCase()} inappropriate language`,
           word: sensitivity.word,
-          classification: sensitivity.classification
+          classification: sensitivity.classification,
+          suspicious_text: sensitivity.suspicious_text || (sensitivity.word ? `Found sensitive term "${sensitivity.word}" in document content.` : "Inappropriate content detected."),
+          bucket: WAITING_BUCKET
         };
       }
 
@@ -594,7 +600,7 @@ exports.uploadDocuments = async (req, res) => {
 
       if (insertError) throw insertError;
 
-      // Nếu tài liệu bị gắn cờ nhạy cảm, log activity để thông báo cho admin
+      // Nếu tài liệu bị gắn cờ nhạy cảm, log activity để thông báo cho user & admin
       if (status === "FLAGGED") {
         await createActivityLog({
           actorUserId: userID,
@@ -602,14 +608,16 @@ exports.uploadDocuments = async (req, res) => {
           entityType: "document",
           entityId: document.id,
           newData: {
+            notificationType: "fileUnderReview",
+            documentTitle: file.originalname,
+            libraryId: libraryId,
             reason: "AI detected sensitive language",
             word: sensitivity.word,
-            classification: sensitivity.classification,
-            fileName: file.originalname
+            classification: sensitivity.classification
           },
           request: req,
-          riskLevel: "HIGH",
-          details: `AI flagged ${file.originalname} for sensitive language.`,
+          riskLevel: sensitivity.classification === "SEVERE" ? "HIGH" : "MEDIUM",
+          details: `Your file "${file.originalname}" contains sensitive content and has been submitted for admin review. Please wait for moderation.`,
         });
       }
 
@@ -841,20 +849,37 @@ exports.viewDocument = async (req, res) => {
       });
     }
 
+    const isAdmin = req.user?.role === "SYSTEM_ADMIN";
     const isOwner = String(document.uploader_id) === String(userID);
 
-    if (!isOwner && document.is_public !== true) {
+    if (!isAdmin && !isOwner && document.is_public !== true) {
       return res.status(403).json({
         status: "error",
         message: "You do not have permission to view this document.",
       });
     }
 
-    const { data: signedUrlData, error: signedUrlError } =
-      await supabase.storage.from(BUCKET).createSignedUrl(document.file_url, 60 * 60);
+    const primaryBucket = (document.status === "FLAGGED" || document.status === "REJECTED" || document.status === "PENDING_RETRY")
+      ? WAITING_BUCKET
+      : BUCKET;
 
-    if (signedUrlError) {
-      throw signedUrlError;
+    let signedUrlData = null;
+    let { data, error: signedUrlError } = await supabase.storage
+      .from(primaryBucket)
+      .createSignedUrl(document.file_url, 60 * 60);
+
+    if (data?.signedUrl) {
+      signedUrlData = data;
+    } else {
+      const fallbackBucket = primaryBucket === WAITING_BUCKET ? BUCKET : WAITING_BUCKET;
+      const { data: fallbackData, error: fallbackError } = await supabase.storage
+        .from(fallbackBucket)
+        .createSignedUrl(document.file_url, 60 * 60);
+
+      if (fallbackError || !fallbackData?.signedUrl) {
+        throw signedUrlError || fallbackError;
+      }
+      signedUrlData = fallbackData;
     }
 
     return res.status(200).json({
@@ -923,6 +948,22 @@ exports.deleteDocument = async (req, res) => {
         message: "Bạn không có quyền xóa tài liệu này.",
       });
     }
+
+    // Xóa file vật lý khỏi Supabase Storage (cả bucket chính và bucket chờ duyệt)
+    if (document.file_url) {
+      try {
+        await supabase.storage.from(BUCKET).remove([document.file_url]);
+        await supabase.storage.from(WAITING_BUCKET).remove([document.file_url]);
+      } catch (storageErr) {
+        console.warn("[deleteDocument] Warning removing file from storage:", storageErr);
+      }
+    }
+
+    // Xóa dữ liệu vector chunks của tệp tin trong DB
+    await supabase
+      .from("document_chunks")
+      .delete()
+      .eq("document_id", documentId);
 
     const { error: updateError } = await supabase
       .from("documents")

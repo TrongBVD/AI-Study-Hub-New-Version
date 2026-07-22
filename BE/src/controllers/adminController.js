@@ -2,6 +2,7 @@ const supabase = require("../config/supabase");
 const { createActivityLog } = require("../services/activityLogService");
 const crypto = require("crypto");
 const DOCUMENT_BUCKET = process.env.SUPABASE_DOCUMENT_BUCKET || "documents";
+const WAITING_BUCKET = process.env.SUPABASE_DOCUMENT_WAITING_ADMIN_APPROVED || "document_waiting_admin";
 
 function getTodayDate() {
   return new Date().toISOString().slice(0, 10);
@@ -211,6 +212,33 @@ exports.reviewDocument = async (req, res) => {
     let updatedDocument;
 
     if (decision === "APPROVE") {
+      // Transfer file from WAITING_BUCKET to DOCUMENT_BUCKET if present
+      if (oldDocument.file_url) {
+        try {
+          const { data: fileBlob, error: downloadErr } = await supabase.storage
+            .from(WAITING_BUCKET)
+            .download(oldDocument.file_url);
+
+          if (!downloadErr && fileBlob) {
+            const arrayBuffer = await fileBlob.arrayBuffer();
+            const buffer = Buffer.from(arrayBuffer);
+
+            await supabase.storage
+              .from(DOCUMENT_BUCKET)
+              .upload(oldDocument.file_url, buffer, {
+                contentType: "application/octet-stream",
+                upsert: true,
+              });
+
+            await supabase.storage
+              .from(WAITING_BUCKET)
+              .remove([oldDocument.file_url]);
+          }
+        } catch (transferErr) {
+          console.warn("Storage transfer warning during document approval:", transferErr);
+        }
+      }
+
       const { data, error: updateError } = await supabase
         .from("documents")
         .update({
@@ -227,11 +255,13 @@ exports.reviewDocument = async (req, res) => {
       updatedDocument = data;
     } else {
       if (oldDocument.file_url) {
-        const { error: storageDeleteError } = await supabase.storage
-          .from(DOCUMENT_BUCKET)
+        await supabase.storage
+          .from(WAITING_BUCKET)
           .remove([oldDocument.file_url]);
 
-        if (storageDeleteError) throw storageDeleteError;
+        await supabase.storage
+          .from(DOCUMENT_BUCKET)
+          .remove([oldDocument.file_url]);
       }
 
       await supabase.from("document_chunks").delete().eq("document_id", documentId);
@@ -256,6 +286,7 @@ exports.reviewDocument = async (req, res) => {
 
     await createActivityLog({
       actorUserId: req.user.id,
+      adminId: req.user.id,
       actionType: "ADMIN_REVIEW_DOCUMENT",
       entityType: "documents",
       entityId: documentId,
@@ -263,11 +294,12 @@ exports.reviewDocument = async (req, res) => {
       newData: updatedDocument,
       request: req,
       riskLevel: decision === "APPROVE" ? "MEDIUM" : "HIGH",
-      details: reviewReason,
+      details: `Admin (ID: ${req.user.id}) ${decision === "APPROVE" ? "approved" : "rejected"} document "${oldDocument.title}". Review note: ${reviewReason}`,
     });
 
     await createActivityLog({
       actorUserId: oldDocument.uploader_id,
+      adminId: req.user.id,
       actionType:
         decision === "APPROVE" ? "DOCUMENT_APPROVED" : "DOCUMENT_REJECTED",
       entityType: "documents",
@@ -285,24 +317,84 @@ exports.reviewDocument = async (req, res) => {
       riskLevel: decision === "APPROVE" ? "INFO" : "MEDIUM",
       details:
         decision === "APPROVE"
-          ? `"${oldDocument.title}" was approved and is now visible in your library.`
-          : `"${oldDocument.title}" was rejected by admin and removed.`,
+          ? `Your document "${oldDocument.title}" has been approved by admin and is now available in your library.`
+          : `Your document "${oldDocument.title}" was rejected by admin. Reason: ${reviewReason}`,
     });
 
     return res.status(200).json({
       status: "success",
       message:
         decision === "APPROVE"
-          ? "Document approved and restored to the user's library."
+          ? "Document approved and moved to main library storage."
           : "Document rejected and removed.",
       data: updatedDocument,
     });
   } catch (error) {
-    console.error("Admin review document error:", error);
+    console.error("Admin reviewDocument error:", error);
     return res.status(500).json({
       status: "error",
-      message: "Could not review document.",
+      message: "Could not process document review decision.",
       error: error.message,
+    });
+  }
+};
+
+exports.viewModerationDocument = async (req, res) => {
+  try {
+    const { documentId } = req.params;
+
+    const { data: document, error: docError } = await supabase
+      .from("documents")
+      .select("*")
+      .eq("id", documentId)
+      .maybeSingle();
+
+    if (docError) throw docError;
+
+    if (!document) {
+      return res.status(404).json({ status: "error", message: "Document not found." });
+    }
+
+    const primaryBucket = (document.status === "FLAGGED" || document.status === "REJECTED" || document.status === "PENDING_RETRY")
+      ? WAITING_BUCKET
+      : DOCUMENT_BUCKET;
+
+    let signedUrlData = null;
+    let { data, error: signedUrlError } = await supabase.storage
+      .from(primaryBucket)
+      .createSignedUrl(document.file_url, 60 * 60);
+
+    if (data?.signedUrl) {
+      signedUrlData = data;
+    } else {
+      const fallbackBucket = primaryBucket === WAITING_BUCKET ? DOCUMENT_BUCKET : WAITING_BUCKET;
+      const { data: fallbackData, error: fallbackError } = await supabase.storage
+        .from(fallbackBucket)
+        .createSignedUrl(document.file_url, 60 * 60);
+
+      if (fallbackError || !fallbackData?.signedUrl) {
+        throw signedUrlError || fallbackError;
+      }
+      signedUrlData = fallbackData;
+    }
+
+    return res.status(200).json({
+      status: "success",
+      data: {
+        documentId: document.id,
+        fileName: document.title,
+        fileSizeBytes: document.file_size_bytes,
+        status: document.status,
+        viewUrl: signedUrlData.signedUrl,
+        expiresIn: 3600
+      }
+    });
+  } catch (error) {
+    console.error("viewModerationDocument error:", error);
+    return res.status(500).json({
+      status: "error",
+      message: "Could not fetch moderation document preview URL.",
+      error: error.message
     });
   }
 };
@@ -512,18 +604,22 @@ exports.getActivityLogs = async (req, res) => {
       .select(`
         id,
         user_id,
+        admin_id,
         action_type,
         entity_type,
         entity_id,
         old_data,
         new_data,
-        ip_address,
-        user_agent,
-        device,
         risk_level,
         details,
         created_at,
         actor:profiles!activity_logs_user_id_fkey (
+          id,
+          email,
+          username,
+          full_name
+        ),
+        admin:profiles!activity_logs_admin_id_fkey (
           id,
           email,
           username,

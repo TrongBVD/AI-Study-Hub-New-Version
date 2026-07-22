@@ -62,13 +62,13 @@ async function generateText(prompt) {
   const ai = await getAiClient();
   const configuredFallbackModels = String(
     process.env.GEMINI_TEXT_FALLBACK_MODELS ||
-      "gemini-3.5-flash-lite,gemini-3.1-flash-lite",
+      "gemini-2.0-flash-lite,gemini-1.5-flash,gemini-1.5-pro",
   )
     .split(",")
     .map((model) => model.trim())
     .filter(Boolean);
   const modelCandidates = [
-    process.env.GEMINI_TEXT_MODEL || "gemini-3.5-flash-lite",
+    process.env.GEMINI_TEXT_MODEL || "gemini-2.5-flash",
     ...configuredFallbackModels,
   ].filter((model, index, models) => models.indexOf(model) === index);
   let lastError;
@@ -83,7 +83,8 @@ async function generateText(prompt) {
       return response.text || "";
     } catch (error) {
       lastError = error;
-      const canTryFallback = [404, 429, 503].includes(Number(error?.status));
+      const statusCode = Number(error?.status);
+      const canTryFallback = [404, 429, 503].includes(statusCode);
       const hasAnotherModel = model !== modelCandidates.at(-1);
 
       if (!canTryFallback || !hasAnotherModel) {
@@ -93,6 +94,11 @@ async function generateText(prompt) {
       console.warn(
         `[Gemini] Model ${model} is unavailable (${error.status}); trying a fallback model.`,
       );
+
+      // Nếu gặp lỗi 429 (Rate limit / Quota), tạm hoãn 1 giây trước khi chuyển model
+      if (statusCode === 429) {
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+      }
     }
   }
 
@@ -323,28 +329,31 @@ function isWholeWordPresent(text, word) {
 async function checkSensitiveContent(text) {
   const sampleText = String(text || "").substring(0, 8000);
 
-  const prompt = `Bạn là hệ thống kiểm duyệt nội dung tự động. 
-Hãy kiểm tra xem đoạn văn bản tài liệu dưới đây có chứa ngôn từ thô tục, nhạy cảm, chửi bậy, khiêu dâm hoặc không phù hợp với môi trường học tập hay không.
+  const prompt = `Bạn là hệ thống kiểm duyệt nội dung tự động cho môi trường học tập. 
+Hãy đọc đoạn văn bản tài liệu dưới đây và chỉ liệt kê CHÍNH XÁC các từ hoặc cụm từ tục tĩu/vi phạm (ví dụ: 'stupid' hoặc 'stupid, damn').
 
 Văn bản tài liệu:
 "${sampleText}"
 
 BẮT BUỘC trả về ĐÚNG định dạng JSON sau, không kèm bất kỳ giải thích nào khác ngoài JSON:
 {
-  "classification": "SEVERE" (nếu cực kỳ thô tục, bậy bạ, khiêu dâm) hoặc "MILD" (nếu có từ chửi tục nhẹ hoặc không phù hợp nhẹ) hoặc "NONE" (nếu tài liệu học tập sạch sẽ, bình thường),
-  "word": "từ hoặc cụm từ vi phạm tiêu biểu nhất (nếu có, nếu không thì để null)"
+  "classification": "SEVERE" (nếu cực kỳ thô tục, dâm ô, xúc phạm nặng) hoặc "MILD" (nếu có từ chửi tục nhẹ hoặc từ lóng không phù hợp nhẹ) hoặc "NONE" (nếu tài liệu sạch sẽ, bình thường),
+  "word": "chỉ liệt kê từ hoặc các từ vi phạm phân cách bằng dấu phẩy (ví dụ: 'stupid'). NẾU KHÔNG CÓ TỪ TỤC THÌ ĐỂ NULL",
+  "suspicious_text": "chỉ ghi đúng từ vi phạm (ví dụ: 'stupid'), TUỆT ĐỐI KHÔNG GHI CẢ CÂU VĂN"
 }`;
 
   try {
     const resultText = await generateText(prompt);
     const result = extractJson(resultText);
+    const extractedWords = result.word || result.suspicious_text || null;
     return {
       classification: ["SEVERE", "MILD", "NONE"].includes(result.classification) ? result.classification : "NONE",
-      word: result.word || null
+      word: extractedWords,
+      suspicious_text: extractedWords
     };
   } catch (error) {
     console.error("Lỗi AI checkSensitiveContent:", error);
-    return { classification: "NONE", word: null };
+    return { classification: "NONE", word: null, suspicious_text: null };
   }
 }
 
