@@ -8,10 +8,6 @@
 .admin-profile-page__heading > div > span { color: var(--accent-color); font-size: 11px; font-weight: 900; letter-spacing: .12em; text-transform: uppercase; }
 .admin-profile-page__heading h1 { margin: 7px 0 0; font-size: 37px; line-height: 1; letter-spacing: -.045em; }
 .admin-profile-page__heading p { margin: 9px 0 0; color: var(--text-secondary); font-size: 13px; }
-.admin-profile-page__primary-action {
-  min-height: 42px; border: 1px solid var(--border-color); border-radius: 10px; padding: 0 15px; display: inline-flex; align-items: center;
-  justify-content: center; gap: 8px; background: var(--bg-card); color: var(--text-primary); text-decoration: none; font-size: 11px; font-weight: 850;
-}
 .admin-profile-page__notice { max-width: 1480px; margin: 16px auto 0; border: 1px solid var(--border-color); border-radius: 10px; padding: 12px; background: var(--bg-card); font-size: 11px; }
 .admin-profile-page__notice.is-error { color: var(--danger-color); background: var(--danger-bg); }
 .admin-profile-page__identity-card {
@@ -50,11 +46,6 @@
 .admin-profile-page__access-card ul { margin: 13px 0 0; padding: 0; display: grid; gap: 10px; list-style: none; }
 .admin-profile-page__access-card li { display: flex; gap: 8px; color: var(--text-secondary); font-size: 9px; }
 .admin-profile-page__access-card li svg { color: var(--success-color); flex: 0 0 auto; }
-.admin-profile-page__security-row { min-height: 42px; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 9px; }
-.admin-profile-page__security-row span { display: flex; align-items: center; gap: 7px; }
-.admin-profile-page__security-row strong { color: var(--success-color); }
-.admin-profile-page__security-row em { color: var(--warning-color); font-style: normal; font-weight: 800; }
-.admin-profile-page__primary-action { width: 100%; margin-top: 14px; border-color: var(--accent-color); background: var(--accent-color); color: var(--button-text); }
 .admin-profile-page__toggle-row { margin-top: 15px; display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 12px; cursor: pointer; position: relative; }
 .admin-profile-page__toggle-row strong, .admin-profile-page__toggle-row small { display: block; }
 .admin-profile-page__toggle-row strong { font-size: 10px; }.admin-profile-page__toggle-row small { margin-top: 4px; color: var(--text-muted); font-size: 8px; }
@@ -62,5 +53,5 @@
 .admin-profile-page__toggle-row > i { width: 36px; height: 20px; border-radius: 999px; background: var(--border-color); position: relative; transition: .2s; }
 .admin-profile-page__toggle-row > i::after { content: ""; width: 14px; height: 14px; border-radius: 50%; background: var(--bg-card); position: absolute; top: 3px; left: 3px; transition: .2s; }
 .admin-profile-page__toggle-row input:checked + i { background: var(--accent-color); }.admin-profile-page__toggle-row input:checked + i::after { transform: translateX(16px); }
-@media (max-width: 1050px) { .admin-profile-page__layout { grid-template-columns: 1fr; }.admin-profile-page__layout aside { grid-template-columns: repeat(2, minmax(0,1fr)); }.admin-profile-page__layout aside section:last-child { grid-column: span 2; } }
-@media (max-width: 720px) { .admin-profile-page { padding: 22px 14px 40px; }.admin-profile-page__heading, .admin-profile-page__identity-card { align-items: stretch; flex-direction: column; }.admin-profile-page__identity-meta { max-width: none; border-left: 0; border-top: 1px solid var(--border-color); padding: 16px 0 0; }.admin-profile-page__layout aside { grid-template-columns: 1fr; }.admin-profile-page__layout aside section:last-child { grid-column: auto; }.admin-profile-page__activity-list time { display: none; } }
+@media (max-width: 1050px) { .admin-profile-page__layout { grid-template-columns: 1fr; }.admin-profile-page__layout aside { grid-template-columns: repeat(2, minmax(0,1fr)); } }
+@media (max-width: 720px) { .admin-profile-page { padding: 22px 14px 40px; }.admin-profile-page__heading, .admin-profile-page__identity-card { align-items: stretch; flex-direction: column; }.admin-profile-page__identity-meta { max-width: none; border-left: 0; border-top: 1px solid var(--border-color); padding: 16px 0 0; }.admin-profile-page__layout aside { grid-template-columns: 1fr; }.admin-profile-page__activity-list time { display: none; } }

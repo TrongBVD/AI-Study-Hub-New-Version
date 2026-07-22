@@ -4927,7 +4927,8 @@
 }
 
 .hashtag_modal_overlay,
-.storage_limit_overlay {
+.storage_limit_overlay,
+.duplicate_confirm_overlay {
   position: fixed;
   inset: 0;
   z-index: 3000;
@@ -4937,6 +4938,116 @@
   align-items: center;
   justify-content: center;
   padding: 24px;
+}
+
+.duplicate_confirm_modal {
+  width: min(100%, 500px);
+  border-radius: 26px;
+  padding: 30px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-soft);
+}
+
+.duplicate_confirm_icon {
+  width: 58px;
+  height: 58px;
+  border-radius: 18px;
+  display: grid;
+  place-items: center;
+  margin-bottom: 20px;
+  color: var(--accent-color);
+  background: var(--bg-secondary, var(--accent-soft));
+  font-size: 24px;
+}
+
+.duplicate_confirm_eyebrow {
+  display: block;
+  margin-bottom: 7px;
+  color: var(--accent-color);
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.duplicate_confirm_content h2 {
+  margin: 0 0 12px;
+  color: var(--text-primary);
+  font-size: 25px;
+  font-weight: 900;
+  letter-spacing: -0.03em;
+}
+
+.duplicate_confirm_content p {
+  margin: 0;
+  color: var(--text-secondary);
+  line-height: 1.55;
+}
+
+.duplicate_confirm_content strong {
+  color: var(--text-primary);
+  overflow-wrap: anywhere;
+}
+
+.duplicate_confirm_content .duplicate_confirm_hint {
+  margin-top: 14px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+  font-size: 13px;
+}
+
+.duplicate_confirm_actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 24px;
+}
+
+.duplicate_confirm_actions button {
+  min-height: 44px;
+  padding: 0 18px;
+  border-radius: 13px;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.duplicate_keep_button {
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  background: var(--bg-card);
+}
+
+.duplicate_replace_button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--bg-card);
+  border: 1px solid var(--accent-color);
+  background: var(--accent-color);
+}
+
+.duplicate_confirm_actions button:hover {
+  transform: translateY(-1px);
+  filter: brightness(0.96);
+}
+
+@media (max-width: 560px) {
+  .duplicate_confirm_modal {
+    padding: 24px 20px;
+  }
+
+  .duplicate_confirm_actions {
+    flex-direction: column-reverse;
+  }
+
+  .duplicate_confirm_actions button {
+    width: 100%;
+    justify-content: center;
+  }
 }
 
 .hashtag_modal,

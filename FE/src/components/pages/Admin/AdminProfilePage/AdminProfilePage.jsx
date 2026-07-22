@@ -5,8 +5,6 @@ import {
   LuBell,
   LuCheck,
   LuClock3,
-  LuKeyRound,
-  LuLockKeyhole,
   LuMail,
   LuShieldCheck,
 } from "react-icons/lu";
@@ -134,13 +132,6 @@ function AdminProfilePage() {
               <li><LuCheck /> View usage and audit logs</li>
               <li><LuCheck /> Access system settings</li>
             </ul>
-          </section>
-
-          <section className="admin-profile-page__card">
-            <header><div><LuLockKeyhole /><span><h2>Security</h2><p>Protect administrative access.</p></span></div></header>
-            <div className="admin-profile-page__security-row"><span><LuKeyRound /> Password</span><strong>Protected</strong></div>
-            <div className="admin-profile-page__security-row"><span><LuShieldCheck /> Two-step verification</span><em>Recommended</em></div>
-            <Link className="admin-profile-page__primary-action" to="/admin/settings">Manage security</Link>
           </section>
 
           <section className="admin-profile-page__card">

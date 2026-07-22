@@ -366,14 +366,24 @@ function mapDiscussionUser(user, fallback = "Workspace member") {
 
 function mapDiscussionComment(row) {
   const solutionPrefix = "[[SOLUTION]]";
+  const solutionReplyMatch = String(row.content || "").match(
+    /^\[\[SOLUTION_REPLY:([^\]]+)\]\]/,
+  );
   const isSolution = String(row.content || "").startsWith(solutionPrefix);
+  const isSolutionReply = Boolean(solutionReplyMatch);
+  const storedPrefix = solutionReplyMatch?.[0] || "";
 
   return {
     id: row.id,
     topicId: row.topic_id,
     userId: row.user_id,
-    content: isSolution ? row.content.slice(solutionPrefix.length) : row.content,
-    kind: isSolution ? "solution" : "comment",
+    content: isSolution
+      ? row.content.slice(solutionPrefix.length)
+      : isSolutionReply
+        ? row.content.slice(storedPrefix.length)
+        : row.content,
+    kind: isSolution ? "solution" : isSolutionReply ? "solutionReply" : "comment",
+    solutionId: solutionReplyMatch?.[1] || null,
     isEdited: row.is_edited === true,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -426,6 +436,7 @@ function mapDiscussionAttachment(row) {
 
 function mapDiscussionTopic(row) {
   const creator = row.creator || {};
+  const mappedComments = (row.comments || []).map(mapDiscussionComment);
 
   return {
     id: row.id,
@@ -444,12 +455,18 @@ function mapDiscussionTopic(row) {
     isPinned: row.is_pinned === true,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
-    comments: (row.comments || [])
-      .map(mapDiscussionComment)
+    comments: mappedComments
       .filter((comment) => comment.kind === "comment"),
-    solutions: (row.comments || [])
-      .map(mapDiscussionComment)
-      .filter((comment) => comment.kind === "solution"),
+    solutions: mappedComments
+      .filter((comment) => comment.kind === "solution")
+      .map((solution) => ({
+        ...solution,
+        replies: mappedComments.filter(
+          (comment) =>
+            comment.kind === "solutionReply" &&
+            String(comment.solutionId) === String(solution.id),
+        ),
+      })),
     subtasks: (row.subtasks || []).map(mapDiscussionSubtask),
     files: (row.attachments || []).map(mapDiscussionAttachment),
   };
@@ -1505,10 +1522,13 @@ exports.addDiscussionComment = async (req, res) => {
     const { workspaceId, topicId } = req.params;
     const access = await getWorkspaceDiscussionAccess(workspaceId, req.user.id);
     const isSolution = req.body.kind === "solution";
+    const isSolutionReply = req.body.kind === "solutionReply";
 
     if (
       !access.workspace ||
-      (isSolution ? !access.canSubmitSolutions : !access.canReadDiscussion)
+      (isSolution || isSolutionReply
+        ? !access.canSubmitSolutions
+        : !access.canReadDiscussion)
     ) {
       return res.status(403).json({
         status: "error",
@@ -1517,12 +1537,37 @@ exports.addDiscussionComment = async (req, res) => {
     }
 
     const rawContent = String(req.body.content || "").trim();
-    const content = isSolution ? `[[SOLUTION]]${rawContent}` : rawContent;
+    const solutionId = String(req.body.solutionId || "").trim();
+    if (isSolutionReply) {
+      const { data: targetSolution, error: solutionError } = await supabase
+        .from("workspace_discussion_comments")
+        .select("id, content")
+        .eq("id", solutionId)
+        .eq("topic_id", topicId)
+        .maybeSingle();
+      if (solutionError) throw solutionError;
+      if (
+        !targetSolution ||
+        !String(targetSolution.content || "").startsWith("[[SOLUTION]]")
+      ) {
+        return res.status(404).json({
+          status: "error",
+          message: "Solution not found.",
+        });
+      }
+    }
+    const content = isSolution
+      ? `[[SOLUTION]]${rawContent}`
+      : isSolutionReply
+        ? `[[SOLUTION_REPLY:${solutionId}]]${rawContent}`
+        : rawContent;
     if (!rawContent) {
       return res.status(400).json({
         status: "error",
         message: isSolution
           ? "Solution content is required."
+          : isSolutionReply
+            ? "Comment content is required."
           : "Comment content is required.",
       });
     }
