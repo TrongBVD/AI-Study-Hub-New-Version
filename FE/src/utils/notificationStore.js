@@ -23,6 +23,8 @@ export const defaultNotificationSettings = {
     uploaded: true,
     deleted: true,
     storageWarning: true,
+    moderationApproved: true,
+    moderationRejected: true,
   },
 
   member: {

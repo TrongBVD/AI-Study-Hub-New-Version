@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { getModerationDocuments, reviewDocument } from "../../../../utils/adminApi";
+import { getModerationDocuments, reviewDocument, getModerationDocumentViewUrl } from "../../../../utils/adminApi";
 import "./AIContentModerationPage.css";
 
 const FILTERS = ["All", "Pending review", "Flagged", "Rejected", "Retry"];
@@ -67,16 +67,30 @@ function getInitials(name = "") {
 }
 
 function getReason(document) {
-  const reason = document.ai_reject_reason;
+  const reason = document?.ai_reject_reason;
   if (!reason) return "No AI reason was stored for this document.";
   if (typeof reason === "string") return reason;
   return reason.reason || reason.error || JSON.stringify(reason);
 }
 
 function getSuspiciousContent(document) {
+  if (!document) return "No suspicious words detected.";
   const reason = document.ai_reject_reason;
-  if (reason?.suspicious_text?.length) return reason.suspicious_text.join("\n");
-  return document.admin_review_reason || "No suspicious text excerpt was stored.";
+  if (!reason) return document.admin_review_reason || "No suspicious words detected.";
+  if (typeof reason === "string") return reason;
+
+  if (reason.word) {
+    return Array.isArray(reason.word) ? reason.word.join(", ") : reason.word;
+  }
+
+  if (reason.suspicious_text) {
+    if (Array.isArray(reason.suspicious_text)) {
+      return reason.suspicious_text.join(", ");
+    }
+    return reason.suspicious_text;
+  }
+
+  return reason.reason || document.admin_review_reason || "No suspicious words detected.";
 }
 
 function getStatusLabel(status) {
@@ -87,13 +101,23 @@ function getStatusLabel(status) {
   return "Pending review";
 }
 
-function getSeverity(status) {
-  if (status === "FLAGGED" || status === "REJECTED") return "High";
-  return "Medium";
+function getSeverity(item) {
+  if (!item) return "Low";
+  const reason = typeof item === "object" ? item?.ai_reject_reason : null;
+  const classification = reason?.classification?.toUpperCase();
+
+  if (classification === "SEVERE") return "High";
+  if (classification === "MILD") return "Medium";
+  if (classification === "NONE") return "Low";
+
+  const status = typeof item === "string" ? item : item?.status;
+  if (status === "FLAGGED") return "Medium";
+  if (status === "REJECTED") return "High";
+  return "Low";
 }
 
 function getSeverityClass(severity) {
-  return severity.toLowerCase();
+  return String(severity || "low").toLowerCase();
 }
 
 function AIContentModerationPage() {
@@ -106,6 +130,28 @@ function AIContentModerationPage() {
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
+
+  const [previewModalUrl, setPreviewModalUrl] = useState(null);
+  const [previewingDocTitle, setPreviewingDocTitle] = useState("");
+  const [isPreviewLoading, setIsPreviewLoading] = useState(false);
+
+  async function handleViewFile(doc) {
+    if (!doc) return;
+    try {
+      setIsPreviewLoading(true);
+      setPreviewingDocTitle(doc.title || "Document");
+      const data = await getModerationDocumentViewUrl(doc.id);
+      if (data?.viewUrl) {
+        setPreviewModalUrl(data.viewUrl);
+      } else {
+        alert("Could not load preview URL for this document.");
+      }
+    } catch (err) {
+      alert(err.response?.data?.message || "Failed to load document preview.");
+    } finally {
+      setIsPreviewLoading(false);
+    }
+  }
 
   useEffect(() => {
     async function loadInitialCases() {
@@ -146,7 +192,7 @@ function AIContentModerationPage() {
       const matchesStatus =
         statusFilter === "All" || statusLabel === statusFilter;
       const matchesSeverity =
-        severityFilter === "All" || getSeverity(item.status) === severityFilter;
+        severityFilter === "All" || getSeverity(item) === severityFilter;
 
       return matchesQuery && matchesStatus && matchesSeverity;
     });
@@ -172,7 +218,7 @@ function AIContentModerationPage() {
     const flagged = cases.filter((item) => item.status === "FLAGGED").length;
     const pending = cases.filter((item) => item.status !== "APPROVED").length;
     const rejected = cases.filter((item) => item.status === "REJECTED").length;
-    const highRisk = cases.filter((item) => getSeverity(item.status) === "High").length;
+    const highRisk = cases.filter((item) => getSeverity(item) === "High").length;
 
     return [
       { label: "Flagged files", value: flagged, note: "Require admin action" },
@@ -242,6 +288,7 @@ function AIContentModerationPage() {
             { value: "All", label: "All risk levels" },
             { value: "High", label: "High risk" },
             { value: "Medium", label: "Medium risk" },
+            { value: "Low", label: "Low risk" },
           ]}
           onChange={setSeverityFilter}
         />
@@ -298,55 +345,40 @@ function AIContentModerationPage() {
           </div>
 
           <div className="ai-moderation-page__case-list">
-            {filteredCases.length > 0 ? (
-              paginatedCases.map((item) => {
-                const severity = getSeverity(item.status);
-                return (
-                  <button
-                    type="button"
-                    key={item.id}
-                    className={`ai-moderation-page__case-row ${
-                      selectedCase?.id === item.id ? "is-selected" : ""
-                    }`}
-                    onClick={() =>
-                    setSelectedCaseId((currentId) =>
-                        currentId === item.id ? null : item.id,
-                    )
-                  }
-                  >
-                    <span className="ai-moderation-page__checkbox">
-                    {selectedCase?.id === item.id && <i className="ti-check" />}
+            {paginatedCases.length > 0 ? (
+              paginatedCases.map((item) => (
+                <button
+                  type="button"
+                  key={item.id}
+                  className={`ai-moderation-page__case-row ${item.id === selectedCaseId ? "is-selected" : ""}`}
+                  onClick={() => setSelectedCaseId(item.id)}
+                >
+                  <span className="ai-moderation-page__checkbox" aria-hidden="true">
+                    {item.id === selectedCaseId && <i className="ti-check" />}
                   </span>
-
                   <span className="ai-moderation-page__file-icon">
-                      <i className="ti-file" />
-                    </span>
-
-                    <span className="ai-moderation-page__case-main">
-                      <strong>{item.title}</strong>
-                      <small>{item.id}</small>
-                    </span>
-
-                    <span className="ai-moderation-page__uploader-cell">
-                      <strong>{getDisplayName(item.uploader)}</strong>
-                      <small>{formatDate(item.created_at)}</small>
-                    </span>
-
-                    <span className={`ai-moderation-page__severity ${getSeverityClass(severity)}`}>
-                      {severity}
-                    </span>
-
-                    <span className={`ai-moderation-page__status-pill is-${getStatusLabel(item.status).toLowerCase().replaceAll(" ", "-")}`}>
-                      {getStatusLabel(item.status)}
-                    </span>
-  
-                  <i className="ti-angle-right ai-moderation-page__row-arrow" />
+                    <i className="ti-file" />
+                  </span>
+                  <div className="ai-moderation-page__case-main">
+                    <strong>{item.title}</strong>
+                    <small>ID: {item.id.slice(0, 8)}...</small>
+                  </div>
+                  <div className="ai-moderation-page__uploader-cell">
+                    <strong>{getDisplayName(item.uploader)}</strong>
+                    <small>{formatDate(item.created_at)}</small>
+                  </div>
+                  <span className={`ai-moderation-page__severity ${getSeverityClass(getSeverity(item))}`}>
+                    {getSeverity(item)}
+                  </span>
+                  <span className={`ai-moderation-page__status-pill is-${item.status.toLowerCase()}`}>
+                    {getStatusLabel(item.status)}
+                  </span>
+                  <i className="ti-angle-right ai-moderation-page__row-arrow" aria-hidden="true" />
                 </button>
-                );
-              })
+              ))
             ) : (
               <div className="ai-moderation-page__empty-state">
-                <i className="ti-shield"></i>
+                <i className="ti-face-smile" />
                 <h3>No cases match your filters</h3>
                 <p>Try another keyword, status or severity level.</p>
               </div>
@@ -398,8 +430,8 @@ function AIContentModerationPage() {
                 <div className="ai-moderation-page__detail-title">
                   <h2>{selectedCase.title}</h2>
                 </div>
-                <span className={`ai-moderation-page__severity ${getSeverityClass(getSeverity(selectedCase.status))}`}>
-                  {getSeverity(selectedCase.status)}
+                <span className={`ai-moderation-page__severity ${getSeverityClass(getSeverity(selectedCase))}`}>
+                  {getSeverity(selectedCase)}
                 </span>
               </div>
 
@@ -454,6 +486,15 @@ function AIContentModerationPage() {
               <div className="ai-moderation-page__decision-bar">
                 <button
                   type="button"
+                  className="view"
+                  disabled={isPreviewLoading}
+                  onClick={() => handleViewFile(selectedCase)}
+                >
+                  <i className={isPreviewLoading ? "ti-reload spinner" : "ti-eye"} />
+                  {isPreviewLoading ? "Loading..." : "View file"}
+                </button>
+                <button
+                  type="button"
                   className="approve"
                   onClick={() => updateCaseStatus(selectedCase.id, "Approved")}
                 >
@@ -479,6 +520,41 @@ function AIContentModerationPage() {
           )}
         </aside>
       </div>
+
+      {previewModalUrl && (
+        <div className="ai-moderation-preview-overlay" onClick={() => setPreviewModalUrl(null)}>
+          <div className="ai-moderation-preview-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="ai-moderation-preview-header">
+              <div>
+                <h3>Previewing Document</h3>
+                <p>{previewingDocTitle}</p>
+              </div>
+              <button type="button" className="close-btn" onClick={() => setPreviewModalUrl(null)}>
+                <i className="ti-close" />
+              </button>
+            </div>
+            <div className="ai-moderation-preview-body">
+              {previewingDocTitle?.match(/\.(docx|xlsx|pptx)$/i) ? (
+                <iframe
+                  src={`https://docs.google.com/gview?url=${encodeURIComponent(previewModalUrl)}&embedded=true`}
+                  title="Document preview"
+                  width="100%"
+                  height="100%"
+                  frameBorder="0"
+                />
+              ) : (
+                <iframe
+                  src={previewModalUrl}
+                  title="Document preview"
+                  width="100%"
+                  height="100%"
+                  frameBorder="0"
+                />
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </section>
   );
 }

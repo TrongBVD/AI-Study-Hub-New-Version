@@ -10,6 +10,11 @@ export async function getModerationDocuments() {
   return response.data.data;
 }
 
+export async function getModerationDocumentViewUrl(documentId) {
+  const response = await api.get(`/admin/moderation/${documentId}/view`);
+  return response.data.data;
+}
+
 export async function reviewDocument(documentId, decision, reason) {
   const response = await api.patch(`/admin/moderation/${documentId}`, {
     decision,

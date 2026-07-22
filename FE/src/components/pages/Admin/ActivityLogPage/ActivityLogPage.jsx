@@ -2,6 +2,19 @@ import { useEffect, useMemo, useState } from "react";
 import { getActivityLogs } from "../../../../utils/adminApi";
 import "./ActivityLogPage.css";
 
+const ACTION_OPTIONS = [
+  { value: "DEFAULT", label: "Default (Select an action...)" },
+  { value: "ADMIN_REVIEW_DOCUMENT", label: "ADMIN_REVIEW_DOCUMENT (Admin Review)" },
+  { value: "DOCUMENT_APPROVED", label: "DOCUMENT_APPROVED (File Approved)" },
+  { value: "DOCUMENT_REJECTED", label: "DOCUMENT_REJECTED (File Rejected)" },
+  { value: "FILE_FLAGGED", label: "FILE_FLAGGED (AI Moderation Flagged)" },
+  { value: "WORKSPACE_ROLE_CHANGED", label: "WORKSPACE_ROLE_CHANGED (Role Update)" },
+  { value: "WORKSPACE_DELETED", label: "WORKSPACE_DELETED (Workspace Removed)" },
+  { value: "WORKSPACE_RENAMED", label: "WORKSPACE_RENAMED (Workspace Renamed)" },
+  { value: "ADMIN_UPDATE_USER_STATUS", label: "ADMIN_UPDATE_USER_STATUS (User Status)" },
+  { value: "ADMIN_UPDATE_USER_ROLE", label: "ADMIN_UPDATE_USER_ROLE (User Role)" },
+];
+
 function getDisplayName(user) {
   return user?.full_name || user?.username || user?.email || "Unknown user";
 }
@@ -22,7 +35,7 @@ function getActionType(action = "") {
   if (action.includes("DISABLE") || action.includes("SECURITY")) return "security";
   if (action.includes("DELETE") || action.includes("REJECT")) return "danger";
   if (action.includes("QUOTA")) return "quota";
-  if (action.includes("CREATE") || action.includes("UPLOAD")) return "create";
+  if (action.includes("CREATE") || action.includes("UPLOAD") || action.includes("APPROVED")) return "create";
   return "update";
 }
 
@@ -36,28 +49,59 @@ function getActionLabel(action = "") {
 
 function mapLog(row) {
   const actorName = getDisplayName(row.actor);
+  const adminName = row.admin ? getDisplayName(row.admin) : actorName;
   const createdAt = row.created_at ? new Date(row.created_at) : null;
+  const action = row.action_type || "UNKNOWN_ACTION";
+  const oldData = row.old_data || {};
+  const newData = row.new_data || {};
+
+  let targetUser = "N/A";
+  let documentTitle = row.entity_type === "documents" ? (newData.documentTitle || oldData.title || row.entity_id) : "N/A";
+  let workspaceName = row.entity_type === "workspaces" ? (newData.name || oldData.name || row.entity_id) : "System";
+  let changeSummary = "";
+
+  if (action === "ADMIN_REVIEW_DOCUMENT" || action === "DOCUMENT_APPROVED" || action === "DOCUMENT_REJECTED") {
+    targetUser = oldData.uploader_id ? (oldData.uploader_name || `User ID: ${oldData.uploader_id.slice(0, 8)}...`) : actorName;
+    changeSummary = row.details || `${newData.notificationType || action}`;
+  } else if (action === "FILE_FLAGGED") {
+    targetUser = actorName;
+    changeSummary = newData.word ? `Flagged word: "${newData.word}" (${newData.classification || "FLAGGED"})` : row.details;
+  } else if (action === "WORKSPACE_ROLE_CHANGED") {
+    targetUser = newData.targetUserName || newData.targetUserId || "Workspace Member";
+    changeSummary = `Role change: ${oldData.role || "Member"} → ${newData.role || "Updated"}`;
+  } else if (action === "ADMIN_UPDATE_USER_STATUS") {
+    targetUser = newData.username || newData.targetUserId || row.entity_id;
+    changeSummary = `Status change: ${oldData.status || "Active"} → ${newData.status || "Updated"}`;
+  } else if (action === "ADMIN_UPDATE_USER_ROLE") {
+    targetUser = newData.username || newData.targetUserId || row.entity_id;
+    changeSummary = `Role change: ${oldData.role || "USER"} → ${newData.role || "Updated"}`;
+  } else {
+    changeSummary = row.details || `${action} on ${row.entity_type}`;
+  }
 
   return {
     id: row.id,
     user: row.actor?.email || row.actor?.username || row.user_id || "unknown",
     userName: actorName,
+    adminId: row.admin_id || row.user_id,
+    adminName: adminName,
+    targetUser: targetUser,
     role: row.actor?.username || "User",
     avatar: getInitials(actorName),
-    action: row.action_type || "UNKNOWN_ACTION",
-    actionLabel: getActionLabel(row.action_type || "UNKNOWN_ACTION"),
-    actionType: getActionType(row.action_type || ""),
-    document: row.entity_type === "documents" ? row.entity_id : "N/A",
+    action: action,
+    actionLabel: getActionLabel(action),
+    actionType: getActionType(action),
+    document: documentTitle,
     documentId: row.entity_type === "documents" ? row.entity_id : "N/A",
-    workspace: row.entity_type === "workspaces" ? row.entity_id : row.entity_type || "System",
-    workspaceId: row.entity_type === "workspaces" ? row.entity_id : row.entity_type || "SYS",
+    workspace: workspaceName,
+    workspaceId: row.entity_type === "workspaces" ? row.entity_id : (row.entity_type || "SYS"),
     entityType: row.entity_type || "System",
-    ipAddress: "N/A",
-    device: "Backend API",
+    changeSummary: changeSummary,
+    riskLevel: row.risk_level || "INFO",
     date: createdAt ? createdAt.toISOString().slice(0, 10) : "",
     time: createdAt ? createdAt.toLocaleTimeString() : "",
     result: "Recorded",
-    details: `${row.action_type} on ${row.entity_type} ${row.entity_id}`,
+    details: row.details || changeSummary,
     raw: row,
   };
 }
@@ -85,7 +129,7 @@ function ActivityLogPage() {
   const [logs, setLogs] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [userFilter, setUserFilter] = useState("All users");
-  const [actionFilter, setActionFilter] = useState("All actions");
+  const [actionFilter, setActionFilter] = useState("DEFAULT");
   const [workspaceFilter, setWorkspaceFilter] = useState("All scopes");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
@@ -102,7 +146,6 @@ function ActivityLogPage() {
         const data = await getActivityLogs();
         const mapped = (data || []).map(mapLog);
         setLogs(mapped);
-        setSelectedLog(mapped[0] || null);
       } catch (err) {
         setError(err.response?.data?.message || "Could not load activity logs.");
       } finally {
@@ -112,11 +155,6 @@ function ActivityLogPage() {
 
     loadLogs();
   }, []);
-
-  const actionFilters = useMemo(
-    () => ["All actions", ...new Set(logs.map((log) => log.action))],
-    [logs],
-  );
 
   const uniqueUsers = useMemo(
     () => ["All users", ...new Set(logs.map((log) => log.user))],
@@ -129,6 +167,10 @@ function ActivityLogPage() {
   );
 
   const filteredLogs = useMemo(() => {
+    if (actionFilter === "DEFAULT") {
+      return [];
+    }
+
     const keyword = searchTerm.trim().toLowerCase();
 
     return logs.filter((log) => {
@@ -137,19 +179,19 @@ function ActivityLogPage() {
         [
           log.user,
           log.userName,
+          log.adminName,
+          log.targetUser,
           log.action,
           log.actionLabel,
           log.document,
-          log.documentId,
           log.workspace,
-          log.workspaceId,
+          log.changeSummary,
         ]
           .join(" ")
           .toLowerCase()
           .includes(keyword);
       const matchesUser = userFilter === "All users" || log.user === userFilter;
-      const matchesAction =
-        actionFilter === "All actions" || log.action === actionFilter;
+      const matchesAction = log.action === actionFilter;
       const matchesWorkspace =
         workspaceFilter === "All scopes" ||
         log.workspace === workspaceFilter;
@@ -184,7 +226,7 @@ function ActivityLogPage() {
     return {
       total: filteredLogs.length,
       security: filteredLogs.filter((log) =>
-        ["security", "danger"].includes(log.actionType),
+        ["security", "danger"].includes(log.actionType) || log.riskLevel === "HIGH",
       ).length,
       document: filteredLogs.filter((log) =>
         String(log.entityType).toLowerCase().includes("document"),
@@ -196,25 +238,31 @@ function ActivityLogPage() {
   function resetFilters() {
     setSearchTerm("");
     setUserFilter("All users");
-    setActionFilter("All actions");
+    setActionFilter("DEFAULT");
     setWorkspaceFilter("All scopes");
     setStartDate("");
     setEndDate("");
+    setSelectedLog(null);
     setNotice("Filters reset.");
   }
 
   function exportCsv() {
+    if (filteredLogs.length === 0) {
+      setNotice("No logs selected to export.");
+      return;
+    }
     const rows = [
-      ["Log ID", "User", "Action", "Resource", "Scope", "Date", "Time", "Risk"],
+      ["Log ID", "Actor/Admin", "Target User", "Action", "Document/Workspace", "Change Details", "Date", "Time", "Risk Level"],
       ...filteredLogs.map((log) => [
         log.id,
-        log.user,
+        log.adminName || log.userName,
+        log.targetUser,
         log.action,
-        log.document,
-        log.workspace,
+        log.document !== "N/A" ? log.document : log.workspace,
+        log.changeSummary,
         log.date,
         log.time,
-        log.result,
+        log.riskLevel,
       ]),
     ];
     const csv = rows
@@ -227,7 +275,7 @@ function ActivityLogPage() {
     );
     const link = document.createElement("a");
     link.href = url;
-    link.download = "activity-log.csv";
+    link.download = `audit-logs-${actionFilter}.csv`;
     link.click();
     URL.revokeObjectURL(url);
     setNotice("Activity log exported.");
@@ -240,10 +288,10 @@ function ActivityLogPage() {
   }
 
   const statCards = [
-    ["Total events", stats.total, "All recorded events", "ti-list", "neutral"],
-    ["Security events", stats.security, "Policy and security actions", "ti-shield", "danger"],
-    ["Document actions", stats.document, "Uploads, edits and deletes", "ti-file", "orange"],
-    ["Active scopes", stats.workspace, "Workspaces and libraries", "ti-user", "green"],
+    ["Total events", stats.total, "Filtered action events", "ti-list", "neutral"],
+    ["High risk events", stats.security, "Security & high risk actions", "ti-shield", "danger"],
+    ["Document actions", stats.document, "Document reviews and moderation", "ti-file", "orange"],
+    ["Active scopes", stats.workspace, "Workspaces and targets", "ti-user", "green"],
   ];
 
   return (
@@ -259,7 +307,7 @@ function ActivityLogPage() {
             <button type="button" onClick={resetFilters}>
               <i className="ti-reload" /> Reset filters
             </button>
-            <button type="button" onClick={exportCsv}>
+            <button type="button" onClick={exportCsv} disabled={actionFilter === "DEFAULT"}>
               <i className="ti-download" /> Export CSV
             </button>
           </div>
@@ -294,7 +342,7 @@ function ActivityLogPage() {
           <div className="activity-log-page__filter-header">
             <div>
               <h2>Filter activity logs</h2>
-              <p>Filter by user, action, document, workspace and date range.</p>
+              <p>Select a specific action from the dropdown to inspect audit records.</p>
             </div>
             <strong>{filteredLogs.length} shown</strong>
           </div>
@@ -308,32 +356,46 @@ function ActivityLogPage() {
                   value={searchTerm}
                   onChange={(event) => setSearchTerm(event.target.value)}
                   placeholder="Search logs..."
+                  disabled={actionFilter === "DEFAULT"}
                 />
               </div>
             </label>
 
             <label className="activity-log-page__filter-field">
-              <span>User</span>
-              <select value={userFilter} onChange={(event) => setUserFilter(event.target.value)}>
-                {uniqueUsers.map((user) => <option key={user}>{user}</option>)}
-              </select>
-            </label>
-
-            <label className="activity-log-page__filter-field">
-              <span>Action</span>
+              <span>Action (Required)</span>
               <select
                 value={actionFilter}
-                onChange={(event) => setActionFilter(event.target.value)}
+                onChange={(event) => {
+                  setActionFilter(event.target.value);
+                  setSelectedLog(null);
+                }}
               >
-                {actionFilters.map((action) => (
-                  <option key={action}>{action}</option>
+                {ACTION_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
                 ))}
               </select>
             </label>
 
             <label className="activity-log-page__filter-field">
+              <span>User</span>
+              <select
+                value={userFilter}
+                onChange={(event) => setUserFilter(event.target.value)}
+                disabled={actionFilter === "DEFAULT"}
+              >
+                {uniqueUsers.map((user) => <option key={user}>{user}</option>)}
+              </select>
+            </label>
+
+            <label className="activity-log-page__filter-field">
               <span>Scope</span>
-              <select value={workspaceFilter} onChange={(event) => setWorkspaceFilter(event.target.value)}>
+              <select
+                value={workspaceFilter}
+                onChange={(event) => setWorkspaceFilter(event.target.value)}
+                disabled={actionFilter === "DEFAULT"}
+              >
                 {uniqueWorkspaces.map((scope) => <option key={scope}>{scope}</option>)}
               </select>
             </label>
@@ -342,9 +404,19 @@ function ActivityLogPage() {
               <span>Date range</span>
               <div className="activity-log-page__date-range">
                 <i className="ti-calendar" />
-                <input type="date" value={startDate} onChange={(event) => setStartDate(event.target.value)} />
+                <input
+                  type="date"
+                  value={startDate}
+                  onChange={(event) => setStartDate(event.target.value)}
+                  disabled={actionFilter === "DEFAULT"}
+                />
                 <span>–</span>
-                <input type="date" value={endDate} onChange={(event) => setEndDate(event.target.value)} />
+                <input
+                  type="date"
+                  value={endDate}
+                  onChange={(event) => setEndDate(event.target.value)}
+                  disabled={actionFilter === "DEFAULT"}
+                />
               </div>
             </label>
           </div>
@@ -355,7 +427,11 @@ function ActivityLogPage() {
             <header className="activity-log-page__table-toolbar">
               <div>
                 <h2>Audit records</h2>
-                <p>Showing {filteredLogs.length} of {logs.length} total events.</p>
+                <p>
+                  {actionFilter === "DEFAULT"
+                    ? "No action selected."
+                    : `Showing ${filteredLogs.length} events for ${actionFilter}.`}
+                </p>
               </div>
             </header>
 
@@ -363,24 +439,35 @@ function ActivityLogPage() {
               <table className="activity-log-page__table">
                 <thead>
                   <tr>
-                    <th>User</th>
+                    <th>Actor / Admin</th>
+                    <th>Target User</th>
                     <th>Action</th>
-                    <th>Document</th>
-                    <th>Workspace</th>
-                    <th>Date</th>
-                    <th>Result</th>
+                    <th>Target Resource</th>
+                    <th>Details &amp; Changes</th>
+                    <th>Date &amp; Time</th>
+                    <th>Risk</th>
                     <th />
                   </tr>
                 </thead>
 
                 <tbody>
-                  {filteredLogs.length === 0 ? (
+                  {actionFilter === "DEFAULT" ? (
                     <tr>
-                      <td colSpan="7">
+                      <td colSpan="8">
+                        <div className="activity-log-page__empty">
+                          <i className="ti-mouse-alt" />
+                          <h3>Please select an action to view audit logs.</h3>
+                          <p>Choose an action option from the filter dropdown above to display matching system events.</p>
+                        </div>
+                      </td>
+                    </tr>
+                  ) : filteredLogs.length === 0 ? (
+                    <tr>
+                      <td colSpan="8">
                         <div className="activity-log-page__empty">
                           <i className="ti-search" />
-                          <h3>No logs match these filters</h3>
-                          <p>Adjust the filter values or reset the filter form.</p>
+                          <h3>No audit records found for this action</h3>
+                          <p>Try clearing your search term or adjusting date range filters.</p>
                         </div>
                       </td>
                     </tr>
@@ -392,8 +479,18 @@ function ActivityLogPage() {
                       >
                         <td>
                           <div className="activity-log-page__event">
-                            <span className={`is-${log.actionType}`}><i className={getEventIcon(log.actionType)} /></span>
-                            <div><strong>{log.actionLabel}</strong><small>{log.id}</small></div>
+                            <span className={`is-${log.actionType}`}>
+                              <i className={getEventIcon(log.actionType)} />
+                            </span>
+                            <div>
+                              <strong>{log.adminName || log.userName}</strong>
+                              <small>ID: {(log.adminId || log.user).slice(0, 8)}...</small>
+                            </div>
+                          </div>
+                        </td>
+                        <td>
+                          <div className="activity-log-page__entity-cell">
+                            <strong>{log.targetUser}</strong>
                           </div>
                         </td>
                         <td>
@@ -403,14 +500,13 @@ function ActivityLogPage() {
                         </td>
                         <td>
                           <div className="activity-log-page__entity-cell">
-                            <strong>{log.document}</strong>
-                            <small>{log.documentId}</small>
+                            <strong>{log.document !== "N/A" ? log.document : log.workspace}</strong>
+                            <small>{log.documentId !== "N/A" ? `Doc: ${log.documentId.slice(0, 8)}...` : `Scope: ${log.workspaceId}`}</small>
                           </div>
                         </td>
                         <td>
-                          <div className="activity-log-page__entity-cell">
-                            <strong>{log.workspace}</strong>
-                            <small>{log.workspaceId}</small>
+                          <div className="activity-log-page__change-cell">
+                            <span>{log.changeSummary}</span>
                           </div>
                         </td>
                         <td>
@@ -420,7 +516,9 @@ function ActivityLogPage() {
                           </div>
                         </td>
                         <td>
-                          <span className="activity-log-page__result">{log.result}</span>
+                          <span className={`activity-log-page__risk-pill is-${String(log.riskLevel).toLowerCase()}`}>
+                            {log.riskLevel}
+                          </span>
                         </td>
                         <td>
                           <button
@@ -434,16 +532,20 @@ function ActivityLogPage() {
                       </tr>
                     ))
                   )}
-                  </tbody>
-                </table>
-              </div>
+                </tbody>
+              </table>
+            </div>
 
-              {filteredLogs.length > 0 && (
-                <footer className="activity-log-page__table-footer">
-                  <span>Showing 1–{filteredLogs.length} of {logs.length} events</span>
-                  <div><button disabled><i className="ti-angle-left" /></button><button className="active">1</button><button disabled><i className="ti-angle-right" /></button></div>
-                </footer>
-              )}
+            {filteredLogs.length > 0 && (
+              <footer className="activity-log-page__table-footer">
+                <span>Showing 1–{filteredLogs.length} of {filteredLogs.length} events</span>
+                <div>
+                  <button disabled><i className="ti-angle-left" /></button>
+                  <button className="active">1</button>
+                  <button disabled><i className="ti-angle-right" /></button>
+                </div>
+              </footer>
+            )}
           </article>
 
           <aside className="activity-log-page__details-panel">
@@ -451,24 +553,37 @@ function ActivityLogPage() {
               <>
                 <div className="activity-log-page__details-title">
                   <h2>Event details</h2>
-                  <button type="button" onClick={() => setSelectedLog(null)} aria-label="Close details"><i className="ti-close" /></button>
+                  <button type="button" onClick={() => setSelectedLog(null)} aria-label="Close details">
+                    <i className="ti-close" />
+                  </button>
                 </div>
 
                 <div className="activity-log-page__details-list">
                   <div>
-                    <span>User</span>
-                    <strong>{selectedLog.userName}</strong>
-                    <small>{selectedLog.user}</small>
+                    <span>Actor / Admin</span>
+                    <strong>{selectedLog.adminName || selectedLog.userName}</strong>
+                    <small>ID: {selectedLog.adminId || selectedLog.user}</small>
                   </div>
                   <div>
-                    <span>Entity</span>
-                    <strong>{selectedLog.entityType}</strong>
-                    <small>{selectedLog.raw?.entity_id}</small>
+                    <span>Target User</span>
+                    <strong>{selectedLog.targetUser}</strong>
                   </div>
                   <div>
-                    <span>Device</span>
-                    <strong>{selectedLog.device}</strong>
-                    <small>{selectedLog.ipAddress}</small>
+                    <span>Action Type</span>
+                    <strong>{selectedLog.action}</strong>
+                  </div>
+                  <div>
+                    <span>Target Resource</span>
+                    <strong>{selectedLog.document !== "N/A" ? selectedLog.document : selectedLog.workspace}</strong>
+                    <small>ID: {selectedLog.documentId !== "N/A" ? selectedLog.documentId : selectedLog.workspaceId}</small>
+                  </div>
+                  <div>
+                    <span>Change Summary</span>
+                    <strong>{selectedLog.changeSummary}</strong>
+                  </div>
+                  <div>
+                    <span>Risk Level</span>
+                    <strong className={`risk-text-${String(selectedLog.riskLevel).toLowerCase()}`}>{selectedLog.riskLevel}</strong>
                   </div>
                   <div>
                     <span>Timestamp</span>
