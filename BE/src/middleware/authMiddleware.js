@@ -20,7 +20,7 @@ async function authMiddleware(req, res, next) {
         role: "GUEST",
         email: "guest@studyhub.local",
         username: "GuestUser",
-        full_name: "Khách (Guest)",
+        full_name: "Guest",
         status: "ACTIVE",
       };
       return next();
@@ -69,7 +69,7 @@ async function authMiddleware(req, res, next) {
     if (user.session_id && user.session_id !== decoded.session_id) {
         return res.status(401).json({
           status: "error",
-          message: "Tài khoản của bạn đã được đăng nhập ở một thiết bị khác.",
+          message: "Your account has been logged in on another device.",
           code: "SESSION_EXPIRED"
         });
     }

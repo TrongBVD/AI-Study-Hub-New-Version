@@ -57,8 +57,8 @@ exports.googleLogin = async (req, res) => {
         }
         res.status(200).json({ status: 'success', data: result });
     } catch (error) {
-        console.error("🔴 LỖI BACKEND GOOGLE LOGIN:", error);
-        res.status(401).json({ status: 'error', message: 'Token Google không hợp lệ.' });
+        console.error("🔴 GOOGLE LOGIN BACKEND ERROR:", error);
+        res.status(401).json({ status: 'error', message: 'Invalid Google token.' });
     }
 };
 
@@ -89,12 +89,12 @@ exports.verifyOTP = async (req, res) => {
         if (!user || user.password_hash !== 'GOOGLE_SSO_NO_PASSWORD') {
             return res.status(400).json({
                 status: 'error',
-                message: 'Tài khoản không ở trạng thái chờ hoàn tất hồ sơ.'
+                message: 'Account is not pending profile completion.'
             });
         }
 
         // ======================================================
-        // 3. KIỂM TRA OTP CÓ ĐÚNG VÀ CÒN HẠN KHÔNG
+        // 3. CHECK IF OTP IS VALID AND NOT EXPIRED
         // ======================================================
         const { data: otpRecord, error } = await supabase
             .from('otp_tokens')
@@ -107,14 +107,14 @@ exports.verifyOTP = async (req, res) => {
             .maybeSingle();
 
         if (error) {
-            console.error("🔴 Lỗi truy vấn Supabase:", error);
+            console.error("🔴 Supabase query error:", error);
             throw error;
         }
 
         if (!otpRecord) {
             return res.status(400).json({
                 status: 'error',
-                message: 'Mã OTP không hợp lệ hoặc đã hết hạn.'
+                message: 'Invalid or expired OTP code.'
             });
         }
 
@@ -198,14 +198,14 @@ exports.completeSetup = async (req, res) => {
         } catch (tokenError) {
             return res.status(401).json({
                 status: "error",
-                message: "Phiên xác minh OTP không hợp lệ hoặc đã hết hạn."
+                message: "OTP verification session is invalid or has expired."
             });
         }
 
         if (payload.type !== "complete_setup" || payload.email !== cleanEmail) {
             return res.status(401).json({
                 status: "error",
-                message: "Phiên xác minh OTP không hợp lệ hoặc đã hết hạn."
+                message: "OTP verification session is invalid or has expired."
             });
         }
 
@@ -215,7 +215,7 @@ exports.completeSetup = async (req, res) => {
         if (!cleanUsername || cleanUsername.length < 3) {
             return res.status(400).json({
                 status: "error",
-                message: "Username phải có ít nhất 3 ký tự."
+                message: "Username must be at least 3 characters long."
             });
         }
 
@@ -233,17 +233,17 @@ exports.completeSetup = async (req, res) => {
         if (existingUser) {
             return res.status(400).json({
                 status: 'error',
-                message: 'Username đã được sử dụng.'
+                message: 'Username is already taken.'
             });
         }
 
         // ======================================================
-        // 4. KIỂM TRA PASSWORD
+        // 4. CHECK PASSWORD
         // ======================================================
         if (!password || password.trim() === "") {
             return res.status(400).json({
                 status: 'error',
-                message: 'Mật khẩu là thông tin bắt buộc.'
+                message: 'Password is required.'
             });
         }
 
@@ -252,7 +252,7 @@ exports.completeSetup = async (req, res) => {
         if (!regex.test(password)) {
             return res.status(400).json({
                 status: 'error',
-                message: 'Mật khẩu không đạt yêu cầu bảo mật.'
+                message: 'Password does not meet security requirements.'
             });
         }
 
@@ -285,12 +285,12 @@ exports.completeSetup = async (req, res) => {
         if (!updatedUser) {
             return res.status(400).json({
                 status: "error",
-                message: "Không thể hoàn tất hồ sơ. Tài khoản có thể đã được thiết lập trước đó."
+                message: "Unable to complete profile setup. Account may have already been configured."
             });
         }
 
         // ======================================================
-        // 7. TẠO ACCESS TOKEN ĐỂ FRONTEND VÀO DASHBOARD
+        // 7. CREATE ACCESS TOKEN FOR DASHBOARD ENTRY
         // ======================================================
         const currentSessionId = crypto.randomUUID();
         updatedUser.session_id = currentSessionId;
@@ -311,7 +311,7 @@ exports.completeSetup = async (req, res) => {
 
         res.status(200).json({
             status: 'success',
-            message: 'Cập nhật thành công',
+            message: 'Update successful',
             data: {
                 accessToken,
                 user: buildPublicUser(updatedUser),
@@ -341,31 +341,30 @@ exports.login = async (req, res) => {
 
         // Trạng thái: Không tìm thấy con trỏ user
         if (!user) {
-            return res.status(401).json({ status: 'error', message: 'Tài khoản không tồn tại.' });
+            return res.status(401).json({ status: 'error', message: 'Account does not exist.' });
         }
 
-        // Trạng thái: Chặn tài khoản chưa setup pass (chỉ mới login Google 1 nửa)
+        // Status: Block account that has not set up password (only completed half of Google login)
         if (user.password_hash === 'GOOGLE_SSO_NO_PASSWORD') {
             return res.status(401).json({ 
                 status: 'error', 
-                message: 'Tài khoản này chưa hoàn tất thiết lập mật khẩu. Vui lòng đăng nhập qua Google.' });
+                message: 'Password setup for this account is incomplete. Please sign in with Google.' });
         }
         if (user.status === "DISABLED") {
             return res.status(403).json({
                 status: "error",
-                message: "Tài khoản của bạn đã bị vô hiệu hóa. Vui lòng liên hệ quản trị viên."
+                message: "Your account has been disabled. Please contact an administrator."
             });
         }
 
-        // 2. Phân tích vùng nhớ Password
-        // Nạp chuỗi thô (password) và chuỗi hash từ DB (user.password_hash) vào thuật toán bcrypt
+        // 2. Password matching check
         const isMatch = await bcrypt.compare(password, user.password_hash);
 
         if (!isMatch) {
             return res.status(401).json({
                 status: 'error',
                 code: 'WRONG_PASSWORD',
-                message: 'Sai mật khẩu. Vui lòng kiểm tra lại hoặc chọn Quên mật khẩu để đặt lại.'
+                message: 'Incorrect password. Please check your password or choose Forgot Password to reset.'
             });
         }
 
@@ -417,15 +416,15 @@ exports.forgotPassword = async (req, res) => {
             .maybeSingle();
 
         if (!user) {
-            return res.status(404).json({ status: 'error', message: 'Email này chưa được đăng ký trong hệ thống.' });
+            return res.status(404).json({ status: 'error', message: 'This email is not registered in our system.' });
         }
         if (user.password_hash === 'GOOGLE_SSO_NO_PASSWORD') {
-            return res.status(400).json({ status: 'error', message: 'Tài khoản này đăng nhập bằng Google. Không thể đổi mật khẩu.' });
+            return res.status(400).json({ status: 'error', message: 'This account signs in with Google. Password cannot be changed.' });
         }
 
-        // 2. Cấp phát OTP vào bảng otp_tokens
+        // 2. Issue OTP to otp_tokens table
         const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
-        const expiresAt = new Date(Date.now() + 10 * 60000); // 10 phút
+        const expiresAt = new Date(Date.now() + 10 * 60000); // 10 minutes
 
         await supabase.from('otp_tokens').insert([{
             email: cleanEmail,
@@ -433,20 +432,20 @@ exports.forgotPassword = async (req, res) => {
             expires_at: expiresAt.toISOString()
         }]);
 
-        // 3. Gửi email OTP khôi phục mật khẩu
+        // 3. Send password recovery OTP email
         const transporter = createMailTransporter();
 
         await transporter.sendMail({
             from: process.env.EMAIL_USER,
             to: cleanEmail,
             subject: 'AI StudyHub - Password Reset Code',
-            text: `Mã OTP khôi phục mật khẩu của bạn là: ${otpCode}. Mã hết hạn sau 10 phút.`
+            text: `Your password reset code is: ${otpCode}. The code expires in 10 minutes.`
         });
 
         res.status(200).json({
             status: 'success',
             code: 'OTP_SENT',
-            message: 'Mã OTP đã được gửi đến email của bạn. Mã có hiệu lực trong 10 phút.'
+            message: 'OTP code has been sent to your email. Valid for 10 minutes.'
         });
     } catch (error) {
         console.error("🔴 Lỗi forgotPassword:", error);
@@ -471,7 +470,7 @@ exports.verifyResetPasswordOTP = async (req, res) => {
         if (!user || user.password_hash === "GOOGLE_SSO_NO_PASSWORD") {
             return res.status(400).json({
                 status: "error",
-                message: "Thông tin khôi phục không hợp lệ hoặc tài khoản không hỗ trợ đặt lại mật khẩu."
+                message: "Invalid recovery information or account does not support password reset."
             });
         }
 
@@ -490,7 +489,7 @@ exports.verifyResetPasswordOTP = async (req, res) => {
         if (!otpRecord) {
             return res.status(400).json({
                 status: "error",
-                message: "Mã OTP không hợp lệ hoặc đã hết hạn."
+                message: "Invalid or expired OTP code."
             });
         }
 
@@ -504,7 +503,7 @@ exports.verifyResetPasswordOTP = async (req, res) => {
 
         return res.status(200).json({
             status: "success",
-            message: "Xác minh OTP thành công.",
+            message: "OTP verification successful.",
             data: {
                 email: cleanEmail,
                 resetToken
@@ -532,7 +531,7 @@ exports.resetPassword = async (req, res) => {
         } catch {
             return res.status(401).json({
                 status: "error",
-                message: "Phiên đặt lại mật khẩu không hợp lệ hoặc đã hết hạn."
+                message: "Password reset session is invalid or has expired."
             });
         }
 
@@ -540,7 +539,7 @@ exports.resetPassword = async (req, res) => {
         if (!passwordRegex.test(newPassword)) {
             return res.status(400).json({
                 status: "error",
-                message: "Mật khẩu cần >= 8 ký tự, có ít nhất 1 chữ thường, 1 số, 1 ký tự đặc biệt và không chứa khoảng trắng."
+                message: "Password must be >= 8 characters, contain at least 1 lowercase letter, 1 number, 1 special character, and no spaces."
             });
         }
 
@@ -555,7 +554,7 @@ exports.resetPassword = async (req, res) => {
         if (!user || user.password_hash === "GOOGLE_SSO_NO_PASSWORD") {
             return res.status(400).json({
                 status: "error",
-                message: "Thông tin khôi phục không hợp lệ hoặc tài khoản không hỗ trợ đặt lại mật khẩu."
+                message: "Invalid recovery information or account does not support password reset."
             });
         }
 
@@ -571,7 +570,7 @@ exports.resetPassword = async (req, res) => {
 
         res.status(200).json({
             status: "success",
-            message: "Đổi mật khẩu thành công. Vui lòng đăng nhập lại."
+            message: "Password reset successful. Please sign in again."
         });
     } catch (error) {
         console.error("🔴 Lỗi resetPassword:", error);
@@ -750,10 +749,10 @@ exports.getUserProfileById = async (req, res) => {
 
     // Kiểm tra đề phòng trường hợp frontend truyền nhầm chuỗi "undefined"
     if (!id || id === "undefined") {
-      return res.status(400).json({ status: "error", message: "ID người dùng không hợp lệ." });
+      return res.status(400).json({ status: "error", message: "Invalid user ID." });
     }
 
-    // 1. Lấy thông tin tài khoản người dùng từ bảng profiles
+    // 1. Get user account info from profiles table
     const { data: profile, error: profileError } = await supabase
       .from("profiles")
       .select("id, username, full_name, date_of_birth, is_dob_public, avatar_url")
@@ -764,10 +763,10 @@ exports.getUserProfileById = async (req, res) => {
     if (profileError) throw profileError;
     
     if (!profile) {
-      return res.status(404).json({ status: "error", message: "Không tìm thấy người dùng này trong hệ thống." });
+      return res.status(404).json({ status: "error", message: "User not found in system." });
     }
 
-    // 2. Lấy danh sách thư viện được cấu hình công khai (is_public = true) của user đó
+    // 2. Get list of public libraries (is_public = true) for user
     const { data: libraries, error: libError } = await supabase
       .from("libraries")
       .select("id, name, description, created_at")
@@ -776,10 +775,10 @@ exports.getUserProfileById = async (req, res) => {
       .eq("is_public", true);
 
     if (libError) {
-      console.warn("Không thể tải danh sách libraries cá nhân, bỏ qua lỗi này:", libError);
+      console.warn("Unable to load personal libraries, skipping:", libError);
     }
 
-    // Trả về cấu trúc dữ liệu đồng bộ cho Frontend nhận diện
+    // Return sync data structure for Frontend
     return res.status(200).json({
       status: "success",
       data: {
@@ -789,8 +788,8 @@ exports.getUserProfileById = async (req, res) => {
     });
 
   } catch (error) {
-    console.error("Lỗi hệ thống tại getUserProfileById:", error);
-    return res.status(500).json({ status: "error", message: "Lỗi xử lý server nội bộ.", error: error.message });
+    console.error("System error in getUserProfileById:", error);
+    return res.status(500).json({ status: "error", message: "Internal server error.", error: error.message });
   }
 };
 

@@ -29,11 +29,11 @@ describe("Black-box tests - authentication public functions", () => {
   });
 
   test("BB-02 email with consecutive dots is rejected", () => {
-    expect(() => normalizeEmail("user..name@example.com")).toThrow("Email không hợp lệ");
+    expect(() => normalizeEmail("user..name@example.com")).toThrow("Invalid email address");
   });
 
   test("BB-03 email with a domain label starting with hyphen is rejected", () => {
-    expect(() => normalizeEmail("user@-example.com")).toThrow("Email không hợp lệ");
+    expect(() => normalizeEmail("user@-example.com")).toThrow("Invalid email address");
   });
 
   test("BB-04 username beginning with a dot is rejected", () => {
@@ -53,7 +53,7 @@ describe("Black-box tests - authentication public functions", () => {
   });
 
   test("BB-08 setup token is not issued for an invalid email", () => {
-    expect(() => signSetupToken("invalid-email")).toThrow("Email không hợp lệ");
+    expect(() => signSetupToken("invalid-email")).toThrow("Invalid email address");
   });
 
   test("BB-09 setup token verification treats email casing as equivalent", () => {

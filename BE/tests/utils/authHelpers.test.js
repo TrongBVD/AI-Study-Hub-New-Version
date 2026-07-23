@@ -11,7 +11,7 @@ describe("authHelpers", () => {
   });
 
   test("normalizeEmail throws for invalid email", () => {
-    expect(() => normalizeEmail("abc")).toThrow("Email không hợp lệ");
+    expect(() => normalizeEmail("abc")).toThrow("Invalid email address");
   });
 
   test("validateUsername accepts valid username", () => {

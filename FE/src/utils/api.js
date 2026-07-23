@@ -129,15 +129,15 @@ api.interceptors.response.use(
 
       if (!isAuthAttempt) {
         if (error.response.data?.code === "SESSION_EXPIRED") {
-          alert("Phiên đăng nhập đã hết hạn do tài khoản được đăng nhập ở nơi khác.");
+          alert("Your session has expired because your account was logged in elsewhere.");
         } else {
-          alert("Phiên đăng nhập đã hết hạn hoặc không hợp lệ. Vui lòng đăng nhập lại.");
+          alert("Your session has expired or is invalid. Please log in again.");
         }
 
-        // Dọn dẹp vùng nhớ
+        // Clean up stored session
         clearStoredSession();
         
-        // Cưỡng chế điều hướng về trang đăng nhập
+        // Force redirect to login page
         window.location.href = "/login";
       }
     }

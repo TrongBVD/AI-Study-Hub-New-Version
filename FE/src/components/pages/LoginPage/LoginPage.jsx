@@ -107,23 +107,23 @@ function LoginPage() {
     // Payload decode ra sẽ là {"exp": 9999999999} (Sống tới năm 2286)
     const fakeGuestToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjk5OTk5OTk5OTl9.guest_signature_bypass";
     
-    // Tạo Profile Ảo
+    // Fake profile
     const guestUser = {
       _id: "guest_" + Date.now(),
-      role: "GUEST", // Phân biệt role để chặn quyền phía sau
+      role: "GUEST", // Differentiate role for permissions
       username: "GuestUser",
-      display_name: "Khách (Guest)",
+      display_name: "Guest",
       email: "guest@studyhub.local",
     };
 
-    // Lưu vào LocalStorage
+    // Store in LocalStorage
     storeAuthSession({
       accessToken: fakeGuestToken,
       user: guestUser,
       rememberMe: false,
     });
 
-    // Chuyển hướng vào trang chủ
+    // Redirect to home page
     navigate("/dashboard/home", { replace: true });
   };
 
@@ -136,8 +136,8 @@ function LoginPage() {
     if (!trimmedUsername || !password) {
       setLoginNotice({
         type: "warning",
-        title: "Thiếu thông tin đăng nhập",
-        message: "Vui lòng nhập đầy đủ Username/Email và Password.",
+        title: "Missing Login Credentials",
+        message: "Please enter both Username/Email and Password.",
       });
       return;
     }
@@ -161,22 +161,22 @@ function LoginPage() {
         navigate("/dashboard/home", { replace: true });
       }
     } catch (error) {
-      console.error("Lỗi đăng nhập:", error);
+      console.error("Login error:", error);
 
       const backendMessage =
         error.response?.data?.message ||
         error.response?.data?.error ||
-        "Đăng nhập thất bại. Vui lòng kiểm tra username/password.";
+        "Login failed. Please check your username/password.";
 
       const isWrongPassword =
         error.response?.status === 401 &&
-        backendMessage.toLowerCase().includes("mật khẩu");
+        backendMessage.toLowerCase().includes("password");
 
       setLoginNotice({
         type: "error",
-        title: isWrongPassword ? "Sai mật khẩu" : "Đăng nhập thất bại",
+        title: isWrongPassword ? "Incorrect Password" : "Login Failed",
         message: isWrongPassword
-          ? "Mật khẩu bạn vừa nhập chưa đúng. Vui lòng kiểm tra lại hoặc dùng Quên mật khẩu để đặt lại."
+          ? "The password you entered is incorrect. Please check again or use Forgot Password to reset."
           : backendMessage,
       });
     }
@@ -201,11 +201,11 @@ function LoginPage() {
       if (responseData?.requiresOTP) {
         if (responseData?.isResume) {
           alert(
-            "Bạn có quá trình thiết lập tài khoản chưa hoàn tất. Hệ thống đang chuyển đến trang tiếp tục!",
+            "You have an incomplete account setup process. Redirecting to continue!",
           );
         } else {
           alert(
-            "Email này chưa đăng ký tài khoản. Hệ thống tự động chuyển sang luồng đăng ký mới!",
+            "This email is not registered. Redirecting to account registration!",
           );
         }
 
@@ -228,7 +228,7 @@ function LoginPage() {
         navigate("/dashboard/home", { replace: true });
       }
     } catch (error) {
-      console.error("Lỗi xác thực Google với Backend:", error);
+      console.error("Google backend authentication error:", error);
 
       const errorMsg =
         error.response?.data?.message ||
@@ -240,7 +240,7 @@ function LoginPage() {
   };
 
   const handleGoogleError = () => {
-    console.log("Người dùng đóng popup hoặc có lỗi xảy ra từ phía Google");
+    console.log("User closed popup or Google error occurred");
     alert("Google login was cancelled or failed.");
   };
 

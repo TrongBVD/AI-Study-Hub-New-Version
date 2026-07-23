@@ -283,22 +283,22 @@ ${content}
 // src/services/aiService.js
 
 async function generateTagsAndName(extractedText, originalName) {
-  // Chỉ lấy khoảng 1000 ký tự đầu tiên để tiết kiệm token
+  // Only take the first ~1000 characters to save tokens
   const sampleText = String(extractedText || "").substring(0, 1000);
 
-  const prompt = `Bạn là hệ thống phân loại tài liệu. 
-  Tên file gốc: "${originalName}"
-  Nội dung trích xuất: "${sampleText}"
+  const prompt = `You are a document classification system. 
+  Original filename: "${originalName}"
+  Extracted content: "${sampleText}"
   
-  Nhiệm vụ:
-  1. Gợi ý 1-3 tags mô tả nội dung (dạng danh từ, ví dụ: #math, #grade12).
-  2. Kiểm tra tên file gốc có sai chính tả hoặc sai nội dung không. Nếu sai, hãy gợi ý tên mới và viết 1 câu thông báo ngắn. Nếu đúng, để rỗng.
+  Tasks:
+  1. Suggest 1-3 tags describing the content (nouns, e.g. #math, #grade12).
+  2. Check if the original filename has spelling errors or incorrect subject naming. If incorrect, suggest a new name and a short notice message. If correct, leave empty.
   
-  BẮT BUỘC trả về ĐÚNG định dạng JSON sau, không có text nào khác:
+  MUST return strictly in the following JSON format, with no extra text:
   {
     "tags": ["#tag1", "#tag2"],
-    "suggestedName": "Tên chuẩn (nếu cần đổi)",
-    "message": "Thông báo (ví dụ: File về toán học nhưng đặt tên physic, bạn có muốn đổi thành math.pdf không?)"
+    "suggestedName": "Standard name (if change needed)",
+    "message": "Notice message (e.g., The file is about math but named physics, would you like to rename it to math.pdf?)"
   }`;
 
   try {
@@ -310,7 +310,7 @@ async function generateTagsAndName(extractedText, originalName) {
       message: result.message || ""
     };
   } catch (error) {
-    console.error("Lỗi khi generateTagsAndName với Gemini:", error);
+    console.error("Error in generateTagsAndName with Gemini:", error);
     return {
       tags: [],
       suggestedName: "",
@@ -329,17 +329,17 @@ function isWholeWordPresent(text, word) {
 async function checkSensitiveContent(text) {
   const sampleText = String(text || "").substring(0, 8000);
 
-  const prompt = `Bạn là hệ thống kiểm duyệt nội dung tự động cho môi trường học tập. 
-Hãy đọc đoạn văn bản tài liệu dưới đây và chỉ liệt kê CHÍNH XÁC các từ hoặc cụm từ tục tĩu/vi phạm (ví dụ: 'stupid' hoặc 'stupid, damn').
+  const prompt = `You are an automated content moderation system for an academic learning environment. 
+Read the document text below and list EXACTLY the profane or violating words/phrases (e.g. 'stupid' or 'stupid, damn').
 
-Văn bản tài liệu:
+Document text:
 "${sampleText}"
 
-BẮT BUỘC trả về ĐÚNG định dạng JSON sau, không kèm bất kỳ giải thích nào khác ngoài JSON:
+MUST return strictly in the following JSON format, with no explanation outside the JSON:
 {
-  "classification": "SEVERE" (nếu cực kỳ thô tục, dâm ô, xúc phạm nặng) hoặc "MILD" (nếu có từ chửi tục nhẹ hoặc từ lóng không phù hợp nhẹ) hoặc "NONE" (nếu tài liệu sạch sẽ, bình thường),
-  "word": "chỉ liệt kê từ hoặc các từ vi phạm phân cách bằng dấu phẩy (ví dụ: 'stupid'). NẾU KHÔNG CÓ TỪ TỤC THÌ ĐỂ NULL",
-  "suspicious_text": "chỉ ghi đúng từ vi phạm (ví dụ: 'stupid'), TUỆT ĐỐI KHÔNG GHI CẢ CÂU VĂN"
+  "classification": "SEVERE" (if extremely profane, sexually explicit, or severely offensive) or "MILD" (if mild profanity or mild slang) or "NONE" (if clean/normal document),
+  "word": "list only the violating words separated by commas (e.g., 'stupid'). IF NO PROFANITY, RETURN NULL",
+  "suspicious_text": "write exact violating words only (e.g., 'stupid'), ABSOLUTELY DO NOT WRITE FULL SENTENCES"
 }`;
 
   try {
@@ -352,7 +352,7 @@ BẮT BUỘC trả về ĐÚNG định dạng JSON sau, không kèm bất kỳ g
       suspicious_text: extractedWords
     };
   } catch (error) {
-    console.error("Lỗi AI checkSensitiveContent:", error);
+    console.error("AI checkSensitiveContent error:", error);
     return { classification: "NONE", word: null, suspicious_text: null };
   }
 }
@@ -365,40 +365,36 @@ async function validateTagsAndContent(
 ) {
   const sampleText = String(extractedText || "").substring(0, 5000);
 
-  const prompt = `Bạn là hệ thống kiểm duyệt và gợi ý hashtag cho tài liệu học tập của sinh viên.
-Tên file gốc: "${originalName}"
-Nội dung trích xuất của file (mẫu 5000 ký tự đầu):
+  const prompt = `You are a content moderation and hashtag suggestion system for student study materials.
+Original filename: "${originalName}"
+Document content (first 5000 chars):
 "${sampleText}"
 
-Danh sách hashtags người dùng nhập vào: ${JSON.stringify(userTags)}
+User input hashtags: ${JSON.stringify(userTags)}
 
-Nhiệm vụ của bạn:
-1. Đối với MỖI hashtag trong danh sách trên, hãy kiểm tra:
-   - Nó có sai chính tả tiếng Việt hoặc tiếng Anh không? Lưu ý quan trọng: Vì là hashtag nên người dùng có thể viết liền không dấu hoặc viết hoa chữ cái đầu từ (ví dụ: "SoftwareTesting", "softwaretesting", "onthihocky"). Đây là định dạng bình thường của hashtag, không được báo là sai chính tả. Hãy phân tích các từ đơn cấu thành để kiểm tra xem có sai chính tả thực tế không.
-   - Nó có phản ánh đúng và chính xác nội dung/chủ đề của tài liệu không?
-   - Định dạng của hashtag: Bắt đầu bằng dấu # và viết liền (không có khoảng trắng, ví dụ: #SoftwareTesting). Nếu người dùng nhập không có dấu # (ví dụ: "Software Testing" hoặc "SoftwareTesting"), hãy xem xét nó vẫn là hợp lệ (isValid = true) nếu đúng chính tả và chủ đề, nhưng trong phần "recommendedReplacement" bạn hãy định dạng lại nó thành chuẩn hashtag có dấu # và viết liền (ví dụ: "#SoftwareTesting").
-   - Ngôn ngữ của hashtag: Ưu tiên sử dụng tiếng Anh cho các hashtag để đồng bộ hệ thống. Nếu người dùng nhập hashtag bằng tiếng Việt (ví dụ: "lichsu", "toanhoc"), bạn VẪN coi là hợp lệ (isValid = true, KHÔNG được đánh dấu false để chặn upload), nhưng trong phần "recommendedReplacement" bạn hãy dịch và gợi ý tag tương đương bằng tiếng Anh (ví dụ: "#history", "#mathematics") và ghi chú vào phần "reason" khuyên họ nên đổi sang tiếng Anh (ví dụ: "Bạn nên dùng tiếng Anh cho hashtag (#history) thay vì tiếng Việt (#lichsu) để đồng bộ.").
+Your tasks:
+1. For EACH hashtag in the user list, check:
+   - Does it have spelling errors? Note: Since it is a hashtag, users may write without spaces or use CamelCase (e.g., "SoftwareTesting", "softwaretesting"). This is standard hashtag format and should not be marked invalid. Analyze constituent words to check for actual misspellings.
+   - Does it accurately reflect the content/topic of the document?
+   - Format: Starts with # and no spaces (e.g. #SoftwareTesting). If user entered without #, consider it valid (isValid = true) if spelling/topic are correct, but format it with # in "recommendedReplacement".
+   - Language: Prefer English for hashtags for consistency.
    
-2. Gợi ý thêm 3-5 hashtags liên quan nhất dựa trên nội dung tài liệu (luôn bắt đầu bằng dấu #, viết liền và viết bằng tiếng Anh).
+2. Suggest 3-5 additional relevant hashtags based on the document content (always starting with #, no spaces, written in English).
 
 IMPORTANT: Every value in the "reason" field MUST be written entirely in English. Do not return Vietnamese text in "reason".
 
-BẮT BUỘC trả về ĐÚNG định dạng JSON sau, không kèm bất kỳ đoạn văn bản giải thích nào khác ngoài JSON:
+MUST return strictly in the following JSON format, with no extra explanation outside JSON:
 {
   "tagValidations": [
     {
-      "tag": "tên_tag_đang_kiểm_tra",
-      "isValid": true hoặc false,
-      "recommendedReplacement": "#tag_gợi_ý_thay_thế_nếu_sai_hoặc_không_phù_hợp_hoặc_cần_thêm_dấu_thăng_và_viết_liền_hoặc_dịch_sang_tiếng_anh",
+      "tag": "tag_name_being_checked",
+      "isValid": true or false,
+      "recommendedReplacement": "#suggested_replacement_tag",
       "reason": "An English explanation of why the tag should be replaced; otherwise leave this empty"
     }
   ],
-  "aiRecommendedTags": ["#goiy1", "#goiy2", "#goiy3"]
+  "aiRecommendedTags": ["#recommendation1", "#recommendation2", "#recommendation3"]
 }
-
-Ví dụ: Nếu người dùng nhập ["Software Testing", "lichsu12"] mà file nói về lịch sử Việt Nam lớp 12:
-- "Software Testing" sẽ có isValid = false, recommendedReplacement = "#vietnamhistory", reason = "This software-related hashtag is not relevant to the document about Vietnamese history."
-- "lichsu12" sẽ có isValid = true, recommendedReplacement = "#lichsu12", reason = ""
 `;
 
   try {
@@ -424,7 +420,7 @@ Ví dụ: Nếu người dùng nhập ["Software Testing", "lichsu12"] mà file 
       aiRecommendedTags
     };
   } catch (error) {
-    console.error("Lỗi khi validateTagsAndContent với Gemini:", error);
+    console.error("Error in validateTagsAndContent with Gemini:", error);
     if (options.throwOnError) {
       throw error;
     }

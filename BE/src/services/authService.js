@@ -165,15 +165,15 @@ exports.verifyAndLoginGoogle = async (googleToken) => {
         // Tạo mail transporter
         const transporter = createMailTransporter();
 
-        // Gửi OTP qua email
+        // Send OTP via email
         await transporter.sendMail({
             from: process.env.EMAIL_USER,
             to: cleanEmail,
             subject: 'AI StudyHub - Your Verification Code',
-            text: `Mã xác thực của bạn là: ${otpCode}. Mã sẽ hết hạn sau ${OTP_EXPIRY_MINUTES} phút.`
+            text: `Your verification code is: ${otpCode}. Code expires in ${OTP_EXPIRY_MINUTES} minutes.`
         });
 
-        // Trả về cho frontend biết cần nhập OTP
+        // Return to frontend to prompt for OTP
         return {
             email: cleanEmail,
             requiresOTP: true,
@@ -183,10 +183,10 @@ exports.verifyAndLoginGoogle = async (googleToken) => {
 
 
     // --------------------------------------------------
-    // 6.5. Nếu user đã hoàn tất setup thì cấp accessToken
+    // 6.5. If user has completed setup, issue accessToken
     // --------------------------------------------------
     if(user.status === "DISABLED") {
-        throw new Error("Tài khoản của bạn đã bị vô hiệu hóa. Vui lòng liên hệ quản trị viên.");
+        throw new Error("Your account has been disabled. Please contact an administrator.");
     }
     const currentSessionId = require("crypto").randomUUID();
     user.session_id = currentSessionId;

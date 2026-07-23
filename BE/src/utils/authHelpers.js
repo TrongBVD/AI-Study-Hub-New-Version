@@ -18,19 +18,19 @@ function getJwtSecret() {
 
 function normalizeEmail(email) {
   if (typeof email !== "string") {
-    throw new Error("Email không hợp lệ");
+    throw new Error("Invalid email address");
   }
   const cleanEmail = email.trim().toLowerCase();
   const emailRegex = /^(?!.*\.\.)[A-Z0-9.!#$%&'*+/=?^_`{|}~-]+@(?!(?:.*\.)?-)[A-Z0-9-]+(?:\.[A-Z0-9-]+)+$/i;
   if (!emailRegex.test(cleanEmail)) {
-    throw new Error("Email không hợp lệ");
+    throw new Error("Invalid email address");
   }
   return cleanEmail;
 }
 
 function normalizeUsername(username) {
   if (typeof username !== "string") {
-    throw new Error("Username không hợp lệ");
+    throw new Error("Invalid username");
   }
   return username.trim();
 }
@@ -44,7 +44,7 @@ function validateUsername(username) {
     return {
       valid: false,
       message:
-        "Username phải từ 3-30 ký tự, chỉ chứa chữ cái, số, dấu gạch dưới hoặc dấu chấm.",
+        "Username must be 3-30 characters long and contain only letters, numbers, underscores, or dots.",
     };
   }
   return { valid: true, username: cleanUsername };
@@ -53,7 +53,7 @@ function validatePassword(password) {
   if (typeof password !== "string" || password.trim() === "") {
     return {
       valid: false,
-      message: "Mật khẩu là thông tin bắt buộc.",
+      message: "Password is required.",
     };
   }
   const passwordRegex = /^(?=.*[a-z])(?=.*\d)(?=.*[^A-Za-z0-9])\S{8,}$/;
@@ -61,7 +61,7 @@ function validatePassword(password) {
     return {
       valid: false,
       message:
-        "Mật khẩu cần >= 8 ký tự, có ít nhất 1 chữ thường, 1 số, 1 ký tự đặc biệt và không chứa khoảng trắng.",
+        "Password must be >= 8 characters, contain at least 1 lowercase letter, 1 number, 1 special character, and no spaces.",
     };
   }
   return { valid: true };
@@ -165,25 +165,25 @@ function buildPublicUser(user) {
 
 function verifySetupToken(setupToken, expectedEmail) {
     if (!setupToken) {
-        throw new Error('Phiên xác minh OTP không hợp lệ hoặc đã hết hạn.');
+        throw new Error('OTP verification session is invalid or has expired.');
     }
     const payload = jwt.verify(setupToken, getJwtSecret());
 
     if (payload.type !== 'complete_setup' || payload.email !== normalizeEmail(expectedEmail)) {
-        throw new Error('Phiên xác minh OTP không hợp lệ hoặc đã hết hạn.');
+        throw new Error('OTP verification session is invalid or has expired.');
     }
     return payload;
 }
 
 function verifyPasswordResetToken(resetToken, expectedEmail) {
   if (!resetToken) {
-    throw new Error("Phiên đặt lại mật khẩu không hợp lệ hoặc đã hết hạn.");
+    throw new Error("Password reset session is invalid or has expired.");
   }
 
   const payload = jwt.verify(resetToken, getJwtSecret());
 
   if (payload.type !== "password_reset" || payload.email !== normalizeEmail(expectedEmail)) {
-    throw new Error("Phiên đặt lại mật khẩu không hợp lệ hoặc đã hết hạn.");
+    throw new Error("Password reset session is invalid or has expired.");
   }
 
   return payload;

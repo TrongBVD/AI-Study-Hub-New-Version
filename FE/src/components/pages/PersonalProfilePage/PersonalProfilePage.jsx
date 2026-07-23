@@ -345,14 +345,14 @@ function PersonalProfile() {
                 className="show_all_libraries_btn"
                 onClick={() => setShowAllLibraries((current) => !current)}
               >
-                {showAllLibraries ? "Show less" : "Show all library"}
+                {showAllLibraries ? "Show less" : "Show all libraries"}
               </button>
             )}
           </div>
 
           {libraries.length === 0 ? (
             <div className="profile_empty_library">
-              <h3>No library upload</h3>
+              <h3>No libraries uploaded</h3>
             </div>
           ) : (
             <div className="library_grid">
@@ -387,7 +387,7 @@ function PersonalProfile() {
 
               <div className="profile_bio_meta">
                 <span className={bioWordCount > 350 ? "over_limit" : ""}>
-                  {bioWordCount} / 350 word
+                  {bioWordCount} / 350 words
                 </span>
 
                 <div>

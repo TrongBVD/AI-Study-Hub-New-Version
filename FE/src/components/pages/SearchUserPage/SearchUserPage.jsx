@@ -25,7 +25,7 @@ function SearchUserPage() {
           setSearchResults(response.data.data);
         }
       } catch (error) {
-        console.error("Lỗi khi tìm kiếm người dùng:", error);
+        console.error("Error searching users:", error);
         setSearchResults([]);
       } finally {
         setIsSearching(false);
@@ -39,9 +39,9 @@ function SearchUserPage() {
 
   return (
     <div style={{ padding: "40px", maxWidth: "600px", margin: "0 auto", minHeight: "100vh" }}>
-      <h2 style={{ fontSize: "24px", marginBottom: "10px" }}>Tìm kiếm người dùng</h2>
+      <h2 style={{ fontSize: "24px", marginBottom: "10px" }}>Search Users</h2>
       <p style={{ color: "var(--text-muted)", marginBottom: "30px" }}>
-        Tìm kiếm bạn bè hoặc người dùng khác để xem thư viện công khai của họ.
+        Search for friends or other users to view their public libraries.
       </p>
 
       <div style={{ position: "relative", marginBottom: "30px" }}>
@@ -50,7 +50,7 @@ function SearchUserPage() {
           type="text"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="Nhập tên hoặc username (VD: Đạt, Hương)..."
+          placeholder="Enter name or username (e.g., Alex, Sarah)..."
           style={{
             width: "100%",
             padding: "14px 14px 14px 45px",
@@ -78,11 +78,11 @@ function SearchUserPage() {
 
       <div className="search_results_container">
         {isSearching ? (
-          <p style={{ textAlign: "center", color: "var(--text-muted)" }}>Đang quét dữ liệu...</p>
+          <p style={{ textAlign: "center", color: "var(--text-muted)" }}>Searching database...</p>
         ) : searchQuery && visibleSearchResults.length === 0 ? (
           <div style={{ textAlign: "center", padding: "40px 0", color: "var(--text-muted)" }}>
             <i className="ti-face-sad" style={{ fontSize: "40px", marginBottom: "10px", display: "block" }}></i>
-            <p>Không tìm thấy người dùng nào khớp với "{searchQuery}"</p>
+            <p>No users found matching "{searchQuery}"</p>
           </div>
         ) : (
           visibleSearchResults.map(user => (
