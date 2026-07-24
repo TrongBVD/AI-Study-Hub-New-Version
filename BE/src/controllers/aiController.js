@@ -167,13 +167,12 @@ exports.chatWithDocument = async (req, res) => {
     }
 
     if (document.status !== "APPROVED") {
-      return res.status(400).json({
+      return res.status(409).json({
         status: "error",
+        code: "DOCUMENT_NOT_AI_READY",
         message: "This document is not approved or not ready for AI chat yet.",
       });
     }
-
-    await increaseChatUsage(userId);
 
     const questionEmbedding = await createEmbedding(question, "query");
 
@@ -189,13 +188,15 @@ exports.chatWithDocument = async (req, res) => {
     if (matchError) throw matchError;
 
     if (!chunks || chunks.length === 0) {
-      return res.status(400).json({
+      return res.status(409).json({
         status: "error",
+        code: "DOCUMENT_CHUNKS_UNAVAILABLE",
         message: "No AI chunks found for this document. Re-upload or re-process it.",
       });
     }
 
     const answer = await answerWithContext(question, chunks);
+    await increaseChatUsage(userId);
 
     return res.status(200).json({
       status: "success",

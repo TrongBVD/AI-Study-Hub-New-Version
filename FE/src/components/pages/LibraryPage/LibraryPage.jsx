@@ -781,9 +781,14 @@ function LibraryPage() {
         }
       }
     } catch (error) {
-      const isRateLimited = error.response?.status === 429;
+      const errorCode = error.response?.data?.code;
+      const isRateLimited =
+        error.response?.status === 429 || errorCode === "AI_QUOTA_EXHAUSTED";
+      const isAiServiceUnavailable =
+        error.response?.status === 503 ||
+        errorCode === "AI_SERVICE_UNAVAILABLE";
 
-      if (!isRateLimited) {
+      if (!isRateLimited && !isAiServiceUnavailable) {
         console.error("Cannot load AI tag suggestions:", error);
       }
 

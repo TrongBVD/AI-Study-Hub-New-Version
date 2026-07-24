@@ -62,7 +62,7 @@ async function generateText(prompt) {
   const ai = await getAiClient();
   const configuredFallbackModels = String(
     process.env.GEMINI_TEXT_FALLBACK_MODELS ||
-      "gemini-2.0-flash-lite,gemini-1.5-flash,gemini-1.5-pro",
+      "gemini-3.5-flash-lite,gemini-3.1-flash-lite,gemini-2.5-flash-lite",
   )
     .split(",")
     .map((model) => model.trim())
@@ -71,7 +71,7 @@ async function generateText(prompt) {
     process.env.GEMINI_TEXT_MODEL || "gemini-2.5-flash",
     ...configuredFallbackModels,
   ].filter((model, index, models) => models.indexOf(model) === index);
-  let lastError;
+  const modelErrors = [];
 
   for (const model of modelCandidates) {
     try {
@@ -82,7 +82,7 @@ async function generateText(prompt) {
 
       return response.text || "";
     } catch (error) {
-      lastError = error;
+      modelErrors.push(error);
       const statusCode = Number(error?.status);
       const canTryFallback = [404, 429, 503].includes(statusCode);
       const hasAnotherModel = model !== modelCandidates.at(-1);
@@ -102,7 +102,15 @@ async function generateText(prompt) {
     }
   }
 
-  throw lastError || new Error("No Gemini text model is available.");
+  // Preserve the actionable service error instead of blindly throwing the
+  // final fallback error. For example, an exhausted model (429) followed by a
+  // retired fallback (404) must still be reported as quota exhaustion.
+  const actionableError =
+    modelErrors.find((error) => Number(error?.status) === 429) ||
+    modelErrors.find((error) => Number(error?.status) === 503) ||
+    modelErrors.at(-1);
+
+  throw actionableError || new Error("No Gemini text model is available.");
 }
 
 /**

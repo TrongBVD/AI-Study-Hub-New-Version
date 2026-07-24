@@ -269,11 +269,33 @@ exports.listMyDocuments = async (req, res) => {
       throw error;
     }
 
+    const approvedDocuments = (data || []).filter(
+      (document) => String(document.status || "").toUpperCase() === "APPROVED",
+    );
+    const approvedDocumentIds = approvedDocuments.map((document) => document.id);
+    let aiReadyDocumentIds = new Set();
+
+    if (approvedDocumentIds.length > 0) {
+      const { data: chunkRows, error: chunkError } = await supabase
+        .from("document_chunks")
+        .select("document_id")
+        .in("document_id", approvedDocumentIds);
+
+      if (chunkError) {
+        throw chunkError;
+      }
+
+      aiReadyDocumentIds = new Set(
+        (chunkRows || []).map((chunk) => String(chunk.document_id)),
+      );
+    }
+
     return res.status(200).json({
       status: "success",
-      data: (data || []).filter(
-        (document) => String(document.status || "").toUpperCase() === "APPROVED",
-      ),
+      data: approvedDocuments.map((document) => ({
+        ...document,
+        ai_ready: aiReadyDocumentIds.has(String(document.id)),
+      })),
     });
   } catch (error) {
     console.error("Lỗi listMyDocuments:", error);
@@ -754,14 +776,23 @@ exports.suggestDocumentTags = async (req, res) => {
     });
   } catch (error) {
     console.error("Lỗi suggestDocumentTags:", error);
-    const isAiQuotaError = Number(error?.status) === 429;
+    const errorStatus = Number(error?.status || error?.statusCode);
+    const isAiQuotaError = errorStatus === 429;
+    const isAiServiceUnavailable = errorStatus === 503;
+    const isTemporaryAiError = isAiQuotaError || isAiServiceUnavailable;
 
-    return res.status(isAiQuotaError ? 503 : 500).json({
+    return res.status(isTemporaryAiError ? 503 : 500).json({
       status: "error",
-      code: isAiQuotaError ? "AI_QUOTA_EXHAUSTED" : "AI_TAG_SUGGESTION_FAILED",
+      code: isAiQuotaError
+        ? "AI_QUOTA_EXHAUSTED"
+        : isAiServiceUnavailable
+          ? "AI_SERVICE_UNAVAILABLE"
+          : "AI_TAG_SUGGESTION_FAILED",
       message: isAiQuotaError
         ? "AI tag suggestions are temporarily unavailable because the service quota was reached. Please try again later."
-        : "AI could not suggest tags for this document.",
+        : isAiServiceUnavailable
+          ? "AI tag suggestions are temporarily unavailable. Please try again shortly."
+          : "AI could not suggest tags for this document.",
     });
   }
 };
