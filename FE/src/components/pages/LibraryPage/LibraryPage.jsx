@@ -12,6 +12,7 @@ import JSZip from "jszip";
 
 import {
   getMyDocuments,
+  getMyLibraryStorageUsage,
   uploadDocuments,
   suggestDocumentTags,
   downloadDocument,
@@ -223,6 +224,7 @@ function LibraryPage() {
   const [isShareLinkCopied, setIsShareLinkCopied] = useState(false);
 
   const [libraryItems, setLibraryItems] = useState(readStoredLibraryItems);
+  const [userStorageUsedBytes, setUserStorageUsedBytes] = useState(0);
   const [isLoadingDocuments, setIsLoadingDocuments] = useState(false);
   const hasFinishedInitialDocumentLoadRef = useRef(false);
   const [isUploadingDocuments, setIsUploadingDocuments] = useState(false);
@@ -550,6 +552,17 @@ function LibraryPage() {
     };
   }
 
+  async function refreshMyLibraryStorageUsage() {
+    if (isGuest) return;
+
+    try {
+      const usage = await getMyLibraryStorageUsage();
+      setUserStorageUsedBytes(Number(usage?.usedBytes) || 0);
+    } catch (error) {
+      console.error("Cannot load shared library storage usage:", error);
+    }
+  }
+
   async function loadBackendDocuments() {
     try {
       setIsLoadingDocuments(true);
@@ -611,6 +624,7 @@ function LibraryPage() {
       }
 
       const backendDocuments = await getMyDocuments(activeLibraryId);
+      await refreshMyLibraryStorageUsage();
       let storedDocumentFolderIds = {};
 
       try {
@@ -934,7 +948,7 @@ function LibraryPage() {
       0
     );
 
-    const currentUsedStorage = countUsedStorageBytes(libraryItems);
+    const currentUsedStorage = userStorageUsedBytes;
     const nextUsedStorage =
       currentUsedStorage - replacementSize + selectedFilesSize;
 
@@ -1177,6 +1191,7 @@ function LibraryPage() {
         syncLibraryDocumentCount(nextItems);
         return nextItems;
       });
+      await refreshMyLibraryStorageUsage();
 
       handleCancelTaggedUpload();
 
@@ -1328,6 +1343,7 @@ function LibraryPage() {
         syncLibraryDocumentCount(nextItems);
         return nextItems;
       });
+      await refreshMyLibraryStorageUsage();
 
       setDocumentPendingDelete(null);
       setUploadNotice({
@@ -1614,7 +1630,9 @@ function LibraryPage() {
 
   const uploadedFileCount = countUploadedFiles(libraryItems) || Number(libraryData.documents) || 0;
 
-  const usedStorageBytes = countUsedStorageBytes(libraryItems);
+  const usedStorageBytes = isGuest
+    ? countUsedStorageBytes(libraryItems)
+    : userStorageUsedBytes;
 
   const usedStoragePercent = Math.min(
     (usedStorageBytes / LIBRARY_STORAGE_LIMIT_BYTES) * 100,
