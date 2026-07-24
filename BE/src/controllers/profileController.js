@@ -9,6 +9,7 @@ function mapProfile(profile) {
     email: profile.email,
     username: profile.username,
     full_name: profile.full_name,
+    bio: profile.bio || "",
     last_name_change: profile.last_name_change,
     date_of_birth: profile.date_of_birth,
     is_dob_public: profile.is_dob_public,
@@ -27,7 +28,7 @@ exports.getMyProfile = async (req, res) => {
 
     const { data: profile, error } = await supabase
       .from("profiles")
-      .select("id, email, username, full_name, last_name_change, date_of_birth, is_dob_public, created_at, role, status, updated_at, last_login_at, avatar_url")
+      .select("id, email, username, full_name, bio, last_name_change, date_of_birth, is_dob_public, created_at, role, status, updated_at, last_login_at, avatar_url")
       .eq("id", userId)
       .maybeSingle();
 
@@ -77,7 +78,7 @@ exports.updateMyProfile = async (req, res) => {
       .from("profiles")
       .update({ full_name: fullName })
       .eq("id", userId)
-      .select("id, email, username, full_name, last_name_change, date_of_birth, is_dob_public, created_at, role, status, updated_at, last_login_at, avatar_url")
+      .select("id, email, username, full_name, bio, last_name_change, date_of_birth, is_dob_public, created_at, role, status, updated_at, last_login_at, avatar_url")
       .single();
 
     if (error) throw error;

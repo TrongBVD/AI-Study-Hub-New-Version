@@ -7,6 +7,7 @@ const authMiddleware = require("../middleware/authMiddleware");
 
 const {
     listMyDocuments,
+    getMyLibraryStorageUsage,
     uploadDocuments,
     suggestDocumentTags,
     downloadDocument,
@@ -61,6 +62,7 @@ const suggestTagsLimiter = rateLimit({
 });
 
 router.get("/", authMiddleware, listMyDocuments);
+router.get("/storage/usage", authMiddleware, getMyLibraryStorageUsage);
 
 router.post(
     "/suggest-tags",

@@ -9,6 +9,11 @@ export async function getMyDocuments(libraryId = null) {
   return response.data.data;
 }
 
+export async function getMyLibraryStorageUsage() {
+  const response = await api.get("/documents/storage/usage");
+  return response.data.data;
+}
+
 export async function uploadDocuments(
   files,
   workspaceId = null,

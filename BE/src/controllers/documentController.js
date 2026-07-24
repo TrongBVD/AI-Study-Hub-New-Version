@@ -39,6 +39,7 @@ const EMBEDDING_CONCURRENCY = Math.min(
   normalizeConcurrency(process.env.EMBEDDING_CONCURRENCY, 3),
   8,
 );
+const LIBRARY_STORAGE_LIMIT_BYTES = 50 * 1024 * 1024;
 
 function normalizeUploadedFileName(fileName) {
   const value = String(fileName || "");
@@ -308,6 +309,43 @@ exports.listMyDocuments = async (req, res) => {
   }
 };
 
+exports.getMyLibraryStorageUsage = async (req, res) => {
+  try {
+    const userID = req.user.id;
+    const { data: documents, error } = await supabase
+      .from("documents")
+      .select("file_size_bytes")
+      .eq("uploader_id", userID)
+      .not("library_id", "is", null)
+      .is("deleted_at", null);
+
+    if (error) throw error;
+
+    const usedBytes = (documents || []).reduce(
+      (total, document) => total + (Number(document.file_size_bytes) || 0),
+      0,
+    );
+
+    return res.status(200).json({
+      status: "success",
+      data: {
+        usedBytes,
+        limitBytes: LIBRARY_STORAGE_LIMIT_BYTES,
+        remainingBytes: Math.max(
+          0,
+          LIBRARY_STORAGE_LIMIT_BYTES - usedBytes,
+        ),
+      },
+    });
+  } catch (error) {
+    console.error("Get library storage usage error:", error);
+    return res.status(500).json({
+      status: "error",
+      message: "Could not load library storage usage.",
+    });
+  }
+};
+
 exports.uploadDocuments = async (req, res) => {
   try {
     const userID = req.user.id;
@@ -477,20 +515,54 @@ exports.uploadDocuments = async (req, res) => {
       0,
     );
 
+    const incomingBytes = files.reduce(
+      (total, file) => total + (Number(file.size) || 0),
+      0,
+    );
+
     if (workspaceId) {
-      const { data: existingDocs } = await supabase
+      const { data: existingDocs, error: workspaceStorageError } = await supabase
         .from("documents")
         .select("file_size_bytes")
         .eq("workspace_id", workspaceId)
         .is("deleted_at", null);
 
-      const currentUsedBytes = (existingDocs || []).reduce((acc, doc) => acc + (Number(doc.file_size_bytes) || 0), 0);
-      const incomingBytes = files.reduce((acc, file) => acc + file.size, 0);
+      if (workspaceStorageError) throw workspaceStorageError;
 
-      if (currentUsedBytes + incomingBytes - replacementBytes > 50 * 1024 * 1024) {
+      const currentUsedBytes = (existingDocs || []).reduce((acc, doc) => acc + (Number(doc.file_size_bytes) || 0), 0);
+
+      if (currentUsedBytes + incomingBytes - replacementBytes > LIBRARY_STORAGE_LIMIT_BYTES) {
         return res.status(400).json({
           status: "error",
-          message: "Workspace đã đạt giới hạn 50MB dung lượng tải lên."
+          message: "Workspace đã đạt giới hạn 50MB dung lượng tải lên.",
+        });
+      }
+    } else if (libraryId) {
+      const { data: existingLibraryDocs, error: libraryStorageError } =
+        await supabase
+          .from("documents")
+          .select("file_size_bytes")
+          .eq("uploader_id", userID)
+          .not("library_id", "is", null)
+          .is("deleted_at", null);
+
+      if (libraryStorageError) throw libraryStorageError;
+
+      const currentUsedBytes = (existingLibraryDocs || []).reduce(
+        (total, document) =>
+          total + (Number(document.file_size_bytes) || 0),
+        0,
+      );
+
+      if (
+        currentUsedBytes + incomingBytes - replacementBytes >
+        LIBRARY_STORAGE_LIMIT_BYTES
+      ) {
+        return res.status(400).json({
+          status: "error",
+          code: "LIBRARY_STORAGE_LIMIT_EXCEEDED",
+          message:
+            "Your libraries have reached the shared 50 MB storage limit.",
         });
       }
     }
