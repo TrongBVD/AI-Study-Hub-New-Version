@@ -981,29 +981,45 @@ function LibraryPage() {
     const updatedHashtags = [...hashtags];
     updatedHashtags[index] = value;
     setHashtags(updatedHashtags);
+    setTagErrors([]);
     setTagInputErrors(["", "", ""]);
-  }
-
-  function handleApplySuggestedTag(suggestedTag) {
-    setHashtags((currentTags) => {
-      const normalizedSuggestion = suggestedTag.trim().toLocaleLowerCase();
-      const alreadyApplied = currentTags.some(
-        (tag) => tag.trim().toLocaleLowerCase() === normalizedSuggestion,
-      );
-      const emptyIndex = currentTags.findIndex((tag) => tag.trim() === "");
-
-      if (alreadyApplied || emptyIndex === -1) return currentTags;
-
-      const nextTags = [...currentTags];
-      nextTags[emptyIndex] = suggestedTag;
-      return nextTags;
-    });
-    setTagInputErrors(["", "", ""]);
+    setUploadNotice((currentNotice) =>
+      currentNotice?.title === "AI hashtag verification failed"
+        ? null
+        : currentNotice,
+    );
   }
 
   function handleApplyAllSuggestedTags() {
     setHashtags((currentTags) => {
       const nextTags = [...currentTags];
+      const invalidTagReplacements = new Map(
+        tagErrors
+          .filter(
+            (validation) =>
+              validation?.isValid === false &&
+              String(validation.recommendedReplacement || "").trim(),
+          )
+          .map((validation) => [
+            String(validation.tag || "")
+              .trim()
+              .replace(/^#/, "")
+              .toLocaleLowerCase(),
+            String(validation.recommendedReplacement).trim(),
+          ]),
+      );
+
+      for (let index = 0; index < nextTags.length; index += 1) {
+        const normalizedCurrentTag = String(nextTags[index] || "")
+          .trim()
+          .replace(/^#/, "")
+          .toLocaleLowerCase();
+        const replacement = invalidTagReplacements.get(normalizedCurrentTag);
+
+        if (replacement) {
+          nextTags[index] = replacement;
+        }
+      }
 
       for (const suggestedTag of aiRecommendedTags) {
         const normalizedSuggestion = suggestedTag.trim().toLocaleLowerCase();
@@ -1019,7 +1035,13 @@ function LibraryPage() {
 
       return nextTags;
     });
+    setTagErrors([]);
     setTagInputErrors(["", "", ""]);
+    setUploadNotice((currentNotice) =>
+      currentNotice?.title === "AI hashtag verification failed"
+        ? null
+        : currentNotice,
+    );
   }
 
   function handleCancelTaggedUpload() {
@@ -2446,7 +2468,6 @@ function LibraryPage() {
                         onClick={() => setActiveHashtagIndex(index)}
                         onChange={(e) => {
                           handleHashtagChange(index, e.target.value);
-                          setTagErrors([]);
                         }}
                         placeholder={`# tag${index + 1}`}
                         className={
@@ -2521,7 +2542,6 @@ function LibraryPage() {
                             hashtagInputRefs.current[targetIndex]?.focus();
                           });
                         }}
-                        onClick={() => handleApplySuggestedTag(recTag)}
                       >
                         {recTag}
                       </button>

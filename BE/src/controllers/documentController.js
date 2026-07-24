@@ -596,9 +596,18 @@ exports.uploadDocuments = async (req, res) => {
       return res.status(500).json({ status: "error", message: "Đã xảy ra lỗi khi kiểm duyệt tài liệu bằng AI." });
     }
 
-    // Kiểm tra tính hợp lệ của tag sau khi đã xử lý song song xong
+    // A sensitive document must still reach the admin moderation queue.
+    // Tag validation is advisory for flagged files; blocking here would stop
+    // the document before it can be saved in the waiting bucket for review.
     for (const processedData of processedFilesData) {
-      if (!processedData.tagValidationResult.isValid) {
+      const isFlaggedForAdmin = isSensitiveClassification(
+        processedData.sensitivity?.classification,
+      );
+
+      if (
+        !isFlaggedForAdmin &&
+        !processedData.tagValidationResult.isValid
+      ) {
         return res.status(400).json({
           status: "error",
           code: "TAG_VALIDATION_FAILED",
