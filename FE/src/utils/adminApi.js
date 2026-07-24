@@ -59,3 +59,18 @@ export async function updateUserRole(userId, role, reason = "") {
 
   return response.data.data;
 }
+
+export async function getDeletedWorkspaces() {
+  const response = await api.get("/admin/workspaces/deleted");
+  return response.data.data;
+}
+
+export async function getWorkspacePurgePreview(workspaceId) {
+  const response = await api.get(`/admin/workspaces/${workspaceId}/purge-preview`);
+  return response.data.data;
+}
+
+export async function permanentlyDeleteWorkspace(workspaceId, confirmation) {
+  const response = await api.delete(`/admin/workspaces/${workspaceId}/permanent`, { data: { confirmation } });
+  return response.data.data;
+}

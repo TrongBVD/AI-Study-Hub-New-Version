@@ -1,6 +1,7 @@
 const crypto = require("crypto");
 const path = require("path");
 const supabase = require("../config/supabase");
+const MAX_LIBRARIES_PER_USER = 5;
 
 const {
   extractTextFromFile,
@@ -1129,6 +1130,21 @@ exports.createLibrary = async (req, res) => {
       return res.status(400).json({
         status: "error",
         message: "Library name is required.",
+      });
+    }
+
+    const { count: libraryCount, error: countError } = await supabase
+      .from("libraries")
+      .select("*", { count: "exact", head: true })
+      .eq("user_id", userID);
+
+    if (countError) throw countError;
+
+    if ((libraryCount || 0) >= MAX_LIBRARIES_PER_USER) {
+      return res.status(409).json({
+        status: "error",
+        code: "LIBRARY_LIMIT_REACHED",
+        message: `You can create up to ${MAX_LIBRARIES_PER_USER} libraries. Delete an existing library before creating another one.`,
       });
     }
 

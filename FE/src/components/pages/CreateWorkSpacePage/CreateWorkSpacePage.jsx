@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { HiOutlineSquares2X2, HiOutlineSquaresPlus } from "react-icons/hi2";
-import { createWorkspace } from "../../../utils/workspaceApi";
+import { createWorkspace, getWorkspaces } from "../../../utils/workspaceApi";
 import { getMyProfile } from "../../../utils/profileApi";
 import "./CreateWorkSpacePage.css";
 
@@ -32,24 +32,34 @@ function CreateWorkSpacePage() {
   const [description, setDescription] = useState("");
   const [ownerName, setOwnerName] = useState("User");
   const [ownerAvatar, setOwnerAvatar] = useState("");
+  const [ownedWorkspaceCount, setOwnedWorkspaceCount] = useState(0);
+  const MAX_OWNED_WORKSPACES = 3;
   const ownerInitials = getInitials(ownerName);
 
   useEffect(() => {
     let isMounted = true;
 
-    async function loadOwnerProfile() {
+    async function loadPageData() {
       try {
-        const profile = await getMyProfile();
+        const [profile, workspaces] = await Promise.all([
+          getMyProfile(),
+          getWorkspaces(),
+        ]);
         if (!isMounted) return;
 
         setOwnerName(profile?.full_name || profile?.username || profile?.email || "User");
         setOwnerAvatar(profile?.avatar_url || "");
+        setOwnedWorkspaceCount(
+          (workspaces || []).filter(
+            (workspace) => String(workspace.created_by) === String(profile?.id),
+          ).length,
+        );
       } catch (error) {
-        console.error("Failed to load owner profile:", error);
+        console.error("Failed to load workspace creation data:", error);
       }
     }
 
-    loadOwnerProfile();
+    loadPageData();
 
     return () => {
       isMounted = false;
@@ -72,7 +82,8 @@ function CreateWorkSpacePage() {
     return (
       trimmedWorkspaceName.length > 0 &&
       trimmedWorkspaceName.length <= TITLE_LIMIT &&
-      trimmedDescription.length <= DESCRIPTION_LIMIT
+      trimmedDescription.length <= DESCRIPTION_LIMIT &&
+      ownedWorkspaceCount < MAX_OWNED_WORKSPACES
     );
   }, [trimmedWorkspaceName, trimmedDescription]);
 
@@ -103,6 +114,11 @@ function CreateWorkSpacePage() {
       return;
     }
 
+    if (ownedWorkspaceCount >= MAX_OWNED_WORKSPACES) {
+      alert(`You can create up to ${MAX_OWNED_WORKSPACES} workspaces. Delete an existing workspace before creating another one.`);
+      return;
+    }
+
     try {
       const newWorkSpace = await createWorkspace({
         name: trimmedWorkspaceName,
@@ -117,7 +133,7 @@ function CreateWorkSpacePage() {
       });
     } catch (error) {
       console.error("Cannot create workspace:", error);
-      alert("Cannot create workspace. Please login again and try later.");
+      alert(error?.response?.data?.message || "Cannot create workspace. Please login again and try later.");
     }
   }
 
@@ -141,6 +157,7 @@ function CreateWorkSpacePage() {
               Create a private workspace for topics, files, discussion threads,
               tasks, and study materials before inviting your members.
             </p>
+            <p>{ownedWorkspaceCount} / {MAX_OWNED_WORKSPACES} workspaces created</p>
           </div>
 
           <aside className="workspace_preview_card" aria-label="Workspace preview">

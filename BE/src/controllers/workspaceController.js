@@ -4,6 +4,7 @@ const { createActivityLog } = require("../services/activityLogService");
 
 const MEMBER_ROLES = ["Editor", "Viewer"];
 const ASSIGNABLE_MEMBER_ROLES = ["Editor", "Viewer"];
+const MAX_OWNED_WORKSPACES = 3;
 
 function getWorkspaceRoleLabel(role) {
   return String(role || "").toLowerCase() === "viewer" ? "Contributor" : role;
@@ -482,6 +483,22 @@ exports.createWorkspace = async (req, res) => {
       return res
         .status(400)
         .json({ status: "error", message: "Workspace name is required." });
+    }
+
+    const { count: ownedWorkspaceCount, error: countError } = await supabase
+      .from("workspaces")
+      .select("*", { count: "exact", head: true })
+      .eq("created_by", userId)
+      .is("deleted_at", null);
+
+    if (countError) throw countError;
+
+    if ((ownedWorkspaceCount || 0) >= MAX_OWNED_WORKSPACES) {
+      return res.status(409).json({
+        status: "error",
+        code: "WORKSPACE_LIMIT_REACHED",
+        message: `You can create up to ${MAX_OWNED_WORKSPACES} workspaces. Delete an existing workspace before creating another one.`,
+      });
     }
 
     const { data: workspace, error: workspaceError } = await supabase

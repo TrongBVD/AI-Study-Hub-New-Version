@@ -4,6 +4,74 @@ const crypto = require("crypto");
 const DOCUMENT_BUCKET = process.env.SUPABASE_DOCUMENT_BUCKET || "documents";
 const WAITING_BUCKET = process.env.SUPABASE_DOCUMENT_WAITING_ADMIN_APPROVED || "document_waiting_admin";
 
+const WAITING_DOCUMENT_STATUSES = new Set(["FLAGGED", "REJECTED", "PENDING_RETRY"]);
+
+function getDocumentBucket(document) {
+  return WAITING_DOCUMENT_STATUSES.has(String(document.status || "").toUpperCase())
+    ? WAITING_BUCKET
+    : DOCUMENT_BUCKET;
+}
+
+function chunkArray(items, size = 500) {
+  const chunks = [];
+  for (let index = 0; index < items.length; index += size) {
+    chunks.push(items.slice(index, index + size));
+  }
+  return chunks;
+}
+
+async function removeWorkspaceStorageFiles(documents) {
+  const pathsByBucket = new Map();
+  for (const document of documents) {
+    const path = String(document.file_url || "").trim();
+    if (!path) continue;
+    const bucket = getDocumentBucket(document);
+    if (!pathsByBucket.has(bucket)) pathsByBucket.set(bucket, new Set());
+    pathsByBucket.get(bucket).add(path);
+  }
+
+  for (const [bucket, paths] of pathsByBucket) {
+    for (const batch of chunkArray([...paths])) {
+      const { error } = await supabase.storage.from(bucket).remove(batch);
+      if (error) {
+        throw new Error(`Storage cleanup failed for bucket "${bucket}": ${error.message}`);
+      }
+    }
+  }
+}
+
+async function getWorkspaceForPurge(workspaceId) {
+  const { data, error } = await supabase
+    .from("workspaces")
+    .select("id, name, description, created_by, created_at, deleted_at")
+    .eq("id", workspaceId)
+    .maybeSingle();
+  if (error) throw error;
+  return data;
+}
+
+async function getWorkspaceDocuments(workspaceId) {
+  const { data, error } = await supabase
+    .from("documents")
+    .select("id, title, file_url, file_size_bytes, status, workspace_id, library_id, deleted_at")
+    .eq("workspace_id", workspaceId);
+  if (error) throw error;
+  return data || [];
+}
+
+async function countRows(table, filter) {
+  let query = supabase.from(table).select("*", { count: "exact", head: true });
+  query = filter(query);
+  const { count, error } = await query;
+  // The discussion tables were introduced incrementally. A preview remains useful
+  // on older deployments where an optional relation or filter column does not exist.
+  if (error && ["42P01", "42703", "PGRST204", "PGRST205"].includes(error.code)) {
+    return 0;
+  }
+  if (error) throw error;
+  return count || 0;
+}
+
 function getTodayDate() {
   return new Date().toISOString().slice(0, 10);
 }
@@ -824,5 +892,102 @@ exports.updateUserRole = async (req, res) => {
       message: "Could not update user role.",
       error: error.message,
     });
+  }
+};
+
+exports.getDeletedWorkspaces = async (req, res) => {
+  try {
+    const { data: workspaces, error } = await supabase
+      .from("workspaces")
+      .select("id, name, description, created_by, created_at, deleted_at")
+      .not("deleted_at", "is", null)
+      .order("deleted_at", { ascending: false });
+    if (error) throw error;
+
+    const rows = await Promise.all((workspaces || []).map(async (workspace) => {
+      const documents = await getWorkspaceDocuments(workspace.id);
+      const reclaimable = documents.filter((document) => !document.library_id);
+      return {
+        ...workspace,
+        documentCount: documents.length,
+        preservedDocumentCount: documents.length - reclaimable.length,
+        reclaimableBytes: reclaimable.reduce((total, document) => total + Number(document.file_size_bytes || 0), 0),
+      };
+    }));
+
+    return res.status(200).json({ status: "success", data: rows });
+  } catch (error) {
+    console.error("Admin deleted workspaces error:", error);
+    return res.status(500).json({ status: "error", message: "Could not load deleted workspaces.", error: error.message });
+  }
+};
+
+exports.getWorkspacePurgePreview = async (req, res) => {
+  try {
+    const { workspaceId } = req.params;
+    const workspace = await getWorkspaceForPurge(workspaceId);
+    if (!workspace) {
+      return res.status(404).json({ status: "error", code: "WORKSPACE_NOT_FOUND", message: "Workspace does not exist. It may already have been permanently deleted." });
+    }
+    if (!workspace.deleted_at) {
+      return res.status(409).json({ status: "error", code: "WORKSPACE_NOT_SOFT_DELETED", message: "Active workspaces cannot be permanently deleted. Soft-delete the workspace first." });
+    }
+
+    const documents = await getWorkspaceDocuments(workspaceId);
+    const deletedDocuments = documents.filter((document) => !document.library_id);
+    const preservedDocuments = documents.filter((document) => document.library_id);
+    const deletedDocumentIds = deletedDocuments.map((document) => document.id);
+    const documentFilter = (query) => deletedDocumentIds.length ? query.in("document_id", deletedDocumentIds) : query.eq("document_id", "00000000-0000-0000-0000-000000000000");
+    const workspaceFilter = (query) => query.eq("workspace_id", workspaceId);
+    const topicIdsResult = await supabase.from("workspace_discussion_topics").select("id").eq("workspace_id", workspaceId);
+    if (topicIdsResult.error && !["42P01", "PGRST205"].includes(topicIdsResult.error.code)) throw topicIdsResult.error;
+    const topicIds = (topicIdsResult.data || []).map((topic) => topic.id);
+    const topicFilter = (query) => topicIds.length ? query.in("topic_id", topicIds) : query.eq("topic_id", "00000000-0000-0000-0000-000000000000");
+
+    const [members, messages, folders, workspaceFlashcards, aiSummaries, documentChunks, documentTags, documentFlashcards, reviews, discussionComments, discussionSubtasks, discussionAttachments] = await Promise.all([
+      countRows("workspace_members", workspaceFilter), countRows("workspace_messages", workspaceFilter), countRows("folders", workspaceFilter), countRows("flashcards", workspaceFilter),
+      countRows("ai_summaries", documentFilter), countRows("document_chunks", documentFilter), countRows("document_tags", documentFilter), countRows("flashcards", documentFilter), countRows("reviews", documentFilter),
+      countRows("workspace_discussion_comments", topicFilter), countRows("workspace_discussion_subtasks", topicFilter), countRows("workspace_discussion_attachments", topicFilter),
+    ]);
+
+    return res.status(200).json({
+      status: "success",
+      data: {
+        workspace,
+        deletion: { members, messages, folders, documents: deletedDocuments.length, aiSummaries, documentChunks, documentTags, flashcards: workspaceFlashcards + documentFlashcards, reviews, discussionTopics: topicIds.length, discussionComments, discussionSubtasks, discussionAttachments, reclaimableBytes: deletedDocuments.reduce((total, document) => total + Number(document.file_size_bytes || 0), 0) },
+        preservation: { documents: preservedDocuments.length, documentList: preservedDocuments.map(({ id, title, library_id: libraryId, file_size_bytes: fileSizeBytes }) => ({ id, title, libraryId, fileSizeBytes })) },
+      },
+    });
+  } catch (error) {
+    console.error("Admin workspace purge preview error:", error);
+    return res.status(500).json({ status: "error", message: "Could not load workspace purge preview.", error: error.message });
+  }
+};
+
+exports.permanentlyDeleteWorkspace = async (req, res) => {
+  try {
+    const { workspaceId } = req.params;
+    const workspace = await getWorkspaceForPurge(workspaceId);
+    if (!workspace) return res.status(404).json({ status: "error", code: "WORKSPACE_NOT_FOUND", message: "Workspace does not exist. It may already have been permanently deleted." });
+    if (!workspace.deleted_at) return res.status(409).json({ status: "error", code: "WORKSPACE_NOT_SOFT_DELETED", message: "Active workspaces cannot be permanently deleted. Soft-delete the workspace first." });
+    if (String(req.body.confirmation || "") !== workspace.name) return res.status(400).json({ status: "error", code: "INVALID_DELETE_CONFIRMATION", message: "Type the workspace name exactly to confirm permanent deletion." });
+
+    const documents = await getWorkspaceDocuments(workspaceId);
+    const workspaceOnlyDocuments = documents.filter((document) => !document.library_id);
+    const bytesFreed = workspaceOnlyDocuments.reduce((total, document) => total + Number(document.file_size_bytes || 0), 0);
+    await removeWorkspaceStorageFiles(workspaceOnlyDocuments);
+
+    const { data, error } = await supabase.rpc("admin_hard_delete_workspace", { p_workspace_id: workspaceId });
+    if (error) {
+      if (String(error.message).includes("WORKSPACE_NOT_FOUND")) return res.status(404).json({ status: "error", code: "WORKSPACE_NOT_FOUND", message: "Workspace does not exist. It may already have been permanently deleted." });
+      if (String(error.message).includes("WORKSPACE_NOT_SOFT_DELETED")) return res.status(409).json({ status: "error", code: "WORKSPACE_NOT_SOFT_DELETED", message: "Active workspaces cannot be permanently deleted. Soft-delete the workspace first." });
+      throw error;
+    }
+
+    await createActivityLog({ actorUserId: req.user.id, adminId: req.user.id, actionType: "ADMIN_PERMANENTLY_DELETE_WORKSPACE", entityType: "workspaces", entityId: workspaceId, oldData: workspace, newData: { ...data, bytesFreed }, request: req, riskLevel: "HIGH", details: `System Admin permanently deleted soft-deleted workspace "${workspace.name}".` });
+    return res.status(200).json({ status: "success", message: "Workspace permanently deleted.", data: { ...data, bytesFreed } });
+  } catch (error) {
+    console.error("Admin permanent workspace deletion error:", error);
+    return res.status(500).json({ status: "error", message: "Could not permanently delete workspace. Storage cleanup must succeed before the database is purged.", error: error.message });
   }
 };

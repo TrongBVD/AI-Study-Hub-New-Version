@@ -44,6 +44,7 @@ import AdminUsersPage from "./components/pages/Admin/UserManagementPage/UserMana
 import AdminLogsPage from "./components/pages/Admin/ActivityLogPage/ActivityLogPage.jsx";
 import AdminUsagePage from "./components/pages/Admin/AdminUsagePage/AdminUsagePage.jsx";
 import AdminProfilePage from "./components/pages/Admin/AdminProfilePage/AdminProfilePage.jsx";
+import DeletedWorkspacesPage from "./components/pages/Admin/DeletedWorkspacesPage/DeletedWorkspacesPage.jsx";
 
 function App() {
   return (
@@ -125,6 +126,7 @@ function App() {
           <Route path="users" element={<AdminUsersPage />} />
           <Route path="logs" element={<AdminLogsPage />} />
           <Route path="usage" element={<AdminUsagePage />} />
+          <Route path="workspaces/deleted" element={<DeletedWorkspacesPage />} />
           <Route path="settings" element={<SettingPage />} />
           <Route path="profile" element={<AdminProfilePage />} />
         </Route>

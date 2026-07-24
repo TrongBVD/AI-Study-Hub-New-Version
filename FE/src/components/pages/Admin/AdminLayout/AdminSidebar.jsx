@@ -1,6 +1,7 @@
 import { NavLink, useNavigate } from "react-router-dom";
 import {
   LuChartPie,
+  LuTrash2,
   LuLayoutDashboard,
   LuListChecks,
   LuLogOut,
@@ -20,6 +21,7 @@ const ADMIN_MENU_ITEMS = [
   { icon: LuUsers, label: "Users", path: "/admin/users" },
   { icon: LuListChecks, label: "Activity Logs", path: "/admin/logs" },
   { icon: LuChartPie, label: "Usage", path: "/admin/usage" },
+  { icon: LuTrash2, label: "Deleted Workspaces", path: "/admin/workspaces/deleted" },
   { icon: LuSettings, label: "Settings", path: "/admin/settings" },
 ];
 

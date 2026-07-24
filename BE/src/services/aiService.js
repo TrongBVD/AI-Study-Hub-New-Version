@@ -1,4 +1,5 @@
 let aiClient = null;
+const OPENAI_CHAT_COMPLETIONS_URL = "https://api.openai.com/v1/chat/completions";
 
 /**
  * Create and reuse Gemini client.
@@ -22,6 +23,56 @@ async function getAiClient() {
   });
 
   return aiClient;
+}
+
+function getOpenAiConfig() {
+  return {
+    apiKey: process.env.OPENAI_API_KEY,
+    model: process.env.OPENAI_TEXT_MODEL || "gpt-4.1-mini",
+    baseUrl: process.env.OPENAI_BASE_URL || OPENAI_CHAT_COMPLETIONS_URL,
+  };
+}
+
+function isRetryableAiError(error) {
+  const statusCode = Number(error?.status);
+  return [404, 429, 503].includes(statusCode);
+}
+
+async function generateTextWithOpenAi(prompt) {
+  const { apiKey, model, baseUrl } = getOpenAiConfig();
+
+  if (!apiKey) {
+    throw new Error("Missing OPENAI_API_KEY in .env file.");
+  }
+
+  const response = await fetch(baseUrl, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      model,
+      messages: [
+        {
+          role: "user",
+          content: prompt,
+        },
+      ],
+      temperature: 0.2,
+    }),
+  });
+
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    const message = data?.error?.message || "OpenAI text generation failed.";
+    const error = new Error(message);
+    error.status = response.status;
+    throw error;
+  }
+
+  return data?.choices?.[0]?.message?.content || "";
 }
 
 /**
@@ -56,7 +107,7 @@ function extractJson(text) {
 }
 
 /**
- * General text generation using Gemini.
+ * General text generation using Gemini first, then OpenAI if Gemini is rate-limited.
  */
 async function generateText(prompt) {
   const ai = await getAiClient();
@@ -84,11 +135,11 @@ async function generateText(prompt) {
     } catch (error) {
       modelErrors.push(error);
       const statusCode = Number(error?.status);
-      const canTryFallback = [404, 429, 503].includes(statusCode);
+      const canTryFallback = isRetryableAiError(error);
       const hasAnotherModel = model !== modelCandidates.at(-1);
 
       if (!canTryFallback || !hasAnotherModel) {
-        throw error;
+        break;
       }
 
       console.warn(
@@ -110,7 +161,12 @@ async function generateText(prompt) {
     modelErrors.find((error) => Number(error?.status) === 503) ||
     modelErrors.at(-1);
 
-  throw actionableError || new Error("No Gemini text model is available.");
+  if (process.env.OPENAI_API_KEY && isRetryableAiError(actionableError)) {
+    console.warn("[AI] Gemini text models unavailable; trying OpenAI fallback.");
+    return generateTextWithOpenAi(prompt);
+  }
+
+  throw actionableError || new Error("No AI text model is available.");
 }
 
 /**
