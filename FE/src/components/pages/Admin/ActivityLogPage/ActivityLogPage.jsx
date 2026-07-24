@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { getActivityLogs } from "../../../../utils/adminApi";
 import "./ActivityLogPage.css";
 
@@ -58,7 +58,7 @@ function mapLog(row) {
   let targetUser = "N/A";
   let documentTitle = row.entity_type === "documents" ? (newData.documentTitle || oldData.title || row.entity_id) : "N/A";
   let workspaceName = row.entity_type === "workspaces" ? (newData.name || oldData.name || row.entity_id) : "System";
-  let changeSummary = "";
+  let changeSummary;
 
   if (action === "ADMIN_REVIEW_DOCUMENT" || action === "DOCUMENT_APPROVED" || action === "DOCUMENT_REJECTED") {
     targetUser = oldData.uploader_id ? (oldData.uploader_name || `User ID: ${oldData.uploader_id.slice(0, 8)}...`) : actorName;
@@ -123,6 +123,65 @@ function getEventIcon(type) {
     danger: "ti-trash",
     security: "ti-shield",
   }[type] || "ti-info";
+}
+
+function ActivityFilterSelect({
+  value,
+  options,
+  onChange,
+  icon,
+  disabled = false,
+}) {
+  const detailsRef = useRef(null);
+  const normalizedOptions = options.map((option) =>
+    typeof option === "string"
+      ? { value: option, label: option }
+      : option,
+  );
+  const selectedOption =
+    normalizedOptions.find((option) => option.value === value) ||
+    normalizedOptions[0];
+
+  function handleSelect(nextValue) {
+    onChange(nextValue);
+    if (detailsRef.current) detailsRef.current.open = false;
+  }
+
+  return (
+    <details
+      ref={detailsRef}
+      className={`activity-log-page__filter-select${disabled ? " is-disabled" : ""}`}
+      onToggle={(event) => {
+        if (disabled && event.currentTarget.open) {
+          event.currentTarget.open = false;
+        }
+      }}
+    >
+      <summary aria-disabled={disabled}>
+        <i className={icon} aria-hidden="true" />
+        <span>{selectedOption?.label || ""}</span>
+        <i className="ti-angle-down" aria-hidden="true" />
+      </summary>
+      {!disabled && (
+        <div className="activity-log-page__filter-options">
+          {normalizedOptions.map((option) => {
+            const isSelected = option.value === value;
+            return (
+              <button
+                type="button"
+                key={option.value}
+                className={isSelected ? "is-selected" : ""}
+                onClick={() => handleSelect(option.value)}
+              >
+                <span>{option.label}</span>
+                {isSelected && <i className="ti-check" aria-hidden="true" />}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </details>
+  );
 }
 
 function ActivityLogPage() {
@@ -361,64 +420,68 @@ function ActivityLogPage() {
               </div>
             </label>
 
-            <label className="activity-log-page__filter-field">
+            <div className="activity-log-page__filter-field">
               <span>Action (Required)</span>
-              <select
+              <ActivityFilterSelect
                 value={actionFilter}
-                onChange={(event) => {
-                  setActionFilter(event.target.value);
+                options={ACTION_OPTIONS}
+                icon="ti-bolt"
+                onChange={(nextValue) => {
+                  setActionFilter(nextValue);
                   setSelectedLog(null);
                 }}
-              >
-                {ACTION_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </label>
+              />
+            </div>
 
-            <label className="activity-log-page__filter-field">
+            <div className="activity-log-page__filter-field">
               <span>User</span>
-              <select
+              <ActivityFilterSelect
                 value={userFilter}
-                onChange={(event) => setUserFilter(event.target.value)}
+                options={uniqueUsers}
+                icon="ti-user"
+                onChange={setUserFilter}
                 disabled={actionFilter === "DEFAULT"}
-              >
-                {uniqueUsers.map((user) => <option key={user}>{user}</option>)}
-              </select>
-            </label>
+              />
+            </div>
 
-            <label className="activity-log-page__filter-field">
+            <div className="activity-log-page__filter-field">
               <span>Scope</span>
-              <select
+              <ActivityFilterSelect
                 value={workspaceFilter}
-                onChange={(event) => setWorkspaceFilter(event.target.value)}
+                options={uniqueWorkspaces}
+                icon="ti-world"
+                onChange={setWorkspaceFilter}
                 disabled={actionFilter === "DEFAULT"}
-              >
-                {uniqueWorkspaces.map((scope) => <option key={scope}>{scope}</option>)}
-              </select>
-            </label>
+              />
+            </div>
 
-            <label className="activity-log-page__filter-field activity-log-page__filter-field--date">
+            <div className="activity-log-page__filter-field activity-log-page__filter-field--date">
               <span>Date range</span>
               <div className="activity-log-page__date-range">
                 <i className="ti-calendar" />
-                <input
-                  type="date"
-                  value={startDate}
-                  onChange={(event) => setStartDate(event.target.value)}
-                  disabled={actionFilter === "DEFAULT"}
-                />
+                <label>
+                  <span>From</span>
+                  <input
+                    type="date"
+                    lang="en-GB"
+                    value={startDate}
+                    onChange={(event) => setStartDate(event.target.value)}
+                    disabled={actionFilter === "DEFAULT"}
+                  />
+                </label>
                 <span>–</span>
-                <input
-                  type="date"
-                  value={endDate}
-                  onChange={(event) => setEndDate(event.target.value)}
-                  disabled={actionFilter === "DEFAULT"}
-                />
+                <label>
+                  <span>To</span>
+                  <input
+                    type="date"
+                    lang="en-GB"
+                    value={endDate}
+                    onChange={(event) => setEndDate(event.target.value)}
+                    disabled={actionFilter === "DEFAULT"}
+                  />
+                </label>
               </div>
-            </label>
+            </div>
           </div>
         </section>
 
