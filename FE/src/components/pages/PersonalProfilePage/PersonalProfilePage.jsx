@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import {
   getMyProfile,
   getProfileById,
+  updateMyBio,
   updateMyAvatar,
   updateMyProfile,
 } from "../../../utils/profileApi";
@@ -96,8 +97,11 @@ function PersonalProfile() {
         setUserEmail(profile?.email || "");
         setDateOfBirth(profile?.date_of_birth || "");
         setIsDateOfBirthPublic(profile?.is_dob_public !== false);
-        setProfileBio(profile?.bio || "");
-        setDraftBio(profile?.bio || "");
+        const nextBio =
+          profile?.bio ||
+          (isOwnProfile ? localStorage.getItem(PROFILE_BIO_KEY) || "" : "");
+        setProfileBio(nextBio);
+        setDraftBio(nextBio);
         setAvatar(nextAvatar);
         setLibraries(sharedLibraries);
         setShowAllLibraries(false);
@@ -269,7 +273,7 @@ function PersonalProfile() {
 
     try {
       setIsSavingBio(true);
-      const profile = await updateMyProfile({ bio: trimmedBio });
+      const profile = await updateMyBio(trimmedBio);
       const nextBio = profile?.bio || trimmedBio;
 
       setProfileBio(nextBio);
@@ -279,7 +283,11 @@ function PersonalProfile() {
       setBioStatus("Bio updated.");
     } catch (error) {
       console.error("Cannot update profile bio:", error);
-      setBioStatus(error.response?.data?.message || "Cannot update bio.");
+      setBioStatus(
+        error.response?.data?.message ||
+          error.response?.data?.error ||
+          "Cannot update bio.",
+      );
     } finally {
       setIsSavingBio(false);
     }
