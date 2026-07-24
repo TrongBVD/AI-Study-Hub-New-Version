@@ -1171,9 +1171,23 @@ exports.getLibrary = async (req, res) => {
       });
     }
 
+    const [{ count: starCount, error: starCountError }, { count: downloadCount, error: downloadCountError }, { data: myStar, error: myStarError }] =
+      await Promise.all([
+        supabase.from("library_stars").select("library_id", { count: "exact", head: true }).eq("library_id", libraryId),
+        supabase.from("library_downloads").select("id", { count: "exact", head: true }).eq("library_id", libraryId),
+        supabase.from("library_stars").select("library_id").eq("library_id", libraryId).eq("user_id", userID).maybeSingle(),
+      ]);
+
+    if (starCountError) throw starCountError;
+    if (downloadCountError) throw downloadCountError;
+    if (myStarError) throw myStarError;
+
     const mapped = {
       ...data,
-      documents: data.documents?.[0]?.count || 0
+      documents: data.documents?.[0]?.count || 0,
+      stars: starCount || 0,
+      downloads: downloadCount || 0,
+      isStarred: Boolean(myStar),
     };
 
     return res.status(200).json({
@@ -1185,6 +1199,109 @@ exports.getLibrary = async (req, res) => {
     return res.status(500).json({
       status: "error",
       message: "Không thể tải thông tin thư viện.",
+      error: error.message,
+    });
+  }
+};
+
+exports.toggleLibraryStar = async (req, res) => {
+  try {
+    const { libraryId } = req.params;
+    const userID = req.user.id;
+    const { data: library, error: libraryError } = await supabase
+      .from("libraries")
+      .select("id, is_public")
+      .eq("id", libraryId)
+      .maybeSingle();
+
+    if (libraryError) throw libraryError;
+    if (!library || !library.is_public) {
+      return res.status(404).json({ status: "error", message: "Public library not found." });
+    }
+
+    const { data: existing, error: existingError } = await supabase
+      .from("library_stars")
+      .select("library_id")
+      .eq("library_id", libraryId)
+      .eq("user_id", userID)
+      .maybeSingle();
+
+    if (existingError) throw existingError;
+
+    if (existing) {
+      const { error } = await supabase
+        .from("library_stars")
+        .delete()
+        .eq("library_id", libraryId)
+        .eq("user_id", userID);
+      if (error) throw error;
+    } else {
+      const { error } = await supabase
+        .from("library_stars")
+        .insert({ library_id: libraryId, user_id: userID });
+      if (error) throw error;
+    }
+
+    const { count, error: countError } = await supabase
+      .from("library_stars")
+      .select("library_id", { count: "exact", head: true })
+      .eq("library_id", libraryId);
+
+    if (countError) throw countError;
+    return res.status(200).json({
+      status: "success",
+      data: { libraryId, isStarred: !existing, stars: count || 0 },
+    });
+  } catch (error) {
+    console.error("Toggle library star error:", error);
+    return res.status(500).json({
+      status: "error",
+      message: "Could not update library star.",
+      error: error.message,
+    });
+  }
+};
+
+exports.getLibraryEngagement = async (req, res) => {
+  try {
+    const { libraryId } = req.params;
+    const userID = req.user.id;
+    const { data: library, error: libraryError } = await supabase
+      .from("libraries")
+      .select("id, is_public, user_id")
+      .eq("id", libraryId)
+      .maybeSingle();
+
+    if (libraryError) throw libraryError;
+    if (!library || (!library.is_public && String(library.user_id) !== String(userID))) {
+      return res.status(404).json({ status: "error", message: "Library not found." });
+    }
+
+    const [{ count: stars, error: starsError }, { count: downloads, error: downloadsError }, { data: myStar, error: myStarError }] =
+      await Promise.all([
+        supabase.from("library_stars").select("library_id", { count: "exact", head: true }).eq("library_id", libraryId),
+        supabase.from("library_downloads").select("id", { count: "exact", head: true }).eq("library_id", libraryId),
+        supabase.from("library_stars").select("library_id").eq("library_id", libraryId).eq("user_id", userID).maybeSingle(),
+      ]);
+
+    if (starsError) throw starsError;
+    if (downloadsError) throw downloadsError;
+    if (myStarError) throw myStarError;
+
+    return res.status(200).json({
+      status: "success",
+      data: {
+        libraryId,
+        stars: stars || 0,
+        downloads: downloads || 0,
+        isStarred: Boolean(myStar),
+      },
+    });
+  } catch (error) {
+    console.error("Get library engagement error:", error);
+    return res.status(500).json({
+      status: "error",
+      message: "Could not load library engagement.",
       error: error.message,
     });
   }
