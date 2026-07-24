@@ -8,6 +8,7 @@ import {
   LuSettings,
   LuLayers,
   LuX,
+  LuCircleHelp,
 } from "react-icons/lu";
 import { HiOutlineHome, HiOutlineSquares2X2 } from "react-icons/hi2";
 import Logo from "../../../assets/logo/Logo.jsx";
@@ -59,6 +60,7 @@ function Sidebar({ isOpen, onClose }) {
       path: "/dashboard/workspaces",
       hideForGuest: true,
     },
+    { icon: LuCircleHelp, label: "Report an issue", path: "/dashboard/report-issue", hideForGuest: true },
     { icon: LuSettings, label: "Settings", path: "/dashboard/settings" },
   ];
 

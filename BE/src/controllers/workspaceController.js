@@ -1,10 +1,10 @@
 const supabase = require("../config/supabase");
 const { createMailTransporter } = require("../utils/mailerService");
 const { createActivityLog } = require("../services/activityLogService");
+const { MAX_OWNED_WORKSPACES, countActiveOwnedWorkspaces } = require("../services/workspaceLimitService");
 
 const MEMBER_ROLES = ["Editor", "Viewer"];
 const ASSIGNABLE_MEMBER_ROLES = ["Editor", "Viewer"];
-const MAX_OWNED_WORKSPACES = 3;
 
 function getWorkspaceRoleLabel(role) {
   return String(role || "").toLowerCase() === "viewer" ? "Contributor" : role;
@@ -173,6 +173,8 @@ async function notifyWorkspaceMembers({
     }
   });
 }
+
+exports.notifyWorkspaceMembers = notifyWorkspaceMembers;
 
 function escapeHtml(value) {
   return String(value || "")
@@ -485,13 +487,7 @@ exports.createWorkspace = async (req, res) => {
         .json({ status: "error", message: "Workspace name is required." });
     }
 
-    const { count: ownedWorkspaceCount, error: countError } = await supabase
-      .from("workspaces")
-      .select("*", { count: "exact", head: true })
-      .eq("created_by", userId)
-      .is("deleted_at", null);
-
-    if (countError) throw countError;
+    const ownedWorkspaceCount = await countActiveOwnedWorkspaces(userId);
 
     if ((ownedWorkspaceCount || 0) >= MAX_OWNED_WORKSPACES) {
       return res.status(409).json({

@@ -45,6 +45,8 @@ import AdminLogsPage from "./components/pages/Admin/ActivityLogPage/ActivityLogP
 import AdminUsagePage from "./components/pages/Admin/AdminUsagePage/AdminUsagePage.jsx";
 import AdminProfilePage from "./components/pages/Admin/AdminProfilePage/AdminProfilePage.jsx";
 import DeletedWorkspacesPage from "./components/pages/Admin/DeletedWorkspacesPage/DeletedWorkspacesPage.jsx";
+import ReportIssuePage from "./components/pages/ReportIssuePage/ReportIssuePage.jsx";
+import IssueReportsPage from "./components/pages/Admin/IssueReportsPage/IssueReportsPage.jsx";
 
 function App() {
   return (
@@ -109,6 +111,7 @@ function App() {
           <Route path="search-user" element={<SearchUserPage />} />
           <Route path="search" element={<SearchResultPage />} />
           <Route path="notifications" element={<NotificationsPage />} />
+          <Route path="report-issue" element={<ReportIssuePage />} />
         </Route>
 
         {/* ADMIN ROUTES - CHỈ SYSTEM_ADMIN TRUY CẬP ĐƯỢC */}
@@ -127,6 +130,7 @@ function App() {
           <Route path="logs" element={<AdminLogsPage />} />
           <Route path="usage" element={<AdminUsagePage />} />
           <Route path="workspaces/deleted" element={<DeletedWorkspacesPage />} />
+          <Route path="issues" element={<IssueReportsPage />} />
           <Route path="settings" element={<SettingPage />} />
           <Route path="profile" element={<AdminProfilePage />} />
         </Route>

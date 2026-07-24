@@ -1,5 +1,7 @@
 const supabase = require("../config/supabase");
 const { createActivityLog } = require("../services/activityLogService");
+const { MAX_OWNED_WORKSPACES, countActiveOwnedWorkspaces } = require("../services/workspaceLimitService");
+const { notifyWorkspaceMembers } = require("./workspaceController");
 const crypto = require("crypto");
 const DOCUMENT_BUCKET = process.env.SUPABASE_DOCUMENT_BUCKET || "documents";
 const WAITING_BUCKET = process.env.SUPABASE_DOCUMENT_WAITING_ADMIN_APPROVED || "document_waiting_admin";
@@ -919,6 +921,24 @@ exports.getDeletedWorkspaces = async (req, res) => {
   } catch (error) {
     console.error("Admin deleted workspaces error:", error);
     return res.status(500).json({ status: "error", message: "Could not load deleted workspaces.", error: error.message });
+  }
+};
+
+exports.restoreWorkspace = async (req, res) => {
+  try {
+    const workspace = await getWorkspaceForPurge(req.params.workspaceId);
+    if (!workspace) return res.status(404).json({ status: "error", code: "WORKSPACE_NOT_FOUND", message: "Workspace does not exist. It may already have been permanently deleted." });
+    if (!workspace.deleted_at) return res.status(409).json({ status: "error", code: "WORKSPACE_NOT_SOFT_DELETED", message: "Only soft-deleted workspaces can be restored." });
+    const activeOwned = await countActiveOwnedWorkspaces(workspace.created_by);
+    if (activeOwned >= MAX_OWNED_WORKSPACES) return res.status(409).json({ status: "error", code: "WORKSPACE_LIMIT_REACHED", message: "The workspace owner already has the maximum number of active workspaces." });
+    const { data: restored, error } = await supabase.from("workspaces").update({ deleted_at: null }).eq("id", workspace.id).select("id, name, description, created_by, created_at, deleted_at").single();
+    if (error) throw error;
+    await createActivityLog({ actorUserId: req.user.id, adminId: req.user.id, actionType: "ADMIN_RESTORE_WORKSPACE", entityType: "workspaces", entityId: workspace.id, oldData: workspace, newData: restored, request: req, riskLevel: "INFO", details: `System Admin restored workspace \"${workspace.name}\".` });
+    await notifyWorkspaceMembers({ workspaceId: workspace.id, actionType: "WORKSPACE_RESTORED", oldData: workspace, newData: { name: workspace.name, notificationType: "restored", restoredBy: req.user.id }, request: req, details: `Workspace \"${workspace.name}\" has been restored by the System Administrator.` });
+    return res.status(200).json({ status: "success", message: "Workspace restored successfully.", data: restored });
+  } catch (error) {
+    console.error("Admin restore workspace error:", error);
+    return res.status(500).json({ status: "error", message: "Could not restore workspace." });
   }
 };
 

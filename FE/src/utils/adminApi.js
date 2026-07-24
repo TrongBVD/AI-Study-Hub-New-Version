@@ -74,3 +74,8 @@ export async function permanentlyDeleteWorkspace(workspaceId, confirmation) {
   const response = await api.delete(`/admin/workspaces/${workspaceId}/permanent`, { data: { confirmation } });
   return response.data.data;
 }
+
+export async function restoreWorkspace(workspaceId) { const response = await api.patch(`/admin/workspaces/${workspaceId}/restore`); return response.data.data; }
+export async function getAdminIssues(params = {}) { const response = await api.get("/admin/issues", { params }); return response.data.data; }
+export async function getAdminIssue(issueId) { const response = await api.get(`/admin/issues/${issueId}`); return response.data.data; }
+export async function updateAdminIssue(issueId, payload) { const response = await api.patch(`/admin/issues/${issueId}`, payload); return response.data.data; }
