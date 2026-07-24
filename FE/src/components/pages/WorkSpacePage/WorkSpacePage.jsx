@@ -4482,7 +4482,7 @@ function renderDiscussionTab() {
                     <div className="discussion_topic_meta">
                       <span>
                         <i className="ti-comment-alt"></i>
-                        {topic.comments?.length || 0} replies
+                        {topic.comments?.length || 0} solution
                       </span>
 
                       <span>
