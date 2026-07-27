@@ -1,6 +1,7 @@
 import { NavLink, useNavigate } from "react-router-dom";
 import {
   LuChartPie,
+  LuTrash2,
   LuLayoutDashboard,
   LuListChecks,
   LuLogOut,
@@ -8,6 +9,7 @@ import {
   LuShieldCheck,
   LuUsers,
   LuX,
+  LuCircleHelp,
 } from "react-icons/lu";
 import { HiOutlineHome } from "react-icons/hi2";
 import Logo from "../../../../assets/logo/Logo.jsx";
@@ -18,8 +20,10 @@ const ADMIN_MENU_ITEMS = [
   { icon: LuLayoutDashboard, label: "Dashboard", path: "/admin/dashboard" },
   { icon: LuShieldCheck, label: "AI Moderation", path: "/admin/moderation" },
   { icon: LuUsers, label: "Users", path: "/admin/users" },
+  { icon: LuCircleHelp, label: "Issue Reports", path: "/admin/issues" },
   { icon: LuListChecks, label: "Activity Logs", path: "/admin/logs" },
   { icon: LuChartPie, label: "Usage", path: "/admin/usage" },
+  { icon: LuTrash2, label: "Deleted Workspaces", path: "/admin/workspaces/deleted" },
   { icon: LuSettings, label: "Settings", path: "/admin/settings" },
 ];
 

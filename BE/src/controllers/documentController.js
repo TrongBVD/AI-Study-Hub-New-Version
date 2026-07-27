@@ -1,6 +1,7 @@
 const crypto = require("crypto");
 const path = require("path");
 const supabase = require("../config/supabase");
+const MAX_LIBRARIES_PER_USER = 5;
 
 const {
   extractTextFromFile,
@@ -39,6 +40,7 @@ const EMBEDDING_CONCURRENCY = Math.min(
   normalizeConcurrency(process.env.EMBEDDING_CONCURRENCY, 3),
   8,
 );
+const LIBRARY_STORAGE_LIMIT_BYTES = 50 * 1024 * 1024;
 
 function normalizeUploadedFileName(fileName) {
   const value = String(fileName || "");
@@ -269,11 +271,33 @@ exports.listMyDocuments = async (req, res) => {
       throw error;
     }
 
+    const approvedDocuments = (data || []).filter(
+      (document) => String(document.status || "").toUpperCase() === "APPROVED",
+    );
+    const approvedDocumentIds = approvedDocuments.map((document) => document.id);
+    let aiReadyDocumentIds = new Set();
+
+    if (approvedDocumentIds.length > 0) {
+      const { data: chunkRows, error: chunkError } = await supabase
+        .from("document_chunks")
+        .select("document_id")
+        .in("document_id", approvedDocumentIds);
+
+      if (chunkError) {
+        throw chunkError;
+      }
+
+      aiReadyDocumentIds = new Set(
+        (chunkRows || []).map((chunk) => String(chunk.document_id)),
+      );
+    }
+
     return res.status(200).json({
       status: "success",
-      data: (data || []).filter(
-        (document) => String(document.status || "").toUpperCase() === "APPROVED",
-      ),
+      data: approvedDocuments.map((document) => ({
+        ...document,
+        ai_ready: aiReadyDocumentIds.has(String(document.id)),
+      })),
     });
   } catch (error) {
     console.error("Lỗi listMyDocuments:", error);
@@ -282,6 +306,43 @@ exports.listMyDocuments = async (req, res) => {
       status: "error",
       message: "Không thể tải danh sách tài liệu.",
       error: error.message,
+    });
+  }
+};
+
+exports.getMyLibraryStorageUsage = async (req, res) => {
+  try {
+    const userID = req.user.id;
+    const { data: documents, error } = await supabase
+      .from("documents")
+      .select("file_size_bytes")
+      .eq("uploader_id", userID)
+      .not("library_id", "is", null)
+      .is("deleted_at", null);
+
+    if (error) throw error;
+
+    const usedBytes = (documents || []).reduce(
+      (total, document) => total + (Number(document.file_size_bytes) || 0),
+      0,
+    );
+
+    return res.status(200).json({
+      status: "success",
+      data: {
+        usedBytes,
+        limitBytes: LIBRARY_STORAGE_LIMIT_BYTES,
+        remainingBytes: Math.max(
+          0,
+          LIBRARY_STORAGE_LIMIT_BYTES - usedBytes,
+        ),
+      },
+    });
+  } catch (error) {
+    console.error("Get library storage usage error:", error);
+    return res.status(500).json({
+      status: "error",
+      message: "Could not load library storage usage.",
     });
   }
 };
@@ -455,20 +516,54 @@ exports.uploadDocuments = async (req, res) => {
       0,
     );
 
+    const incomingBytes = files.reduce(
+      (total, file) => total + (Number(file.size) || 0),
+      0,
+    );
+
     if (workspaceId) {
-      const { data: existingDocs } = await supabase
+      const { data: existingDocs, error: workspaceStorageError } = await supabase
         .from("documents")
         .select("file_size_bytes")
         .eq("workspace_id", workspaceId)
         .is("deleted_at", null);
 
-      const currentUsedBytes = (existingDocs || []).reduce((acc, doc) => acc + (Number(doc.file_size_bytes) || 0), 0);
-      const incomingBytes = files.reduce((acc, file) => acc + file.size, 0);
+      if (workspaceStorageError) throw workspaceStorageError;
 
-      if (currentUsedBytes + incomingBytes - replacementBytes > 50 * 1024 * 1024) {
+      const currentUsedBytes = (existingDocs || []).reduce((acc, doc) => acc + (Number(doc.file_size_bytes) || 0), 0);
+
+      if (currentUsedBytes + incomingBytes - replacementBytes > LIBRARY_STORAGE_LIMIT_BYTES) {
         return res.status(400).json({
           status: "error",
-          message: "Workspace đã đạt giới hạn 50MB dung lượng tải lên."
+          message: "Workspace đã đạt giới hạn 50MB dung lượng tải lên.",
+        });
+      }
+    } else if (libraryId) {
+      const { data: existingLibraryDocs, error: libraryStorageError } =
+        await supabase
+          .from("documents")
+          .select("file_size_bytes")
+          .eq("uploader_id", userID)
+          .not("library_id", "is", null)
+          .is("deleted_at", null);
+
+      if (libraryStorageError) throw libraryStorageError;
+
+      const currentUsedBytes = (existingLibraryDocs || []).reduce(
+        (total, document) =>
+          total + (Number(document.file_size_bytes) || 0),
+        0,
+      );
+
+      if (
+        currentUsedBytes + incomingBytes - replacementBytes >
+        LIBRARY_STORAGE_LIMIT_BYTES
+      ) {
+        return res.status(400).json({
+          status: "error",
+          code: "LIBRARY_STORAGE_LIMIT_EXCEEDED",
+          message:
+            "Your libraries have reached the shared 50 MB storage limit.",
         });
       }
     }
@@ -502,9 +597,18 @@ exports.uploadDocuments = async (req, res) => {
       return res.status(500).json({ status: "error", message: "Đã xảy ra lỗi khi kiểm duyệt tài liệu bằng AI." });
     }
 
-    // Kiểm tra tính hợp lệ của tag sau khi đã xử lý song song xong
+    // A sensitive document must still reach the admin moderation queue.
+    // Tag validation is advisory for flagged files; blocking here would stop
+    // the document before it can be saved in the waiting bucket for review.
     for (const processedData of processedFilesData) {
-      if (!processedData.tagValidationResult.isValid) {
+      const isFlaggedForAdmin = isSensitiveClassification(
+        processedData.sensitivity?.classification,
+      );
+
+      if (
+        !isFlaggedForAdmin &&
+        !processedData.tagValidationResult.isValid
+      ) {
         return res.status(400).json({
           status: "error",
           code: "TAG_VALIDATION_FAILED",
@@ -754,14 +858,23 @@ exports.suggestDocumentTags = async (req, res) => {
     });
   } catch (error) {
     console.error("Lỗi suggestDocumentTags:", error);
-    const isAiQuotaError = Number(error?.status) === 429;
+    const errorStatus = Number(error?.status || error?.statusCode);
+    const isAiQuotaError = errorStatus === 429;
+    const isAiServiceUnavailable = errorStatus === 503;
+    const isTemporaryAiError = isAiQuotaError || isAiServiceUnavailable;
 
-    return res.status(isAiQuotaError ? 503 : 500).json({
+    return res.status(isTemporaryAiError ? 503 : 500).json({
       status: "error",
-      code: isAiQuotaError ? "AI_QUOTA_EXHAUSTED" : "AI_TAG_SUGGESTION_FAILED",
+      code: isAiQuotaError
+        ? "AI_QUOTA_EXHAUSTED"
+        : isAiServiceUnavailable
+          ? "AI_SERVICE_UNAVAILABLE"
+          : "AI_TAG_SUGGESTION_FAILED",
       message: isAiQuotaError
         ? "AI tag suggestions are temporarily unavailable because the service quota was reached. Please try again later."
-        : "AI could not suggest tags for this document.",
+        : isAiServiceUnavailable
+          ? "AI tag suggestions are temporarily unavailable. Please try again shortly."
+          : "AI could not suggest tags for this document.",
     });
   }
 };
@@ -1017,6 +1130,21 @@ exports.createLibrary = async (req, res) => {
       return res.status(400).json({
         status: "error",
         message: "Library name is required.",
+      });
+    }
+
+    const { count: libraryCount, error: countError } = await supabase
+      .from("libraries")
+      .select("*", { count: "exact", head: true })
+      .eq("user_id", userID);
+
+    if (countError) throw countError;
+
+    if ((libraryCount || 0) >= MAX_LIBRARIES_PER_USER) {
+      return res.status(409).json({
+        status: "error",
+        code: "LIBRARY_LIMIT_REACHED",
+        message: `You can create up to ${MAX_LIBRARIES_PER_USER} libraries. Delete an existing library before creating another one.`,
       });
     }
 

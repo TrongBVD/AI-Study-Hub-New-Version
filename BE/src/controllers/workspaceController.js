@@ -1,6 +1,7 @@
 const supabase = require("../config/supabase");
 const { createMailTransporter } = require("../utils/mailerService");
 const { createActivityLog } = require("../services/activityLogService");
+const { MAX_OWNED_WORKSPACES, countActiveOwnedWorkspaces } = require("../services/workspaceLimitService");
 
 const MEMBER_ROLES = ["Editor", "Viewer"];
 const ASSIGNABLE_MEMBER_ROLES = ["Editor", "Viewer"];
@@ -172,6 +173,8 @@ async function notifyWorkspaceMembers({
     }
   });
 }
+
+exports.notifyWorkspaceMembers = notifyWorkspaceMembers;
 
 function escapeHtml(value) {
   return String(value || "")
@@ -482,6 +485,16 @@ exports.createWorkspace = async (req, res) => {
       return res
         .status(400)
         .json({ status: "error", message: "Workspace name is required." });
+    }
+
+    const ownedWorkspaceCount = await countActiveOwnedWorkspaces(userId);
+
+    if ((ownedWorkspaceCount || 0) >= MAX_OWNED_WORKSPACES) {
+      return res.status(409).json({
+        status: "error",
+        code: "WORKSPACE_LIMIT_REACHED",
+        message: `You can create up to ${MAX_OWNED_WORKSPACES} workspaces. Delete an existing workspace before creating another one.`,
+      });
     }
 
     const { data: workspace, error: workspaceError } = await supabase
