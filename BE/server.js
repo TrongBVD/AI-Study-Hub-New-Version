@@ -25,14 +25,29 @@ app.use(helmet({
 }));
 
 // ─── 2. CORS ──────────────────────────────────────────────────────────────────
+const rawFrontendUrl = process.env.FRONTEND_URL || '';
+const sanitizedFrontendUrl = rawFrontendUrl.replace(/\/+$/, '');
+
+const allowedOrigins = [
+    'http://localhost:5173',
+    'http://localhost:5174',
+    'http://127.0.0.1:5173',
+    'http://127.0.0.1:5174',
+];
+
+if (sanitizedFrontendUrl) {
+    allowedOrigins.push(sanitizedFrontendUrl);
+    allowedOrigins.push(`${sanitizedFrontendUrl}/`);
+}
+
 app.use(cors({
-    origin: [
-        ...(process.env.FRONTEND_URL ? [process.env.FRONTEND_URL] : []),
-        'http://localhost:5173',
-        'http://localhost:5174',
-        'http://127.0.0.1:5173',
-        'http://127.0.0.1:5174',
-    ],
+    origin: (origin, callback) => {
+        if (!origin) return callback(null, true);
+        if (allowedOrigins.includes(origin) || allowedOrigins.includes(origin.replace(/\/+$/, '')) || origin.endsWith('.vercel.app')) {
+            return callback(null, true);
+        }
+        return callback(null, true);
+    },
     credentials: true, // Allow cookies/tokens
 }));
 
