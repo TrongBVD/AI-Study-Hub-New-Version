@@ -82,6 +82,12 @@ app.get('/', (req, res) => {
 
 // ─── 6. Start server ──────────────────────────────────────────────────────────
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-    console.log(`[🚀 Server] Listening at http://localhost:${PORT}`);
-});
+
+if (process.env.NODE_ENV !== 'production' || require.main === module) {
+    app.listen(PORT, () => {
+        console.log(`[🚀 Server] Listening at http://localhost:${PORT}`);
+    });
+}
+
+module.exports = app;
+
