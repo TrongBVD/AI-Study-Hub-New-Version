@@ -920,6 +920,17 @@ exports.downloadDocument = async (req, res) => {
       throw signedUrlError;
     }
 
+    if (document.library_id) {
+      try {
+        await supabase.from("library_downloads").insert({
+          library_id: document.library_id,
+          user_id: userID === "guest" || userID === "00000000-0000-0000-0000-000000000000" ? null : userID,
+        });
+      } catch (dlErr) {
+        console.warn("Could not log library download:", dlErr);
+      }
+    }
+
     return res.status(200).json({
       status: "success",
       data: {
@@ -1337,6 +1348,18 @@ exports.deleteLibrary = async (req, res) => {
         message: "Authenticated user id is missing.",
       });
     }
+
+    if (userID === "guest" || userID === "00000000-0000-0000-0000-000000000000" || req.user.role === "GUEST") {
+      return res.status(403).json({
+        status: "error",
+        message: "Guest users cannot delete libraries.",
+      });
+    }
+
+    // Clean up dependent records first to avoid foreign key constraint errors
+    await supabase.from("library_stars").delete().eq("library_id", id);
+    await supabase.from("library_downloads").delete().eq("library_id", id);
+    await supabase.from("documents").update({ library_id: null }).eq("library_id", id);
 
     const { error } = await supabase
       .from("libraries")

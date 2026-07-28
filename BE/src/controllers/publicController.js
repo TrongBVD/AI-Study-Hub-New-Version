@@ -218,6 +218,17 @@ exports.downloadPublicDocument = async (req, res) => {
 
     if (signedUrlError) throw signedUrlError;
 
+    if (document.library_id) {
+      try {
+        await supabase.from("library_downloads").insert({
+          library_id: document.library_id,
+          user_id: null,
+        });
+      } catch (dlErr) {
+        console.warn("Could not log public library download:", dlErr);
+      }
+    }
+
     return res.status(200).json({
       status: "success",
       data: {

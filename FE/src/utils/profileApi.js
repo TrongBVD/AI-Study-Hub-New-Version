@@ -16,7 +16,7 @@ export async function updateMyProfile(payload) {
 }
 
 export async function updateMyBio(bio) {
-  const response = await api.patch("/users/profile-bio", { bio });
+  const response = await api.put("/profile/me", { bio });
   return response.data.data;
 }
 
