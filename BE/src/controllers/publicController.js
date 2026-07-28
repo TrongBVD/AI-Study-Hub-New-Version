@@ -60,6 +60,9 @@ exports.listPublicLibraries = async (req, res) => {
     const { starsByLibrary, downloadsByLibrary } =
       await getLibraryEngagement(libraryIds);
 
+    let starCounts = new Map();
+    let downloadCounts = new Map();
+
     if (libraryIds.length > 0) {
       const { data: documents, error: documentError } = await supabase
         .from("documents")
@@ -73,6 +76,28 @@ exports.listPublicLibraries = async (req, res) => {
 
       documentCounts = (documents || []).reduce((counts, document) => {
         const key = String(document.library_id);
+        counts.set(key, (counts.get(key) || 0) + 1);
+        return counts;
+      }, new Map());
+
+      const { data: starsData } = await supabase
+        .from("library_stars")
+        .select("library_id")
+        .in("library_id", libraryIds);
+
+      starCounts = (starsData || []).reduce((counts, row) => {
+        const key = String(row.library_id);
+        counts.set(key, (counts.get(key) || 0) + 1);
+        return counts;
+      }, new Map());
+
+      const { data: downloadsData } = await supabase
+        .from("library_downloads")
+        .select("library_id")
+        .in("library_id", libraryIds);
+
+      downloadCounts = (downloadsData || []).reduce((counts, row) => {
+        const key = String(row.library_id);
         counts.set(key, (counts.get(key) || 0) + 1);
         return counts;
       }, new Map());
@@ -98,6 +123,8 @@ exports.listPublicLibraries = async (req, res) => {
       data: (libraries || []).map((library) => ({
         ...library,
         documents: documentCounts.get(String(library.id)) || 0,
+        stars: starCounts.get(String(library.id)) || 0,
+        downloads: downloadCounts.get(String(library.id)) || 0,
         owner: ownersById.get(String(library.user_id)) || null,
         visibility: "public",
         stars: starsByLibrary.get(String(library.id)) || 0,
@@ -158,6 +185,16 @@ exports.getPublicLibrary = async (req, res) => {
       await getLibraryEngagement([library.id]);
     if (ownerError) throw ownerError;
 
+    const { count: starsCount } = await supabase
+      .from("library_stars")
+      .select("*", { count: "exact", head: true })
+      .eq("library_id", libraryId);
+
+    const { count: downloadsCount } = await supabase
+      .from("library_downloads")
+      .select("*", { count: "exact", head: true })
+      .eq("library_id", libraryId);
+
     return res.status(200).json({
       status: "success",
       data: {
@@ -165,6 +202,8 @@ exports.getPublicLibrary = async (req, res) => {
           ...library,
           owner: owner || null,
           documents: documents?.length || 0,
+          stars: starsCount || 0,
+          downloads: downloadsCount || 0,
           visibility: "public",
           stars: starsByLibrary.get(String(library.id)) || 0,
           downloads: downloadsByLibrary.get(String(library.id)) || 0,
@@ -267,6 +306,17 @@ exports.downloadPublicDocument = async (req, res) => {
       });
 
     if (signedUrlError) throw signedUrlError;
+
+    if (document.library_id) {
+      try {
+        await supabase.from("library_downloads").insert({
+          library_id: document.library_id,
+          user_id: null,
+        });
+      } catch (dlErr) {
+        console.warn("Could not log public library download:", dlErr);
+      }
+    }
 
     return res.status(200).json({
       status: "success",

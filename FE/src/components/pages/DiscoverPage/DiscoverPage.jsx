@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { getPublicLibraries } from "../../../utils/publicApi.js";
+import { isLibraryStarred } from "../../../utils/starredLibraries.js";
 import "./DiscoverPage.css";
 
 const libraryThemes = [
@@ -36,11 +37,13 @@ function getLibraryTheme(index) {
 
 function normalizeLibrary(library, index) {
   const id = library.id || library.libraryId;
+  const isStarredLocally = isLibraryStarred(id);
   const name = library.name || library.libraryName || "Untitled library";
   const documents = Number(library.documents || library.document_count || 0);
-  const stars = Number(
+  const baseStars = Number(
     library.stars ?? library.star_count ?? library.starCount ?? 0,
   );
+  const stars = isStarredLocally ? Math.max(baseStars, 1) : baseStars;
   const downloads = Number(
     library.downloads ?? library.download_count ?? library.downloadCount ?? 0,
   );

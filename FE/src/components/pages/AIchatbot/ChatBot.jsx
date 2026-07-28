@@ -159,7 +159,7 @@ function ChatBot({ defaultOpen = false, showBubble = true }) {
         const result = documentsResponse.data;
 
         const approvedDocs = (result.data || []).filter(
-          (doc) => doc.status === "APPROVED",
+          (doc) => doc.status === "APPROVED" && doc.ai_ready !== false,
         );
         const myLibraries = librariesResponse.data?.data || [];
 

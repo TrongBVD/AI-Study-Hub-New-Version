@@ -7,6 +7,7 @@ const authMiddleware = require("../middleware/authMiddleware");
 
 const {
     listMyDocuments,
+    getMyLibraryStorageUsage,
     uploadDocuments,
     suggestDocumentTags,
     downloadDocument,
@@ -63,6 +64,7 @@ const suggestTagsLimiter = rateLimit({
 });
 
 router.get("/", authMiddleware, listMyDocuments);
+router.get("/storage/usage", authMiddleware, getMyLibraryStorageUsage);
 
 router.post(
     "/suggest-tags",
@@ -84,6 +86,7 @@ router.get("/libraries/:libraryId", authMiddleware, getLibrary);
 router.get("/libraries/:libraryId/engagement", authMiddleware, getLibraryEngagement);
 router.post("/libraries/:libraryId/star", authMiddleware, toggleLibraryStar);
 router.post("/libraries", authMiddleware, createLibrary);
+router.post("/libraries/:libraryId/star", authMiddleware, toggleStarLibrary);
 router.put("/libraries/:id", authMiddleware, updateLibrary);
 router.delete("/libraries/:id", authMiddleware, deleteLibrary);
 

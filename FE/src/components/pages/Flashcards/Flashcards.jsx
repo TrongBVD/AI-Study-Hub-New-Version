@@ -84,6 +84,22 @@ function Flashcards() {
     loadDocuments();
   }, [requestedDocumentId]);
 
+  useEffect(() => {
+    if (!selectedDocumentId) return;
+    async function loadDatabaseFlashcards() {
+      try {
+        const response = await api.get(`/ai/documents/${selectedDocumentId}/flashcards`);
+        const cards = response.data?.data || [];
+        if (cards.length > 0) {
+          setFlashcards(cards);
+        }
+      } catch (err) {
+        console.warn("Could not load flashcards from Database:", err);
+      }
+    }
+    loadDatabaseFlashcards();
+  }, [selectedDocumentId]);
+
   async function generateFlashcards() {
     if (!selectedDocumentId || loading) return;
 

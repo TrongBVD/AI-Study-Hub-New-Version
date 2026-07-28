@@ -48,6 +48,7 @@ function CreateLibraryPage() {
 
   const TITLE_LIMIT = 20;
   const DESCRIPTION_LIMIT = 350;
+  const MAX_LIBRARIES_PER_USER = 5;
   const returnPath = location.state?.from || "/dashboard/home";
 
   const [libraryName, setLibraryName] = useState("");
@@ -87,7 +88,8 @@ function CreateLibraryPage() {
   const isDuplicateName =
     trimmedLibraryName.length > 0 &&
     hasDuplicateLibraryName(userLibraries, trimmedLibraryName);
-  const canCreate = trimmedLibraryName.length > 0 && !isDuplicateName;
+  const hasReachedLibraryLimit = userLibraries.length >= MAX_LIBRARIES_PER_USER;
+  const canCreate = trimmedLibraryName.length > 0 && !isDuplicateName && !hasReachedLibraryLimit;
 
   const previewName = trimmedLibraryName || "Untitled library";
   const previewDescription =
@@ -126,6 +128,11 @@ function CreateLibraryPage() {
       return;
     }
 
+    if (hasReachedLibraryLimit) {
+      alert(`You can create up to ${MAX_LIBRARIES_PER_USER} libraries. Delete an existing library before creating another one.`);
+      return;
+    }
+
     try {
       const latestLibraries = await getMyLibraries();
       const safeLatestLibraries = Array.isArray(latestLibraries)
@@ -133,6 +140,11 @@ function CreateLibraryPage() {
         : [];
 
       setUserLibraries(safeLatestLibraries);
+
+      if (safeLatestLibraries.length >= MAX_LIBRARIES_PER_USER) {
+        alert(`You can create up to ${MAX_LIBRARIES_PER_USER} libraries. Delete an existing library before creating another one.`);
+        return;
+      }
 
       if (hasDuplicateLibraryName(safeLatestLibraries, trimmedLibraryName)) {
         alert("A library with this name already exists. Please choose another name.");
@@ -185,6 +197,7 @@ function CreateLibraryPage() {
               Set up a library for course documents, summaries, research notes,
               and AI-supported learning materials.
             </p>
+            <p>{userLibraries.length} / {MAX_LIBRARIES_PER_USER} libraries created</p>
 
             <div className="create_library_steps" aria-label="Library setup steps">
               <article>

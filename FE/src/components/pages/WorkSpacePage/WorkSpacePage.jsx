@@ -2772,7 +2772,6 @@ function renderMembersTab() {
                               ))}
                             </div>
                           )}
-                          {renderSolutionComments(solution)}
                         </div>
                       )}
 

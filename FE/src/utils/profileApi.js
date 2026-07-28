@@ -15,6 +15,11 @@ export async function updateMyProfile(payload) {
   return response.data.data;
 }
 
+export async function updateMyBio(bio) {
+  const response = await api.put("/profile/me", { bio });
+  return response.data.data;
+}
+
 export async function updateMyAvatar(file) {
   const formData = new FormData();
   formData.append("avatar", file);

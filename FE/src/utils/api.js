@@ -105,6 +105,7 @@ api.interceptors.response.use(
       const url = originalRequest.url || "";
       const isAuthAttempt =
         url.includes("/auth/login") ||
+        url.includes("/auth/logout") ||
         url.includes("/auth/refresh") ||
         url.includes("/auth/verify-otp") ||
         url.includes("/auth/verify-reset-otp") ||
@@ -128,17 +129,28 @@ api.interceptors.response.use(
       }
 
       if (!isAuthAttempt) {
-        if (error.response.data?.code === "SESSION_EXPIRED") {
-          alert("Your session has expired because your account was logged in elsewhere.");
-        } else {
-          alert("Your session has expired or is invalid. Please log in again.");
+        const storedToken = getAccessToken();
+        const storedUser = localStorage.getItem("user");
+        const isGuest = storedUser && storedUser.includes('"GUEST"');
+        const isProtectedRoute =
+          window.location.pathname.startsWith("/dashboard") ||
+          window.location.pathname.startsWith("/admin");
+
+        if (storedToken && !isGuest && isProtectedRoute) {
+          if (error.response.data?.code === "SESSION_EXPIRED") {
+            alert("Your session has expired because your account was logged in elsewhere.");
+          } else {
+            alert("Your session has expired or is invalid. Please log in again.");
+          }
         }
 
         // Clean up stored session
         clearStoredSession();
-        
-        // Force redirect to login page
-        window.location.href = "/login";
+
+        // Force redirect to login page only on protected route for non-guest
+        if (isProtectedRoute && !isGuest) {
+          window.location.href = "/login";
+        }
       }
     }
     return Promise.reject(error);

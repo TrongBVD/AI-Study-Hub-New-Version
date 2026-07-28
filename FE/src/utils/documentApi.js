@@ -9,6 +9,11 @@ export async function getMyDocuments(libraryId = null) {
   return response.data.data;
 }
 
+export async function getMyLibraryStorageUsage() {
+  const response = await api.get("/documents/storage/usage");
+  return response.data.data;
+}
+
 export async function uploadDocuments(
   files,
   workspaceId = null,
@@ -118,4 +123,9 @@ export async function getLibraryEngagement(libraryId) {
 export async function deleteLibrary(libraryId) {
   const response = await api.delete(`/documents/libraries/${libraryId}`);
   return response.data;
+}
+
+export async function toggleStarLibraryApi(libraryId) {
+  const response = await api.post(`/documents/libraries/${libraryId}/star`);
+  return response.data.data;
 }

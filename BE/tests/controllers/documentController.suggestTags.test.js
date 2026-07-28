@@ -110,4 +110,20 @@ describe("documentController.suggestDocumentTags", () => {
       expect.objectContaining({ code: "AI_QUOTA_EXHAUSTED" }),
     );
   });
+
+  test("reports a temporarily unavailable AI service", async () => {
+    extractTextFromFile.mockResolvedValue("Readable educational content.");
+    validateTagsAndContent.mockRejectedValue({ status: 503 });
+    const response = createResponse();
+
+    await suggestDocumentTags(
+      { files: [{ originalname: "requirements.pdf" }] },
+      response,
+    );
+
+    expect(response.status).toHaveBeenCalledWith(503);
+    expect(response.json).toHaveBeenCalledWith(
+      expect.objectContaining({ code: "AI_SERVICE_UNAVAILABLE" }),
+    );
+  });
 });

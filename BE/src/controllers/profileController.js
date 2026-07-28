@@ -10,6 +10,7 @@ function mapProfile(profile) {
     email: profile.email,
     username: profile.username,
     full_name: profile.full_name,
+    bio: profile.bio || "",
     last_name_change: profile.last_name_change,
     date_of_birth: profile.date_of_birth,
     is_dob_public: profile.is_dob_public,
@@ -26,9 +27,25 @@ exports.getMyProfile = async (req, res) => {
   try {
     const userId = req.user.id;
 
+    if (userId === "guest" || userId === "00000000-0000-0000-0000-000000000000" || req.user.role === "GUEST") {
+      return res.status(200).json({
+        status: "success",
+        data: {
+          id: "00000000-0000-0000-0000-000000000000",
+          email: "guest@studyhub.local",
+          username: "GuestUser",
+          full_name: "Guest",
+          role: "GUEST",
+          status: "ACTIVE",
+          avatar_url: "",
+          bio: "",
+        },
+      });
+    }
+
     const { data: profile, error } = await supabase
       .from("profiles")
-      .select("id, email, username, full_name, last_name_change, date_of_birth, is_dob_public, created_at, role, status, updated_at, last_login_at, avatar_url")
+      .select("id, email, username, full_name, bio, last_name_change, date_of_birth, is_dob_public, created_at, role, status, updated_at, last_login_at, avatar_url")
       .eq("id", userId)
       .maybeSingle();
 
@@ -58,19 +75,42 @@ exports.getMyProfile = async (req, res) => {
 exports.updateMyProfile = async (req, res) => {
   try {
     const userId = req.user.id;
-    const fullName = String(req.body?.full_name || "").trim();
 
-    if (!fullName) {
-      return res.status(400).json({
+    if (userId === "guest" || userId === "00000000-0000-0000-0000-000000000000" || req.user.role === "GUEST") {
+      return res.status(403).json({
         status: "error",
-        message: "Profile name is required.",
+        message: "Guest profile cannot be updated.",
       });
     }
 
-    if (fullName.length > 80) {
+    const updates = {};
+
+    if (req.body?.full_name !== undefined) {
+      const fullName = String(req.body.full_name || "").trim();
+      if (!fullName) {
+        return res.status(400).json({
+          status: "error",
+          message: "Profile name is required.",
+        });
+      }
+      if (fullName.length > 80) {
+        return res.status(400).json({
+          status: "error",
+          message: "Profile name must be 80 characters or fewer.",
+        });
+      }
+      updates.full_name = fullName;
+    }
+
+    if (req.body?.bio !== undefined) {
+      const bio = String(req.body.bio || "").trim();
+      updates.bio = bio;
+    }
+
+    if (Object.keys(updates).length === 0) {
       return res.status(400).json({
         status: "error",
-        message: "Profile name must be 80 characters or fewer.",
+        message: "No profile fields to update.",
       });
     }
 
@@ -113,8 +153,13 @@ exports.updateMyProfile = async (req, res) => {
     const { data: profile, error } = await supabase
       .from("profiles")
       .update({ full_name: fullName, last_name_change: changedAt })
+    updates.updated_at = new Date().toISOString();
+
+    const { data: profile, error } = await supabase
+      .from("profiles")
+      .update(updates)
       .eq("id", userId)
-      .select("id, email, username, full_name, last_name_change, date_of_birth, is_dob_public, created_at, role, status, updated_at, last_login_at, avatar_url")
+      .select("id, email, username, full_name, bio, last_name_change, date_of_birth, is_dob_public, created_at, role, status, updated_at, last_login_at, avatar_url")
       .single();
 
     if (error) throw error;

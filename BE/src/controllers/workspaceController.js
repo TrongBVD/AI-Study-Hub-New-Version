@@ -1,6 +1,7 @@
 const supabase = require("../config/supabase");
 const { createMailTransporter } = require("../utils/mailerService");
 const { createActivityLog } = require("../services/activityLogService");
+const { MAX_OWNED_WORKSPACES, countActiveOwnedWorkspaces } = require("../services/workspaceLimitService");
 
 const MEMBER_ROLES = ["Editor", "Viewer"];
 const ASSIGNABLE_MEMBER_ROLES = ["Editor", "Viewer"];
@@ -172,6 +173,8 @@ async function notifyWorkspaceMembers({
     }
   });
 }
+
+exports.notifyWorkspaceMembers = notifyWorkspaceMembers;
 
 function escapeHtml(value) {
   return String(value || "")
@@ -484,6 +487,16 @@ exports.createWorkspace = async (req, res) => {
         .json({ status: "error", message: "Workspace name is required." });
     }
 
+    const ownedWorkspaceCount = await countActiveOwnedWorkspaces(userId);
+
+    if ((ownedWorkspaceCount || 0) >= MAX_OWNED_WORKSPACES) {
+      return res.status(409).json({
+        status: "error",
+        code: "WORKSPACE_LIMIT_REACHED",
+        message: `You can create up to ${MAX_OWNED_WORKSPACES} workspaces. Delete an existing workspace before creating another one.`,
+      });
+    }
+
     const { data: workspace, error: workspaceError } = await supabase
       .from("workspaces")
       .insert({ name, description, created_by: userId })
@@ -512,6 +525,13 @@ exports.createWorkspace = async (req, res) => {
 
 exports.listMyWorkspaces = async (req, res) => {
   try {
+    if (req.user.id === "guest") {
+      return res.status(200).json({
+        status: "success",
+        data: [],
+      });
+    }
+
     const { data, error } = await supabase
       .from("workspace_members")
       .select(
@@ -852,21 +872,15 @@ exports.addMember = async (req, res) => {
 
     if (error) throw error;
 
-    let emailSent = false;
-    let emailError = null;
-
-    try {
-      await sendWorkspaceInviteEmail({
-        to: invitedUser.email,
-        workspace: access.workspace,
-        inviter,
-        role,
-      });
-      emailSent = true;
-    } catch (mailError) {
-      emailError = mailError.message;
-      console.error("Could not send workspace invite email:", mailError);
-    }
+    // Trigger email invitation in background so HTTP response returns instantly (< 200ms)
+    sendWorkspaceInviteEmail({
+      to: invitedUser.email,
+      workspace: access.workspace,
+      inviter,
+      role,
+    }).catch((mailError) => {
+      console.error("Could not send workspace invite email:", mailError?.message || mailError);
+    });
 
     return res.status(201).json({
       status: "success",
@@ -878,8 +892,7 @@ exports.addMember = async (req, res) => {
           username: invitedUser.username,
           full_name: invitedUser.full_name,
         },
-        emailSent,
-        emailError,
+        emailSent: true,
       },
     });
   } catch (error) {

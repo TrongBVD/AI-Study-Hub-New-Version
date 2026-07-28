@@ -28,6 +28,7 @@ import {
   getStoredUser,
   isTokenValid,
 } from "../../../utils/authToken";
+import { isLibraryStarred, toggleStarLibrary } from "../../../utils/starredLibraries";
 import {
   downloadPublicDocument,
   getPublicLibrary,
@@ -197,8 +198,13 @@ function LibraryPage() {
   const [stars, setStars] = useState(() => Number(getInitialLibraryData().stars) || 0);
 
   const [isStarred, setIsStarred] = useState(
-    () => Boolean(getInitialLibraryData().isStarred)
+    () => isLibraryStarred(libraryId) || Boolean(getInitialLibraryData().isStarred)
   );
+
+  const [stars, setStars] = useState(() => {
+    const base = Number(getInitialLibraryData().stars) || 0;
+    return isLibraryStarred(libraryId) ? Math.max(base, 1) : base;
+  });
   const [activeTab, setActiveTab] = useState("documents");
   const [documentSearch, setDocumentSearch] = useState("");
   const [currentFolder, setCurrentFolder] = useState(null);
@@ -864,9 +870,14 @@ function LibraryPage() {
         }
       }
     } catch (error) {
-      const isRateLimited = error.response?.status === 429;
+      const errorCode = error.response?.data?.code;
+      const isRateLimited =
+        error.response?.status === 429 || errorCode === "AI_QUOTA_EXHAUSTED";
+      const isAiServiceUnavailable =
+        error.response?.status === 503 ||
+        errorCode === "AI_SERVICE_UNAVAILABLE";
 
-      if (!isRateLimited) {
+      if (!isRateLimited && !isAiServiceUnavailable) {
         console.error("Cannot load AI tag suggestions:", error);
       }
 
@@ -1059,29 +1070,45 @@ function LibraryPage() {
     const updatedHashtags = [...hashtags];
     updatedHashtags[index] = value;
     setHashtags(updatedHashtags);
+    setTagErrors([]);
     setTagInputErrors(["", "", ""]);
-  }
-
-  function handleApplySuggestedTag(suggestedTag) {
-    setHashtags((currentTags) => {
-      const normalizedSuggestion = suggestedTag.trim().toLocaleLowerCase();
-      const alreadyApplied = currentTags.some(
-        (tag) => tag.trim().toLocaleLowerCase() === normalizedSuggestion,
-      );
-      const emptyIndex = currentTags.findIndex((tag) => tag.trim() === "");
-
-      if (alreadyApplied || emptyIndex === -1) return currentTags;
-
-      const nextTags = [...currentTags];
-      nextTags[emptyIndex] = suggestedTag;
-      return nextTags;
-    });
-    setTagInputErrors(["", "", ""]);
+    setUploadNotice((currentNotice) =>
+      currentNotice?.title === "AI hashtag verification failed"
+        ? null
+        : currentNotice,
+    );
   }
 
   function handleApplyAllSuggestedTags() {
     setHashtags((currentTags) => {
       const nextTags = [...currentTags];
+      const invalidTagReplacements = new Map(
+        tagErrors
+          .filter(
+            (validation) =>
+              validation?.isValid === false &&
+              String(validation.recommendedReplacement || "").trim(),
+          )
+          .map((validation) => [
+            String(validation.tag || "")
+              .trim()
+              .replace(/^#/, "")
+              .toLocaleLowerCase(),
+            String(validation.recommendedReplacement).trim(),
+          ]),
+      );
+
+      for (let index = 0; index < nextTags.length; index += 1) {
+        const normalizedCurrentTag = String(nextTags[index] || "")
+          .trim()
+          .replace(/^#/, "")
+          .toLocaleLowerCase();
+        const replacement = invalidTagReplacements.get(normalizedCurrentTag);
+
+        if (replacement) {
+          nextTags[index] = replacement;
+        }
+      }
 
       for (const suggestedTag of aiRecommendedTags) {
         const normalizedSuggestion = suggestedTag.trim().toLocaleLowerCase();
@@ -1097,7 +1124,13 @@ function LibraryPage() {
 
       return nextTags;
     });
+    setTagErrors([]);
     setTagInputErrors(["", "", ""]);
+    setUploadNotice((currentNotice) =>
+      currentNotice?.title === "AI hashtag verification failed"
+        ? null
+        : currentNotice,
+    );
   }
 
   function handleCancelTaggedUpload() {
@@ -2524,7 +2557,6 @@ function LibraryPage() {
                         onClick={() => setActiveHashtagIndex(index)}
                         onChange={(e) => {
                           handleHashtagChange(index, e.target.value);
-                          setTagErrors([]);
                         }}
                         placeholder={`# tag${index + 1}`}
                         className={
@@ -2599,7 +2631,6 @@ function LibraryPage() {
                             hashtagInputRefs.current[targetIndex]?.focus();
                           });
                         }}
-                        onClick={() => handleApplySuggestedTag(recTag)}
                       >
                         {recTag}
                       </button>

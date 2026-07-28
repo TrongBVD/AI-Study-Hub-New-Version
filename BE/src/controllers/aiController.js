@@ -109,6 +109,19 @@ async function increaseChatUsage(userId) {
 exports.getAiSummary = async (req, res) => {
   try {
     const chatLimit = 50;
+
+    if (req.user.id === "guest" || req.user.id === "00000000-0000-0000-0000-000000000000" || req.user.role === "GUEST") {
+      return res.status(200).json({
+        status: "success",
+        data: {
+          chatLimit,
+          chatsUsed: 0,
+          chatsRemaining: chatLimit,
+          tokensConsumed: 0,
+        },
+      });
+    }
+
     const today = new Date().toISOString().slice(0, 10);
     const { data: usage, error } = await supabase
       .from("ai_usage_logs")
@@ -167,13 +180,12 @@ exports.chatWithDocument = async (req, res) => {
     }
 
     if (document.status !== "APPROVED") {
-      return res.status(400).json({
+      return res.status(409).json({
         status: "error",
+        code: "DOCUMENT_NOT_AI_READY",
         message: "This document is not approved or not ready for AI chat yet.",
       });
     }
-
-    await increaseChatUsage(userId);
 
     const questionEmbedding = await createEmbedding(question, "query");
 
@@ -189,13 +201,15 @@ exports.chatWithDocument = async (req, res) => {
     if (matchError) throw matchError;
 
     if (!chunks || chunks.length === 0) {
-      return res.status(400).json({
+      return res.status(409).json({
         status: "error",
+        code: "DOCUMENT_CHUNKS_UNAVAILABLE",
         message: "No AI chunks found for this document. Re-upload or re-process it.",
       });
     }
 
     const answer = await answerWithContext(question, chunks);
+    await increaseChatUsage(userId);
 
     return res.status(200).json({
       status: "success",
@@ -335,5 +349,29 @@ exports.generateFlashcards = async (req, res) => {
       status: "error",
       message: error.message || "Failed to generate flashcards.",
     });
+  }
+};
+
+exports.getDocumentFlashcards = async (req, res) => {
+  try {
+    const { documentId } = req.params;
+    const userId = req.user.id;
+
+    if (userId === "guest" || userId === "00000000-0000-0000-0000-000000000000" || req.user.role === "GUEST") {
+      return res.status(200).json({ status: "success", data: [] });
+    }
+
+    const { data: flashcards, error } = await supabase
+      .from("flashcards")
+      .select("id, document_id, workspace_id, creator_id, question, answer, created_at")
+      .eq("document_id", documentId)
+      .order("created_at", { ascending: true });
+
+    if (error) throw error;
+
+    return res.status(200).json({ status: "success", data: flashcards || [] });
+  } catch (error) {
+    console.error("getDocumentFlashcards error:", error);
+    return res.status(500).json({ status: "error", message: "Could not load flashcards." });
   }
 };
