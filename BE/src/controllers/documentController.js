@@ -1359,3 +1359,62 @@ exports.deleteLibrary = async (req, res) => {
     });
   }
 };
+
+// Hàm API toggle thả sao cho Thư viện (lưu trực tiếp vào bảng library_stars)
+exports.toggleStarLibrary = async (req, res) => {
+  try {
+    const { libraryId } = req.params;
+    const userID = req.user.id;
+
+    if (userID === "guest" || userID === "00000000-0000-0000-0000-000000000000" || req.user.role === "GUEST") {
+      return res.status(403).json({
+        status: "error",
+        message: "Tài khoản Guest không hỗ trợ thả sao thư viện.",
+      });
+    }
+
+    const { data: existing } = await supabase
+      .from("library_stars")
+      .select("library_id")
+      .eq("library_id", libraryId)
+      .eq("user_id", userID)
+      .maybeSingle();
+
+    let isStarred = false;
+
+    if (existing) {
+      await supabase
+        .from("library_stars")
+        .delete()
+        .eq("library_id", libraryId)
+        .eq("user_id", userID);
+      isStarred = false;
+    } else {
+      await supabase
+        .from("library_stars")
+        .insert({ library_id: libraryId, user_id: userID });
+      isStarred = true;
+    }
+
+    const { count } = await supabase
+      .from("library_stars")
+      .select("*", { count: "exact", head: true })
+      .eq("library_id", libraryId);
+
+    return res.status(200).json({
+      status: "success",
+      data: {
+        libraryId,
+        isStarred,
+        stars: count || 0,
+      },
+    });
+  } catch (error) {
+    console.error("Lỗi toggleStarLibrary:", error);
+    return res.status(500).json({
+      status: "error",
+      message: "Không thể thay đổi trạng thái sao cho thư viện.",
+      error: error.message,
+    });
+  }
+};

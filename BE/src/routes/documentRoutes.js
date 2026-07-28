@@ -18,6 +18,7 @@ const {
     updateLibrary,
     getLibrary,
     deleteLibrary,
+    toggleStarLibrary,
 } = require("../controllers/documentController");
 
 const router = express.Router();
@@ -82,6 +83,7 @@ router.post(
 router.get("/libraries", authMiddleware, listMyLibraries);
 router.get("/libraries/:libraryId", authMiddleware, getLibrary);
 router.post("/libraries", authMiddleware, createLibrary);
+router.post("/libraries/:libraryId/star", authMiddleware, toggleStarLibrary);
 router.put("/libraries/:id", authMiddleware, updateLibrary);
 router.delete("/libraries/:id", authMiddleware, deleteLibrary);
 

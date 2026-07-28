@@ -351,3 +351,27 @@ exports.generateFlashcards = async (req, res) => {
     });
   }
 };
+
+exports.getDocumentFlashcards = async (req, res) => {
+  try {
+    const { documentId } = req.params;
+    const userId = req.user.id;
+
+    if (userId === "guest" || userId === "00000000-0000-0000-0000-000000000000" || req.user.role === "GUEST") {
+      return res.status(200).json({ status: "success", data: [] });
+    }
+
+    const { data: flashcards, error } = await supabase
+      .from("flashcards")
+      .select("id, document_id, workspace_id, creator_id, question, answer, created_at")
+      .eq("document_id", documentId)
+      .order("created_at", { ascending: true });
+
+    if (error) throw error;
+
+    return res.status(200).json({ status: "success", data: flashcards || [] });
+  } catch (error) {
+    console.error("getDocumentFlashcards error:", error);
+    return res.status(500).json({ status: "error", message: "Could not load flashcards." });
+  }
+};

@@ -20,12 +20,14 @@ import {
   getLibrary,
   updateLibrary,
   deleteLibrary,
+  toggleStarLibraryApi,
 } from "../../../utils/documentApi";
 import {
   getAccessToken,
   getStoredUser,
   isTokenValid,
 } from "../../../utils/authToken";
+import { isLibraryStarred, toggleStarLibrary } from "../../../utils/starredLibraries";
 import {
   downloadPublicDocument,
   getPublicLibrary,
@@ -177,11 +179,14 @@ function LibraryPage() {
   const folderIdRef = useRef(1);
   const authorName = "You";
   const [libraryData, setLibraryData] = useState(getInitialLibraryData);
-  const [stars, setStars] = useState(() => Number(getInitialLibraryData().stars) || 0);
-
   const [isStarred, setIsStarred] = useState(
-    () => Boolean(getInitialLibraryData().isStarred)
+    () => isLibraryStarred(libraryId) || Boolean(getInitialLibraryData().isStarred)
   );
+
+  const [stars, setStars] = useState(() => {
+    const base = Number(getInitialLibraryData().stars) || 0;
+    return isLibraryStarred(libraryId) ? Math.max(base, 1) : base;
+  });
   const [activeTab, setActiveTab] = useState("documents");
   const [documentSearch, setDocumentSearch] = useState("");
   const [currentFolder, setCurrentFolder] = useState(null);
@@ -429,19 +434,33 @@ function LibraryPage() {
     }
   }
 
-  function handleToggleStar() {
-    const nextIsStarred = !isStarred;
-    const nextStars = nextIsStarred ? stars + 1 : Math.max(stars - 1, 0);
-
-    const updatedLibrary = {
-      ...libraryData,
-      stars: nextStars,
-      isStarred: nextIsStarred,
-    };
+  async function handleToggleStar() {
+    const targetId = libraryId || libraryData.id;
+    const nextIsStarred = toggleStarLibrary(targetId);
+    const nextStars = nextIsStarred ? Math.max(stars + 1, 1) : Math.max(stars - 1, 0);
 
     setStars(nextStars);
     setIsStarred(nextIsStarred);
-    setLibraryData(updatedLibrary);
+    setLibraryData((prev) => ({
+      ...prev,
+      stars: nextStars,
+      isStarred: nextIsStarred,
+    }));
+
+    try {
+      const resData = await toggleStarLibraryApi(targetId);
+      if (resData && typeof resData.stars === "number") {
+        setStars(resData.stars);
+        setIsStarred(Boolean(resData.isStarred));
+        setLibraryData((prev) => ({
+          ...prev,
+          stars: resData.stars,
+          isStarred: Boolean(resData.isStarred),
+        }));
+      }
+    } catch (err) {
+      console.warn("Could not sync star state with Database:", err);
+    }
   }
   function countUploadedFiles(items) {
     return items.filter((item) => item.type !== "folder").length;

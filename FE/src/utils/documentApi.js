@@ -114,3 +114,8 @@ export async function deleteLibrary(libraryId) {
   const response = await api.delete(`/documents/libraries/${libraryId}`);
   return response.data;
 }
+
+export async function toggleStarLibraryApi(libraryId) {
+  const response = await api.post(`/documents/libraries/${libraryId}/star`);
+  return response.data.data;
+}

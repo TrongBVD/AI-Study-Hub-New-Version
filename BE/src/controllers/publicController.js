@@ -30,6 +30,9 @@ exports.listPublicLibraries = async (req, res) => {
     let documentCounts = new Map();
     let ownersById = new Map();
 
+    let starCounts = new Map();
+    let downloadCounts = new Map();
+
     if (libraryIds.length > 0) {
       const { data: documents, error: documentError } = await supabase
         .from("documents")
@@ -43,6 +46,28 @@ exports.listPublicLibraries = async (req, res) => {
 
       documentCounts = (documents || []).reduce((counts, document) => {
         const key = String(document.library_id);
+        counts.set(key, (counts.get(key) || 0) + 1);
+        return counts;
+      }, new Map());
+
+      const { data: starsData } = await supabase
+        .from("library_stars")
+        .select("library_id")
+        .in("library_id", libraryIds);
+
+      starCounts = (starsData || []).reduce((counts, row) => {
+        const key = String(row.library_id);
+        counts.set(key, (counts.get(key) || 0) + 1);
+        return counts;
+      }, new Map());
+
+      const { data: downloadsData } = await supabase
+        .from("library_downloads")
+        .select("library_id")
+        .in("library_id", libraryIds);
+
+      downloadCounts = (downloadsData || []).reduce((counts, row) => {
+        const key = String(row.library_id);
         counts.set(key, (counts.get(key) || 0) + 1);
         return counts;
       }, new Map());
@@ -68,6 +93,8 @@ exports.listPublicLibraries = async (req, res) => {
       data: (libraries || []).map((library) => ({
         ...library,
         documents: documentCounts.get(String(library.id)) || 0,
+        stars: starCounts.get(String(library.id)) || 0,
+        downloads: downloadCounts.get(String(library.id)) || 0,
         owner: ownersById.get(String(library.user_id)) || null,
         visibility: "public",
       })),
@@ -113,12 +140,24 @@ exports.getPublicLibrary = async (req, res) => {
 
     if (documentError) throw documentError;
 
+    const { count: starsCount } = await supabase
+      .from("library_stars")
+      .select("*", { count: "exact", head: true })
+      .eq("library_id", libraryId);
+
+    const { count: downloadsCount } = await supabase
+      .from("library_downloads")
+      .select("*", { count: "exact", head: true })
+      .eq("library_id", libraryId);
+
     return res.status(200).json({
       status: "success",
       data: {
         library: {
           ...library,
           documents: documents?.length || 0,
+          stars: starsCount || 0,
+          downloads: downloadsCount || 0,
           visibility: "public",
         },
         documents: (documents || []).map(mapDocument),
