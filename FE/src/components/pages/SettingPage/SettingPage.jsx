@@ -10,6 +10,10 @@ import {
   clearStoredSession,
   getAuthStorage,
 } from "../../../utils/authToken.js";
+import {
+  getMyProfile,
+  updateMyProfile,
+} from "../../../utils/profileApi.js";
 import "./SettingPage.css";
 
 const SETTING_MENUS = [
@@ -190,6 +194,7 @@ function SettingPage() {
     getProfileNameChangedAt,
   );
   const [profileNameStatus, setProfileNameStatus] = useState("");
+  const [isSavingProfileName, setIsSavingProfileName] = useState(false);
   const [activeSetting, setActiveSetting] = useState("Profile & appearance");
   const [notificationSettings, setNotificationSettings] = useState(() =>
     getNotificationSettings(),
@@ -206,6 +211,46 @@ function SettingPage() {
   useEffect(() => {
     saveNotificationSettings(notificationSettings);
   }, [notificationSettings]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadProfileName() {
+      try {
+        const profile = await getMyProfile();
+        if (!isMounted) return;
+
+        const profileName =
+          profile?.full_name || profile?.username || profile?.email || "";
+        const changedAt = profile?.last_name_change
+          ? new Date(profile.last_name_change).getTime()
+          : 0;
+
+        if (profileName) {
+          setWorkspaceName(profileName);
+          setSavedProfileName(profileName);
+        }
+        setProfileNameChangedAt(Number.isFinite(changedAt) ? changedAt : 0);
+
+        const authStorage = getAuthStorage();
+        if (changedAt) {
+          authStorage.setItem(
+            PROFILE_NAME_CHANGED_AT_KEY,
+            String(changedAt),
+          );
+        } else {
+          authStorage.removeItem(PROFILE_NAME_CHANGED_AT_KEY);
+        }
+      } catch (error) {
+        console.error("Cannot load the current profile name:", error);
+      }
+    }
+
+    loadProfileName();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   useEffect(() => {
     if (!isAdminSettings) return;
@@ -234,7 +279,7 @@ function SettingPage() {
     setProfileNameStatus("");
   }
 
-  function handleSaveProfileName() {
+  async function handleSaveProfileName() {
     const nextName = workspaceName.trim().replace(/\s+/g, " ");
     const cooldownText = getProfileNameCooldownText(profileNameChangedAt);
 
@@ -254,27 +299,45 @@ function SettingPage() {
       return;
     }
 
-    const nextChangedAt = Date.now();
-    const storedUser = getStoredUser();
-    const nextUser = {
-      ...storedUser,
-      full_name: nextName,
-      fullName: nextName,
-      display_name: nextName,
-      displayName: nextName,
-      name: nextName,
-    };
+    try {
+      setIsSavingProfileName(true);
+      setProfileNameStatus("");
 
-    const authStorage = getAuthStorage();
-    authStorage.setItem(PROFILE_NAME_KEY, nextName);
-    authStorage.setItem(PROFILE_NAME_CHANGED_AT_KEY, String(nextChangedAt));
-    authStorage.setItem("user", JSON.stringify(nextUser));
+      const profile = await updateMyProfile({ full_name: nextName });
+      const savedName = profile?.full_name || nextName;
+      const changedAt = profile?.last_name_change
+        ? new Date(profile.last_name_change).getTime()
+        : Date.now();
+      const storedUser = getStoredUser();
+      const nextUser = {
+        ...storedUser,
+        full_name: savedName,
+        fullName: savedName,
+        display_name: savedName,
+        displayName: savedName,
+        name: savedName,
+      };
 
-    setWorkspaceName(nextName);
-    setSavedProfileName(nextName);
-    setProfileNameChangedAt(nextChangedAt);
-    setProfileNameStatus("Display name saved. You can change it again after 7 days.");
-    window.dispatchEvent(new Event("aiStudyHubProfileNameChanged"));
+      const authStorage = getAuthStorage();
+      authStorage.setItem(PROFILE_NAME_KEY, savedName);
+      authStorage.setItem(PROFILE_NAME_CHANGED_AT_KEY, String(changedAt));
+      authStorage.setItem("user", JSON.stringify(nextUser));
+
+      setWorkspaceName(savedName);
+      setSavedProfileName(savedName);
+      setProfileNameChangedAt(changedAt);
+      setProfileNameStatus(
+        "Display name saved. You can change it again after 7 days.",
+      );
+      window.dispatchEvent(new Event("aiStudyHubProfileNameChanged"));
+    } catch (error) {
+      console.error("Cannot update the profile name:", error);
+      setProfileNameStatus(
+        error.response?.data?.message || "Could not update display name.",
+      );
+    } finally {
+      setIsSavingProfileName(false);
+    }
   }
 
   return (
@@ -338,6 +401,7 @@ function SettingPage() {
                 profileNameChangedAt,
               )}
               profileNameMaxLength={PROFILE_NAME_MAX_LENGTH}
+              isSavingProfileName={isSavingProfileName}
               onWorkspaceNameChange={handleProfileNameChange}
               onSaveProfileName={handleSaveProfileName}
               selectedTheme={theme}
@@ -496,6 +560,7 @@ function ProfileAppearanceSettings({
   profileNameStatus,
   profileNameCooldownText,
   profileNameMaxLength,
+  isSavingProfileName,
   onWorkspaceNameChange,
   onSaveProfileName,
   selectedTheme,
@@ -505,7 +570,10 @@ function ProfileAppearanceSettings({
   const trimmedName = workspaceName.trim().replace(/\s+/g, " ");
   const isNameLocked = Boolean(profileNameCooldownText);
   const canSaveProfileName =
-    !isNameLocked && trimmedName.length > 0 && trimmedName !== savedProfileName;
+    !isNameLocked &&
+    !isSavingProfileName &&
+    trimmedName.length > 0 &&
+    trimmedName !== savedProfileName;
 
   return (
     <>
@@ -541,7 +609,7 @@ function ProfileAppearanceSettings({
                 <input
                   value={workspaceName}
                   maxLength={profileNameMaxLength}
-                  disabled={isNameLocked}
+                disabled={isNameLocked || isSavingProfileName}
                   onChange={(event) =>
                     onWorkspaceNameChange(event.target.value)
                   }
@@ -553,7 +621,7 @@ function ProfileAppearanceSettings({
                 disabled={!canSaveProfileName}
                 onClick={onSaveProfileName}
               >
-                Save
+                {isSavingProfileName ? "Saving..." : "Save"}
               </button>
               <p
                 className={`settings_name_hint ${

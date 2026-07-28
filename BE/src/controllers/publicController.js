@@ -13,6 +13,34 @@ function mapDocument(document) {
   };
 }
 
+async function getLibraryEngagement(libraryIds) {
+  const ids = (libraryIds || []).filter(Boolean);
+  const starsByLibrary = new Map();
+  const downloadsByLibrary = new Map();
+
+  if (ids.length === 0) return { starsByLibrary, downloadsByLibrary };
+
+  const [{ data: stars, error: starsError }, { data: downloads, error: downloadsError }] =
+    await Promise.all([
+      supabase.from("library_stars").select("library_id").in("library_id", ids),
+      supabase.from("library_downloads").select("library_id").in("library_id", ids),
+    ]);
+
+  if (starsError) throw starsError;
+  if (downloadsError) throw downloadsError;
+
+  (stars || []).forEach(({ library_id }) => {
+    const key = String(library_id);
+    starsByLibrary.set(key, (starsByLibrary.get(key) || 0) + 1);
+  });
+  (downloads || []).forEach(({ library_id }) => {
+    const key = String(library_id);
+    downloadsByLibrary.set(key, (downloadsByLibrary.get(key) || 0) + 1);
+  });
+
+  return { starsByLibrary, downloadsByLibrary };
+}
+
 exports.listPublicLibraries = async (req, res) => {
   try {
     const { data: libraries, error: libraryError } = await supabase
@@ -29,6 +57,8 @@ exports.listPublicLibraries = async (req, res) => {
     ];
     let documentCounts = new Map();
     let ownersById = new Map();
+    const { starsByLibrary, downloadsByLibrary } =
+      await getLibraryEngagement(libraryIds);
 
     let starCounts = new Map();
     let downloadCounts = new Map();
@@ -97,6 +127,8 @@ exports.listPublicLibraries = async (req, res) => {
         downloads: downloadCounts.get(String(library.id)) || 0,
         owner: ownersById.get(String(library.user_id)) || null,
         visibility: "public",
+        stars: starsByLibrary.get(String(library.id)) || 0,
+        downloads: downloadsByLibrary.get(String(library.id)) || 0,
       })),
     });
   } catch (error) {
@@ -129,16 +161,29 @@ exports.getPublicLibrary = async (req, res) => {
       });
     }
 
-    const { data: documents, error: documentError } = await supabase
-      .from("documents")
-      .select("id, library_id, title, file_size_bytes, status, created_at")
-      .eq("library_id", libraryId)
-      .eq("is_public", true)
-      .eq("status", "APPROVED")
-      .is("deleted_at", null)
-      .order("created_at", { ascending: false });
+    const [
+      { data: documents, error: documentError },
+      { data: owner, error: ownerError },
+    ] = await Promise.all([
+      supabase
+        .from("documents")
+        .select("id, library_id, title, file_size_bytes, status, created_at")
+        .eq("library_id", libraryId)
+        .eq("is_public", true)
+        .eq("status", "APPROVED")
+        .is("deleted_at", null)
+        .order("created_at", { ascending: false }),
+      supabase
+        .from("profiles")
+        .select("id, username, full_name, avatar_url")
+        .eq("id", library.user_id)
+        .maybeSingle(),
+    ]);
 
     if (documentError) throw documentError;
+    const { starsByLibrary, downloadsByLibrary } =
+      await getLibraryEngagement([library.id]);
+    if (ownerError) throw ownerError;
 
     const { count: starsCount } = await supabase
       .from("library_stars")
@@ -155,10 +200,13 @@ exports.getPublicLibrary = async (req, res) => {
       data: {
         library: {
           ...library,
+          owner: owner || null,
           documents: documents?.length || 0,
           stars: starsCount || 0,
           downloads: downloadsCount || 0,
           visibility: "public",
+          stars: starsByLibrary.get(String(library.id)) || 0,
+          downloads: downloadsByLibrary.get(String(library.id)) || 0,
         },
         documents: (documents || []).map(mapDocument),
       },
@@ -168,6 +216,47 @@ exports.getPublicLibrary = async (req, res) => {
     return res.status(500).json({
       status: "error",
       message: "Could not load public library.",
+      error: error.message,
+    });
+  }
+};
+
+exports.recordPublicLibraryDownload = async (req, res) => {
+  try {
+    const { libraryId } = req.params;
+    const { data: library, error: libraryError } = await supabase
+      .from("libraries")
+      .select("id")
+      .eq("id", libraryId)
+      .eq("is_public", true)
+      .maybeSingle();
+
+    if (libraryError) throw libraryError;
+    if (!library) {
+      return res.status(404).json({ status: "error", message: "Public library not found." });
+    }
+
+    const { error: insertError } = await supabase
+      .from("library_downloads")
+      .insert({ library_id: libraryId });
+
+    if (insertError) throw insertError;
+
+    const { count, error: countError } = await supabase
+      .from("library_downloads")
+      .select("id", { count: "exact", head: true })
+      .eq("library_id", libraryId);
+
+    if (countError) throw countError;
+    return res.status(201).json({
+      status: "success",
+      data: { libraryId, downloads: count || 0 },
+    });
+  } catch (error) {
+    console.error("Record public library download error:", error);
+    return res.status(500).json({
+      status: "error",
+      message: "Could not record library download.",
       error: error.message,
     });
   }

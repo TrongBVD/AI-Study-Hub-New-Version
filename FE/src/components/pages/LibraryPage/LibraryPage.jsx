@@ -20,7 +20,8 @@ import {
   getLibrary,
   updateLibrary,
   deleteLibrary,
-  toggleStarLibraryApi,
+  toggleLibraryStar,
+  getLibraryEngagement,
 } from "../../../utils/documentApi";
 import {
   getAccessToken,
@@ -31,6 +32,7 @@ import { isLibraryStarred, toggleStarLibrary } from "../../../utils/starredLibra
 import {
   downloadPublicDocument,
   getPublicLibrary,
+  recordPublicLibraryDownload,
 } from "../../../utils/publicApi";
 
 import "./LibraryPage.css";
@@ -177,8 +179,24 @@ function LibraryPage() {
   }
 
   const folderIdRef = useRef(1);
-  const authorName = "You";
   const [libraryData, setLibraryData] = useState(getInitialLibraryData);
+  const currentUser = getStoredUser() || {};
+  const currentUserId = currentUser.id || currentUser.user_id || "";
+  const libraryOwnerId =
+    libraryData.user_id || libraryData.owner?.id || libraryData.owner_id || "";
+  const isLibraryOwner =
+    Boolean(currentUserId) &&
+    Boolean(libraryOwnerId) &&
+    String(currentUserId) === String(libraryOwnerId);
+  const ownerDisplayName = isLibraryOwner
+    ? "You"
+    : libraryData.owner?.full_name ||
+      libraryData.owner?.username ||
+      libraryData.owner_name ||
+      "Library owner";
+  const authorName = isLibraryOwner ? "You" : ownerDisplayName;
+  const [stars, setStars] = useState(() => Number(getInitialLibraryData().stars) || 0);
+
   const [isStarred, setIsStarred] = useState(
     () => isLibraryStarred(libraryId) || Boolean(getInitialLibraryData().isStarred)
   );
@@ -362,7 +380,9 @@ function LibraryPage() {
         }
 
         try {
-          const downloadData = await downloadDocument(item.id);
+          const downloadData = item.isPublicFile
+            ? await downloadPublicDocument(item.id)
+            : await downloadDocument(item.id);
           if (!downloadData?.downloadUrl) {
             throw new Error("Missing download URL");
           }
@@ -407,6 +427,14 @@ function LibraryPage() {
       link.click();
       link.remove();
       URL.revokeObjectURL(downloadUrl);
+
+      if (libraryVisibility === "public" && libraryId) {
+        try {
+          await recordPublicLibraryDownload(libraryId);
+        } catch (metricError) {
+          console.error("Could not record library download:", metricError);
+        }
+      }
     } catch (error) {
       console.error("Cannot export library:", error);
       alert("Cannot create the library ZIP. Please try again.");
@@ -435,31 +463,31 @@ function LibraryPage() {
   }
 
   async function handleToggleStar() {
-    const targetId = libraryId || libraryData.id;
-    const nextIsStarred = toggleStarLibrary(targetId);
-    const nextStars = nextIsStarred ? Math.max(stars + 1, 1) : Math.max(stars - 1, 0);
-
-    setStars(nextStars);
-    setIsStarred(nextIsStarred);
-    setLibraryData((prev) => ({
-      ...prev,
-      stars: nextStars,
-      isStarred: nextIsStarred,
-    }));
+    if (isGuest) {
+      setUploadNotice({
+        type: "error",
+        title: "Sign in required",
+        message: "Please sign in to star a library.",
+      });
+      return;
+    }
 
     try {
-      const resData = await toggleStarLibraryApi(targetId);
-      if (resData && typeof resData.stars === "number") {
-        setStars(resData.stars);
-        setIsStarred(Boolean(resData.isStarred));
-        setLibraryData((prev) => ({
-          ...prev,
-          stars: resData.stars,
-          isStarred: Boolean(resData.isStarred),
-        }));
-      }
-    } catch (err) {
-      console.warn("Could not sync star state with Database:", err);
+      const result = await toggleLibraryStar(libraryId);
+      setStars(Number(result?.stars) || 0);
+      setIsStarred(Boolean(result?.isStarred));
+      setLibraryData((current) => ({
+        ...current,
+        stars: Number(result?.stars) || 0,
+        isStarred: Boolean(result?.isStarred),
+      }));
+    } catch (error) {
+      console.error("Could not update library star:", error);
+      setUploadNotice({
+        type: "error",
+        title: "Star was not saved",
+        message: error.response?.data?.message || "Please try again.",
+      });
     }
   }
   function countUploadedFiles(items) {
@@ -547,7 +575,7 @@ function LibraryPage() {
       .reduce((total, item) => total + (Number(item.sizeBytes) || 0), 0);
   }
 
-  function mapBackendDocumentToLibraryItem(document) {
+  function mapBackendDocumentToLibraryItem(document, uploaderName = authorName) {
     const apiTags = (document.document_tags || [])
       .map((dt) => (dt.tags?.name ? `#${dt.tags.name}` : ""))
       .filter(Boolean);
@@ -563,7 +591,7 @@ function LibraryPage() {
       uploadedTime: document.created_at
         ? new Date(document.created_at).toLocaleString()
         : "Recently",
-      uploadedBy: authorName,
+      uploadedBy: uploaderName,
       icon: null,
       folderId: null,
       hashtags: apiTags,
@@ -601,9 +629,16 @@ function LibraryPage() {
         setLibraryName(nextLibraryData.name || "Public Library");
         setLibraryVisibility("public");
         setShareOnProfile(false);
+        setStars(Number(nextLibraryData.stars) || 0);
+        setIsStarred(false);
         setLibraryItems(
           (publicLibrary.documents || []).map((document) => ({
-            ...mapBackendDocumentToLibraryItem(document),
+            ...mapBackendDocumentToLibraryItem(
+              document,
+              nextLibraryData.owner?.full_name ||
+                nextLibraryData.owner?.username ||
+                "Library owner",
+            ),
             isPublicFile: true,
           })),
         );
@@ -611,27 +646,62 @@ function LibraryPage() {
       }
       let currentLibData = libraryData;
       if (!isGuest) {
-        if (!currentLibData || currentLibData.id === "default-library" || currentLibData.id !== libraryId) {
+        if (libraryId) {
           try {
             const lib = await getLibrary(libraryId);
             if (lib) {
               currentLibData = {
                 id: lib.id,
+                user_id: lib.user_id,
                 name: lib.name,
                 description: lib.description || "",
                 visibility: lib.is_public ? "public" : "private",
                 shareOnProfile: lib.share_on_profile ?? false,
                 updatedAt: lib.updated_at ? new Date(lib.updated_at).toLocaleString() : "Updated just now",
                 icon: "ti-archive",
+                stars: Number(lib.stars) || 0,
+                downloads: Number(lib.downloads) || 0,
+                isStarred: Boolean(lib.isStarred),
               };
               setLibraryData(currentLibData);
               setLibraryName(currentLibData.name);
               setLibraryDescription(currentLibData.description);
               setLibraryVisibility(currentLibData.visibility);
               setShareOnProfile(currentLibData.shareOnProfile);
+              setStars(currentLibData.stars);
+              setIsStarred(currentLibData.isStarred);
             }
           } catch (err) {
-            console.error("Failed to load library metadata from backend:", err);
+            if (err.response?.status !== 404) {
+              console.error("Failed to load library metadata from backend:", err);
+            }
+
+            const publicLibrary = await getPublicLibrary(libraryId);
+            const engagement = await getLibraryEngagement(libraryId);
+            const nextLibraryData = {
+              ...publicLibrary.library,
+              ...engagement,
+              isPublicView: true,
+              visibility: "public",
+              updatedAt: publicLibrary.library.created_at
+                ? new Date(publicLibrary.library.created_at).toLocaleString()
+                : "Updated just now",
+            };
+
+            setLibraryData(nextLibraryData);
+            setLibraryName(nextLibraryData.name || "Public Library");
+            setLibraryDescription(nextLibraryData.description || "");
+            setLibraryVisibility("public");
+            setShareOnProfile(false);
+            setStars(Number(nextLibraryData.stars) || 0);
+            setIsStarred(Boolean(nextLibraryData.isStarred));
+            setLibraryItems(
+              (publicLibrary.documents || []).map((document) => ({
+                ...mapBackendDocumentToLibraryItem(document),
+                isPublicFile: true,
+              })),
+            );
+            return;
           }
         }
       }
@@ -1419,7 +1489,7 @@ function LibraryPage() {
         return;
       }
 
-      const data = isGuest
+      const data = isGuest || fileItem.isPublicFile
         ? await downloadPublicDocument(fileItem.id)
         : await downloadDocument(fileItem.id);
 
@@ -2219,7 +2289,7 @@ function LibraryPage() {
           </section>
 
           <aside className="library_sidebar">
-            <div className="capacity_card">
+            {isLibraryOwner && <div className="capacity_card">
               <div className="storage_card_header">
                 <div className="storage_card_icon">
                   <i className="ti-harddrive"></i>
@@ -2253,7 +2323,7 @@ function LibraryPage() {
                   <span>Remaining</span>
                 </div>
               </div>
-            </div>
+            </div>}
 
             <div className="side_card">
               <div className="side_title">
@@ -2266,7 +2336,7 @@ function LibraryPage() {
                 </div>
 
                 <div>
-                  <strong>{authorName}</strong>
+                  <strong>{ownerDisplayName}</strong>
                   <p>Library owner</p>
                 </div>
               </div>
