@@ -16,7 +16,7 @@ async function authMiddleware(req, res, next) {
 
     if (token && token.includes("guest_signature_bypass")) {
       req.user = {
-        id: "guest",
+        id: "00000000-0000-0000-0000-000000000000",
         role: "GUEST",
         email: "guest@studyhub.local",
         username: "GuestUser",

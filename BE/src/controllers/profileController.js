@@ -26,6 +26,22 @@ exports.getMyProfile = async (req, res) => {
   try {
     const userId = req.user.id;
 
+    if (userId === "guest" || userId === "00000000-0000-0000-0000-000000000000" || req.user.role === "GUEST") {
+      return res.status(200).json({
+        status: "success",
+        data: {
+          id: "00000000-0000-0000-0000-000000000000",
+          email: "guest@studyhub.local",
+          username: "GuestUser",
+          full_name: "Guest",
+          role: "GUEST",
+          status: "ACTIVE",
+          avatar_url: "",
+          bio: "",
+        },
+      });
+    }
+
     const { data: profile, error } = await supabase
       .from("profiles")
       .select("id, email, username, full_name, bio, last_name_change, date_of_birth, is_dob_public, created_at, role, status, updated_at, last_login_at, avatar_url")

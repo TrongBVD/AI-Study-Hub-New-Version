@@ -12,7 +12,12 @@ import {
 } from "../../../utils/authToken";
 import "./LoginPage.css";
 
-const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+const GOOGLE_CLIENT_ID = String(
+  import.meta.env.VITE_GOOGLE_CLIENT_ID ||
+    "816282057609-4clrdj4f4mp1jh72m40ffaf04fne6vhe.apps.googleusercontent.com",
+)
+  .trim()
+  .replace(/^["']|["']$/g, "");
 
 function LoginPage() {
   const [username, setUsername] = useState("");

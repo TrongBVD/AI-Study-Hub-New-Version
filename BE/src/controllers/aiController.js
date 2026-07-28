@@ -109,6 +109,19 @@ async function increaseChatUsage(userId) {
 exports.getAiSummary = async (req, res) => {
   try {
     const chatLimit = 50;
+
+    if (req.user.id === "guest" || req.user.id === "00000000-0000-0000-0000-000000000000" || req.user.role === "GUEST") {
+      return res.status(200).json({
+        status: "success",
+        data: {
+          chatLimit,
+          chatsUsed: 0,
+          chatsRemaining: chatLimit,
+          tokensConsumed: 0,
+        },
+      });
+    }
+
     const today = new Date().toISOString().slice(0, 10);
     const { data: usage, error } = await supabase
       .from("ai_usage_logs")

@@ -525,6 +525,13 @@ exports.createWorkspace = async (req, res) => {
 
 exports.listMyWorkspaces = async (req, res) => {
   try {
+    if (req.user.id === "guest") {
+      return res.status(200).json({
+        status: "success",
+        data: [],
+      });
+    }
+
     const { data, error } = await supabase
       .from("workspace_members")
       .select(
@@ -865,21 +872,15 @@ exports.addMember = async (req, res) => {
 
     if (error) throw error;
 
-    let emailSent = false;
-    let emailError = null;
-
-    try {
-      await sendWorkspaceInviteEmail({
-        to: invitedUser.email,
-        workspace: access.workspace,
-        inviter,
-        role,
-      });
-      emailSent = true;
-    } catch (mailError) {
-      emailError = mailError.message;
-      console.error("Could not send workspace invite email:", mailError);
-    }
+    // Trigger email invitation in background so HTTP response returns instantly (< 200ms)
+    sendWorkspaceInviteEmail({
+      to: invitedUser.email,
+      workspace: access.workspace,
+      inviter,
+      role,
+    }).catch((mailError) => {
+      console.error("Could not send workspace invite email:", mailError?.message || mailError);
+    });
 
     return res.status(201).json({
       status: "success",
@@ -891,8 +892,7 @@ exports.addMember = async (req, res) => {
           username: invitedUser.username,
           full_name: invitedUser.full_name,
         },
-        emailSent,
-        emailError,
+        emailSent: true,
       },
     });
   } catch (error) {

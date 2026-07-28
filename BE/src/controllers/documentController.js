@@ -1241,6 +1241,13 @@ exports.listMyLibraries = async (req, res) => {
       });
     }
 
+    if (userID === "guest" || userID === "00000000-0000-0000-0000-000000000000" || req.user.role === "GUEST") {
+      return res.status(200).json({
+        status: "success",
+        data: [],
+      });
+    }
+
     const { data, error } = await supabase
       .from("libraries")
       .select("*, documents(count)")
