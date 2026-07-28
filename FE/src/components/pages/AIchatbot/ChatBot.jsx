@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import api from "../../../utils/api.js";
 import "./ChatBot.css";
-import aiChatbotIcon from "../../../assets/images/iconchatbot.svg";
+import chatBookLogo from "../../../assets/images/ChatBookLogo.svg";
 
 import { IoIosSend } from "react-icons/io";
 import { RiResetRightLine } from "react-icons/ri";
@@ -429,7 +429,7 @@ function ChatBot({ defaultOpen = false, showBubble = true }) {
         >
           <aside className={`chat-sidebar ${showHistory ? "is-open" : ""}`}>
             <div className="chat-brand">
-              <img src={aiChatbotIcon} alt="AI Chatbot" />
+              <img src={chatBookLogo} alt="StudyHub book logo" />
               <span>CHAT A.I+</span>
             </div>
 

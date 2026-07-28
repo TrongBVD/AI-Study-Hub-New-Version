@@ -134,24 +134,36 @@ exports.getPublicLibrary = async (req, res) => {
       });
     }
 
-    const { data: documents, error: documentError } = await supabase
-      .from("documents")
-      .select("id, library_id, title, file_size_bytes, status, created_at")
-      .eq("library_id", libraryId)
-      .eq("is_public", true)
-      .eq("status", "APPROVED")
-      .is("deleted_at", null)
-      .order("created_at", { ascending: false });
+    const [
+      { data: documents, error: documentError },
+      { data: owner, error: ownerError },
+    ] = await Promise.all([
+      supabase
+        .from("documents")
+        .select("id, library_id, title, file_size_bytes, status, created_at")
+        .eq("library_id", libraryId)
+        .eq("is_public", true)
+        .eq("status", "APPROVED")
+        .is("deleted_at", null)
+        .order("created_at", { ascending: false }),
+      supabase
+        .from("profiles")
+        .select("id, username, full_name, avatar_url")
+        .eq("id", library.user_id)
+        .maybeSingle(),
+    ]);
 
     if (documentError) throw documentError;
     const { starsByLibrary, downloadsByLibrary } =
       await getLibraryEngagement([library.id]);
+    if (ownerError) throw ownerError;
 
     return res.status(200).json({
       status: "success",
       data: {
         library: {
           ...library,
+          owner: owner || null,
           documents: documents?.length || 0,
           visibility: "public",
           stars: starsByLibrary.get(String(library.id)) || 0,

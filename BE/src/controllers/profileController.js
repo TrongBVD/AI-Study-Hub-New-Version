@@ -2,6 +2,7 @@ const path = require("path");
 const supabase = require("../config/supabase");
 
 const AVATAR_BUCKET = process.env.SUPABASE_AVATAR_BUCKET || "avatars";
+const PROFILE_NAME_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000;
 
 function mapProfile(profile) {
   return {
@@ -73,9 +74,45 @@ exports.updateMyProfile = async (req, res) => {
       });
     }
 
+    const { data: currentProfile, error: currentProfileError } = await supabase
+      .from("profiles")
+      .select("id, full_name, last_name_change")
+      .eq("id", userId)
+      .maybeSingle();
+
+    if (currentProfileError) throw currentProfileError;
+
+    if (!currentProfile) {
+      return res.status(404).json({
+        status: "error",
+        message: "Profile not found.",
+      });
+    }
+
+    if (currentProfile.full_name === fullName) {
+      return exports.getMyProfile(req, res);
+    }
+
+    const lastChangedAt = currentProfile.last_name_change
+      ? new Date(currentProfile.last_name_change).getTime()
+      : 0;
+    const remainingMs =
+      PROFILE_NAME_COOLDOWN_MS - (Date.now() - lastChangedAt);
+
+    if (lastChangedAt && remainingMs > 0) {
+      const remainingDays = Math.ceil(remainingMs / (24 * 60 * 60 * 1000));
+      return res.status(429).json({
+        status: "error",
+        message: `You can change your display name again in ${remainingDays} day${
+          remainingDays === 1 ? "" : "s"
+        }.`,
+      });
+    }
+
+    const changedAt = new Date().toISOString();
     const { data: profile, error } = await supabase
       .from("profiles")
-      .update({ full_name: fullName })
+      .update({ full_name: fullName, last_name_change: changedAt })
       .eq("id", userId)
       .select("id, email, username, full_name, last_name_change, date_of_birth, is_dob_public, created_at, role, status, updated_at, last_login_at, avatar_url")
       .single();

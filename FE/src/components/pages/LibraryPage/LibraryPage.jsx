@@ -178,8 +178,22 @@ function LibraryPage() {
   }
 
   const folderIdRef = useRef(1);
-  const authorName = "You";
   const [libraryData, setLibraryData] = useState(getInitialLibraryData);
+  const currentUser = getStoredUser() || {};
+  const currentUserId = currentUser.id || currentUser.user_id || "";
+  const libraryOwnerId =
+    libraryData.user_id || libraryData.owner?.id || libraryData.owner_id || "";
+  const isLibraryOwner =
+    Boolean(currentUserId) &&
+    Boolean(libraryOwnerId) &&
+    String(currentUserId) === String(libraryOwnerId);
+  const ownerDisplayName = isLibraryOwner
+    ? "You"
+    : libraryData.owner?.full_name ||
+      libraryData.owner?.username ||
+      libraryData.owner_name ||
+      "Library owner";
+  const authorName = isLibraryOwner ? "You" : ownerDisplayName;
   const [stars, setStars] = useState(() => Number(getInitialLibraryData().stars) || 0);
 
   const [isStarred, setIsStarred] = useState(
@@ -555,7 +569,7 @@ function LibraryPage() {
       .reduce((total, item) => total + (Number(item.sizeBytes) || 0), 0);
   }
 
-  function mapBackendDocumentToLibraryItem(document) {
+  function mapBackendDocumentToLibraryItem(document, uploaderName = authorName) {
     const apiTags = (document.document_tags || [])
       .map((dt) => (dt.tags?.name ? `#${dt.tags.name}` : ""))
       .filter(Boolean);
@@ -571,7 +585,7 @@ function LibraryPage() {
       uploadedTime: document.created_at
         ? new Date(document.created_at).toLocaleString()
         : "Recently",
-      uploadedBy: authorName,
+      uploadedBy: uploaderName,
       icon: null,
       folderId: null,
       hashtags: apiTags,
@@ -613,7 +627,12 @@ function LibraryPage() {
         setIsStarred(false);
         setLibraryItems(
           (publicLibrary.documents || []).map((document) => ({
-            ...mapBackendDocumentToLibraryItem(document),
+            ...mapBackendDocumentToLibraryItem(
+              document,
+              nextLibraryData.owner?.full_name ||
+                nextLibraryData.owner?.username ||
+                "Library owner",
+            ),
             isPublicFile: true,
           })),
         );
@@ -627,6 +646,7 @@ function LibraryPage() {
             if (lib) {
               currentLibData = {
                 id: lib.id,
+                user_id: lib.user_id,
                 name: lib.name,
                 description: lib.description || "",
                 visibility: lib.is_public ? "public" : "private",
@@ -2236,7 +2256,7 @@ function LibraryPage() {
           </section>
 
           <aside className="library_sidebar">
-            <div className="capacity_card">
+            {isLibraryOwner && <div className="capacity_card">
               <div className="storage_card_header">
                 <div className="storage_card_icon">
                   <i className="ti-harddrive"></i>
@@ -2270,7 +2290,7 @@ function LibraryPage() {
                   <span>Remaining</span>
                 </div>
               </div>
-            </div>
+            </div>}
 
             <div className="side_card">
               <div className="side_title">
@@ -2283,7 +2303,7 @@ function LibraryPage() {
                 </div>
 
                 <div>
-                  <strong>{authorName}</strong>
+                  <strong>{ownerDisplayName}</strong>
                   <p>Library owner</p>
                 </div>
               </div>
