@@ -86,7 +86,6 @@ router.get("/libraries/:libraryId", authMiddleware, getLibrary);
 router.get("/libraries/:libraryId/engagement", authMiddleware, getLibraryEngagement);
 router.post("/libraries/:libraryId/star", authMiddleware, toggleLibraryStar);
 router.post("/libraries", authMiddleware, createLibrary);
-router.post("/libraries/:libraryId/star", authMiddleware, toggleStarLibrary);
 router.put("/libraries/:id", authMiddleware, updateLibrary);
 router.delete("/libraries/:id", authMiddleware, deleteLibrary);
 

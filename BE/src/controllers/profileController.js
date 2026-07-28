@@ -129,30 +129,25 @@ exports.updateMyProfile = async (req, res) => {
       });
     }
 
-    if (currentProfile.full_name === fullName) {
-      return exports.getMyProfile(req, res);
+    if (updates.full_name && updates.full_name !== currentProfile.full_name) {
+      const lastChangedAt = currentProfile.last_name_change
+        ? new Date(currentProfile.last_name_change).getTime()
+        : 0;
+      const remainingMs =
+        PROFILE_NAME_COOLDOWN_MS - (Date.now() - lastChangedAt);
+
+      if (lastChangedAt && remainingMs > 0) {
+        const remainingDays = Math.ceil(remainingMs / (24 * 60 * 60 * 1000));
+        return res.status(429).json({
+          status: "error",
+          message: `You can change your display name again in ${remainingDays} day${
+            remainingDays === 1 ? "" : "s"
+          }.`,
+        });
+      }
+      updates.last_name_change = new Date().toISOString();
     }
 
-    const lastChangedAt = currentProfile.last_name_change
-      ? new Date(currentProfile.last_name_change).getTime()
-      : 0;
-    const remainingMs =
-      PROFILE_NAME_COOLDOWN_MS - (Date.now() - lastChangedAt);
-
-    if (lastChangedAt && remainingMs > 0) {
-      const remainingDays = Math.ceil(remainingMs / (24 * 60 * 60 * 1000));
-      return res.status(429).json({
-        status: "error",
-        message: `You can change your display name again in ${remainingDays} day${
-          remainingDays === 1 ? "" : "s"
-        }.`,
-      });
-    }
-
-    const changedAt = new Date().toISOString();
-    const { data: profile, error } = await supabase
-      .from("profiles")
-      .update({ full_name: fullName, last_name_change: changedAt })
     updates.updated_at = new Date().toISOString();
 
     const { data: profile, error } = await supabase

@@ -195,8 +195,6 @@ function LibraryPage() {
       libraryData.owner_name ||
       "Library owner";
   const authorName = isLibraryOwner ? "You" : ownerDisplayName;
-  const [stars, setStars] = useState(() => Number(getInitialLibraryData().stars) || 0);
-
   const [isStarred, setIsStarred] = useState(
     () => isLibraryStarred(libraryId) || Boolean(getInitialLibraryData().isStarred)
   );

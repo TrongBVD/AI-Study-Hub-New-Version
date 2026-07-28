@@ -14,11 +14,12 @@ import {
 } from "../../../utils/notificationStore.js";
 import { searchUsers } from "../../../utils/searchApi.js";
 import { getMyLibraries } from "../../../utils/documentApi.js";
-import { getMyWorkspaceNotifications, getWorkspaces } from "../../../utils/workspaceApi.js";
+import { getMyWorkspaceNotifications, getWorkspaces, markWorkspaceNotificationsAsReadApi, respondToInvitation } from "../../../utils/workspaceApi.js";
 import { getMyProfile } from "../../../utils/profileApi.js";
 import { getPublicLibraries } from "../../../utils/publicApi.js";
 import defaultAvatar from "../../../assets/images/account.png";
 import { getStoredUser } from "../../../utils/authToken.js";
+import { WorkspaceInviteModal } from "./WorkspaceInviteModal.jsx";
 
 function getStoredUserRole() {
   try {
@@ -97,10 +98,24 @@ function Navbar({
 
 
   const [notifications, setNotifications] = useState(() => getNotifications());
+  const [selectedInviteNotification, setSelectedInviteNotification] = useState(null);
 
   const [notificationSettings, setNotificationSettings] = useState(() =>
     getNotificationSettings()
   );
+
+  const handleRespondInvite = async (invitationId, action) => {
+    try {
+      const res = await respondToInvitation(invitationId, action);
+      const updatedNotifications = await getMyWorkspaceNotifications();
+      setNotifications(mergeAppNotifications(updatedNotifications || []));
+      if (res?.action === "ACCEPTED" && res?.workspaceId) {
+        navigate(`/dashboard/workspaces/${res.workspaceId}`);
+      }
+    } catch (err) {
+      console.error("Could not respond to invitation:", err);
+    }
+  };
 
   useEffect(() => {
     function syncNotifications() {
@@ -492,9 +507,19 @@ function Navbar({
 
                   <button
                     type="button"
-                    onClick={() => {
+                    onClick={async () => {
+                      try {
+                        await markWorkspaceNotificationsAsReadApi();
+                      } catch (err) {
+                        console.error("Failed to mark notifications read in DB:", err);
+                      }
                       markAllNotificationsAsRead();
-                      setNotifications(getNotifications());
+                      try {
+                        const updated = await getMyWorkspaceNotifications();
+                        setNotifications(mergeAppNotifications(updated || []));
+                      } catch (err) {
+                        setNotifications(getNotifications());
+                      }
                     }}
                   >
                     Mark all read
@@ -513,30 +538,107 @@ function Navbar({
                       <p>No notifications yet.</p>
                     </div>
                   ) : (
-                    notifications.map((notification) => (
-                      <button
-                        type="button"
-                        key={notification.id}
-                        className={`notification_item ${
-                          notification.isRead ? "" : "unread"
-                        }`}
-                        onClick={() => {
-                          if (notification.link) {
-                            navigate(notification.link);
-                          }
-                        }}
-                      >
-                        <div className="notification_icon">
-                          <i className={notification.icon}></i>
-                        </div>
+                    notifications.map((notification) => {
+                      if (notification.isInvitation) {
+                        return (
+                          <div
+                            key={notification.id}
+                            className={`notification_item invitation ${
+                              notification.isRead ? "" : "unread"
+                            }`}
+                            style={{ cursor: "pointer", display: "flex", alignItems: "center", gap: "10px" }}
+                            onClick={() => setSelectedInviteNotification(notification)}
+                          >
+                            <div className="notification_icon">
+                              <i className="ti-email"></i>
+                            </div>
 
-                        <div>
-                          <strong>{notification.title}</strong>
-                          <p>{getNotificationMessage(notification.message)}</p>
-                          <span>{notification.createdAt}</span>
-                        </div>
-                      </button>
-                    ))
+                            <div style={{ flex: 1, textAlign: "left" }}>
+                              <strong>{notification.title}</strong>
+                              <p>{notification.message}</p>
+                              <span>{notification.createdAt}</span>
+                            </div>
+
+                            {notification.status === "PENDING" && (
+                              <div
+                                style={{ display: "flex", gap: "6px" }}
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <button
+                                  type="button"
+                                  style={{
+                                    border: "none",
+                                    background: "#16a34a",
+                                    color: "#fff",
+                                    width: "28px",
+                                    height: "28px",
+                                    borderRadius: "50%",
+                                    cursor: "pointer",
+                                    fontWeight: "bold",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                  }}
+                                  title="Đồng ý"
+                                  onClick={() =>
+                                    handleRespondInvite(notification.logId, "accept")
+                                  }
+                                >
+                                  ✓
+                                </button>
+                                <button
+                                  type="button"
+                                  style={{
+                                    border: "none",
+                                    background: "#ef4444",
+                                    color: "#fff",
+                                    width: "28px",
+                                    height: "28px",
+                                    borderRadius: "50%",
+                                    cursor: "pointer",
+                                    fontWeight: "bold",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                  }}
+                                  title="Từ chối"
+                                  onClick={() =>
+                                    handleRespondInvite(notification.logId, "reject")
+                                  }
+                                >
+                                  ✕
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      }
+
+                      return (
+                        <button
+                          type="button"
+                          key={notification.id}
+                          className={`notification_item ${
+                            notification.isRead ? "" : "unread"
+                          }`}
+                          onClick={() => {
+                            if (notification.link) {
+                              navigate(notification.link);
+                            }
+                          }}
+                        >
+                          <div className="notification_icon">
+                            <i className={notification.icon}></i>
+                          </div>
+
+                          <div>
+                            <strong>{notification.title}</strong>
+                            <p>{getNotificationMessage(notification.message)}</p>
+                            <span>{notification.createdAt}</span>
+                          </div>
+                        </button>
+                      );
+                    })
                   )}
                 </div>
 
@@ -549,6 +651,14 @@ function Navbar({
                 </button>
               </div>
             </div>
+
+            {selectedInviteNotification && (
+              <WorkspaceInviteModal
+                invitation={selectedInviteNotification}
+                onClose={() => setSelectedInviteNotification(null)}
+                onRespond={handleRespondInvite}
+              />
+            )}
 
           </>
         )}

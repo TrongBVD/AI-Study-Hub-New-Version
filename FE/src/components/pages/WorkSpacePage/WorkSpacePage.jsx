@@ -32,6 +32,8 @@ import {
   reviewWorkspaceDocument,
   generateWorkspaceDocumentFlashcards,
   createWorkspaceDiscussionTopic,
+  leaveWorkspace,
+  transferAdminOwnership,
 } from "../../../utils/workspaceApi";
 import { uploadDocuments } from "../../../utils/documentApi";
 import { getStoredUser as getAuthStoredUser } from "../../../utils/authToken.js";
@@ -376,25 +378,22 @@ function WorkSpacePage() {
   const [memberActionStatus, setMemberActionStatus] = useState("");
   const [memberActionId, setMemberActionId] = useState("");
   const [openRoleMenuId, setOpenRoleMenuId] = useState("");
-  const [pendingInvitations, setPendingInvitations] = useState(() =>
-    loadPendingInvitations(workspaceId),
-  );
+  const [pendingInvitations, setPendingInvitations] = useState([]);
   const [candidateUsers, setCandidateUsers] = useState([]);
   const [selectedUserId, setSelectedUserId] = useState("");
   const [activeMemberProfileId, setActiveMemberProfileId] = useState("");
 
   useEffect(() => {
-    setPendingInvitations(loadPendingInvitations(workspaceId));
+    try {
+      Object.keys(localStorage).forEach((key) => {
+        if (key.startsWith("aiStudyHubPendingInvitations")) {
+          localStorage.removeItem(key);
+        }
+      });
+    } catch (err) {
+      console.error("Could not clean pending invitation keys:", err);
+    }
   }, [workspaceId]);
-
-  useEffect(() => {
-    if (!workspaceId) return;
-
-    localStorage.setItem(
-      getPendingInvitationsStorageKey(workspaceId),
-      JSON.stringify(pendingInvitations),
-    );
-  }, [pendingInvitations, workspaceId]);
 
   useEffect(() => {
     if (!activeMemberProfileId) return;
@@ -587,8 +586,8 @@ function WorkSpacePage() {
   );
 
   const canManageTopics =
-    currentWorkspaceRole === "editor" || currentWorkspaceRole === "admin";
-  const canManageWorkspace = currentWorkspaceRole === "admin";
+    currentWorkspaceRole === "editor" || currentWorkspaceRole === "admin" || isWorkspaceOwner;
+  const canManageWorkspace = currentWorkspaceRole === "admin" || isWorkspaceOwner;
   const normalizedMemberSearch = normalizeIdentity(memberSearchQuery);
 
   const pendingInvitationUserIds = useMemo(
@@ -1988,24 +1987,7 @@ async function handleSendInvite() {
     });
     handleCloseInviteModal();
     await loadWorkspaceMembers();
-    const emailWasSent = inviteResult?.emailSent;
-    setInviteSuccess(
-      emailWasSent
-        ? `Added ${invitedName} to the workspace and sent an invitation email to ${invitedEmail}.`
-        : `Added ${invitedName} to the workspace, but the invitation email could not be sent. Please check the backend email configuration.`,
-    );
-    createAppNotification({
-      category: "member",
-      action: "joined",
-      title: emailWasSent
-        ? "Workspace invite email sent"
-        : "Workspace invite created",
-      message: emailWasSent
-        ? `${invitedName} has been invited by email to "${workspace?.name || "this workspace"}".`
-        : `${invitedName} was added to "${workspace?.name || "this workspace"}", but the invite email was not sent.`,
-      icon: "ti-user",
-      link: `/dashboard/workspaces/${workspaceId}`,
-    });
+    setInviteSuccess(`Workspace invitation sent to ${invitedName}.`);
   } catch (error) {
     console.error("Cannot add workspace member:", error);
     setInviteError(getInviteErrorMessage(error));
@@ -2033,6 +2015,30 @@ async function handleUpdateMemberRole(userId, nextRole) {
     setMemberActionStatus(
       error.response?.data?.message || "Could not update member role.",
     );
+  } finally {
+    setMemberActionId("");
+  }
+}
+
+async function handleTransferAdminOwnership(targetUserId, targetUserName) {
+  if (!targetUserId) return;
+
+  const isConfirmed = window.confirm(
+    `Are you sure you want to transfer Admin ownership to ${targetUserName || "this member"}? Your role will become Contributor.`
+  );
+  if (!isConfirmed) return;
+
+  try {
+    setOpenRoleMenuId("");
+    setMemberActionId(targetUserId);
+    setMemberActionStatus("");
+
+    const res = await transferAdminOwnership(workspaceId, targetUserId);
+    alert(res?.message || `Admin ownership transferred to ${targetUserName}.`);
+    await loadWorkspaceData();
+  } catch (error) {
+    console.error("Cannot transfer admin ownership:", error);
+    alert(error.response?.data?.message || "Could not transfer admin ownership.");
   } finally {
     setMemberActionId("");
   }
@@ -2191,11 +2197,27 @@ async function handleDeleteWorkspace() {
 
   try {
     await deleteWorkspace(workspaceId);
-
     navigate("/dashboard/workspaces");
   } catch (err) {
     console.error("Failed to delete workspace:", err);
     alert("Failed to delete workspace on server.");
+  }
+}
+
+async function handleLeaveWorkspace() {
+  const isConfirmed = window.confirm(
+    "Are you sure you want to leave this workspace?",
+  );
+
+  if (!isConfirmed) return;
+
+  try {
+    const res = await leaveWorkspace(workspaceId);
+    alert(res?.message || "Successfully left the workspace.");
+    navigate("/dashboard/workspaces");
+  } catch (err) {
+    console.error("Failed to leave workspace:", err);
+    alert(err.response?.data?.message || "Could not leave the workspace.");
   }
 }
 
@@ -2745,7 +2767,7 @@ function renderMembersTab() {
 
                           {openRoleMenuId === member.id && (
                             <div className="workspace_role_menu" role="listbox">
-                              {["Editor", "Viewer"].map((role) => (
+                              {["Admin", "Editor", "Viewer"].map((role) => (
                                 <button
                                   type="button"
                                   role="option"
@@ -2754,14 +2776,25 @@ function renderMembersTab() {
                                     member.role === role ? "selected" : ""
                                   }
                                   key={role}
-                                  onClick={() =>
-                                    handleUpdateMemberRole(member.id, role)
-                                  }
+                                  onClick={() => {
+                                    if (role === "Admin") {
+                                      handleTransferAdminOwnership(
+                                        member.id,
+                                        member.name || member.username,
+                                      );
+                                    } else {
+                                      handleUpdateMemberRole(member.id, role);
+                                    }
+                                  }}
                                 >
                                   <span
                                     className={`workspace_role_dot role_${role.toLowerCase()}`}
                                   ></span>
-                                  <span>{getWorkspaceRoleLabel(role)}</span>
+                                  <span>
+                                    {role === "Admin"
+                                      ? "Transfer Admin"
+                                      : getWorkspaceRoleLabel(role)}
+                                  </span>
                                   {member.role === role && (
                                     <i
                                       className="ti-check"
@@ -5048,19 +5081,19 @@ function renderSettingsTab() {
           <label>Workspace name</label>
           <input
             type="text"
-            value={workspaceNameInput}
+            value={workspaceNameInput || workspace?.name || ""}
             onChange={handleWorkspaceNameChange}
             placeholder="Enter workspace name"
           />
 
           <small
             className={
-              workspaceNameInput.length > WORKSPACE_NAME_MAX_LENGTH
+              (workspaceNameInput || workspace?.name || "").length > WORKSPACE_NAME_MAX_LENGTH
                 ? "settings_warning_text"
                 : ""
             }
           >
-            {workspaceNameInput.length}/{WORKSPACE_NAME_MAX_LENGTH} characters
+            {(workspaceNameInput || workspace?.name || "").length}/{WORKSPACE_NAME_MAX_LENGTH} characters
           </small>
           <button type="submit">Save changes</button>
         </form>
@@ -5072,26 +5105,108 @@ function renderSettingsTab() {
         )}
       </section>
 
-      <section className="workspace_settings_card danger">
-        <div className="workspace_settings_card_header">
-          <div className="workspace_settings_icon danger">
-            <i className="ti-trash"></i>
+      {!canManageWorkspace && (
+        <section className="workspace_settings_card danger">
+          <div className="workspace_settings_card_header">
+            <div className="workspace_settings_icon warning" style={{ background: "#fef3c7", color: "#d97706" }}>
+              <i className="ti-export"></i>
+            </div>
+
+            <div>
+              <h3>Leave workspace</h3>
+              <p>Remove yourself from this workspace. Admins and Editors will be notified.</p>
+            </div>
           </div>
 
-          <div>
-            <h3>Delete workspace</h3>
-            <p>Remove this workspace for all members.</p>
-          </div>
-        </div>
+          <button
+            type="button"
+            className="workspace_delete_btn"
+            style={{ backgroundColor: "#d97706" }}
+            onClick={handleLeaveWorkspace}
+          >
+            Leave workspace
+          </button>
+        </section>
+      )}
 
-        <button
-          type="button"
-          className="workspace_delete_btn"
-          onClick={handleDeleteWorkspace}
-        >
-          Delete workspace
-        </button>
-      </section>
+      {canManageWorkspace && (
+        <section className="workspace_settings_card" style={{ marginTop: "16px" }}>
+          <div className="workspace_settings_card_header">
+            <div className="workspace_settings_icon" style={{ background: "#eff6ff", color: "#2563eb" }}>
+              <i className="ti-crown"></i>
+            </div>
+
+            <div>
+              <h3>Transfer Admin ownership</h3>
+              <p>Promote a member to Admin. Your role will become Contributor.</p>
+            </div>
+          </div>
+
+          <div style={{ display: "flex", gap: "10px", marginTop: "12px", alignItems: "center" }}>
+            <select
+              id="transferAdminSelect"
+              style={{
+                flex: 1,
+                padding: "8px 12px",
+                borderRadius: "8px",
+                border: "1px solid #cbd5e1",
+                fontSize: "14px",
+              }}
+            >
+              <option value="">Select a member to promote...</option>
+              {visibleWorkspaceMembers
+                .filter((m) => String(m.id || m.userId) !== currentUserId)
+                .map((m) => (
+                  <option key={m.id || m.userId} value={m.id || m.userId}>
+                    {m.name || m.username || m.email} ({m.role})
+                  </option>
+                ))}
+            </select>
+            <button
+              type="button"
+              className="workspace_delete_btn"
+              style={{ backgroundColor: "#2563eb", marginTop: 0 }}
+              onClick={() => {
+                const selectEl = document.getElementById("transferAdminSelect");
+                const targetId = selectEl?.value;
+                if (!targetId) {
+                  alert("Please select a member first.");
+                  return;
+                }
+                const selectedMember = visibleWorkspaceMembers.find(
+                  (m) => String(m.id || m.userId) === String(targetId)
+                );
+                handleTransferAdminOwnership(targetId, selectedMember?.name || selectedMember?.username);
+              }}
+            >
+              Transfer Admin
+            </button>
+          </div>
+        </section>
+      )}
+
+      {canManageWorkspace && (
+        <section className="workspace_settings_card danger" style={{ marginTop: "16px" }}>
+          <div className="workspace_settings_card_header">
+            <div className="workspace_settings_icon danger">
+              <i className="ti-trash"></i>
+            </div>
+
+            <div>
+              <h3>Delete workspace</h3>
+              <p>Remove this workspace for all members.</p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            className="workspace_delete_btn"
+            onClick={handleDeleteWorkspace}
+          >
+            Delete workspace
+          </button>
+        </section>
+      )}
     </section>
   );
 }
@@ -5358,6 +5473,30 @@ return (
         <i className="ti-settings"></i>
         Setting
       </button>
+
+      {!canManageWorkspace && (
+        <button
+          type="button"
+          className="workspace_leave_tab_btn"
+          style={{
+            marginLeft: "auto",
+            color: "#dc2626",
+            border: "1px solid #fca5a5",
+            background: "#fef2f2",
+            display: "flex",
+            alignItems: "center",
+            gap: "6px",
+            borderRadius: "8px",
+            padding: "6px 14px",
+            cursor: "pointer",
+            fontWeight: 600,
+          }}
+          onClick={handleLeaveWorkspace}
+        >
+          <i className="ti-export"></i>
+          Leave workspace
+        </button>
+      )}
     </nav>
 
     {activeTab === "messages" && renderMessagesTab()}

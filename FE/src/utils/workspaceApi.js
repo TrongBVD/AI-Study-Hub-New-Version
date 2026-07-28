@@ -101,3 +101,15 @@ export const reviewWorkspaceDocument = (workspaceId, documentId, payload) =>
 
 export const generateWorkspaceDocumentFlashcards = (documentId) =>
   api.post(`/ai/documents/${documentId}/flashcards`).then((res) => res.data.data);
+
+export const leaveWorkspace = (workspaceId) =>
+  api.post(`/workspaces/${workspaceId}/leave`).then((res) => res.data);
+
+export const respondToInvitation = (invitationId, action) =>
+  api.post(`/workspaces/invitations/${invitationId}/respond`, { action }).then((res) => res.data);
+
+export const markWorkspaceNotificationsAsReadApi = () =>
+  api.post("/workspaces/notifications/mark-read").then((res) => res.data);
+
+export const transferAdminOwnership = (workspaceId, targetUserId) =>
+  api.post(`/workspaces/${workspaceId}/transfer-admin`, { targetUserId }).then((res) => res.data);

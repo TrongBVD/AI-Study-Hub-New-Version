@@ -9,11 +9,15 @@ router.use(authMiddleware);
 router.get("/", workspaceController.listMyWorkspaces);
 router.post("/", workspaceController.createWorkspace);
 router.get("/notifications/me", workspaceController.listMyWorkspaceNotifications);
+router.post("/notifications/mark-read", workspaceController.markAllNotificationsAsRead);
 router.get("/:workspaceId", workspaceController.getWorkspace);
 router.put("/:workspaceId", workspaceController.updateWorkspace);
 router.delete("/:workspaceId", workspaceController.deleteWorkspace);
 router.get("/:workspaceId/members", workspaceController.listMembers);
 router.get("/:workspaceId/users/search", workspaceController.searchUsers);
+router.post("/:workspaceId/leave", workspaceController.leaveWorkspace);
+router.post("/:workspaceId/transfer-admin", workspaceController.transferAdminOwnership);
+router.post("/invitations/:invitationId/respond", workspaceController.respondToInvitation);
 router.post("/:workspaceId/members", workspaceController.addMember);
 router.patch(
   "/:workspaceId/members/:userId",

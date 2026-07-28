@@ -153,27 +153,23 @@ export function markAllNotificationsAsRead() {
 }
 
 export function mergeAppNotifications(incomingNotifications = []) {
-  const settings = getNotificationSettings();
-  if (!settings.enabled) return getNotifications();
-
-  const currentNotifications = getNotifications();
-  const existingById = new Map(
-    currentNotifications.map((notification) => [notification.id, notification]),
-  );
-
-  incomingNotifications.forEach((notification) => {
-    if (!notification?.id) return;
-    if (!settings[notification.category]?.[notification.action]) return;
-
-    const existing = existingById.get(notification.id);
-    existingById.set(notification.id, {
-      ...notification,
-      isRead: existing?.isRead ?? false,
+  try {
+    Object.keys(localStorage).forEach((key) => {
+      if (key.startsWith("aiStudyHubPendingInvitations")) {
+        localStorage.removeItem(key);
+      }
     });
-  });
+  } catch (err) {
+    console.error("Could not clean legacy localStorage keys:", err);
+  }
 
-  const merged = [...existingById.values()]
-    .sort((a, b) => Number(b.createdAtMs || 0) - Number(a.createdAtMs || 0));
-  saveNotifications(merged);
-  return merged;
+  const settings = getNotificationSettings();
+  if (!settings.enabled) return [];
+
+  if (Array.isArray(incomingNotifications) && incomingNotifications.length > 0) {
+    saveNotifications(incomingNotifications);
+    return incomingNotifications;
+  }
+
+  return getNotifications();
 }

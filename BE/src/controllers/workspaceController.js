@@ -9,6 +9,22 @@ const ASSIGNABLE_MEMBER_ROLES = ["Editor", "Viewer"];
 function getWorkspaceRoleLabel(role) {
   return String(role || "").toLowerCase() === "viewer" ? "Contributor" : role;
 }
+
+function formatRelativeTime(dateInput) {
+  if (!dateInput) return "Just now";
+  const date = new Date(dateInput);
+  const now = new Date();
+  const diffInSeconds = Math.floor((now - date) / 1000);
+
+  if (diffInSeconds < 60) return "Just now";
+  const diffInMinutes = Math.floor(diffInSeconds / 60);
+  if (diffInMinutes < 60) return `${diffInMinutes} minute${diffInMinutes === 1 ? "" : "s"} ago`;
+  const diffInHours = Math.floor(diffInMinutes / 60);
+  if (diffInHours < 24) return `${diffInHours} hour${diffInHours === 1 ? "" : "s"} ago`;
+  const diffInDays = Math.floor(diffInHours / 24);
+  if (diffInDays < 30) return `${diffInDays} day${diffInDays === 1 ? "" : "s"} ago`;
+  return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
 const MESSAGE_SELECT = `
   id,
   workspace_id,
@@ -852,66 +868,80 @@ exports.addMember = async (req, res) => {
         });
     }
 
-    const { data: inviter, error: inviterError } = await supabase
+    // Check if user is already a member
+    const { data: existingMember } = await supabase
+      .from("workspace_members")
+      .select("role")
+      .eq("workspace_id", req.params.workspaceId)
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    if (existingMember) {
+      return res.status(409).json({
+        status: "error",
+        message: "This user is already a member of the workspace.",
+      });
+    }
+
+    const { data: inviter } = await supabase
       .from("profiles")
       .select("id, email, username, full_name")
       .eq("id", req.user.id)
       .maybeSingle();
 
-    if (inviterError) throw inviterError;
+    const inviterName = inviter?.full_name || inviter?.username || inviter?.email || "Workspace Admin";
+    const workspaceName = access.workspace.name || "Workspace";
+    const workspaceDescription = access.workspace.description || "";
 
-    const { data, error } = await supabase
-      .from("workspace_members")
+    // Create in-app invitation notification log
+    const { data: logData, error: logError } = await supabase
+      .from("activity_logs")
       .insert({
-        workspace_id: req.params.workspaceId,
         user_id: userId,
-        role,
+        admin_id: req.user.id,
+        action_type: "WORKSPACE_INVITATION_PENDING",
+        entity_type: "workspace",
+        entity_id: req.params.workspaceId,
+        old_data: { status: "PENDING", role },
+        new_data: {
+          workspaceId: req.params.workspaceId,
+          workspaceName,
+          workspaceDescription,
+          inviterId: req.user.id,
+          inviterName,
+          role,
+          status: "PENDING",
+          notificationType: "workspaceInvitation",
+        },
+        details: `${inviterName} invited you to join workspace "${workspaceName}" as ${role === "Viewer" ? "Contributor" : role}.`,
       })
-      .select("workspace_id, user_id, role, joined_at")
+      .select("id, created_at")
       .single();
 
-    if (error) throw error;
-
-    // Trigger email invitation in background so HTTP response returns instantly (< 200ms)
-    sendWorkspaceInviteEmail({
-      to: invitedUser.email,
-      workspace: access.workspace,
-      inviter,
-      role,
-    }).catch((mailError) => {
-      console.error("Could not send workspace invite email:", mailError?.message || mailError);
-    });
+    if (logError) throw logError;
 
     return res.status(201).json({
       status: "success",
+      message: "Thư mời tham gia nhóm đã được gửi tới người dùng.",
       data: {
-        ...data,
+        invitationId: logData.id,
+        workspaceId: req.params.workspaceId,
         invitedUser: {
           id: invitedUser.id,
           email: invitedUser.email,
           username: invitedUser.username,
           full_name: invitedUser.full_name,
         },
-        emailSent: true,
+        role,
+        status: "PENDING",
       },
     });
   } catch (error) {
-    if (error.code === "23505") {
-      return res
-        .status(409)
-        .json({
-          status: "error",
-          message: "This user is already a member of the workspace.",
-        });
-    }
-
-    return res
-      .status(500)
-      .json({
-        status: "error",
-        message: "Could not add member.",
-        error: error.message,
-      });
+    return res.status(500).json({
+      status: "error",
+      message: "Could not send workspace invitation.",
+      error: error.message,
+    });
   }
 };
 
@@ -1015,8 +1045,67 @@ exports.updateMemberRole = async (req, res) => {
   }
 };
 
+exports.markAllNotificationsAsRead = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const readTimestamp = new Date().toISOString();
+
+    try {
+      await supabase
+        .from("profiles")
+        .update({ notifications_read_at: readTimestamp })
+        .eq("id", userId);
+    } catch (profileErr) {
+      console.warn("Could not update notifications_read_at on profile:", profileErr);
+    }
+
+    const { data: logs } = await supabase
+      .from("activity_logs")
+      .select("id, new_data")
+      .eq("user_id", userId);
+
+    if (logs && logs.length > 0) {
+      for (const logItem of logs) {
+        if (!logItem.new_data?.is_read) {
+          await supabase
+            .from("activity_logs")
+            .update({
+              new_data: {
+                ...(logItem.new_data || {}),
+                is_read: true,
+              },
+            })
+            .eq("id", logItem.id);
+        }
+      }
+    }
+
+    return res.status(200).json({
+      status: "success",
+      message: "All notifications marked as read.",
+    });
+  } catch (error) {
+    console.error("markAllNotificationsAsRead error:", error);
+    return res.status(500).json({
+      status: "error",
+      message: "Could not mark notifications as read.",
+      error: error.message,
+    });
+  }
+};
+
 exports.listMyWorkspaceNotifications = async (req, res) => {
   try {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("notifications_read_at")
+      .eq("id", req.user.id)
+      .maybeSingle();
+
+    const lastReadAtMs = profile?.notifications_read_at
+      ? new Date(profile.notifications_read_at).getTime()
+      : 0;
+
     const { data, error } = await supabase
       .from("activity_logs")
       .select("id, entity_id, old_data, new_data, details, created_at")
@@ -1027,6 +1116,8 @@ exports.listMyWorkspaceNotifications = async (req, res) => {
         "WORKSPACE_DELETED",
         "DOCUMENT_APPROVED",
         "DOCUMENT_REJECTED",
+        "WORKSPACE_INVITATION_PENDING",
+        "WORKSPACE_MEMBER_LEFT",
       ])
       .order("created_at", { ascending: false })
       .limit(30);
@@ -1036,7 +1127,50 @@ exports.listMyWorkspaceNotifications = async (req, res) => {
     return res.status(200).json({
       status: "success",
       data: (data || []).map((item) => {
+        const createdAtMs = new Date(item.created_at).getTime();
+        const isRead = Boolean(
+          item.new_data?.is_read || (lastReadAtMs > 0 && createdAtMs <= lastReadAtMs)
+        );
         const actionType = item.new_data?.notificationType || "roleChanged";
+        if (actionType === "workspaceInvitation") {
+          const invStatus = item.new_data?.status || item.old_data?.status || "PENDING";
+          return {
+            id: `invitation-${item.id}`,
+            logId: item.id,
+            category: "invitation",
+            action: "workspaceInvitation",
+            title: "Workspace invitation",
+            message: item.details,
+            workspaceId: item.entity_id,
+            workspaceName: item.new_data?.workspaceName || "Workspace",
+            workspaceDescription: item.new_data?.workspaceDescription || "No description provided.",
+            inviterName: item.new_data?.inviterName || "Workspace Admin",
+            role: item.new_data?.role || "Contributor",
+            status: invStatus,
+            isInvitation: true,
+            isRead,
+            icon: "ti-email",
+            link: `/dashboard/workspaces/${item.entity_id}`,
+            createdAt: formatRelativeTime(item.created_at),
+            createdAtMs,
+          };
+        }
+
+        if (actionType === "memberLeft") {
+          return {
+            id: `member-left-${item.id}`,
+            category: "member",
+            action: "memberLeft",
+            title: "Member left workspace",
+            message: item.details,
+            isRead,
+            icon: "ti-user",
+            link: `/dashboard/workspaces/${item.entity_id}`,
+            createdAt: formatRelativeTime(item.created_at),
+            createdAtMs,
+          };
+        }
+
         const isDocumentModeration =
           actionType === "moderationApproved" ||
           actionType === "moderationRejected";
@@ -1069,6 +1203,7 @@ exports.listMyWorkspaceNotifications = async (req, res) => {
               ? `${documentTitle} has been reviewed by admin.`
               : `Your workspace role changed from ${getWorkspaceRoleLabel(item.old_data?.role || "member")} to ${getWorkspaceRoleLabel(item.new_data?.role || "a new role")}.`)
           ).replace(/\bViewer\b/gi, "Contributor"),
+          isRead,
           icon: isDocumentModeration
             ? actionType === "moderationApproved"
               ? "ti-check"
@@ -1083,8 +1218,8 @@ exports.listMyWorkspaceNotifications = async (req, res) => {
             : isDeleted
               ? "/dashboard/workspaces"
               : `/dashboard/workspaces/${item.entity_id}`,
-          createdAt: "Recently",
-          createdAtMs: new Date(item.created_at).getTime(),
+          createdAt: formatRelativeTime(item.created_at),
+          createdAtMs,
         };
       }),
     });
@@ -2123,6 +2258,374 @@ exports.deleteWorkspace = async (req, res) => {
   } catch (error) {
     console.error("Lỗi deleteWorkspace:", error);
     return res.status(500).json({ status: "error", message: error.message });
+  }
+};
+
+exports.respondToInvitation = async (req, res) => {
+  try {
+    const { invitationId } = req.params;
+    const { action } = req.body;
+    const userId = req.user.id;
+
+    if (!["accept", "reject"].includes(action)) {
+      return res.status(400).json({
+        status: "error",
+        message: "Invalid action. Must be 'accept' or 'reject'.",
+      });
+    }
+
+    const { data: inviteLog, error: logError } = await supabase
+      .from("activity_logs")
+      .select("*")
+      .eq("id", invitationId)
+      .eq("user_id", userId)
+      .eq("action_type", "WORKSPACE_INVITATION_PENDING")
+      .maybeSingle();
+
+    if (logError) throw logError;
+
+    if (!inviteLog) {
+      return res.status(404).json({
+        status: "error",
+        message: "Không tìm thấy thư mời hoặc bạn không có quyền phản hồi thư mời này.",
+      });
+    }
+
+    const currentStatus = inviteLog.new_data?.status || "PENDING";
+    if (currentStatus !== "PENDING") {
+      return res.status(400).json({
+        status: "error",
+        message: `Thư mời này đã được ${currentStatus === "ACCEPTED" ? "chấp nhận" : "từ chối"} trước đó.`,
+      });
+    }
+
+    const workspaceId = inviteLog.entity_id;
+    const role = inviteLog.new_data?.role || "Viewer";
+    const workspaceName = inviteLog.new_data?.workspaceName || "Workspace";
+
+    if (action === "accept") {
+      const { error: insertError } = await supabase
+        .from("workspace_members")
+        .insert({
+          workspace_id: workspaceId,
+          user_id: userId,
+          role,
+        });
+
+      if (insertError && insertError.code !== "23505") {
+        throw insertError;
+      }
+
+      await supabase
+        .from("activity_logs")
+        .update({
+          new_data: {
+            ...inviteLog.new_data,
+            status: "ACCEPTED",
+          },
+        })
+        .eq("id", invitationId);
+
+      const { data: userProfile } = await supabase
+        .from("profiles")
+        .select("full_name, username")
+        .eq("id", userId)
+        .maybeSingle();
+
+      const userDisplayName = userProfile?.full_name || userProfile?.username || "A new member";
+
+      const { data: adminsAndEditors } = await supabase
+        .from("workspace_members")
+        .select("user_id")
+        .eq("workspace_id", workspaceId)
+        .in("role", ["Admin", "Editor"])
+        .neq("user_id", userId);
+
+      if (adminsAndEditors && adminsAndEditors.length > 0) {
+        const notifyRows = adminsAndEditors.map((m) => ({
+          user_id: m.user_id,
+          admin_id: userId,
+          action_type: "WORKSPACE_ROLE_CHANGED",
+          entity_type: "workspace",
+          entity_id: workspaceId,
+          new_data: {
+            notificationType: "roleChanged",
+            role,
+            workspaceName,
+          },
+          details: `${userDisplayName} accepted the invitation and joined workspace "${workspaceName}" as ${getWorkspaceRoleLabel(role)}.`,
+        }));
+
+        await supabase.from("activity_logs").insert(notifyRows);
+      }
+
+      return res.status(200).json({
+        status: "success",
+        message: `Successfully joined workspace "${workspaceName}"!`,
+        action: "ACCEPTED",
+      });
+    } else {
+      await supabase
+        .from("activity_logs")
+        .update({
+          new_data: {
+            ...inviteLog.new_data,
+            status: "REJECTED",
+          },
+        })
+        .eq("id", invitationId);
+
+      const { data: userProfile } = await supabase
+        .from("profiles")
+        .select("full_name, username")
+        .eq("id", userId)
+        .maybeSingle();
+
+      const userDisplayName = userProfile?.full_name || userProfile?.username || "A user";
+
+      const { data: adminsAndEditors } = await supabase
+        .from("workspace_members")
+        .select("user_id")
+        .eq("workspace_id", workspaceId)
+        .in("role", ["Admin", "Editor"])
+        .neq("user_id", userId);
+
+      const inviterId = inviteLog.new_data?.inviterId || inviteLog.admin_id;
+      const targetAdminUserIds = new Set([
+        ...(adminsAndEditors || []).map((m) => m.user_id),
+        inviterId,
+      ].filter((id) => id && id !== userId));
+
+      if (targetAdminUserIds.size > 0) {
+        const notifyRows = Array.from(targetAdminUserIds).map((targetId) => ({
+          user_id: targetId,
+          admin_id: userId,
+          action_type: "WORKSPACE_ROLE_CHANGED",
+          entity_type: "workspace",
+          entity_id: workspaceId,
+          new_data: {
+            notificationType: "roleChanged",
+            status: "REJECTED",
+            workspaceName,
+          },
+          details: `${userDisplayName} declined the invitation to join workspace "${workspaceName}".`,
+        }));
+
+        await supabase.from("activity_logs").insert(notifyRows);
+      }
+
+      return res.status(200).json({
+        status: "success",
+        message: `Declined invitation to join workspace "${workspaceName}".`,
+        action: "REJECTED",
+      });
+    }
+  } catch (error) {
+    console.error("respondToInvitation error:", error);
+    return res.status(500).json({
+      status: "error",
+      message: "Could not process invitation response.",
+      error: error.message,
+    });
+  }
+};
+
+exports.leaveWorkspace = async (req, res) => {
+  try {
+    const { workspaceId } = req.params;
+    const userId = req.user.id;
+
+    if (userId === "guest" || userId === "00000000-0000-0000-0000-000000000000" || req.user.role === "GUEST") {
+      return res.status(403).json({
+        status: "error",
+        message: "Guest users cannot leave workspaces.",
+      });
+    }
+
+    const access = await getWorkspaceAccess(workspaceId, userId);
+    if (!access.workspace || !access.member) {
+      return res.status(404).json({
+        status: "error",
+        message: "You are not a member of this workspace.",
+      });
+    }
+
+    if (access.member.role === "Admin") {
+      const adminCount = await countWorkspaceAdmins(workspaceId);
+      if (adminCount <= 1) {
+        return res.status(400).json({
+          status: "error",
+          message: "A workspace must have at least one admin. You must assign another admin before leaving.",
+        });
+      }
+    }
+
+    const { error: deleteError } = await supabase
+      .from("workspace_members")
+      .delete()
+      .eq("workspace_id", workspaceId)
+      .eq("user_id", userId);
+
+    if (deleteError) throw deleteError;
+
+    const { data: userProfile } = await supabase
+      .from("profiles")
+      .select("full_name, username")
+      .eq("id", userId)
+      .maybeSingle();
+
+    const userDisplayName = userProfile?.full_name || userProfile?.username || "A member";
+    const workspaceName = access.workspace.name || "Workspace";
+
+    const { data: adminsAndEditors } = await supabase
+      .from("workspace_members")
+      .select("user_id")
+      .eq("workspace_id", workspaceId)
+      .in("role", ["Admin", "Editor"])
+      .neq("user_id", userId);
+
+    if (adminsAndEditors && adminsAndEditors.length > 0) {
+      const notifyRows = adminsAndEditors.map((m) => ({
+        user_id: m.user_id,
+        admin_id: userId,
+        action_type: "WORKSPACE_MEMBER_LEFT",
+        entity_type: "workspace",
+        entity_id: workspaceId,
+        new_data: {
+          notificationType: "memberLeft",
+          leftUserId: userId,
+          workspaceName,
+        },
+        details: `${userDisplayName} has left workspace "${workspaceName}".`,
+      }));
+
+      await supabase.from("activity_logs").insert(notifyRows);
+    }
+
+    try {
+      await supabase.from("workspace_messages").insert({
+        workspace_id: workspaceId,
+        sender_id: userId,
+        content: `${userDisplayName} left the workspace.`,
+      });
+    } catch (msgErr) {
+      console.warn("Could not insert left workspace message:", msgErr);
+    }
+
+    return res.status(200).json({
+      status: "success",
+      message: `Successfully left workspace "${workspaceName}".`,
+    });
+  } catch (error) {
+    console.error("leaveWorkspace error:", error);
+    return res.status(500).json({
+      status: "error",
+      message: "Could not leave workspace.",
+      error: error.message,
+    });
+  }
+};
+
+exports.transferAdminOwnership = async (req, res) => {
+  try {
+    const { workspaceId } = req.params;
+    const { targetUserId } = req.body;
+    const currentUserId = req.user.id;
+
+    if (!targetUserId) {
+      return res.status(400).json({
+        status: "error",
+        message: "targetUserId is required.",
+      });
+    }
+
+    if (currentUserId === targetUserId) {
+      return res.status(400).json({
+        status: "error",
+        message: "You are already an Admin of this workspace.",
+      });
+    }
+
+    const access = await getWorkspaceAccess(workspaceId, currentUserId);
+    if (!access.workspace || !access.isAdmin) {
+      return res.status(403).json({
+        status: "error",
+        message: "Only workspace Admins can transfer ownership.",
+      });
+    }
+
+    const { data: targetMember, error: targetError } = await supabase
+      .from("workspace_members")
+      .select("role, user_id")
+      .eq("workspace_id", workspaceId)
+      .eq("user_id", targetUserId)
+      .maybeSingle();
+
+    if (targetError) throw targetError;
+    if (!targetMember) {
+      return res.status(404).json({
+        status: "error",
+        message: "Target user is not a member of this workspace.",
+      });
+    }
+
+    // 1. Promote target user to Admin
+    const { error: promoteError } = await supabase
+      .from("workspace_members")
+      .update({ role: "Admin" })
+      .eq("workspace_id", workspaceId)
+      .eq("user_id", targetUserId);
+
+    if (promoteError) throw promoteError;
+
+    // 2. Demote current user to Viewer (Contributor)
+    const { error: demoteError } = await supabase
+      .from("workspace_members")
+      .update({ role: "Viewer" })
+      .eq("workspace_id", workspaceId)
+      .eq("user_id", currentUserId);
+
+    if (demoteError) throw demoteError;
+
+    // Fetch profile names for notifications
+    const { data: profiles } = await supabase
+      .from("profiles")
+      .select("id, full_name, username")
+      .in("id", [currentUserId, targetUserId]);
+
+    const profileMap = new Map((profiles || []).map((p) => [p.id, p.full_name || p.username]));
+    const currentAdminName = profileMap.get(currentUserId) || "Admin";
+    const targetUserName = profileMap.get(targetUserId) || "Member";
+    const workspaceName = access.workspace.name || "Workspace";
+
+    // 3. Send notification letter to target user
+    await supabase.from("activity_logs").insert({
+      user_id: targetUserId,
+      admin_id: currentUserId,
+      action_type: "WORKSPACE_ROLE_CHANGED",
+      entity_type: "workspace",
+      entity_id: workspaceId,
+      old_data: { role: targetMember.role },
+      new_data: {
+        role: "Admin",
+        workspaceName,
+        changedBy: currentUserId,
+        notificationType: "roleChanged",
+      },
+      details: `You have been promoted to Admin of workspace "${workspaceName}". Admin ownership was transferred to you by ${currentAdminName}.`,
+    });
+
+    return res.status(200).json({
+      status: "success",
+      message: `Admin ownership transferred to ${targetUserName}. You are now a Contributor.`,
+    });
+  } catch (error) {
+    console.error("transferAdminOwnership error:", error);
+    return res.status(500).json({
+      status: "error",
+      message: "Could not transfer admin ownership.",
+      error: error.message,
+    });
   }
 };
 
