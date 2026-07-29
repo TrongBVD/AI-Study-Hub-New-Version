@@ -403,6 +403,32 @@ exports.uploadDocuments = async (req, res) => {
 
     // CHECK GIỚI HẠN 50MB NẾU UP VÀO WORKSPACE
     const isDirectWorkspaceUpload = Boolean(workspaceId && !libraryId);
+
+    let targetLibrary = null;
+    if (libraryId) {
+      const { data: lib, error: libErr } = await supabase
+        .from("libraries")
+        .select("id, uploader_id, is_public")
+        .eq("id", libraryId)
+        .is("deleted_at", null)
+        .maybeSingle();
+
+      if (libErr || !lib) {
+        return res.status(404).json({
+          status: "error",
+          message: "Library not found.",
+        });
+      }
+
+      if (lib.uploader_id !== userID && req.user.role !== "ADMIN") {
+        return res.status(403).json({
+          status: "error",
+          message: "You can only upload documents to your own library.",
+        });
+      }
+      targetLibrary = lib;
+    }
+
     const workspaceAccess = workspaceId
       ? await getWorkspaceDocumentUploadAccess(workspaceId, userID)
       : null;
@@ -570,31 +596,40 @@ exports.uploadDocuments = async (req, res) => {
 
     // 1. Trích xuất text và chạy kiểm tra nhạy cảm + tag validation song song cho tất cả các file
     let processedFilesData = [];
-    try {
-      processedFilesData = await mapWithConcurrency(
-        files,
-        FILE_VALIDATION_CONCURRENCY,
-        async (file, fileIndex) => {
-          const extractedText = await extractTextFromFile(file);
+    if (isDirectWorkspaceUpload) {
+      processedFilesData = files.map((file, fileIndex) => ({
+        file,
+        fileIndex,
+        extractedText: "",
+        sensitivity: { classification: "APPROVED", word: "", suspicious_text: "" },
+        tagValidationResult: { isValid: true, tagValidations: [], aiRecommendedTags: [] },
+      }));
+    } else {
+      try {
+        processedFilesData = await mapWithConcurrency(
+          files,
+          FILE_VALIDATION_CONCURRENCY,
+          async (file, fileIndex) => {
+            const extractedText = await extractTextFromFile(file);
 
-          // Chạy song song kiểm tra nhạy cảm và kiểm duyệt tag để giảm thời gian xử lý (tối ưu hóa hiệu năng)
-          const [sensitivity, tagValidationResult] = await Promise.all([
-            checkSensitiveContent(extractedText),
-            validateTagsAndContent(extractedText, file.originalname, userTags),
-          ]);
+            const [sensitivity, tagValidationResult] = await Promise.all([
+              checkSensitiveContent(extractedText),
+              validateTagsAndContent(extractedText, file.originalname, userTags),
+            ]);
 
-          return {
-            file,
-            fileIndex,
-            extractedText,
-            sensitivity,
-            tagValidationResult,
-          };
-        },
-      );
-    } catch (err) {
-      console.error("Lỗi song song AI:", err);
-      return res.status(500).json({ status: "error", message: "Đã xảy ra lỗi khi kiểm duyệt tài liệu bằng AI." });
+            return {
+              file,
+              fileIndex,
+              extractedText,
+              sensitivity,
+              tagValidationResult,
+            };
+          },
+        );
+      } catch (err) {
+        console.error("Lỗi song song AI:", err);
+        return res.status(500).json({ status: "error", message: "Đã xảy ra lỗi khi kiểm duyệt tài liệu bằng AI." });
+      }
     }
 
     // A sensitive document must still reach the admin moderation queue.
@@ -696,7 +731,7 @@ exports.uploadDocuments = async (req, res) => {
           title: file.originalname,
           file_url: storagePath,
           file_size_bytes: file.size,
-          is_public: libraryId ? true : false,
+          is_public: targetLibrary ? Boolean(targetLibrary.is_public) : false,
           status: status,
           ai_reject_reason: aiRejectReason
         })
@@ -1137,6 +1172,13 @@ exports.createLibrary = async (req, res) => {
       });
     }
 
+    if (userID === "guest" || userID === "00000000-0000-0000-0000-000000000000" || req.user?.role === "GUEST") {
+      return res.status(403).json({
+        status: "error",
+        message: "Guest users cannot create libraries.",
+      });
+    }
+
     if (!name || name.trim() === "") {
       return res.status(400).json({
         status: "error",
@@ -1202,8 +1244,34 @@ exports.updateLibrary = async (req, res) => {
     const { name, description, is_public, share_on_profile } = req.body;
     const userID = req.user.id;
 
+    if (userID === "guest" || userID === "00000000-0000-0000-0000-000000000000" || req.user.role === "GUEST") {
+      return res.status(403).json({
+        status: "error",
+        message: "Guest users cannot update libraries.",
+      });
+    }
+
+    const { data: targetLib, error: getLibErr } = await supabase
+      .from("libraries")
+      .select("id, user_id, is_public")
+      .eq("id", id)
+      .maybeSingle();
+
+    if (getLibErr || !targetLib) {
+      return res.status(404).json({
+        status: "error",
+        message: "Library not found.",
+      });
+    }
+
+    if (targetLib.user_id !== userID && req.user.role !== "ADMIN") {
+      return res.status(403).json({
+        status: "error",
+        message: "You can only update your own library.",
+      });
+    }
+
     if (name && name.trim() !== "") {
-      // Kiểm tra trùng tên với các thư viện khác cùng user (trừ thư viện hiện tại đang sửa)
       const { data: existingLib, error: searchError } = await supabase
         .from("libraries")
         .select("id")
@@ -1234,6 +1302,14 @@ exports.updateLibrary = async (req, res) => {
       .select().single();
 
     if (error) throw error;
+
+    if (typeof is_public === "boolean" && is_public !== targetLib.is_public) {
+      await supabase
+        .from("documents")
+        .update({ is_public: is_public })
+        .eq("library_id", id);
+    }
+
     return res.status(200).json({ status: "success", data });
   } catch (error) {
     return res.status(500).json({ status: "error", message: error.message });
@@ -1473,7 +1549,27 @@ exports.deleteLibrary = async (req, res) => {
       });
     }
 
-    // Clean up dependent records first to avoid foreign key constraint errors
+    const { data: targetLib } = await supabase
+      .from("libraries")
+      .select("id, user_id")
+      .eq("id", id)
+      .maybeSingle();
+
+    if (!targetLib) {
+      return res.status(404).json({
+        status: "error",
+        message: "Library not found.",
+      });
+    }
+
+    if (targetLib.user_id !== userID && req.user.role !== "ADMIN") {
+      return res.status(403).json({
+        status: "error",
+        message: "You can only delete your own library.",
+      });
+    }
+
+    // Clean up dependent records ONLY AFTER confirming ownership
     await supabase.from("library_stars").delete().eq("library_id", id);
     await supabase.from("library_downloads").delete().eq("library_id", id);
     await supabase.from("documents").update({ library_id: null }).eq("library_id", id);
@@ -1481,8 +1577,7 @@ exports.deleteLibrary = async (req, res) => {
     const { error } = await supabase
       .from("libraries")
       .delete()
-      .eq("id", id)
-      .eq("user_id", userID);
+      .eq("id", id);
 
     if (error) throw error;
 

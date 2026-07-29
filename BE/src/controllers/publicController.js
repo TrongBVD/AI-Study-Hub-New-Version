@@ -1,6 +1,7 @@
 const supabase = require("../config/supabase");
 
 const BUCKET = process.env.SUPABASE_DOCUMENT_BUCKET || "documents";
+const downloadDeduplicationCache = new Map();
 
 function mapDocument(document) {
   return {
@@ -236,11 +237,17 @@ exports.recordPublicLibraryDownload = async (req, res) => {
       return res.status(404).json({ status: "error", message: "Public library not found." });
     }
 
-    const { error: insertError } = await supabase
-      .from("library_downloads")
-      .insert({ library_id: libraryId });
+    const clientIp = req.headers["x-forwarded-for"] || req.socket.remoteAddress || "anonymous";
+    const dedupKey = `${clientIp}:${libraryId}`;
+    const nowMs = Date.now();
+    const lastMs = downloadDeduplicationCache.get(dedupKey) || 0;
 
-    if (insertError) throw insertError;
+    if (nowMs - lastMs > 60000) {
+      downloadDeduplicationCache.set(dedupKey, nowMs);
+      await supabase
+        .from("library_downloads")
+        .insert({ library_id: libraryId });
+    }
 
     const { count, error: countError } = await supabase
       .from("library_downloads")

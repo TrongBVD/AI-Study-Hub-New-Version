@@ -111,7 +111,7 @@ function CompleteProfile() {
     let nextUser = createdUser || {};
 
     try {
-      const response = await api.patch("/users/profile-bio", {
+      const response = await api.put("/profile", {
         bio: trimmedBio,
       });
 

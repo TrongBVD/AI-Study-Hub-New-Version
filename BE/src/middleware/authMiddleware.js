@@ -14,18 +14,6 @@ async function authMiddleware(req, res, next) {
 
     const token = authHeader.split(" ")[1];
 
-    if (token && token.includes("guest_signature_bypass")) {
-      req.user = {
-        id: "00000000-0000-0000-0000-000000000000",
-        role: "GUEST",
-        email: "guest@studyhub.local",
-        username: "GuestUser",
-        full_name: "Guest",
-        status: "ACTIVE",
-      };
-      return next();
-    }
-
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
     const userID =

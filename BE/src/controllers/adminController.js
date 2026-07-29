@@ -270,10 +270,10 @@ exports.reviewDocument = async (req, res) => {
 
     if (fetchError) throw fetchError;
 
-    if (!oldDocument) {
-      return res.status(404).json({
+    if (!["FLAGGED", "PENDING"].includes(oldDocument.status)) {
+      return res.status(400).json({
         status: "error",
-        message: "Document not found.",
+        message: "Only documents pending moderation can be reviewed.",
       });
     }
 
@@ -282,30 +282,39 @@ exports.reviewDocument = async (req, res) => {
     let updatedDocument;
 
     if (decision === "APPROVE") {
-      // Transfer file from WAITING_BUCKET to DOCUMENT_BUCKET if present
-      if (oldDocument.file_url) {
+      // Transfer file from WAITING_BUCKET to DOCUMENT_BUCKET if present in WAITING_BUCKET
+      if (oldDocument.file_url && oldDocument.status === "FLAGGED") {
         try {
           const { data: fileBlob, error: downloadErr } = await supabase.storage
             .from(WAITING_BUCKET)
             .download(oldDocument.file_url);
 
-          if (!downloadErr && fileBlob) {
-            const arrayBuffer = await fileBlob.arrayBuffer();
-            const buffer = Buffer.from(arrayBuffer);
-
-            await supabase.storage
-              .from(DOCUMENT_BUCKET)
-              .upload(oldDocument.file_url, buffer, {
-                contentType: "application/octet-stream",
-                upsert: true,
-              });
-
-            await supabase.storage
-              .from(WAITING_BUCKET)
-              .remove([oldDocument.file_url]);
+          if (downloadErr || !fileBlob) {
+            throw downloadErr || new Error("Failed to download file from WAITING_BUCKET");
           }
+
+          const arrayBuffer = await fileBlob.arrayBuffer();
+          const buffer = Buffer.from(arrayBuffer);
+
+          const { error: uploadErr } = await supabase.storage
+            .from(DOCUMENT_BUCKET)
+            .upload(oldDocument.file_url, buffer, {
+              contentType: "application/octet-stream",
+              upsert: true,
+            });
+
+          if (uploadErr) throw uploadErr;
+
+          await supabase.storage
+            .from(WAITING_BUCKET)
+            .remove([oldDocument.file_url]);
         } catch (transferErr) {
-          console.warn("Storage transfer warning during document approval:", transferErr);
+          console.error("Storage transfer failed during document approval:", transferErr);
+          return res.status(500).json({
+            status: "error",
+            message: "Could not approve document: Storage file transfer failed.",
+            error: transferErr.message,
+          });
         }
       }
 
@@ -618,6 +627,21 @@ exports.updateUserStatus = async (req, res) => {
         status: "error",
         message: "User not found.",
       });
+    }
+
+    if (status === "DISABLED" && oldUser.role === "ADMIN") {
+      const { count: activeAdminCount } = await supabase
+        .from("profiles")
+        .select("id", { count: "exact", head: true })
+        .eq("role", "ADMIN")
+        .eq("status", "ACTIVE");
+
+      if ((activeAdminCount || 0) <= 1) {
+        return res.status(400).json({
+          status: "error",
+          message: "Cannot disable the last active System Admin.",
+        });
+      }
     }
 
     const { data: updatedUser, error: updateError } = await supabase
@@ -995,13 +1019,18 @@ exports.permanentlyDeleteWorkspace = async (req, res) => {
     const documents = await getWorkspaceDocuments(workspaceId);
     const workspaceOnlyDocuments = documents.filter((document) => !document.library_id);
     const bytesFreed = workspaceOnlyDocuments.reduce((total, document) => total + Number(document.file_size_bytes || 0), 0);
-    await removeWorkspaceStorageFiles(workspaceOnlyDocuments);
 
     const { data, error } = await supabase.rpc("admin_hard_delete_workspace", { p_workspace_id: workspaceId });
     if (error) {
       if (String(error.message).includes("WORKSPACE_NOT_FOUND")) return res.status(404).json({ status: "error", code: "WORKSPACE_NOT_FOUND", message: "Workspace does not exist. It may already have been permanently deleted." });
       if (String(error.message).includes("WORKSPACE_NOT_SOFT_DELETED")) return res.status(409).json({ status: "error", code: "WORKSPACE_NOT_SOFT_DELETED", message: "Active workspaces cannot be permanently deleted. Soft-delete the workspace first." });
       throw error;
+    }
+
+    try {
+      await removeWorkspaceStorageFiles(workspaceOnlyDocuments);
+    } catch (storageErr) {
+      console.warn("Storage cleanup warning during workspace purge:", storageErr);
     }
 
     await createActivityLog({ actorUserId: req.user.id, adminId: req.user.id, actionType: "ADMIN_PERMANENTLY_DELETE_WORKSPACE", entityType: "workspaces", entityId: workspaceId, oldData: workspace, newData: { ...data, bytesFreed }, request: req, riskLevel: "HIGH", details: `System Admin permanently deleted soft-deleted workspace "${workspace.name}".` });

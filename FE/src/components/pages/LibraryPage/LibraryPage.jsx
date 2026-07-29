@@ -2399,14 +2399,18 @@ function LibraryPage() {
                 onChange={(event) => setLibraryDescription(event.target.value)}
                 placeholder="Write a short description for this library..."
                 aria-label="Library description"
+                readOnly={isGuest}
+                disabled={isGuest}
               />
 
-              <div className="library_description_actions">
-                <small>{libraryDescription.length} characters</small>
-                <button type="button" onClick={handleSaveSettings}>
-                  Save description
-                </button>
-              </div>
+              {!isGuest && (
+                <div className="library_description_actions">
+                  <small>{libraryDescription.length} characters</small>
+                  <button type="button" onClick={handleSaveSettings}>
+                    Save description
+                  </button>
+                </div>
+              )}
             </div>
           </section>
         )}

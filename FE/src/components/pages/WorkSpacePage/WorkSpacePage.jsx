@@ -32,6 +32,7 @@ import {
   reviewWorkspaceDocument,
   generateWorkspaceDocumentFlashcards,
   createWorkspaceDiscussionTopic,
+  updateWorkspaceDiscussionSubtask,
   leaveWorkspace,
   transferAdminOwnership,
 } from "../../../utils/workspaceApi";
@@ -2035,7 +2036,8 @@ async function handleTransferAdminOwnership(targetUserId, targetUserName) {
 
     const res = await transferAdminOwnership(workspaceId, targetUserId);
     alert(res?.message || `Admin ownership transferred to ${targetUserName}.`);
-    await loadWorkspaceData();
+    await loadWorkspaceMembers();
+    await fetchWorkspaceDetails();
   } catch (error) {
     console.error("Cannot transfer admin ownership:", error);
     alert(error.response?.data?.message || "Could not transfer admin ownership.");

@@ -46,9 +46,9 @@ app.use(cors({
         if (allowedOrigins.includes(origin) || allowedOrigins.includes(origin.replace(/\/+$/, '')) || origin.endsWith('.vercel.app')) {
             return callback(null, true);
         }
-        return callback(null, true);
+        return callback(new Error('Not allowed by CORS'));
     },
-    credentials: true, // Allow cookies/tokens
+    credentials: true,
 }));
 
 // ─── 3. Body parsing ──────────────────────────────────────────────────────────

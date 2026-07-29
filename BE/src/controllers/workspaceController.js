@@ -503,6 +503,13 @@ exports.createWorkspace = async (req, res) => {
         .json({ status: "error", message: "Workspace name is required." });
     }
 
+    if (userId === "guest" || userId === "00000000-0000-0000-0000-000000000000" || req.user.role === "GUEST") {
+      return res.status(403).json({
+        status: "error",
+        message: "Guest users cannot create workspaces.",
+      });
+    }
+
     const ownedWorkspaceCount = await countActiveOwnedWorkspaces(userId);
 
     if ((ownedWorkspaceCount || 0) >= MAX_OWNED_WORKSPACES) {
@@ -525,7 +532,10 @@ exports.createWorkspace = async (req, res) => {
       .from("workspace_members")
       .insert({ workspace_id: workspace.id, user_id: userId, role: "Admin" });
 
-    if (memberError) throw memberError;
+    if (memberError) {
+      await supabase.from("workspaces").delete().eq("id", workspace.id);
+      throw memberError;
+    }
 
     return res.status(201).json({ status: "success", data: workspace });
   } catch (error) {
@@ -1565,6 +1575,22 @@ exports.updateDiscussionTopic = async (req, res) => {
       });
     }
 
+    const existingTopic = await getDiscussionTopicInWorkspace(workspaceId, topicId);
+    if (!existingTopic) {
+      return res.status(404).json({
+        status: "error",
+        message: "Discussion topic not found.",
+      });
+    }
+
+    const isAuthor = String(existingTopic.author_id) === String(req.user.id);
+    if (!isAuthor && !access.isAdmin) {
+      return res.status(403).json({
+        status: "error",
+        message: "Only the topic author or workspace Admin can edit this topic.",
+      });
+    }
+
     const updatePayload = {};
     const fields = {
       title: "title",
@@ -1640,6 +1666,22 @@ exports.deleteDiscussionTopic = async (req, res) => {
       return res.status(403).json({
         status: "error",
         message: "Only workspace editors and admins can delete discussion topics.",
+      });
+    }
+
+    const existingTopic = await getDiscussionTopicInWorkspace(workspaceId, topicId);
+    if (!existingTopic) {
+      return res.status(404).json({
+        status: "error",
+        message: "Discussion topic not found.",
+      });
+    }
+
+    const isAuthor = String(existingTopic.author_id) === String(req.user.id);
+    if (!isAuthor && !access.isAdmin) {
+      return res.status(403).json({
+        status: "error",
+        message: "Only the topic author or workspace Admin can delete this topic.",
       });
     }
 
@@ -2303,6 +2345,19 @@ exports.respondToInvitation = async (req, res) => {
     const role = inviteLog.new_data?.role || "Viewer";
     const workspaceName = inviteLog.new_data?.workspaceName || "Workspace";
 
+    const { data: targetWs } = await supabase
+      .from("workspaces")
+      .select("id, deleted_at")
+      .eq("id", workspaceId)
+      .maybeSingle();
+
+    if (!targetWs || targetWs.deleted_at) {
+      return res.status(400).json({
+        status: "error",
+        message: "This workspace has been deleted and is no longer available.",
+      });
+    }
+
     if (action === "accept") {
       const { error: insertError } = await supabase
         .from("workspace_members")
@@ -2585,7 +2640,25 @@ exports.transferAdminOwnership = async (req, res) => {
       .eq("workspace_id", workspaceId)
       .eq("user_id", currentUserId);
 
-    if (demoteError) throw demoteError;
+    if (demoteError) {
+      // Rollback promote if demote failed
+      await supabase
+        .from("workspace_members")
+        .update({ role: targetMember.role })
+        .eq("workspace_id", workspaceId)
+        .eq("user_id", targetUserId);
+      throw demoteError;
+    }
+
+    // 3. Update created_by field on workspaces table to transfer full ownership
+    const { error: updateOwnerError } = await supabase
+      .from("workspaces")
+      .update({ created_by: targetUserId })
+      .eq("id", workspaceId);
+
+    if (updateOwnerError) {
+      console.warn("Could not update workspaces.created_by:", updateOwnerError);
+    }
 
     // Fetch profile names for notifications
     const { data: profiles } = await supabase
