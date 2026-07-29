@@ -160,7 +160,6 @@ function AdminUsagePage() {
 
   useEffect(() => {
     // Resetting pagination is intentional whenever the filter result set changes.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setCurrentPage(1);
   }, [searchText, riskFilter, usageTypeFilter]);
 

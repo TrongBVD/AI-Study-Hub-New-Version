@@ -28,7 +28,7 @@ import {
   getStoredUser,
   isTokenValid,
 } from "../../../utils/authToken";
-import { isLibraryStarred, toggleStarLibrary } from "../../../utils/starredLibraries";
+import { isLibraryStarred } from "../../../utils/starredLibraries";
 import {
   downloadPublicDocument,
   getPublicLibrary,
@@ -188,6 +188,7 @@ function LibraryPage() {
     Boolean(currentUserId) &&
     Boolean(libraryOwnerId) &&
     String(currentUserId) === String(libraryOwnerId);
+  const canManageLibrary = isLibraryOwner;
   const ownerDisplayName = isLibraryOwner
     ? "You"
     : libraryData.owner?.full_name ||
@@ -1441,6 +1442,10 @@ function LibraryPage() {
 
   async function handleConfirmDeleteDocument() {
     if (!documentPendingDelete || isDeletingDocument) return;
+    if (!canManageLibrary) {
+      setDocumentPendingDelete(null);
+      return;
+    }
     const fileItem = documentPendingDelete;
     try {
       setIsDeletingDocument(true);
@@ -1521,6 +1526,7 @@ function LibraryPage() {
     if (e && e.preventDefault) {
       e.preventDefault();
     }
+    if (!canManageLibrary) return;
 
     const rawLibraryName = libraryName;
     const trimmedLibraryName = rawLibraryName.trim();
@@ -1834,7 +1840,7 @@ function LibraryPage() {
             Documents
           </button>
 
-          {!isGuest && (
+          {canManageLibrary && (
             <button
               type="button"
               className={activeTab === "settings" ? "active" : ""}
@@ -1867,7 +1873,7 @@ function LibraryPage() {
                       />
                     </label>
 
-                    {!isGuest && (
+                    {canManageLibrary && (
                       <div className="documents_tab_actions">
                         <button
                           type="button"
@@ -2123,7 +2129,7 @@ function LibraryPage() {
                               <i className="ti-download"></i>
                             </button>
 
-                            {!isGuest && (
+                            {canManageLibrary && (
                               <button
                                 type="button"
                                 className="delete_document_btn"
@@ -2150,7 +2156,7 @@ function LibraryPage() {
               </section>
             )}
 
-            {!isGuest && activeTab === "settings" && (
+            {canManageLibrary && activeTab === "settings" && (
               <section className="settings_tab_panel">
                 <div className="settings_header">
                   <h2>Library settings</h2>
@@ -2399,11 +2405,11 @@ function LibraryPage() {
                 onChange={(event) => setLibraryDescription(event.target.value)}
                 placeholder="Write a short description for this library..."
                 aria-label="Library description"
-                readOnly={isGuest}
-                disabled={isGuest}
+                readOnly={!canManageLibrary}
+                disabled={!canManageLibrary}
               />
 
-              {!isGuest && (
+              {canManageLibrary && (
                 <div className="library_description_actions">
                   <small>{libraryDescription.length} characters</small>
                   <button type="button" onClick={handleSaveSettings}>

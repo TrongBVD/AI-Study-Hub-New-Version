@@ -292,26 +292,9 @@ function buildWorkspaceStudySets(flashcards) {
   }));
 }
 
-function getPendingInvitationsStorageKey(workspaceId) {
-  return `aiStudyHubPendingInvitations:${workspaceId}`;
-}
-
-function loadPendingInvitations(workspaceId) {
-  if (!workspaceId) return [];
-
-  try {
-    return JSON.parse(
-      localStorage.getItem(getPendingInvitationsStorageKey(workspaceId)) ||
-        "[]",
-    );
-  } catch (error) {
-    console.error("Cannot read pending workspace invitations:", error);
-    return [];
-  }
-}
-
 function WorkSpacePage() {
   const WORKSPACE_NAME_MAX_LENGTH = 20;
+  const showLegacySubtaskPanel = false;
 
   const { workspaceId } = useParams();
   const location = useLocation();
@@ -591,16 +574,6 @@ function WorkSpacePage() {
   const canManageWorkspace = currentWorkspaceRole === "admin" || isWorkspaceOwner;
   const normalizedMemberSearch = normalizeIdentity(memberSearchQuery);
 
-  const pendingInvitationUserIds = useMemo(
-    () =>
-      new Set(
-        pendingInvitations
-          .map((invitation) => invitation.userId)
-          .filter(Boolean),
-      ),
-    [pendingInvitations],
-  );
-
   const [chatMessages, setChatMessages] = useState([]);
 
   const [discussionTopics, setDiscussionTopics] = useState([]);
@@ -731,7 +704,7 @@ function WorkSpacePage() {
     return () => {
       isMounted = false;
     };
-  }, [workspaceId, currentUserId]);
+  }, [currentUserId, currentUserIdentifiers, workspaceId]);
 
   const studySets = useMemo(
     () => buildWorkspaceStudySets(workspaceFlashcards),
@@ -1955,7 +1928,7 @@ async function handleSendInvite() {
     const invitedUser = candidateUsers.find(
       (user) => user.id === selectedUserId,
     );
-    const inviteResult = await addWorkspaceMember(workspaceId, {
+    await addWorkspaceMember(workspaceId, {
       userId: selectedUserId,
       role: inviteRole,
     });
@@ -2037,7 +2010,7 @@ async function handleTransferAdminOwnership(targetUserId, targetUserName) {
     const res = await transferAdminOwnership(workspaceId, targetUserId);
     alert(res?.message || `Admin ownership transferred to ${targetUserName}.`);
     await loadWorkspaceMembers();
-    await fetchWorkspaceDetails();
+    setWorkspace(await getWorkspace(workspaceId));
   } catch (error) {
     console.error("Cannot transfer admin ownership:", error);
     alert(error.response?.data?.message || "Could not transfer admin ownership.");
@@ -3270,7 +3243,7 @@ function renderDiscussionTab() {
                 )}
               </form>
 
-              {false && (
+              {showLegacySubtaskPanel && (
                 <>
                   <section className="workspace_clickup_section">
                     <div className="workspace_clickup_subtask_header">
@@ -3435,6 +3408,11 @@ function renderDiscussionTab() {
                                       <button
                                         type="button"
                                         key={priorityOption}
+                                        className={
+                                          subtaskPriority === priorityOption
+                                            ? "active"
+                                            : ""
+                                        }
                                         onClick={() => {
                                           setSubtaskPriority(priorityOption);
                                           setIsSubtaskPriorityOpen(false);
@@ -4976,7 +4954,6 @@ function renderDocumentsTab() {
           <div className="workspace_documents_list">
             {workspaceDocuments.map((document) => {
               const status = String(document.status || "PENDING").toUpperCase();
-              const isApproved = status === "APPROVED";
               const needsWorkspaceReview =
                 canManageWorkspace &&
                 ["PENDING", "FLAGGED", "PENDING_RETRY", "REJECTED"].includes(
@@ -5461,6 +5438,14 @@ return (
       </button>
 
       <button
+        className={activeTab === "study" ? "active" : ""}
+        onClick={() => setActiveTab("study")}
+      >
+        <i className="ti-light-bulb"></i>
+        Study
+      </button>
+
+      <button
         className={activeTab === "members" ? "active" : ""}
         onClick={() => setActiveTab("members")}
       >
@@ -5506,6 +5491,8 @@ return (
     {activeTab === "discussion" && renderDiscussionTab()}
 
     {activeTab === "documents" && renderDocumentsTab()}
+
+    {activeTab === "study" && renderStudyTab()}
 
     {activeTab === "members" && renderMembersTab()}
 

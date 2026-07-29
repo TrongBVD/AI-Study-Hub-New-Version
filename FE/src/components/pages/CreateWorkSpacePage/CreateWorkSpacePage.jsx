@@ -85,7 +85,7 @@ function CreateWorkSpacePage() {
       trimmedDescription.length <= DESCRIPTION_LIMIT &&
       ownedWorkspaceCount < MAX_OWNED_WORKSPACES
     );
-  }, [trimmedWorkspaceName, trimmedDescription]);
+  }, [ownedWorkspaceCount, trimmedWorkspaceName, trimmedDescription]);
 
   function handleReturn() {
     if (window.history.length > 1) {

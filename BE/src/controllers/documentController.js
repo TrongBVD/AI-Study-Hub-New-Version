@@ -28,6 +28,7 @@ const {
 const BUCKET = process.env.SUPABASE_DOCUMENT_BUCKET || "documents";
 const WAITING_BUCKET = process.env.SUPABASE_DOCUMENT_WAITING_ADMIN_APPROVED || "document_waiting_admin";
 const { createActivityLog } = require("../services/activityLogService");
+const { canAccessDocument } = require("../services/documentAccessService");
 const FILE_VALIDATION_CONCURRENCY = Math.min(
   normalizeConcurrency(process.env.FILE_VALIDATION_CONCURRENCY, 2),
   4,
@@ -216,6 +217,71 @@ async function processDocumentWithAI(
       error: error.message,
       chunkCount: 0,
     };
+  }
+}
+
+async function processWorkspaceDocumentInBackground(
+  file,
+  documentId,
+  storagePath,
+  userTags,
+) {
+  try {
+    const extractedText = await extractTextFromFile(file);
+    const [moderation, tagValidation] = await Promise.all([
+      moderateDocument(extractedText),
+      validateTagsAndContent(extractedText, file.originalname, userTags),
+    ]);
+
+    if (!tagValidation.isValid) {
+      await supabase
+        .from("documents")
+        .update({
+          status: "REJECTED",
+          ai_reject_reason: {
+            reason: "Document tags do not match the uploaded content.",
+            tagValidations: tagValidation.tagValidations || [],
+          },
+        })
+        .eq("id", documentId);
+      return;
+    }
+
+    const isFlagged = moderation.status === "REJECTED";
+    if (isFlagged) {
+      const { error: waitingUploadError } = await supabase.storage
+        .from(WAITING_BUCKET)
+        .upload(storagePath, file.buffer, {
+          contentType: file.mimetype || "application/octet-stream",
+          upsert: true,
+        });
+      if (waitingUploadError) throw waitingUploadError;
+
+      const { error: sourceRemoveError } = await supabase.storage
+        .from(BUCKET)
+        .remove([storagePath]);
+      if (sourceRemoveError) throw sourceRemoveError;
+    }
+
+    await processDocumentWithAI(
+      file,
+      documentId,
+      extractedText,
+      isFlagged ? "FLAGGED" : "PENDING",
+      isFlagged ? moderation : null,
+    );
+  } catch (error) {
+    console.error("Background workspace document validation failed:", error);
+    await supabase
+      .from("documents")
+      .update({
+        status: "PENDING_RETRY",
+        ai_reject_reason: {
+          reason: "AI processing failed. Manual review may be needed.",
+          error: error.message,
+        },
+      })
+      .eq("id", documentId);
   }
 }
 
@@ -408,9 +474,8 @@ exports.uploadDocuments = async (req, res) => {
     if (libraryId) {
       const { data: lib, error: libErr } = await supabase
         .from("libraries")
-        .select("id, uploader_id, is_public")
+        .select("id, user_id, is_public")
         .eq("id", libraryId)
-        .is("deleted_at", null)
         .maybeSingle();
 
       if (libErr || !lib) {
@@ -420,7 +485,7 @@ exports.uploadDocuments = async (req, res) => {
         });
       }
 
-      if (lib.uploader_id !== userID && req.user.role !== "ADMIN") {
+      if (String(lib.user_id) !== String(userID)) {
         return res.status(403).json({
           status: "error",
           message: "You can only upload documents to your own library.",
@@ -768,13 +833,32 @@ exports.uploadDocuments = async (req, res) => {
 
       // Gọi hàm xử lý AI (embedding và chunking)
       const shouldKeepReviewStatus = status === "FLAGGED" || Boolean(workspaceId);
-      const aiResult = await processDocumentWithAI(
-        file,
-        document.id,
-        extractedText,
-        shouldKeepReviewStatus ? status : null,
-        shouldKeepReviewStatus ? aiRejectReason : null
-      );
+      let aiResult = { status };
+      if (isDirectWorkspaceUpload) {
+        // The document is already stored as PENDING. Continue extraction,
+        // moderation, chunking and embeddings without holding the upload
+        // response open. processDocumentWithAI records controlled failure
+        // states, including PENDING_RETRY.
+        void processWorkspaceDocumentInBackground(
+          file,
+          document.id,
+          storagePath,
+          userTags,
+        ).catch((processingError) => {
+          console.error(
+            "Background workspace document processing failed:",
+            processingError,
+          );
+        });
+      } else {
+        aiResult = await processDocumentWithAI(
+          file,
+          document.id,
+          extractedText,
+          shouldKeepReviewStatus ? status : null,
+          shouldKeepReviewStatus ? aiRejectReason : null
+        );
+      }
 
       for (const tagName of uniqueTags) {
         if (!tagName) continue;
@@ -937,9 +1021,7 @@ exports.downloadDocument = async (req, res) => {
       });
     }
 
-    const isOwner = String(document.uploader_id) === String(userID);
-
-    if (!isOwner && document.is_public !== true) {
+    if (!(await canAccessDocument(document, userID))) {
       return res.status(403).json({
         status: "error",
         message: "Bạn không có quyền truy cập tài liệu này.",
@@ -1008,10 +1090,7 @@ exports.viewDocument = async (req, res) => {
       });
     }
 
-    const isAdmin = req.user?.role === "SYSTEM_ADMIN";
-    const isOwner = String(document.uploader_id) === String(userID);
-
-    if (!isAdmin && !isOwner && document.is_public !== true) {
+    if (!(await canAccessDocument(document, userID))) {
       return res.status(403).json({
         status: "error",
         message: "You do not have permission to view this document.",
@@ -1264,7 +1343,7 @@ exports.updateLibrary = async (req, res) => {
       });
     }
 
-    if (targetLib.user_id !== userID && req.user.role !== "ADMIN") {
+    if (String(targetLib.user_id) !== String(userID)) {
       return res.status(403).json({
         status: "error",
         message: "You can only update your own library.",
@@ -1299,16 +1378,10 @@ exports.updateLibrary = async (req, res) => {
         share_on_profile
       })
       .eq("id", id)
+      .eq("user_id", userID)
       .select().single();
 
     if (error) throw error;
-
-    if (typeof is_public === "boolean" && is_public !== targetLib.is_public) {
-      await supabase
-        .from("documents")
-        .update({ is_public: is_public })
-        .eq("library_id", id);
-    }
 
     return res.status(200).json({ status: "success", data });
   } catch (error) {
@@ -1562,24 +1635,36 @@ exports.deleteLibrary = async (req, res) => {
       });
     }
 
-    if (targetLib.user_id !== userID && req.user.role !== "ADMIN") {
+    if (String(targetLib.user_id) !== String(userID)) {
       return res.status(403).json({
         status: "error",
         message: "You can only delete your own library.",
       });
     }
 
-    // Clean up dependent records ONLY AFTER confirming ownership
-    await supabase.from("library_stars").delete().eq("library_id", id);
-    await supabase.from("library_downloads").delete().eq("library_id", id);
-    await supabase.from("documents").update({ library_id: null }).eq("library_id", id);
+    // The database function verifies ownership again while locking the
+    // library row, then cleans up dependent records and deletes the library in
+    // one transaction.
+    const { error } = await supabase.rpc("delete_owned_library", {
+      p_library_id: id,
+      p_user_id: userID,
+    });
 
-    const { error } = await supabase
-      .from("libraries")
-      .delete()
-      .eq("id", id);
-
-    if (error) throw error;
+    if (error) {
+      if (String(error.message).includes("LIBRARY_NOT_FOUND")) {
+        return res.status(404).json({
+          status: "error",
+          message: "Library not found.",
+        });
+      }
+      if (String(error.message).includes("LIBRARY_OWNER_REQUIRED")) {
+        return res.status(403).json({
+          status: "error",
+          message: "You can only delete your own library.",
+        });
+      }
+      throw error;
+    }
 
     return res.status(200).json({
       status: "success",

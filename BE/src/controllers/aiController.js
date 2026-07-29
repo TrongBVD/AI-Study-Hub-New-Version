@@ -1,5 +1,6 @@
 const supabase = require("../config/supabase");
 const { createActivityLog } = require("../services/activityLogService");
+const { canAccessDocument } = require("../services/documentAccessService");
 
 const DAILY_FLASHCARD_LIMIT = 3;
 
@@ -56,9 +57,7 @@ async function getAllowedDocument(documentId, userId) {
   if (error) throw error;
   if (!document) return null;
 
-  const isOwner = String(document.uploader_id) === String(userId);
-
-  if (!isOwner && document.is_public !== true) {
+  if (!(await canAccessDocument(document, userId))) {
     return "FORBIDDEN";
   }
 

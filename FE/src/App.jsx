@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import SettingPage from "./components/pages/SettingPage/SettingPage.jsx";
 // ================= AUTH IMPORTS =================
@@ -18,39 +19,39 @@ import Dashboard from "./components/layout/Dashboard/Dashboard.jsx";
 import HomePage from "./components/pages/HomePage/HomePage.jsx";
 import MyLibraryPage from "./components/pages/MyLibraryPage/MyLibraryPage.jsx";
 import CreateLibraryPage from "./components/pages/CreateLibraryPage/CreateLibraryPage.jsx";
-import ImportLibraryPage from "./components/pages/ImportLibraryPage/ImportLibraryPage.jsx";
-import LibraryPage from "./components/pages/LibraryPage/LibraryPage.jsx";
-import DocumentViewerPage from "./components/pages/DocumentViewerPage/DocumentViewerPage.jsx";
 import MyWorkSpace from "./components/pages/MyWorkSpace/MyWorkSpace.jsx";
-import WorkSpacePage from "./components/pages/WorkSpacePage/WorkSpacePage.jsx";
 import PersonalProfilePage from "./components/pages/PersonalProfilePage/PersonalProfilePage.jsx";
-import Flashcards from "./components/pages/Flashcards/Flashcards.jsx";
 import CreateWorkSpacePage from "./components/pages/CreateWorkSpacePage/CreateWorkSpacePage.jsx";
 import SearchUserPage from "./components/pages/SearchUserPage/SearchUserPage";
 import SearchResultPage from "./components/pages/SearchResultPage/SearchResultPage.jsx";
 import NotificationsPage from "./components/pages/NotificationsPage/NotificationsPage.jsx";
 import DiscoverPage from "./components/pages/DiscoverPage/DiscoverPage.jsx";
-import ChatBot from "./components/pages/AIchatbot/ChatBot.jsx";
-
-
 // ================= PROTECTED ROUTE =================
 import ProtectedRoute from "./components/common/ProtectedRoute/ProtectedRoute.jsx";
 
 // ================= ADMIN IMPORTS =================
 import AdminLayout from "./components/pages/Admin/AdminLayout/AdminLayout.jsx";
-import AdminDashboardPage from "./components/pages/Admin/AdminDashboardPage/AdminDashboardPage.jsx";
-import AdminModerationPage from "./components/pages/Admin/AiContentModerationPage/AIContentModerationPage.jsx";
-import AdminUsersPage from "./components/pages/Admin/UserManagementPage/UserManagementPage.jsx";
-import AdminLogsPage from "./components/pages/Admin/ActivityLogPage/ActivityLogPage.jsx";
-import AdminUsagePage from "./components/pages/Admin/AdminUsagePage/AdminUsagePage.jsx";
-import AdminProfilePage from "./components/pages/Admin/AdminProfilePage/AdminProfilePage.jsx";
-import DeletedWorkspacesPage from "./components/pages/Admin/DeletedWorkspacesPage/DeletedWorkspacesPage.jsx";
 import ReportIssuePage from "./components/pages/ReportIssuePage/ReportIssuePage.jsx";
-import IssueReportsPage from "./components/pages/Admin/IssueReportsPage/IssueReportsPage.jsx";
+
+const ImportLibraryPage = lazy(() => import("./components/pages/ImportLibraryPage/ImportLibraryPage.jsx"));
+const LibraryPage = lazy(() => import("./components/pages/LibraryPage/LibraryPage.jsx"));
+const DocumentViewerPage = lazy(() => import("./components/pages/DocumentViewerPage/DocumentViewerPage.jsx"));
+const WorkSpacePage = lazy(() => import("./components/pages/WorkSpacePage/WorkSpacePage.jsx"));
+const Flashcards = lazy(() => import("./components/pages/Flashcards/Flashcards.jsx"));
+const ChatBot = lazy(() => import("./components/pages/AIchatbot/ChatBot.jsx"));
+const AdminDashboardPage = lazy(() => import("./components/pages/Admin/AdminDashboardPage/AdminDashboardPage.jsx"));
+const AdminModerationPage = lazy(() => import("./components/pages/Admin/AiContentModerationPage/AIContentModerationPage.jsx"));
+const AdminUsersPage = lazy(() => import("./components/pages/Admin/UserManagementPage/UserManagementPage.jsx"));
+const AdminLogsPage = lazy(() => import("./components/pages/Admin/ActivityLogPage/ActivityLogPage.jsx"));
+const AdminUsagePage = lazy(() => import("./components/pages/Admin/AdminUsagePage/AdminUsagePage.jsx"));
+const AdminProfilePage = lazy(() => import("./components/pages/Admin/AdminProfilePage/AdminProfilePage.jsx"));
+const DeletedWorkspacesPage = lazy(() => import("./components/pages/Admin/DeletedWorkspacesPage/DeletedWorkspacesPage.jsx"));
+const IssueReportsPage = lazy(() => import("./components/pages/Admin/IssueReportsPage/IssueReportsPage.jsx"));
 
 function App() {
   return (
     <BrowserRouter>
+      <Suspense fallback={null}>
       <Routes>
         {/* DEFAULT: vào web sẽ về login */}
         <Route path="/" element={<LandingPage />} />
@@ -138,6 +139,7 @@ function App() {
         {/* NOT FOUND */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
+      </Suspense>
     </BrowserRouter>
   );
 }

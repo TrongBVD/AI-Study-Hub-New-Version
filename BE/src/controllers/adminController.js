@@ -1020,17 +1020,16 @@ exports.permanentlyDeleteWorkspace = async (req, res) => {
     const workspaceOnlyDocuments = documents.filter((document) => !document.library_id);
     const bytesFreed = workspaceOnlyDocuments.reduce((total, document) => total + Number(document.file_size_bytes || 0), 0);
 
+    // BR-ADM-06 requires workspace-only files to be removed before the
+    // database purge. A storage failure must leave the database intact so the
+    // operation can be retried safely.
+    await removeWorkspaceStorageFiles(workspaceOnlyDocuments);
+
     const { data, error } = await supabase.rpc("admin_hard_delete_workspace", { p_workspace_id: workspaceId });
     if (error) {
       if (String(error.message).includes("WORKSPACE_NOT_FOUND")) return res.status(404).json({ status: "error", code: "WORKSPACE_NOT_FOUND", message: "Workspace does not exist. It may already have been permanently deleted." });
       if (String(error.message).includes("WORKSPACE_NOT_SOFT_DELETED")) return res.status(409).json({ status: "error", code: "WORKSPACE_NOT_SOFT_DELETED", message: "Active workspaces cannot be permanently deleted. Soft-delete the workspace first." });
       throw error;
-    }
-
-    try {
-      await removeWorkspaceStorageFiles(workspaceOnlyDocuments);
-    } catch (storageErr) {
-      console.warn("Storage cleanup warning during workspace purge:", storageErr);
     }
 
     await createActivityLog({ actorUserId: req.user.id, adminId: req.user.id, actionType: "ADMIN_PERMANENTLY_DELETE_WORKSPACE", entityType: "workspaces", entityId: workspaceId, oldData: workspace, newData: { ...data, bytesFreed }, request: req, riskLevel: "HIGH", details: `System Admin permanently deleted soft-deleted workspace "${workspace.name}".` });

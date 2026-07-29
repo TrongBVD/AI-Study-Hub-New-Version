@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import Chart from "react-apexcharts";
+import Chart from "./SimpleChart.jsx";
 import {
   getActivityLogs,
   getAdminDashboard,
@@ -170,7 +170,6 @@ function AdminDashboardPage() {
 
   useEffect(() => {
     // Initial dashboard hydration is an intentional mount-time side effect.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadDashboard();
   }, []);
 

@@ -222,6 +222,9 @@ function ChatBot({ defaultOpen = false, showBubble = true }) {
     if (open) {
       loadApprovedDocuments();
     }
+    // The pending chat supplies explicit question/document overrides, so this
+    // effect intentionally reacts only when the panel is opened.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
   const submitChatQuestion = async (

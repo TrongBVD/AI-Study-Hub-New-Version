@@ -7,6 +7,15 @@ const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 
 const app = express();
+if (process.env.TRUST_PROXY) {
+    const configuredTrustProxy = Number(process.env.TRUST_PROXY);
+    app.set(
+        'trust proxy',
+        Number.isFinite(configuredTrustProxy)
+            ? configuredTrustProxy
+            : process.env.TRUST_PROXY,
+    );
+}
 
 // Import routes
 const authRoutes = require('./src/routes/authRoutes');
@@ -39,11 +48,16 @@ if (sanitizedFrontendUrl) {
     allowedOrigins.push(sanitizedFrontendUrl);
     allowedOrigins.push(`${sanitizedFrontendUrl}/`);
 }
+String(process.env.CORS_ALLOWED_ORIGINS || '')
+    .split(',')
+    .map((origin) => origin.trim().replace(/\/+$/, ''))
+    .filter(Boolean)
+    .forEach((origin) => allowedOrigins.push(origin));
 
 app.use(cors({
     origin: (origin, callback) => {
         if (!origin) return callback(null, true);
-        if (allowedOrigins.includes(origin) || allowedOrigins.includes(origin.replace(/\/+$/, '')) || origin.endsWith('.vercel.app')) {
+        if (allowedOrigins.includes(origin) || allowedOrigins.includes(origin.replace(/\/+$/, ''))) {
             return callback(null, true);
         }
         return callback(new Error('Not allowed by CORS'));
@@ -56,10 +70,11 @@ app.use(express.json());
 
 // ─── 4. Rate limiters ─────────────────────────────────────────────────────────
 
-// General API limiter – 100000000 requests per 15 minutes per IP
+// General API limiter. Override intentionally through the environment when
+// production traffic requires a different threshold.
 const generalLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
-    max: 100000000,
+    max: Math.max(1, Number(process.env.GENERAL_RATE_LIMIT_MAX) || 200),
     standardHeaders: true,
     legacyHeaders: false,
     message: { status: 'error', message: 'Too many requests. Please try again later.' },

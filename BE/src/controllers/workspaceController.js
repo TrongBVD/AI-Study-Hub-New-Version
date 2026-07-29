@@ -5,6 +5,64 @@ const { MAX_OWNED_WORKSPACES, countActiveOwnedWorkspaces } = require("../service
 
 const MEMBER_ROLES = ["Editor", "Viewer"];
 const ASSIGNABLE_MEMBER_ROLES = ["Editor", "Viewer"];
+const DOCUMENT_BUCKET = process.env.SUPABASE_DOCUMENT_BUCKET || "documents";
+const WAITING_BUCKET =
+  process.env.SUPABASE_DOCUMENT_WAITING_ADMIN_APPROVED ||
+  "document_waiting_admin";
+
+async function moveWorkspaceDocumentToBucket(document, targetBucket) {
+  if (!document?.file_url) {
+    return { moved: false, sourceBucket: null, targetBucket };
+  }
+
+  const candidateBuckets =
+    targetBucket === DOCUMENT_BUCKET
+      ? [WAITING_BUCKET, DOCUMENT_BUCKET]
+      : [DOCUMENT_BUCKET, WAITING_BUCKET];
+
+  let sourceBucket = null;
+  let fileBlob = null;
+  let lastDownloadError = null;
+
+  for (const bucket of candidateBuckets) {
+    const { data, error } = await supabase.storage
+      .from(bucket)
+      .download(document.file_url);
+    if (!error && data) {
+      sourceBucket = bucket;
+      fileBlob = data;
+      break;
+    }
+    lastDownloadError = error;
+  }
+
+  if (!sourceBucket || !fileBlob) {
+    throw lastDownloadError || new Error("Workspace document file is missing.");
+  }
+  if (sourceBucket === targetBucket) {
+    return { moved: false, sourceBucket, targetBucket };
+  }
+
+  const buffer = Buffer.from(await fileBlob.arrayBuffer());
+  const { error: uploadError } = await supabase.storage
+    .from(targetBucket)
+    .upload(document.file_url, buffer, {
+      contentType: "application/octet-stream",
+      upsert: true,
+    });
+  if (uploadError) throw uploadError;
+
+  const { error: removeError } = await supabase.storage
+    .from(sourceBucket)
+    .remove([document.file_url]);
+  if (removeError) {
+    // Do not leave duplicate copies when the source removal fails.
+    await supabase.storage.from(targetBucket).remove([document.file_url]);
+    throw removeError;
+  }
+
+  return { moved: true, sourceBucket, targetBucket };
+}
 
 function getWorkspaceRoleLabel(role) {
   return String(role || "").toLowerCase() === "viewer" ? "Contributor" : role;
@@ -307,7 +365,7 @@ async function getWorkspaceDiscussionAccess(workspaceId, userId) {
 async function getDiscussionTopicInWorkspace(workspaceId, topicId) {
   const { data, error } = await supabase
     .from("workspace_discussion_topics")
-    .select("id")
+    .select("id, created_by")
     .eq("workspace_id", workspaceId)
     .eq("id", topicId)
     .is("deleted_at", null)
@@ -1439,6 +1497,10 @@ exports.reviewDocument = async (req, res) => {
     }
 
     const newStatus = decision === "APPROVE" ? "APPROVED" : "REJECTED";
+    const storageMove = await moveWorkspaceDocumentToBucket(
+      document,
+      decision === "APPROVE" ? DOCUMENT_BUCKET : WAITING_BUCKET,
+    );
 
     const { data: updatedDocument, error: updateError } = await supabase
       .from("documents")
@@ -1455,7 +1517,22 @@ exports.reviewDocument = async (req, res) => {
       .select(WORKSPACE_DOCUMENT_SELECT)
       .single();
 
-    if (updateError) throw updateError;
+    if (updateError) {
+      if (storageMove.moved && storageMove.sourceBucket) {
+        try {
+          await moveWorkspaceDocumentToBucket(
+            document,
+            storageMove.sourceBucket,
+          );
+        } catch (rollbackError) {
+          console.error(
+            "Could not roll back workspace document storage move:",
+            rollbackError,
+          );
+        }
+      }
+      throw updateError;
+    }
 
     return res.status(200).json({
       status: "success",
@@ -1583,14 +1660,6 @@ exports.updateDiscussionTopic = async (req, res) => {
       });
     }
 
-    const isAuthor = String(existingTopic.author_id) === String(req.user.id);
-    if (!isAuthor && !access.isAdmin) {
-      return res.status(403).json({
-        status: "error",
-        message: "Only the topic author or workspace Admin can edit this topic.",
-      });
-    }
-
     const updatePayload = {};
     const fields = {
       title: "title",
@@ -1674,14 +1743,6 @@ exports.deleteDiscussionTopic = async (req, res) => {
       return res.status(404).json({
         status: "error",
         message: "Discussion topic not found.",
-      });
-    }
-
-    const isAuthor = String(existingTopic.author_id) === String(req.user.id);
-    if (!isAuthor && !access.isAdmin) {
-      return res.status(403).json({
-        status: "error",
-        message: "Only the topic author or workspace Admin can delete this topic.",
       });
     }
 
@@ -2624,40 +2685,29 @@ exports.transferAdminOwnership = async (req, res) => {
       });
     }
 
-    // 1. Promote target user to Admin
-    const { error: promoteError } = await supabase
-      .from("workspace_members")
-      .update({ role: "Admin" })
-      .eq("workspace_id", workspaceId)
-      .eq("user_id", targetUserId);
+    const { error: transferError } = await supabase.rpc(
+      "transfer_workspace_ownership",
+      {
+        p_workspace_id: workspaceId,
+        p_current_owner_id: currentUserId,
+        p_target_user_id: targetUserId,
+      },
+    );
 
-    if (promoteError) throw promoteError;
-
-    // 2. Demote current user to Viewer (Contributor)
-    const { error: demoteError } = await supabase
-      .from("workspace_members")
-      .update({ role: "Viewer" })
-      .eq("workspace_id", workspaceId)
-      .eq("user_id", currentUserId);
-
-    if (demoteError) {
-      // Rollback promote if demote failed
-      await supabase
-        .from("workspace_members")
-        .update({ role: targetMember.role })
-        .eq("workspace_id", workspaceId)
-        .eq("user_id", targetUserId);
-      throw demoteError;
-    }
-
-    // 3. Update created_by field on workspaces table to transfer full ownership
-    const { error: updateOwnerError } = await supabase
-      .from("workspaces")
-      .update({ created_by: targetUserId })
-      .eq("id", workspaceId);
-
-    if (updateOwnerError) {
-      console.warn("Could not update workspaces.created_by:", updateOwnerError);
+    if (transferError) {
+      if (String(transferError.message).includes("WORKSPACE_OWNER_REQUIRED")) {
+        return res.status(403).json({
+          status: "error",
+          message: "Only the current workspace owner can transfer ownership.",
+        });
+      }
+      if (String(transferError.message).includes("TARGET_MEMBER_NOT_FOUND")) {
+        return res.status(404).json({
+          status: "error",
+          message: "Target user is not a member of this workspace.",
+        });
+      }
+      throw transferError;
     }
 
     // Fetch profile names for notifications
