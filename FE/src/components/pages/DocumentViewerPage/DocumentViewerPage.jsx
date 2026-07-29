@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { getDocumentView } from "../../../utils/documentApi";
+import { downloadPublicDocument } from "../../../utils/publicApi";
 import { getStoredUser } from "../../../utils/authToken";
 import FileViewer from "../FileViewer/FileViewer";
 import "./DocumentViewerPage.css";
@@ -45,10 +46,14 @@ function DocumentViewerPage() {
         setIsLoading(true);
         setErrorMessage("");
 
-        const data = await getDocumentView(documentId);
+        const data = isGuest
+          ? await downloadPublicDocument(documentId)
+          : await getDocumentView(documentId);
         if (!isMounted) return;
 
-        setDocumentData(data);
+        setDocumentData(
+          isGuest ? { ...data, viewUrl: data.downloadUrl } : data,
+        );
       } catch (error) {
         if (!isMounted) return;
 
@@ -67,7 +72,7 @@ function DocumentViewerPage() {
     return () => {
       isMounted = false;
     };
-  }, [documentId]);
+  }, [documentId, isGuest]);
 
   if (isLoading) {
     return (

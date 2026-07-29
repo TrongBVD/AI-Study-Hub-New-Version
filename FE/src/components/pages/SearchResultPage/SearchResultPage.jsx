@@ -96,7 +96,7 @@ function SearchResultPage() {
     return () => {
       isMounted = false;
     };
-  }, [isGuest, query]);
+  }, [isGuest, isLoggedIn, query]);
 
   const results = useMemo(() => {
     const keyword = normalize(query);

@@ -20,7 +20,7 @@ export function storeAuthSession({ accessToken, user, rememberMe }) {
   sessionStorage.removeItem("user");
 
   const storage = rememberMe ? localStorage : sessionStorage;
-  storage.setItem("accessToken", accessToken);
+  if (accessToken) storage.setItem("accessToken", accessToken);
   if (user) storage.setItem("user", JSON.stringify(user));
 
   if (rememberMe) localStorage.setItem("rememberMe", "true");

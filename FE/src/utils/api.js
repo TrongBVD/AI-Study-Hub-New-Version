@@ -130,7 +130,8 @@ api.interceptors.response.use(
 
       if (!isAuthAttempt) {
         const storedToken = getAccessToken();
-        const storedUser = localStorage.getItem("user");
+        const storedUser =
+          localStorage.getItem("user") || sessionStorage.getItem("user");
         const isGuest = storedUser && storedUser.includes('"GUEST"');
         const isProtectedRoute =
           window.location.pathname.startsWith("/dashboard") ||

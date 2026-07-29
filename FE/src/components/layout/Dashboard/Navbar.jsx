@@ -167,7 +167,7 @@ function Navbar({
       window.clearInterval(intervalId);
       window.removeEventListener("focus", syncServerNotifications);
     };
-  }, [isGuest]);
+  }, [isGuest, isLoggedIn]);
 
   useEffect(() => {
     const keyword = searchValue.trim();
@@ -229,7 +229,7 @@ function Navbar({
     return () => {
       isMounted = false;
     };
-  }, [isGuest]);
+  }, [isGuest, isLoggedIn]);
 
   const unreadNotificationCount = notifications.filter(
     (notification) => !notification.isRead
@@ -270,7 +270,7 @@ function Navbar({
     return () => {
       isMounted = false;
     };
-  }, [isGuest]);
+  }, [isGuest, isLoggedIn]);
 
   const searchResults = useMemo(() => {
     const keyword = searchValue.trim().toLowerCase();
@@ -517,7 +517,7 @@ function Navbar({
                       try {
                         const updated = await getMyWorkspaceNotifications();
                         setNotifications(mergeAppNotifications(updated || []));
-                      } catch (err) {
+                      } catch {
                         setNotifications(getNotifications());
                       }
                     }}

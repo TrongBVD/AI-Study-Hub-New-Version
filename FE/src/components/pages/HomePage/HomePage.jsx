@@ -52,10 +52,6 @@ function getStoredUserRole() {
   }
 }
 
-function notifyGuestRegistrationRequired() {
-  alert("Please register or log in with an account to create libraries and workspaces.");
-}
-
 function getStoredJson(key) {
   try {
     return JSON.parse(localStorage.getItem(key) || "null");
@@ -183,7 +179,7 @@ function HomePage() {
       [...libraries]
             .sort((a, b) => getRecentTimestamp(b) - getRecentTimestamp(a))
             .slice(0, 2),
-    [isGuest, libraries]
+    [libraries]
   );
 
   const recentWorkspaces = useMemo(
@@ -248,22 +244,6 @@ function HomePage() {
           ],
     [isGuest, libraries.length, workspaces.length, totalDocuments],
   );
-
-  const quickActions = [
-    {
-      title: "Create workspace",
-      description: "Open a private room for topics, files and team discussion.",
-      icon: HiOutlineSquaresPlus,
-      to: "/dashboard/create-workspace",
-      primary: true,
-    },
-    {
-      title: "Create library",
-      description: "Build a clean collection for documents and study materials.",
-      icon: LuBookPlus,
-      to: "/dashboard/create-library",
-    },
-  ];
 
   const latestLibrary = recentLibraries[0];
   const latestWorkspace = recentWorkspaces[0];

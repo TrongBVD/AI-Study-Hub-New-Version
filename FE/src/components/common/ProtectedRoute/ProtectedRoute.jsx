@@ -42,16 +42,22 @@ function isGuestAllowedPath(pathname) {
 
 function ProtectedRoute({ children, allowedRoles }) {
   const location = useLocation();
-  const [authState, setAuthState] = useState(() =>
-    isTokenValid(getAccessToken())
+  const [authState, setAuthState] = useState(() => {
+    const initialRole = String(getStoredUser()?.role || "").toUpperCase();
+    return initialRole === "GUEST" || isTokenValid(getAccessToken())
       ? "authenticated"
-      : "checking",
-  );
+      : "checking";
+  });
   const token = getAccessToken();
   const user = getStoredUser();
   const role = String(user?.role || "").toUpperCase();
+  const isGuest = role === "GUEST";
 
   useEffect(() => {
+    if (String(getStoredUser()?.role || "").toUpperCase() === "GUEST") {
+      return undefined;
+    }
+
     if (isTokenValid(getAccessToken())) {
       return;
     }
@@ -75,7 +81,10 @@ function ProtectedRoute({ children, allowedRoles }) {
   }
 
   // Not logged in or token is expired/invalid
-  if (authState === "unauthenticated" || !token || !isTokenValid(token)) {
+  if (
+    !isGuest &&
+    (authState === "unauthenticated" || !token || !isTokenValid(token))
+  ) {
     if (token) {
       clearStoredSession();
     }
@@ -93,7 +102,7 @@ function ProtectedRoute({ children, allowedRoles }) {
     return <Navigate to="/dashboard/home" replace />;
   }
 
-  if (role === "GUEST" && !isGuestAllowedPath(location.pathname)) {
+  if (isGuest && !isGuestAllowedPath(location.pathname)) {
     return <Navigate to="/dashboard/home" replace />;
   }
 

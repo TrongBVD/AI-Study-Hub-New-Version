@@ -143,7 +143,6 @@ function UserManagementPage() {
 
   useEffect(() => {
     // Resetting pagination is intentional whenever the filter or sort changes.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setCurrentPage(1);
   }, [query, statusFilter, roleFilter, sortBy]);
 
@@ -185,7 +184,6 @@ function UserManagementPage() {
   useEffect(() => {
     if (selectedUser) {
       // Keep the editor aligned with the newly selected directory row.
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setRoleDraft(selectedUser.role);
     }
   }, [selectedUser]);

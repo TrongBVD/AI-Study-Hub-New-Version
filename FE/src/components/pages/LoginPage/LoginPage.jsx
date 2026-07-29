@@ -108,11 +108,8 @@ function LoginPage() {
     // 2. Xóa sạch Local Storage để tránh chồng lấp dữ liệu cũ
     clearStoredSession();
 
-    // Tạo 1 Fake JWT Token để qua mặt hàm isTokenValid() trong authToken.js
-    // Payload decode ra sẽ là {"exp": 9999999999} (Sống tới năm 2286)
-    const fakeGuestToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjk5OTk5OTk5OTl9.guest_signature_bypass";
-    
-    // Fake profile
+    // Guest is a restricted client-side mode. It intentionally has no access
+    // token and may only use anonymous public endpoints.
     const guestUser = {
       _id: "guest_" + Date.now(),
       role: "GUEST", // Differentiate role for permissions
@@ -123,7 +120,7 @@ function LoginPage() {
 
     // Store in LocalStorage
     storeAuthSession({
-      accessToken: fakeGuestToken,
+      accessToken: null,
       user: guestUser,
       rememberMe: false,
     });

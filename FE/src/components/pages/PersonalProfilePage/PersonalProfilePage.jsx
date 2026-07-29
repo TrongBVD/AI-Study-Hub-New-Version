@@ -5,7 +5,6 @@ import {
   getProfileById,
   updateMyBio,
   updateMyAvatar,
-  updateMyProfile,
 } from "../../../utils/profileApi";
 import defaultAvatar from "../../../assets/images/account.png";
 import { getStoredUser } from "../../../utils/authToken.js";
@@ -13,10 +12,6 @@ import "./PersonalProfilePage.css";
 
 const PROFILE_BIO_KEY = "aiStudyHubProfileBio";
 const PROFILE_NAME_KEY = "aiStudyHubProfileName";
-
-function getLocalStoredUser() {
-  return getStoredUser() || {};
-}
 
 function getLoggedInUserId() {
   const storedUser = getStoredUser();
@@ -52,8 +47,6 @@ function PersonalProfile() {
   const [userEmail, setUserEmail] = useState(getLoggedInUserEmail);
   const [dateOfBirth, setDateOfBirth] = useState("");
   const [isDateOfBirthPublic, setIsDateOfBirthPublic] = useState(true);
-  const [isEditingName, setIsEditingName] = useState(false);
-  const [newName, setNewName] = useState(userName);
   const [profileBio, setProfileBio] = useState(getStoredProfileBio);
   const [draftBio, setDraftBio] = useState(getStoredProfileBio);
   const [isEditingBio, setIsEditingBio] = useState(false);
@@ -93,7 +86,6 @@ function PersonalProfile() {
           profile?.full_name || profile?.username || profile?.email || "User";
 
         setUserName(nextName);
-        setNewName(nextName);
         setUserEmail(profile?.email || "");
         setDateOfBirth(profile?.date_of_birth || "");
         setIsDateOfBirthPublic(profile?.is_dob_public !== false);
@@ -173,16 +165,13 @@ function PersonalProfile() {
   const handleImageLoaded = (e) => {
     const { naturalWidth, naturalHeight } = e.target;
     const containerSize = 300;
-    let w = containerSize;
-    let h = containerSize;
-
-    if (naturalWidth > naturalHeight) {
-      h = containerSize;
-      w = (naturalWidth / naturalHeight) * containerSize;
-    } else {
-      w = containerSize;
-      h = (naturalHeight / naturalWidth) * containerSize;
-    }
+    const isLandscape = naturalWidth > naturalHeight;
+    const w = isLandscape
+      ? (naturalWidth / naturalHeight) * containerSize
+      : containerSize;
+    const h = isLandscape
+      ? containerSize
+      : (naturalHeight / naturalWidth) * containerSize;
 
     setImgSize({ width: w, height: h });
     setPos({ x: 0, y: 0 });
@@ -238,26 +227,6 @@ function PersonalProfile() {
       }
     }, "image/jpeg", 0.9);
   };
-
-  async function handleSaveName() {
-    if (!isOwnProfile) return;
-
-    const trimmedName = newName.trim();
-
-    try {
-      const profile = await updateMyProfile({ full_name: trimmedName });
-      const nextName =
-        profile?.full_name || profile?.username || profile?.email || trimmedName;
-
-      setUserName(nextName);
-      setNewName(nextName);
-      localStorage.setItem(PROFILE_NAME_KEY, nextName);
-      setIsEditingName(false);
-    } catch (error) {
-      console.error("Cannot update profile name:", error);
-      alert(error.response?.data?.message || "Cannot update profile name.");
-    }
-  }
 
   async function handleSaveBio() {
     if (!isOwnProfile) return;

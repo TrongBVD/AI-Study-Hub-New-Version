@@ -8,18 +8,23 @@ export default defineConfig({
     dedupe: ['react', 'react-dom'],
   },
   build: {
-    chunkSizeWarningLimit: 1000,
+    chunkSizeWarningLimit: 500,
     rollupOptions: {
       output: {
         manualChunks(id) {
           if (id.includes('node_modules')) {
-            if (id.includes('react') || id.includes('react-dom') || id.includes('react-router')) {
-              return 'vendor-react';
-            }
             if (id.includes('react-icons') || id.includes('lucide-react')) {
               return 'vendor-icons';
             }
-            return 'vendor-other';
+            if (id.includes('apexcharts')) return 'vendor-charts';
+            if (id.includes('@supabase')) return 'vendor-supabase';
+            if (id.includes('react') || id.includes('react-dom') || id.includes('react-router')) {
+              return 'vendor-react';
+            }
+            if (id.includes('axios')) return 'vendor-http';
+            if (id.includes('jszip')) return 'vendor-archive';
+            if (id.includes('@react-oauth')) return 'vendor-auth';
+            return 'vendor-misc';
           }
         },
       },
