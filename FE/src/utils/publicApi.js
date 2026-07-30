@@ -9,5 +9,8 @@ export const getPublicLibrary = (libraryId) =>
 export const recordPublicLibraryDownload = (libraryId) =>
   api.post(`/public/libraries/${libraryId}/download`).then((res) => res.data.data);
 
+export const viewPublicDocument = (documentId) =>
+  api.get(`/public/documents/${documentId}/view`).then((res) => res.data.data);
+
 export const downloadPublicDocument = (documentId) =>
   api.get(`/public/documents/${documentId}/download`).then((res) => res.data.data);
