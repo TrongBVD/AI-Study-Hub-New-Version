@@ -1,16 +1,12 @@
 import { useLocation, useNavigate } from "react-router-dom";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import "./ImportLibraryPage.css";
-
-function readStorageList(key) {
-  try {
-    const value = JSON.parse(localStorage.getItem(key) || "[]");
-    return Array.isArray(value) ? value : [];
-  } catch {
-    return [];
-  }
-}
+import {
+  getMyLibraries,
+  importLibrary,
+  previewLibraryImport,
+} from "../../../utils/documentApi";
 
 function normalizeLibraryName(value) {
   return String(value || "")
@@ -28,30 +24,50 @@ function ImportLibraryPage() {
   const [libraryName, setLibraryName] = useState("");
   const [description, setDescription] = useState("");
   const [sourceLibrary, setSourceLibrary] = useState(null);
-  const [sourceItems, setSourceItems] = useState([]);
+  const [userLibraries, setUserLibraries] = useState([]);
   const [linkError, setLinkError] = useState("");
+  const [isCheckingLink, setIsCheckingLink] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
 
   const trimmedLink = libraryLink.trim();
   const trimmedName = libraryName.trim();
   const trimmedDescription = description.trim();
-  const savedLibraries = readStorageList("aiStudyHubLibraries");
   const isDuplicateName =
     trimmedName.length > 0 &&
-    savedLibraries.some(
+    userLibraries.some(
       (library) =>
         normalizeLibraryName(library.name || library.libraryName) ===
         normalizeLibraryName(trimmedName),
     );
-  const storedFileCount = sourceItems.filter((item) => item.type !== "folder").length;
-  const fileCount =
-    storedFileCount || Number(sourceLibrary?.documents || 0);
-  const folderCount = sourceItems.filter((item) => item.type === "folder").length;
-  const canImport = Boolean(sourceLibrary && trimmedName && !isDuplicateName);
+  const fileCount = Number(sourceLibrary?.documents || 0);
+  const folderCount = Number(sourceLibrary?.folders || 0);
+  const canImport = Boolean(
+    sourceLibrary &&
+      trimmedName &&
+      !isDuplicateName &&
+      !isCheckingLink &&
+      !isImporting,
+  );
 
-  function resolveLibraryLink() {
+  useEffect(() => {
+    let cancelled = false;
+
+    getMyLibraries()
+      .then((libraries) => {
+        if (!cancelled) setUserLibraries(libraries || []);
+      })
+      .catch(() => {
+        if (!cancelled) setUserLibraries([]);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  async function resolveLibraryLink() {
     setLinkError("");
     setSourceLibrary(null);
-    setSourceItems([]);
 
     if (!trimmedLink) {
       setLinkError("Please enter a library link.");
@@ -67,98 +83,54 @@ function ImportLibraryPage() {
         throw new Error("This is not a valid AI Study Hub library link.");
       }
 
-      const savedLibraries = readStorageList("aiStudyHubLibraries");
-      const matchedLibrary = savedLibraries.find(
-        (library) => String(library.id) === decodeURIComponent(libraryId),
-      );
-
-      if (!matchedLibrary) {
-        throw new Error(
-          "This library is not available in the current browser session.",
-        );
-      }
-
-      const importedItems = readStorageList(
-        `aiStudyHubImportedLibraryItems:${matchedLibrary.id}`,
+      setIsCheckingLink(true);
+      const matchedLibrary = await previewLibraryImport(
+        decodeURIComponent(libraryId),
       );
 
       setSourceLibrary(matchedLibrary);
-      setSourceItems(importedItems);
       setLibraryName(matchedLibrary.name || "Imported library");
       setDescription(matchedLibrary.description || "");
     } catch (error) {
-      setLinkError(error.message || "Cannot read this library link.");
+      setLinkError(
+        error.response?.data?.message ||
+          error.message ||
+          "Cannot read this library link.",
+      );
+    } finally {
+      setIsCheckingLink(false);
     }
   }
 
-  function handleImportLibrary() {
+  async function handleImportLibrary() {
     if (!canImport) return;
 
-    const importTimestamp = Date.now();
-    const importedIdMap = new Map(
-      sourceItems.map((item, index) => [
-        item.id,
-        `imported-${importTimestamp}-${index}`,
-      ]),
-    );
-    const normalizedItems = sourceItems.map((item, index) => ({
-      ...item,
-      id: importedIdMap.get(item.id) || `imported-${importTimestamp}-${index}`,
-      folderId: item.folderId
-        ? importedIdMap.get(item.folderId) || item.folderId
-        : null,
-      isBackendFile: false,
-      importedOnly: true,
-    }));
-    const newLibrary = {
-      ...sourceLibrary,
-      id: `library-${importTimestamp}`,
-      name: trimmedName,
-      description:
-        trimmedDescription ||
-        "Imported library shared through AI Study Hub.",
-      documents:
-        normalizedItems.filter((item) => item.type !== "folder").length ||
-        Number(sourceLibrary.documents || 0),
-      updatedAt: "Imported just now",
-      createdAt: new Date().toISOString(),
-      icon: sourceLibrary.icon || "ti-archive",
-    };
-    const currentRecentLibraries = readStorageList(
-      "aiStudyHubRecentLibraries",
-    );
-    const recentLibrary = {
-      id: newLibrary.id,
-      name: newLibrary.name,
-      description: newLibrary.description,
-      documents: newLibrary.documents,
-      icon: newLibrary.icon,
-      updatedAt: newLibrary.updatedAt,
-      visitedAt: Date.now(),
-    };
+    setIsImporting(true);
+    setLinkError("");
 
-    localStorage.setItem(
-      "aiStudyHubLibraries",
-      JSON.stringify([newLibrary, ...savedLibraries]),
-    );
-    localStorage.setItem(
-      `aiStudyHubImportedLibraryItems:${newLibrary.id}`,
-      JSON.stringify(normalizedItems),
-    );
-    localStorage.setItem(
-      "aiStudyHubRecentLibraries",
-      JSON.stringify([
-        recentLibrary,
-        ...currentRecentLibraries.filter((item) => item.id !== newLibrary.id),
-      ].slice(0, 2)),
-    );
+    try {
+      const newLibrary = await importLibrary(sourceLibrary.id, {
+        name: trimmedName,
+        description:
+          trimmedDescription ||
+          "Imported library shared through AI Study Hub.",
+      });
 
-    navigate(`/dashboard/libraries/${newLibrary.id}`, {
-      state: {
-        library: newLibrary,
-        importedItems: normalizedItems,
-      },
-    });
+      navigate(`/dashboard/libraries/${newLibrary.id}`, {
+        state: { library: newLibrary },
+      });
+    } catch (error) {
+      setLinkError(
+        error.response?.data?.message ||
+          "Could not import this library. Please try again.",
+      );
+      if (error.response?.data?.code === "DUPLICATE_LIBRARY_NAME") {
+        const libraries = await getMyLibraries().catch(() => []);
+        setUserLibraries(libraries || []);
+      }
+    } finally {
+      setIsImporting(false);
+    }
   }
 
   return (
@@ -254,15 +226,18 @@ function ImportLibraryPage() {
                   onChange={(event) => {
                     setLibraryLink(event.target.value);
                     setSourceLibrary(null);
-                    setSourceItems([]);
                     setLibraryName("");
                     setDescription("");
                     setLinkError("");
                   }}
                   placeholder="https://studyhub.app/dashboard/libraries/library-id"
                 />
-                <button type="button" onClick={resolveLibraryLink}>
-                  Check link
+                <button
+                  type="button"
+                  onClick={resolveLibraryLink}
+                  disabled={isCheckingLink}
+                >
+                  {isCheckingLink ? "Checking..." : "Check link"}
                 </button>
               </div>
               {linkError && <p className="import_field_error">{linkError}</p>}
@@ -346,7 +321,7 @@ function ImportLibraryPage() {
               </span>
               <div>
                 <small>Visibility</small>
-                <strong>{sourceLibrary?.visibility || "Not available"}</strong>
+                <strong>{sourceLibrary ? "Private copy" : "Not available"}</strong>
               </div>
             </article>
           </div>
@@ -387,7 +362,7 @@ function ImportLibraryPage() {
             onClick={handleImportLibrary}
           >
             <i className="ti-import" />
-            Import library
+            {isImporting ? "Importing..." : "Import library"}
           </button>
         </footer>
       </section>

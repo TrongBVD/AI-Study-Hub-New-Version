@@ -29,11 +29,7 @@
   align-items: stretch;
   overflow: hidden;
   position: relative;
-  background:
-    linear-gradient(135deg, rgba(59, 42, 26, 0.97), rgba(77, 51, 31, 0.93)),
-    url("https://picsum.photos/seed/library-builder/1600/900");
-  background-size: cover;
-  background-position: center;
+  background: var(--sidebar-bg);
   color: var(--bg-card);
   box-shadow: var(--shadow-soft);
 }
@@ -46,7 +42,8 @@
   right: -170px;
   top: -170px;
   border-radius: 50%;
-  background: var(--accent-soft);
+  background: rgba(255, 248, 235, 0.06);
+  pointer-events: none;
 }
 
 .create_library_hero_content,
@@ -65,9 +62,9 @@
 .create_library_back {
   width: fit-content;
   min-height: 32px;
-  border: 1px solid var(--sidebar-active-bg);
+  border: 1px solid rgba(255, 248, 235, 0.18);
   border-radius: 999px;
-  background: var(--sidebar-active-bg);
+  background: rgba(255, 248, 235, 0.1);
   color: var(--bg-card);
   padding: 0 12px;
   cursor: pointer;
@@ -99,7 +96,7 @@
 .create_library_hero_content > p {
   max-width: 500px;
   margin: 14px 0 0;
-  color: var(--hero-card-bg);
+  color: rgba(255, 248, 235, 0.78);
   font-size: 13px;
   line-height: 1.6;
 }
@@ -114,8 +111,8 @@
   min-height: 64px;
   border-radius: 14px;
   padding: 12px;
-  background: var(--sidebar-active-bg);
-  border: 1px solid var(--sidebar-active-bg);
+  background: rgba(255, 248, 235, 0.08);
+  border: 1px solid rgba(255, 248, 235, 0.14);
   backdrop-filter: blur(12px);
 }
 
@@ -134,9 +131,9 @@
 .create_library_preview {
   border-radius: 20px;
   padding: 18px;
-  background: var(--sidebar-active-bg);
-  border: 1px solid var(--sidebar-active-bg);
-  box-shadow: var(--shadow-soft);
+  background: rgba(255, 248, 235, 0.08);
+  border: 1px solid rgba(255, 248, 235, 0.14);
+  box-shadow: none;
   backdrop-filter: blur(14px);
   display: flex;
   flex-direction: column;
@@ -173,18 +170,18 @@
 }
 
 .preview_badge {
-  border: 1px solid var(--accent-soft);
+  border: 1px solid rgba(255, 248, 235, 0.22);
   border-radius: 999px;
   padding: 5px 11px;
   background: var(--accent-soft);
-  color: var(--bg-secondary, var(--accent-soft));
+  color: var(--sidebar-bg);
   font-size: 12px;
   font-weight: 900;
   text-transform: capitalize;
 }
 
 .preview_badge.private {
-  background: var(--sidebar-active-bg);
+  background: rgba(255, 248, 235, 0.1);
   color: var(--bg-card);
 }
 
@@ -199,14 +196,14 @@
 
 .preview_body p {
   margin: 0;
-  color: var(--hero-card-bg);
+  color: rgba(255, 248, 235, 0.78);
   font-size: 13px;
   line-height: 1.55;
   overflow-wrap: anywhere;
 }
 
 .preview_footer {
-  border-top: 1px solid var(--sidebar-active-bg);
+  border-top: 1px solid rgba(255, 248, 235, 0.16);
   padding-top: 13px;
 }
 
@@ -220,7 +217,7 @@
 .preview_footer span {
   display: block;
   margin-top: 5px;
-  color: var(--hero-card-bg);
+  color: rgba(255, 248, 235, 0.72);
   font-size: 12px;
   font-weight: 800;
 }
@@ -240,12 +237,15 @@
   box-shadow: var(--shadow-soft);
 }
 
-.form_section_header {
+.create_library_page .form_section_header {
+  display: block;
   align-items: flex-start;
+  padding-bottom: 16px;
   margin-bottom: 18px;
+  border-bottom: 1px solid var(--bg-secondary, var(--accent-soft));
 }
 
-.form_section_header h2 {
+.create_library_page .form_section_header h2 {
   margin: 7px 0 8px;
   color: var(--text-primary);
   font-size: 20px;
@@ -253,11 +253,13 @@
   letter-spacing: 0;
 }
 
-.form_section_header p {
+.create_library_page .form_section_header p {
+  max-width: 560px;
   margin: 0;
   color: var(--text-secondary);
   font-size: 13px;
   line-height: 1.55;
+  text-align: left;
 }
 
 .section_number {
