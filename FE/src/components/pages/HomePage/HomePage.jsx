@@ -13,6 +13,8 @@ import { getMyProfile } from "../../../utils/profileApi.js";
 import { getAiSummary } from "../../../utils/aiApi.js";
 import { getPublicLibraries } from "../../../utils/publicApi.js";
 
+import { getStoredUser } from "../../../utils/authToken.js";
+
 function getItemId(item) {
   return item?.id || item?._id || item?.libraryId || item?.workspaceId || "";
 }
@@ -45,7 +47,7 @@ function getRecentTimestamp(item) {
     
 function getStoredUserRole() {
   try {
-    const user = JSON.parse(localStorage.getItem("user") || "null");
+    const user = getStoredUser();
     return String(user?.role || "").toUpperCase();
   } catch {
     return "";
