@@ -11,9 +11,11 @@ const {
 const {
   moderateDocument,
   createEmbedding,
+  createBatchEmbeddings,
   toVectorLiteral,
   checkSensitiveContent,
   validateTagsAndContent,
+  analyzeDocumentForUpload,
 } = require("../services/aiService");
 const {
   mapWithConcurrency,
@@ -114,8 +116,6 @@ async function processDocumentWithAI(
   overrideRejectReason = null,
 ) {
   try {
-    console.log("Starting AI processing for document:", documentId);
-
     const extractedText = preExtractedText || await extractTextFromFile(file);
 
     if (!extractedText || extractedText.trim().length < 20) {
@@ -161,19 +161,13 @@ async function processDocumentWithAI(
         return { status: "REJECTED", reason: "No readable text chunks could be created.", chunkCount: 0 };
       }
 
-      const chunkRows = await mapWithConcurrency(
-        chunks,
-        EMBEDDING_CONCURRENCY,
-        async (chunk, index) => {
-          const embedding = await createEmbedding(chunk, "document");
-          return {
-            document_id: documentId,
-            chunk_index: index,
-            content: chunk,
-            embedding: toVectorLiteral(embedding),
-          };
-        },
-      );
+      const embeddings = await createBatchEmbeddings(chunks, "document");
+      const chunkRows = chunks.map((chunk, index) => ({
+        document_id: documentId,
+        chunk_index: index,
+        content: chunk,
+        embedding: toVectorLiteral(embeddings[index]),
+      }));
 
       await supabase.from("document_chunks").delete().eq("document_id", documentId);
 
@@ -189,8 +183,6 @@ async function processDocumentWithAI(
       };
 
       await supabase.from("documents").update(updatePayload).eq("id", documentId);
-
-      console.log("AI processing completed for document:", documentId);
 
       return {
         status: status,
@@ -461,8 +453,6 @@ exports.uploadDocuments = async (req, res) => {
       });
     }
 
-    console.log("[uploadDocuments] userTags received:", userTags);
-
     if (files.length === 0) {
       return res.status(400).json({ status: "error", message: "Vui lòng chọn tệp." });
     }
@@ -677,10 +667,16 @@ exports.uploadDocuments = async (req, res) => {
           async (file, fileIndex) => {
             const extractedText = await extractTextFromFile(file);
 
-            const [sensitivity, tagValidationResult] = await Promise.all([
-              checkSensitiveContent(extractedText),
-              validateTagsAndContent(extractedText, file.originalname, userTags),
-            ]);
+            const tagValidationResult = await validateTagsAndContent(
+              extractedText,
+              file.originalname,
+              userTags,
+            );
+            const sensitivity = tagValidationResult.sensitivity || {
+              classification: "NONE",
+              word: null,
+              suspicious_text: null,
+            };
 
             return {
               file,
@@ -828,7 +824,6 @@ exports.uploadDocuments = async (req, res) => {
       // Lưu tags vào DB
       // Loại bỏ các tag trùng lặp và làm sạch
       const uniqueTags = [...new Set(userTags.map(t => t.trim().toLowerCase().replace("#", "")))];
-      console.log("[uploadDocuments] final user tag names:", uniqueTags);
 
 
       // Gọi hàm xử lý AI (embedding và chunking)
@@ -886,11 +881,6 @@ exports.uploadDocuments = async (req, res) => {
       if (finalTagCountError) {
         throw finalTagCountError;
       }
-
-      console.log("[uploadDocuments] tags after insert:", {
-        documentId: document.id,
-        count: finalTagCount,
-      });
 
         const replacedDocumentIds =
           duplicateDecision.replacementTargetIds[fileIndex] || [];

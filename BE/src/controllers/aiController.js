@@ -1,15 +1,85 @@
 const supabase = require("../config/supabase");
 const { createActivityLog } = require("../services/activityLogService");
 const { canAccessDocument } = require("../services/documentAccessService");
+const {
+  extractTextFromFile,
+  splitTextIntoChunks,
+} = require("../services/textExtractService");
 
 const DAILY_FLASHCARD_LIMIT = 3;
 
 const {
   createEmbedding,
+  createBatchEmbeddings,
   toVectorLiteral,
   answerWithContext,
   generateFlashcardsFromChunks,
 } = require("../services/aiService");
+
+async function ensureDocumentChunks(document) {
+  try {
+    const { data: existingChunks, error: selectError } = await supabase
+      .from("document_chunks")
+      .select("chunk_index, content")
+      .eq("document_id", document.id)
+      .order("chunk_index", { ascending: true });
+
+    if (!selectError && existingChunks && existingChunks.length > 0) {
+      return existingChunks;
+    }
+
+    if (!document || !document.file_url) {
+      return [];
+    }
+
+    const bucket = document.status === "FLAGGED" ? "document_waiting_admin" : "documents";
+    const { data: fileBlob, error: downloadError } = await supabase.storage
+      .from(bucket)
+      .download(document.file_url);
+
+    if (downloadError || !fileBlob) {
+      console.error("Auto-repair chunks download error:", downloadError);
+      return [];
+    }
+
+    const buffer = Buffer.from(await fileBlob.arrayBuffer());
+    const extractedText = await extractTextFromFile({
+      buffer,
+      originalname: document.title,
+      mimetype: document.title?.endsWith(".pdf")
+        ? "application/pdf"
+        : document.title?.endsWith(".docx")
+          ? "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+          : "text/plain",
+    });
+
+    const chunks = splitTextIntoChunks(extractedText);
+    if (chunks.length === 0) {
+      return [];
+    }
+
+    const embeddings = await createBatchEmbeddings(chunks, "document");
+    const chunkRows = chunks.map((chunk, index) => ({
+      document_id: document.id,
+      chunk_index: index,
+      content: chunk,
+      embedding: toVectorLiteral(embeddings[index]),
+    }));
+
+    await supabase.from("document_chunks").delete().eq("document_id", document.id);
+    const { error: insertError } = await supabase.from("document_chunks").insert(chunkRows);
+
+    if (insertError) {
+      console.error("Auto-repair insert chunks error:", insertError);
+      return [];
+    }
+
+    return chunkRows.map((r) => ({ chunk_index: r.chunk_index, content: r.content }));
+  } catch (err) {
+    console.error("ensureDocumentChunks error:", err);
+    return [];
+  }
+}
 
 function getVietnamDayRange() {
   const now = new Date();
@@ -79,7 +149,7 @@ async function increaseChatUsage(userId) {
 
   if (selectError) throw selectError;
 
-  if (existing && existing.chat_count >= 50) {
+  if (existing && existing.chat_count >= 20) {
     const error = new Error("Daily AI chatbot quota exceeded.");
     error.statusCode = 429;
     throw error;
@@ -107,7 +177,7 @@ async function increaseChatUsage(userId) {
 
 exports.getAiSummary = async (req, res) => {
   try {
-    const chatLimit = 50;
+    const chatLimit = 20;
 
     if (req.user.id === "guest" || req.user.id === "00000000-0000-0000-0000-000000000000" || req.user.role === "GUEST") {
       return res.status(200).json({
@@ -135,9 +205,9 @@ exports.getAiSummary = async (req, res) => {
     return res.status(200).json({
       status: "success",
       data: {
-        chatLimit,
+        chatLimit: 20,
         chatsUsed,
-        chatsRemaining: Math.max(0, chatLimit - chatsUsed),
+        chatsRemaining: Math.max(0, 20 - chatsUsed),
         tokensConsumed: Math.max(0, Number(usage?.tokens_consumed || 0)),
       },
     });
@@ -188,18 +258,26 @@ exports.chatWithDocument = async (req, res) => {
 
     const questionEmbedding = await createEmbedding(question, "query");
 
-    const { data: chunks, error: matchError } = await supabase.rpc(
-      "match_document_chunks",
-      {
+    let matchedChunks = [];
+    try {
+      const { data: rpcChunks } = await supabase.rpc("match_document_chunks", {
         match_document_id: documentId,
         query_embedding: toVectorLiteral(questionEmbedding),
         match_count: 5,
+      });
+      if (Array.isArray(rpcChunks) && rpcChunks.length > 0) {
+        matchedChunks = rpcChunks;
       }
-    );
+    } catch (e) {
+      console.warn("RPC match_document_chunks error or fallback:", e);
+    }
 
-    if (matchError) throw matchError;
+    if (matchedChunks.length === 0) {
+      const availableChunks = await ensureDocumentChunks(document);
+      matchedChunks = availableChunks.slice(0, 5);
+    }
 
-    if (!chunks || chunks.length === 0) {
+    if (!matchedChunks || matchedChunks.length === 0) {
       return res.status(409).json({
         status: "error",
         code: "DOCUMENT_CHUNKS_UNAVAILABLE",
@@ -207,7 +285,7 @@ exports.chatWithDocument = async (req, res) => {
       });
     }
 
-    const answer = await answerWithContext(question, chunks);
+    const answer = await answerWithContext(question, matchedChunks);
     await increaseChatUsage(userId);
 
     return res.status(200).json({
@@ -216,9 +294,9 @@ exports.chatWithDocument = async (req, res) => {
         documentId,
         question,
         answer,
-        sources: chunks.map((chunk) => ({
+        sources: matchedChunks.map((chunk) => ({
           chunk_index: chunk.chunk_index,
-          similarity: chunk.similarity,
+          similarity: chunk.similarity || 1,
         })),
       },
     });
@@ -236,24 +314,6 @@ exports.generateFlashcards = async (req, res) => {
   try {
     const userId = req.user.id;
     const { documentId } = req.params;
-    const cardsCreatedToday = await getFlashcardsCreatedToday(userId);
-    const remainingCards = Math.max(
-      0,
-      DAILY_FLASHCARD_LIMIT - cardsCreatedToday,
-    );
-
-    if (remainingCards === 0) {
-      return res.status(429).json({
-        status: "error",
-        code: "DAILY_FLASHCARD_LIMIT_REACHED",
-        message: `You can create up to ${DAILY_FLASHCARD_LIMIT} flashcards per day. Please try again tomorrow.`,
-        data: {
-          dailyLimit: DAILY_FLASHCARD_LIMIT,
-          createdToday: cardsCreatedToday,
-          remainingToday: 0,
-        },
-      });
-    }
 
     const document = await getAllowedDocument(documentId, userId);
 
@@ -278,14 +338,12 @@ exports.generateFlashcards = async (req, res) => {
       });
     }
 
-    const { data: chunks, error: chunkError } = await supabase
-      .from("document_chunks")
-      .select("chunk_index, content")
-      .eq("document_id", documentId)
-      .order("chunk_index", { ascending: true })
-      .limit(10);
+    // Increment AI Usage limit (1 operation against 20 daily AI usage limit)
+    await increaseChatUsage(userId);
 
-    if (chunkError) throw chunkError;
+    let chunks = (await ensureDocumentChunks(document)) || [];
+    if (!Array.isArray(chunks)) chunks = [];
+    chunks = chunks.slice(0, 30);
 
     if (!chunks || chunks.length === 0) {
       return res.status(400).json({
@@ -295,8 +353,9 @@ exports.generateFlashcards = async (req, res) => {
     }
 
     const generatedCards = await generateFlashcardsFromChunks(chunks);
-    const cards = generatedCards.slice(0, remainingCards);
+    const cards = generatedCards.slice(0, 20);
 
+    // Delete old flashcards for this document if regenerating
     await supabase.from("flashcards").delete().eq("document_id", documentId);
 
     const rows = cards.map((card) => ({
@@ -307,38 +366,34 @@ exports.generateFlashcards = async (req, res) => {
       answer: card.answer,
     }));
 
-    const { data: insertedCards, error: insertError } = await supabase
+    const result = await supabase
       .from("flashcards")
       .insert(rows)
       .select("*");
 
-    if (insertError) throw insertError;
+    if (result.error) throw result.error;
+    const cardsList = Array.isArray(result.data) ? result.data : rows;
 
-    if (insertedCards.length > 0) {
+    if (cardsList.length > 0) {
       await createActivityLog({
         actorUserId: userId,
         actionType: "FLASHCARDS_GENERATED",
         entityType: "document",
         entityId: documentId,
         newData: {
-          cardCount: insertedCards.length,
-          dailyLimit: DAILY_FLASHCARD_LIMIT,
+          cardCount: cardsList.length,
+          dailyLimit: 20,
         },
         request: req,
-        details: `Generated ${insertedCards.length} flashcard(s).`,
+        details: `Generated ${cardsList.length} flashcard(s).`,
       });
     }
 
     return res.status(201).json({
       status: "success",
-      data: insertedCards,
+      data: cardsList,
       quota: {
-        dailyLimit: DAILY_FLASHCARD_LIMIT,
-        createdToday: cardsCreatedToday + insertedCards.length,
-        remainingToday: Math.max(
-          0,
-          DAILY_FLASHCARD_LIMIT - cardsCreatedToday - insertedCards.length,
-        ),
+        dailyLimit: 20,
       },
     });
   } catch (error) {

@@ -306,7 +306,7 @@ async function generateFlashcardsFromChunks(chunks) {
   const content = chunks
     .map((chunk) => chunk.content)
     .join("\n\n")
-    .slice(0, 12000);
+    .slice(0, 25000);
 
   const prompt = `
 Create study flashcards from the document content.
@@ -320,8 +320,12 @@ Return JSON array only in this exact format:
 ]
 
 Rules:
-- Make 5 to 10 flashcards.
-- Keep answers short.
+- Generate UP TO 20 flashcards depending on text length and content depth:
+  * For shorter documents: Generate 3 to 8 essential flashcards.
+  * For longer, richer documents: Generate 10 to 20 diverse, non-repetitive, high-yield study flashcards covering key topics across the entire text.
+- LANGUAGE: Write ALL questions and answers in VIETNAMESE (Tiếng Việt) if the document is in Vietnamese or bilingual. Default to VIETNAMESE for student study materials.
+- Ensure questions and answers cover distinct, diverse concepts without duplicate content.
+- Keep answers clear and concise.
 - Use only the document content.
 - Do not invent information.
 
@@ -338,6 +342,7 @@ ${content}
 
   return cards
     .filter((card) => card.question && card.answer)
+    .slice(0, 20)
     .map((card) => ({
       question: String(card.question).trim(),
       answer: String(card.answer).trim(),
@@ -421,95 +426,150 @@ MUST return strictly in the following JSON format, with no explanation outside t
   }
 }
 
-async function validateTagsAndContent(
+async function analyzeDocumentForUpload(
   extractedText,
   originalName,
-  userTags,
+  userTags = [],
   options = {},
 ) {
-  const sampleText = String(extractedText || "").substring(0, 5000);
+  const sampleText = String(extractedText || "").substring(0, 8000);
 
-  const prompt = `You are a content moderation and hashtag suggestion system for student study materials.
+  const prompt = `You are an AI document analysis system for student study materials on AI StudyHub.
 Original filename: "${originalName}"
-Document content (first 5000 chars):
-"${sampleText}"
-
+Document content (first 8000 chars): "${sampleText}"
 User input hashtags: ${JSON.stringify(userTags)}
 
 Your tasks:
 1. For EACH hashtag in the user list, check:
-   - Does it have spelling errors? Note: Since it is a hashtag, users may write without spaces or use CamelCase (e.g., "SoftwareTesting", "softwaretesting"). This is standard hashtag format and should not be marked invalid. Analyze constituent words to check for actual misspellings.
-   - Does it accurately reflect the content/topic of the document?
-   - Format: Starts with # and no spaces (e.g. #SoftwareTesting). If user entered without #, consider it valid (isValid = true) if spelling/topic are correct, but format it with # in "recommendedReplacement".
-   - Language: Prefer English for hashtags for consistency.
-   
-2. Suggest 3-5 additional relevant hashtags based on the document content (always starting with #, no spaces, written in English).
+   - Does it have spelling errors? Note: CamelCase like #SoftwareTesting, #BugReport, #SecurityVulnerability are standard valid hashtag formats and MUST be marked valid (isValid: true).
+   - Format: Starts with # and no spaces. If user entered with # (e.g. #BugReport), consider it VALID (isValid: true).
+   - Does it reflect the content or study topic?
+2. Suggest 3-5 additional relevant hashtags based on document content (always starting with #, no spaces, written in English).
+3. Check for profane, inappropriate, or violating words in the text.
 
-IMPORTANT: Every value in the "reason" field MUST be written entirely in English. Do not return Vietnamese text in "reason".
-
-MUST return strictly in the following JSON format, with no extra explanation outside JSON:
+MUST return strictly in the following JSON format:
 {
   "tagValidations": [
     {
-      "tag": "tag_name_being_checked",
+      "tag": "tag_name",
       "isValid": true or false,
       "recommendedReplacement": "#suggested_replacement_tag",
-      "reason": "An English explanation of why the tag should be replaced; otherwise leave this empty"
+      "reason": "English explanation ONLY if replacement is needed; otherwise empty string"
     }
   ],
-  "aiRecommendedTags": ["#recommendation1", "#recommendation2", "#recommendation3"]
-}
-`;
+  "aiRecommendedTags": ["#recommendation1", "#recommendation2", "#recommendation3"],
+  "sensitivity": {
+    "classification": "SEVERE" or "MILD" or "NONE",
+    "word": "violating words separated by commas, or null",
+    "suspicious_text": "violating words or null"
+  }
+}`;
 
   try {
     const responseText = await generateText(prompt);
     const result = extractJson(responseText);
 
-    const tagValidations = (result.tagValidations || []).map(v => ({
-      tag: v.tag || "",
-      isValid: typeof v.isValid === "boolean" ? v.isValid : true,
-      recommendedReplacement: v.recommendedReplacement || v.tag || "",
-      reason: v.reason || ""
-    }));
+    const tagValidations = (result.tagValidations || []).map((v) => {
+      const originalTag = String(v.tag || "").trim();
+      let recTag = String(v.recommendedReplacement || originalTag).trim();
+      if (recTag && !recTag.startsWith("#")) {
+        recTag = "#" + recTag;
+      }
 
-    const isValid = tagValidations.every(v => v.isValid === true);
+      const normOriginal = originalTag.startsWith("#") ? originalTag : "#" + originalTag;
+      const normRec = recTag.startsWith("#") ? recTag : "#" + recTag;
 
-    const aiRecommendedTags = Array.isArray(result.aiRecommendedTags) 
-      ? result.aiRecommendedTags 
+      let isValid = typeof v.isValid === "boolean" ? v.isValid : true;
+      let reason = v.reason || "";
+
+      // Sanity check: If the user tag starts with #, has no spaces, and matches recommendation, it is VALID.
+      if (normOriginal.toLowerCase() === normRec.toLowerCase()) {
+        isValid = true;
+        reason = "";
+      }
+
+      return {
+        tag: originalTag,
+        isValid,
+        recommendedReplacement: normRec,
+        reason: isValid ? "" : reason,
+      };
+    });
+
+    const isValid = tagValidations.every((v) => v.isValid === true);
+    const aiRecommendedTags = Array.isArray(result.aiRecommendedTags)
+      ? result.aiRecommendedTags
       : [];
+
+    const sensitivityObj = result.sensitivity || {};
+    const extractedWords = sensitivityObj.word || sensitivityObj.suspicious_text || null;
+    const classification = ["SEVERE", "MILD", "NONE"].includes(sensitivityObj.classification)
+      ? sensitivityObj.classification
+      : "NONE";
 
     return {
       isValid,
       tagValidations,
-      aiRecommendedTags
+      aiRecommendedTags,
+      sensitivity: {
+        classification,
+        word: extractedWords,
+        suspicious_text: extractedWords,
+      },
     };
   } catch (error) {
-    console.error("Error in validateTagsAndContent with Gemini:", error);
+    console.error("Error in analyzeDocumentForUpload:", error);
     if (options.throwOnError) {
       throw error;
     }
 
     return {
       isValid: true,
-      tagValidations: userTags.map(t => ({
+      tagValidations: userTags.map((t) => ({
         tag: t,
         isValid: true,
         recommendedReplacement: t,
-        reason: ""
+        reason: "",
       })),
-      aiRecommendedTags: []
+      aiRecommendedTags: [],
+      sensitivity: { classification: "NONE", word: null, suspicious_text: null },
     };
   }
+}
+
+async function createBatchEmbeddings(chunks, mode = "document") {
+  if (!Array.isArray(chunks) || chunks.length === 0) return [];
+  const BATCH_SIZE = 10;
+  const results = [];
+  for (let i = 0; i < chunks.length; i += BATCH_SIZE) {
+    const batch = chunks.slice(i, i + BATCH_SIZE);
+    const batchResults = await Promise.all(
+      batch.map((chunk) => createEmbedding(chunk, mode)),
+    );
+    results.push(...batchResults);
+  }
+  return results;
+}
+
+async function validateTagsAndContent(
+  extractedText,
+  originalName,
+  userTags = [],
+  options = {},
+) {
+  return analyzeDocumentForUpload(extractedText, originalName, userTags, options);
 }
 
 module.exports = {
   moderateDocument,
   createEmbedding,
+  createBatchEmbeddings,
   toVectorLiteral,
   answerWithContext,
   generateFlashcardsFromChunks,
   generateTagsAndName,
   checkSensitiveContent,
   validateTagsAndContent,
+  analyzeDocumentForUpload,
 };
 

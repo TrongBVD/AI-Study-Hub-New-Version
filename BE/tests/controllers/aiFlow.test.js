@@ -20,8 +20,14 @@ jest.mock("../../src/config/supabase", () => {
   };
 });
 
+jest.mock("../../src/services/textExtractService", () => ({
+  extractTextFromFile: jest.fn().mockResolvedValue("Sample extracted text for study."),
+  splitTextIntoChunks: jest.fn().mockReturnValue(["Sample extracted text for study."]),
+}));
+
 jest.mock("../../src/services/aiService", () => ({
   createEmbedding: jest.fn().mockResolvedValue([0.1, 0.2, 0.3]),
+  createBatchEmbeddings: jest.fn().mockResolvedValue([[0.1, 0.2, 0.3]]),
   toVectorLiteral: jest.fn().mockReturnValue("[0.1, 0.2, 0.3]"),
   answerWithContext: jest.fn().mockResolvedValue({
     answer: "Detailed study answer derived from document context.",
@@ -95,6 +101,76 @@ describe("AI Pipeline Main Flow Tests", () => {
 
       expect(res.status).toHaveBeenCalledWith(403);
     });
+
+    test("successfully answers question when vector search or chunk fallback is active", async () => {
+      req.body = { documentId: "doc-approved-1", question: "What is momentum?" };
+
+      const mockChain = supabase.from();
+      mockChain.maybeSingle.mockResolvedValueOnce({
+        data: { id: "doc-approved-1", status: "APPROVED", title: "physics.pdf", file_url: "user/physics.pdf" },
+        error: null,
+      });
+
+      canAccessDocument.mockResolvedValueOnce(true);
+
+      supabase.rpc.mockResolvedValueOnce({
+        data: [{ chunk_index: 0, content: "Momentum is mass times velocity.", similarity: 0.95 }],
+        error: null,
+      });
+
+      await aiController.chatWithDocument(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          status: "success",
+          data: expect.objectContaining({
+            documentId: "doc-approved-1",
+            question: "What is momentum?",
+          }),
+        })
+      );
+    });
+
+    test("auto-repairs missing chunks on-demand and returns AI response", async () => {
+      req.body = { documentId: "doc-no-chunks", question: "Explain gravity" };
+
+      const mockChain = supabase.from();
+      mockChain.maybeSingle.mockResolvedValueOnce({
+        data: { id: "doc-no-chunks", status: "APPROVED", title: "physics.pdf", file_url: "user/physics.pdf" },
+        error: null,
+      });
+
+      canAccessDocument.mockResolvedValueOnce(true);
+
+      // rpc returns no chunks
+      supabase.rpc.mockResolvedValueOnce({ data: [], error: null });
+
+      // select from document_chunks returns no chunks first time
+      mockChain.order.mockResolvedValueOnce({ data: [], error: null });
+
+      // mock storage download
+      supabase.storage = {
+        from: jest.fn().mockReturnValue({
+          download: jest.fn().mockResolvedValue({
+            data: { arrayBuffer: jest.fn().mockResolvedValue(Buffer.from("dummy")) },
+            error: null,
+          }),
+        }),
+      };
+
+      await aiController.chatWithDocument(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          status: "success",
+          data: expect.objectContaining({
+            documentId: "doc-no-chunks",
+          }),
+        })
+      );
+    });
   });
 
   describe("2. AI Usage & Summary Flow", () => {
@@ -112,9 +188,9 @@ describe("AI Pipeline Main Flow Tests", () => {
         expect.objectContaining({
           status: "success",
           data: expect.objectContaining({
-            chatLimit: 50,
+            chatLimit: 20,
             chatsUsed: 5,
-            chatsRemaining: 45,
+            chatsRemaining: 15,
           }),
         })
       );
@@ -131,6 +207,37 @@ describe("AI Pipeline Main Flow Tests", () => {
       await aiController.generateFlashcards(req, res);
 
       expect(res.status).toHaveBeenCalledWith(404);
+    });
+
+    test("successfully generates flashcards for any document as long as AI usage quota remains", async () => {
+      req.params = { documentId: "doc-flashcards-1" };
+
+      const mockChain = supabase.from();
+      mockChain.maybeSingle
+        .mockResolvedValueOnce({
+          data: { id: "doc-flashcards-1", status: "APPROVED", title: "physics.pdf", file_url: "user/physics.pdf" },
+          error: null,
+        }) // 1st: getAllowedDocument
+        .mockResolvedValueOnce({ data: { id: "log-1", chat_count: 5 }, error: null }); // 2nd: increaseChatUsage
+
+      canAccessDocument.mockResolvedValueOnce(true);
+
+      mockChain.order.mockResolvedValueOnce({
+        data: [{ chunk_index: 0, content: "Newton's first law text" }],
+        error: null,
+      });
+
+      mockChain.delete.mockReturnThis();
+      mockChain.insert.mockReturnThis();
+
+      await aiController.generateFlashcards(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(201);
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          status: "success",
+        })
+      );
     });
   });
 });

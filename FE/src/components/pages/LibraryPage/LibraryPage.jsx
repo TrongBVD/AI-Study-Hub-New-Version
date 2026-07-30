@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { LuLibraryBig } from "react-icons/lu";
+import { FaRotate } from "react-icons/fa6";
 import {
   TbFileText,
   TbFileTypeDoc,
@@ -2813,6 +2814,7 @@ function LibraryPage() {
               <button
                 type="button"
                 className="duplicate_keep_button"
+                disabled={isUploadingDocuments}
                 onClick={() => closeDuplicateConfirmation(false)}
               >
                 Keep current
@@ -2820,11 +2822,21 @@ function LibraryPage() {
               <button
                 type="button"
                 className="duplicate_replace_button"
+                disabled={isUploadingDocuments}
                 autoFocus
                 onClick={() => closeDuplicateConfirmation(true)}
               >
-                <i className="ti-reload" aria-hidden="true"></i>
-                Replace document
+                {isUploadingDocuments ? (
+                  <>
+                    <FaRotate className="spin" aria-hidden="true" />
+                    Replacing...
+                  </>
+                ) : (
+                  <>
+                    <FaRotate aria-hidden="true" />
+                    Replace document
+                  </>
+                )}
               </button>
             </div>
           </section>
