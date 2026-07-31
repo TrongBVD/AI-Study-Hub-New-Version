@@ -2567,13 +2567,10 @@ exports.leaveWorkspace = async (req, res) => {
     }
 
     if (access.member.role === "Admin") {
-      const adminCount = await countWorkspaceAdmins(workspaceId);
-      if (adminCount <= 1) {
-        return res.status(400).json({
-          status: "error",
-          message: "A workspace must have at least one admin. You must assign another admin before leaving.",
-        });
-      }
+      return res.status(400).json({
+        status: "error",
+        message: "You must transfer Admin ownership to another member before leaving this workspace.",
+      });
     }
 
     const { error: deleteError } = await supabase
