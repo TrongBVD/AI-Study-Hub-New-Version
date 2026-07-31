@@ -5,6 +5,8 @@ import {
   useNavigate,
   useSearchParams,
 } from "react-router-dom";
+import ActionPopup from "../../common/ActionPopup/ActionPopup.jsx";
+import useActionPopup from "../../common/ActionPopup/useActionPopup.js";
 import { createAppNotification } from "../../../utils/notificationStore.js";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -299,6 +301,11 @@ function WorkSpacePage() {
   const { workspaceId } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
+  const {
+    popup: actionPopup,
+    showConfirm,
+    resolvePopup: resolveActionPopup,
+  } = useActionPopup();
   const [activeTab, setActiveTab] = useState("discussion");
   const [isLeaveBlockedModalOpen, setIsLeaveBlockedModalOpen] =
     useState(false);
@@ -1159,7 +1166,7 @@ function WorkSpacePage() {
 
     if (!fileToDelete) return;
 
-    const confirmDelete = window.confirm(
+    const confirmDelete = await showConfirm(
       `Delete "${fileToDelete.fileName || fileToDelete.name}" from this topic?`,
     );
 
@@ -1194,7 +1201,7 @@ function WorkSpacePage() {
     if (!selectedTopic) return;
     if (!requireTopicPermission("delete topics")) return;
 
-    const confirmDelete = window.confirm(
+    const confirmDelete = await showConfirm(
       `Delete topic "${selectedTopic.title}"?`,
     );
 
@@ -1213,7 +1220,7 @@ function WorkSpacePage() {
     }
   }
 
-  function resolveWorkspaceUploadSelection(files) {
+  async function resolveWorkspaceUploadSelection(files) {
     const { candidates, duplicateBatchFileNames } =
       buildWorkspaceUploadCandidates(files, workspaceDocuments);
 
@@ -1229,11 +1236,11 @@ function WorkSpacePage() {
   const replacementDocumentIds = [];
   const keptExistingFileNames = [];
 
-  candidates.forEach(({ file, existingDocument }) => {
+  for (const { file, existingDocument } of candidates) {
     if (!existingDocument) {
       acceptedFiles.push(file);
       replacementDocumentIds.push(null);
-      return;
+      continue;
     }
 
     const existingUploaderId = String(
@@ -1250,21 +1257,26 @@ function WorkSpacePage() {
         }. Only the original uploader or a workspace admin can replace it.`,
       );
       keptExistingFileNames.push(file.name);
-      return;
+      continue;
     }
 
-    const shouldReplace = window.confirm(
+    const shouldReplace = await showConfirm(
       `"${file.name}" has already been uploaded to this workspace.\n\nSelect OK to replace the existing document, or Cancel to keep the current version.`,
+      {
+        title: "Replace existing document?",
+        confirmText: "Replace document",
+        cancelText: "Keep current",
+      },
     );
 
     if (!shouldReplace) {
       keptExistingFileNames.push(file.name);
-      return;
+      continue;
     }
 
     acceptedFiles.push(file);
     replacementDocumentIds.push(String(existingDocument.id));
-  });
+  }
 
   return {
     acceptedFiles,
@@ -1330,7 +1342,7 @@ async function uploadWorkspaceFilesWithDuplicateConfirmation(
     const duplicateNames = duplicateDocuments
       .map((duplicate) => duplicate.fileName)
       .filter(Boolean);
-    const shouldReplace = window.confirm(
+    const shouldReplace = await showConfirm(
       `${duplicateNames.join(", ")} ${
         duplicateNames.length === 1 ? "has" : "have"
       } already been uploaded to this workspace.\n\nSelect OK to replace the existing ${
@@ -1370,7 +1382,7 @@ async function handleTopicFileChange(e) {
   }
 
 const { acceptedFiles, replacementDocumentIds, keptExistingFileNames } =
-  resolveWorkspaceUploadSelection(selectedFiles);
+  await resolveWorkspaceUploadSelection(selectedFiles);
 
 if (acceptedFiles.length === 0) {
   setDiscussionStatus(
@@ -2045,7 +2057,7 @@ async function handleUpdateMemberRole(userId, nextRole) {
 async function handleTransferAdminOwnership(targetUserId, targetUserName) {
   if (!targetUserId) return;
 
-  const isConfirmed = window.confirm(
+  const isConfirmed = await showConfirm(
     `Are you sure you want to transfer Admin ownership to ${targetUserName || "this member"}? Your role will become Contributor.`
   );
   if (!isConfirmed) return;
@@ -2070,7 +2082,7 @@ async function handleTransferAdminOwnership(targetUserId, targetUserName) {
 async function handleRemoveWorkspaceMember(userId, memberName) {
   if (!userId) return;
 
-  const isConfirmed = window.confirm(
+  const isConfirmed = await showConfirm(
     `Remove ${memberName || "this member"} from the workspace?`,
   );
 
@@ -2239,7 +2251,7 @@ async function handleLeaveWorkspace() {
     return;
   }
 
-  const isConfirmed = window.confirm(
+  const isConfirmed = await showConfirm(
     "Are you sure you want to leave this workspace?",
   );
 
@@ -2290,10 +2302,10 @@ async function handleGenerateWorkspaceFlashcards() {
   }
 }
 
-function handleWorkspaceDocumentFileChange(event) {
+async function handleWorkspaceDocumentFileChange(event) {
   const selectedFiles = Array.from(event.target.files || []);
   const { acceptedFiles, replacementDocumentIds, keptExistingFileNames } =
-    resolveWorkspaceUploadSelection(selectedFiles);
+    await resolveWorkspaceUploadSelection(selectedFiles);
 
   setWorkspaceUploadFiles(acceptedFiles);
   setWorkspaceReplacementDocumentIds(replacementDocumentIds);
@@ -5778,6 +5790,8 @@ return (
         </section>
       </div>
     )}
+
+    <ActionPopup popup={actionPopup} onResolve={resolveActionPopup} />
   </main>
 );
 }

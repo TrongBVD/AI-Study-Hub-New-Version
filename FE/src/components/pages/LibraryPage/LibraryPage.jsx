@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { LuLibraryBig } from "react-icons/lu";
 import { FaRotate } from "react-icons/fa6";
+import ActionPopup from "../../common/ActionPopup/ActionPopup.jsx";
+import useActionPopup from "../../common/ActionPopup/useActionPopup.js";
 import {
   TbFileText,
   TbFileTypeDoc,
@@ -81,6 +83,12 @@ function LibraryPage() {
   const { libraryId } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
+  const {
+    popup: actionPopup,
+    showConfirm,
+    showPrompt,
+    resolvePopup: resolveActionPopup,
+  } = useActionPopup();
   const isGuest = getStoredUserRole() === "GUEST";
 
   function getLibraryOrganizationStorageKey() {
@@ -1369,8 +1377,12 @@ function LibraryPage() {
     }
   }
 
-  function handleCreateFolder() {
-    const folderName = window.prompt("Enter folder name:");
+  async function handleCreateFolder() {
+    const folderName = await showPrompt("Enter a name for the new folder.", "", {
+      title: "Create folder",
+      placeholder: "Folder name",
+      confirmText: "Create folder",
+    });
 
     if (!folderName || folderName.trim() === "") return;
 
@@ -1572,7 +1584,7 @@ function LibraryPage() {
     }
   }
   async function handleDeleteLibrary() {
-    const confirmed = window.confirm(
+    const confirmed = await showConfirm(
       "Are you sure you want to delete this library? This action cannot be undone."
     );
 
@@ -1588,11 +1600,15 @@ function LibraryPage() {
     }
   }
 
-  function handleRenameFolder(folder, event) {
+  async function handleRenameFolder(folder, event) {
     event?.stopPropagation();
 
     const oldName = folder.name || "";
-    const newName = window.prompt("Enter new folder name:", oldName);
+    const newName = await showPrompt("Enter a new name for this folder.", oldName, {
+      title: "Rename folder",
+      placeholder: "Folder name",
+      confirmText: "Rename folder",
+    });
 
     if (newName === null) return;
 
@@ -1638,11 +1654,11 @@ function LibraryPage() {
     }
   }
 
-  function handleDeleteFolder(folder, event) {
+  async function handleDeleteFolder(folder, event) {
     event.stopPropagation();
 
     const folderKey = getFolderKey(folder);
-    const confirmDelete = window.confirm(
+    const confirmDelete = await showConfirm(
       `Delete folder "${folder.name}" and everything inside it?`,
     );
 
@@ -2842,6 +2858,7 @@ function LibraryPage() {
           </section>
         </div>
       )}
+      <ActionPopup popup={actionPopup} onResolve={resolveActionPopup} />
     </main>
   );
 
