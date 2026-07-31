@@ -1,5 +1,6 @@
 import { GoogleLogin, GoogleOAuthProvider } from "@react-oauth/google"; // Thêm import GoogleOAuthProvider
 import api from "../../../utils/api.js";
+import { storeAuthSession } from "../../../utils/authToken.js";
 import { useNavigate } from "react-router-dom";
 import "./Register.css";
 
@@ -21,7 +22,11 @@ function Register() {
       if (res.data.data.requiresOTP) {
         navigate('/verify-otp', { state: { email: res.data.data.email } });
       } else {
-        localStorage.setItem("accessToken", res.data.data.accessToken);
+        storeAuthSession({
+          accessToken: res.data.data.accessToken,
+          user: res.data.data.user,
+          rememberMe: true,
+        });
         alert("Login Successful!");
         navigate('/dashboard');
       }

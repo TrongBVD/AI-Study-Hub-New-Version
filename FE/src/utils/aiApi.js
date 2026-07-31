@@ -9,6 +9,19 @@ export async function chatWithDocument(documentId, question) {
   return response.data.data;
 }
 
+export async function getChatHistory() {
+  const response = await api.get("/ai/chat-history");
+  return response.data.data || [];
+}
+
+export async function deleteChatHistory(conversationId) {
+  await api.delete(`/ai/chat-history/${conversationId}`);
+}
+
+export async function clearChatHistory() {
+  await api.delete("/ai/chat-history");
+}
+
 export async function getAiSummary() {
   const response = await api.get("/ai/summary");
   return response.data.data;

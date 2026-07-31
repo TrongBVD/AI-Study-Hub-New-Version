@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import FormInput from "../../common/FormInput/FormInput.jsx";
 import api from "../../../utils/api.js";
+import { getAccessToken, storeAuthSession } from "../../../utils/authToken.js";
+import { setUserStoredItem } from "../../../utils/userStorage.js";
 import { useNavigate, useLocation, Navigate } from "react-router-dom";
 import "./Register.css";
 
@@ -77,11 +79,7 @@ function CompleteProfile() {
       const accessToken = response.data.data.accessToken;
       const user = response.data.data.user;
 
-      localStorage.setItem("accessToken", accessToken);
-
-      if (user) {
-        localStorage.setItem("user", JSON.stringify(user));
-      }
+      storeAuthSession({ accessToken, user, rememberMe: true });
 
       setCreatedUser(user || null);
       setShowBioPopup(true);
@@ -128,8 +126,12 @@ function CompleteProfile() {
       };
     }
 
-    localStorage.setItem("user", JSON.stringify(nextUser));
-    localStorage.setItem("aiStudyHubProfileBio", trimmedBio);
+    storeAuthSession({
+      accessToken: getAccessToken(),
+      user: nextUser,
+      rememberMe: true,
+    });
+    setUserStoredItem("aiStudyHubProfileBio", trimmedBio);
     setIsSavingBio(false);
     navigate("/dashboard/profile", { replace: true });
   };
