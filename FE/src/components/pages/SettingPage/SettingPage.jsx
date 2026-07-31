@@ -11,6 +11,11 @@ import {
   getAuthStorage,
 } from "../../../utils/authToken.js";
 import {
+  getUserStoredItem,
+  removeUserStoredItem,
+  setUserStoredItem,
+} from "../../../utils/userStorage.js";
+import {
   getMyProfile,
   updateMyProfile,
 } from "../../../utils/profileApi.js";
@@ -157,14 +162,14 @@ function getInitialProfileName() {
     storedUser.displayName ||
     storedUser.name ||
     storedUser.username ||
-    getAuthStorage().getItem(PROFILE_NAME_KEY) ||
+    getUserStoredItem(PROFILE_NAME_KEY) ||
     "AI Student Hub"
   );
 }
 
 function getProfileNameChangedAt() {
   const timestamp = Number(
-    getAuthStorage().getItem(PROFILE_NAME_CHANGED_AT_KEY),
+    getUserStoredItem(PROFILE_NAME_CHANGED_AT_KEY),
   );
   return Number.isFinite(timestamp) ? timestamp : 0;
 }
@@ -232,14 +237,13 @@ function SettingPage() {
         }
         setProfileNameChangedAt(Number.isFinite(changedAt) ? changedAt : 0);
 
-        const authStorage = getAuthStorage();
         if (changedAt) {
-          authStorage.setItem(
+          setUserStoredItem(
             PROFILE_NAME_CHANGED_AT_KEY,
             String(changedAt),
           );
         } else {
-          authStorage.removeItem(PROFILE_NAME_CHANGED_AT_KEY);
+          removeUserStoredItem(PROFILE_NAME_CHANGED_AT_KEY);
         }
       } catch (error) {
         console.error("Cannot load the current profile name:", error);
@@ -318,10 +322,9 @@ function SettingPage() {
         name: savedName,
       };
 
-      const authStorage = getAuthStorage();
-      authStorage.setItem(PROFILE_NAME_KEY, savedName);
-      authStorage.setItem(PROFILE_NAME_CHANGED_AT_KEY, String(changedAt));
-      authStorage.setItem("user", JSON.stringify(nextUser));
+      setUserStoredItem(PROFILE_NAME_KEY, savedName);
+      setUserStoredItem(PROFILE_NAME_CHANGED_AT_KEY, String(changedAt));
+      getAuthStorage().setItem("user", JSON.stringify(nextUser));
 
       setWorkspaceName(savedName);
       setSavedProfileName(savedName);

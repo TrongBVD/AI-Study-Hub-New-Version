@@ -19,6 +19,7 @@ import { getMyProfile } from "../../../utils/profileApi.js";
 import { getPublicLibraries } from "../../../utils/publicApi.js";
 import defaultAvatar from "../../../assets/images/account.png";
 import { getStoredUser } from "../../../utils/authToken.js";
+import { getUserStoredItem, setUserStoredItem } from "../../../utils/userStorage.js";
 import { WorkspaceInviteModal } from "./WorkspaceInviteModal.jsx";
 
 function getStoredUserRole() {
@@ -36,7 +37,7 @@ function getNotificationMessage(message) {
 
 function saveRecentLibrary(library) {
   const currentRecentLibraries = JSON.parse(
-    localStorage.getItem("aiStudyHubRecentLibraries") || "[]"
+    getUserStoredItem("aiStudyHubRecentLibraries") || "[]"
   );
 
   const recentLibrary = {
@@ -53,7 +54,7 @@ function saveRecentLibrary(library) {
     ...currentRecentLibraries.filter((item) => item.id !== library.id),
   ].slice(0, 2);
 
-  localStorage.setItem(
+  setUserStoredItem(
     "aiStudyHubRecentLibraries",
     JSON.stringify(nextRecentLibraries)
   );
@@ -61,7 +62,7 @@ function saveRecentLibrary(library) {
 
 function saveRecentWorkspace(workspace) {
   const currentRecentWorkspaces = JSON.parse(
-    localStorage.getItem("aiStudyHubRecentWorkspaces") || "[]"
+    getUserStoredItem("aiStudyHubRecentWorkspaces") || "[]"
   );
 
   const recentWorkspace = {
@@ -77,7 +78,7 @@ function saveRecentWorkspace(workspace) {
     ...currentRecentWorkspaces.filter((item) => item.id !== workspace.id),
   ].slice(0, 3);
 
-  localStorage.setItem(
+  setUserStoredItem(
     "aiStudyHubRecentWorkspaces",
     JSON.stringify(nextRecentWorkspaces)
   );

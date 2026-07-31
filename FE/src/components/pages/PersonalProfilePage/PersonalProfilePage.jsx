@@ -8,6 +8,7 @@ import {
 } from "../../../utils/profileApi";
 import defaultAvatar from "../../../assets/images/account.png";
 import { getStoredUser } from "../../../utils/authToken.js";
+import { getUserStoredItem, setUserStoredItem } from "../../../utils/userStorage.js";
 import "./PersonalProfilePage.css";
 
 const PROFILE_BIO_KEY = "aiStudyHubProfileBio";
@@ -24,15 +25,15 @@ function getLoggedInUserEmail() {
 
 function getStoredProfileBio() {
   const storedUser = getStoredUser();
-  return storedUser?.bio || localStorage.getItem(PROFILE_BIO_KEY) || "";
+  return storedUser?.bio || getUserStoredItem(PROFILE_BIO_KEY) || "";
 }
 
 function getStoredProfileName() {
   const storedUser = getStoredUser();
   return (
-    localStorage.getItem(PROFILE_NAME_KEY) ||
-    storedUser.full_name ||
+    getUserStoredItem(PROFILE_NAME_KEY) ||
     storedUser.username ||
+    storedUser.full_name ||
     "User"
   );
 }
@@ -83,7 +84,7 @@ function PersonalProfile() {
           : profileData?.libraries || [];
         const nextAvatar = profile?.avatar_url || "";
         const nextName =
-          profile?.full_name || profile?.username || profile?.email || "User";
+          profile?.username || profile?.full_name || profile?.email || "User";
 
         setUserName(nextName);
         setUserEmail(profile?.email || "");
@@ -91,7 +92,7 @@ function PersonalProfile() {
         setIsDateOfBirthPublic(profile?.is_dob_public !== false);
         const nextBio =
           profile?.bio ||
-          (isOwnProfile ? localStorage.getItem(PROFILE_BIO_KEY) || "" : "");
+          (isOwnProfile ? getUserStoredItem(PROFILE_BIO_KEY) || "" : "");
         setProfileBio(nextBio);
         setDraftBio(nextBio);
         setAvatar(nextAvatar);
@@ -247,7 +248,7 @@ function PersonalProfile() {
 
       setProfileBio(nextBio);
       setDraftBio(nextBio);
-      localStorage.setItem(PROFILE_BIO_KEY, nextBio);
+      setUserStoredItem(PROFILE_BIO_KEY, nextBio);
       setIsEditingBio(false);
       setBioStatus("Bio updated.");
     } catch (error) {

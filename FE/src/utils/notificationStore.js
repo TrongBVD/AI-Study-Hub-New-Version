@@ -1,3 +1,5 @@
+import { getUserStoredItem, setUserStoredItem } from "./userStorage.js";
+
 const NOTIFICATION_SETTINGS_KEY = "aiStudyHubNotificationSettings";
 const NOTIFICATIONS_KEY = "aiStudyHubNotifications";
 
@@ -49,7 +51,7 @@ export const defaultNotificationSettings = {
 export function getNotificationSettings() {
   try {
     const savedSettings = JSON.parse(
-      localStorage.getItem(NOTIFICATION_SETTINGS_KEY) || "{}",
+      getUserStoredItem(NOTIFICATION_SETTINGS_KEY) || "{}",
     );
 
     return {
@@ -93,13 +95,13 @@ export function getNotificationSettings() {
 }
 
 export function saveNotificationSettings(settings) {
-  localStorage.setItem(NOTIFICATION_SETTINGS_KEY, JSON.stringify(settings));
+  setUserStoredItem(NOTIFICATION_SETTINGS_KEY, JSON.stringify(settings));
   window.dispatchEvent(new Event("aiStudyHubNotificationSettingsChanged"));
 }
 
 export function getNotifications() {
   try {
-    return JSON.parse(localStorage.getItem(NOTIFICATIONS_KEY) || "[]");
+    return JSON.parse(getUserStoredItem(NOTIFICATIONS_KEY) || "[]");
   } catch (error) {
     console.error("Cannot read notifications:", error);
     return [];
@@ -107,7 +109,7 @@ export function getNotifications() {
 }
 
 export function saveNotifications(notifications) {
-  localStorage.setItem(NOTIFICATIONS_KEY, JSON.stringify(notifications));
+  setUserStoredItem(NOTIFICATIONS_KEY, JSON.stringify(notifications));
   window.dispatchEvent(new Event("aiStudyHubNotificationsChanged"));
 }
 

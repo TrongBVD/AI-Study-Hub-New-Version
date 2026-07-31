@@ -175,6 +175,129 @@ async function increaseChatUsage(userId) {
   if (insertError) throw insertError;
 }
 
+function isGuestUser(user) {
+  return user?.id === "guest" || user?.id === "00000000-0000-0000-0000-000000000000" || user?.role === "GUEST";
+}
+
+async function saveChatHistory({ userId, documentId, question, answer }) {
+  const { data: conversation, error: conversationError } = await supabase
+    .from("chat_conversations")
+    .insert({
+      user_id: userId,
+      document_id: documentId,
+      title: question.trim().slice(0, 120),
+    })
+    .select("id, document_id, title, created_at")
+    .single();
+
+  if (conversationError) throw conversationError;
+
+  const { data: messages, error: messagesError } = await supabase
+    .from("chat_messages")
+    .insert([
+      { conversation_id: conversation.id, role: "user", content: question.trim() },
+      { conversation_id: conversation.id, role: "ai", content: answer },
+    ])
+    .select("id, role, content, created_at");
+
+  if (messagesError) {
+    await supabase.from("chat_conversations").delete().eq("id", conversation.id);
+    throw messagesError;
+  }
+
+  return {
+    conversationId: conversation.id,
+    documentId: conversation.document_id,
+    title: conversation.title,
+    messages: messages || [],
+  };
+}
+
+exports.getChatHistory = async (req, res) => {
+  try {
+    if (isGuestUser(req.user)) {
+      return res.status(200).json({ status: "success", data: [] });
+    }
+
+    const { data: conversations, error: conversationsError } = await supabase
+      .from("chat_conversations")
+      .select("id, document_id, title, created_at, updated_at")
+      .eq("user_id", req.user.id)
+      .order("updated_at", { ascending: false });
+    if (conversationsError) throw conversationsError;
+
+    const conversationIds = (conversations || []).map((conversation) => conversation.id);
+    if (conversationIds.length === 0) {
+      return res.status(200).json({ status: "success", data: [] });
+    }
+
+    const { data: messages, error: messagesError } = await supabase
+      .from("chat_messages")
+      .select("id, conversation_id, role, content, created_at")
+      .in("conversation_id", conversationIds)
+      .order("created_at", { ascending: true });
+    if (messagesError) throw messagesError;
+
+    const messagesByConversation = (messages || []).reduce((result, message) => {
+      (result[message.conversation_id] ||= []).push({
+        id: message.id,
+        conversationId: message.conversation_id,
+        role: message.role,
+        text: message.content,
+        createdAt: message.created_at,
+      });
+      return result;
+    }, {});
+
+    return res.status(200).json({
+      status: "success",
+      data: (conversations || []).map((conversation) => ({
+        id: conversation.id,
+        documentId: conversation.document_id,
+        title: conversation.title,
+        createdAt: conversation.created_at,
+        messages: messagesByConversation[conversation.id] || [],
+      })),
+    });
+  } catch (error) {
+    console.error("getChatHistory error:", error);
+    return res.status(500).json({ status: "error", message: "Could not load chat history." });
+  }
+};
+
+exports.deleteChatHistoryItem = async (req, res) => {
+  try {
+    if (isGuestUser(req.user)) return res.status(204).send();
+
+    const { error } = await supabase
+      .from("chat_conversations")
+      .delete()
+      .eq("id", req.params.conversationId)
+      .eq("user_id", req.user.id);
+    if (error) throw error;
+    return res.status(204).send();
+  } catch (error) {
+    console.error("deleteChatHistoryItem error:", error);
+    return res.status(500).json({ status: "error", message: "Could not delete chat history." });
+  }
+};
+
+exports.clearChatHistory = async (req, res) => {
+  try {
+    if (isGuestUser(req.user)) return res.status(204).send();
+
+    const { error } = await supabase
+      .from("chat_conversations")
+      .delete()
+      .eq("user_id", req.user.id);
+    if (error) throw error;
+    return res.status(204).send();
+  } catch (error) {
+    console.error("clearChatHistory error:", error);
+    return res.status(500).json({ status: "error", message: "Could not clear chat history." });
+  }
+};
+
 exports.getAiSummary = async (req, res) => {
   try {
     const chatLimit = 20;
@@ -287,6 +410,14 @@ exports.chatWithDocument = async (req, res) => {
 
     const answer = await answerWithContext(question, matchedChunks);
     await increaseChatUsage(userId);
+    let chatHistory = null;
+    try {
+      chatHistory = await saveChatHistory({ userId, documentId, question, answer });
+    } catch (historyError) {
+      // Do not hide a valid AI answer if history persistence is temporarily unavailable.
+      // The frontend retains a per-user cache so the user does not lose the answer.
+      console.error("Could not save chat history:", historyError);
+    }
 
     return res.status(200).json({
       status: "success",
@@ -298,6 +429,7 @@ exports.chatWithDocument = async (req, res) => {
           chunk_index: chunk.chunk_index,
           similarity: chunk.similarity || 1,
         })),
+        chatHistory,
       },
     });
   } catch (error) {
