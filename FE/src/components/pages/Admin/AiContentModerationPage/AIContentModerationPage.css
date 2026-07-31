@@ -458,6 +458,7 @@
 
 /* Keep every main surface neutral in the white theme. */
 body[data-theme="white"] .ai-moderation-page {
+  --moderation-orange-soft: var(--accent-soft);
   background: var(--moderation-bg);
 }
 
@@ -470,6 +471,17 @@ body[data-theme="white"] .ai-moderation-page__detail-panel {
 body[data-theme="white"] .ai-moderation-page__case-row:hover,
 body[data-theme="white"] .ai-moderation-page__case-row.is-selected {
   background: var(--bg-secondary);
+}
+
+body[data-theme="white"] .ai-moderation-page__queue-header > span,
+body[data-theme="white"] .ai-moderation-page__file-icon {
+  background: var(--accent-soft);
+  color: var(--accent-color);
+}
+
+body[data-theme="white"] .ai-moderation-page__meta-grid div {
+  background: #e2e8f0;
+  border-color: #cbd5e1;
 }
 
 .ai-moderation-page__queue-card {

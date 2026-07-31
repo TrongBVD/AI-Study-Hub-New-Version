@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import Chart from "./SimpleChart.jsx";
+import Chart from "react-apexcharts";
 import {
   getActivityLogs,
   getAdminDashboard,
@@ -170,6 +170,7 @@ function AdminDashboardPage() {
 
   useEffect(() => {
     // Initial dashboard hydration is an intentional mount-time side effect.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadDashboard();
   }, []);
 
@@ -288,6 +289,23 @@ function AdminDashboardPage() {
           chart: { ...base.chart, type: "donut" },
           colors: [CHART_COLORS.olive, CHART_COLORS.muted],
           labels: ["Active", "Disabled"],
+          dataLabels: {
+            enabled: true,
+            formatter: (value) => `${Math.round(value)}%`,
+            style: {
+              fontSize: "13px",
+              fontWeight: 800,
+              colors: ["#ffffff"],
+            },
+            dropShadow: {
+              enabled: true,
+              top: 1,
+              left: 0,
+              blur: 2,
+              color: "#1f2937",
+              opacity: 0.45,
+            },
+          },
           legend: { ...base.legend, position: "bottom" },
           stroke: { colors: ["transparent"], width: 3 },
           plotOptions: { pie: { donut: { size: "68%", labels: { show: true, total: { show: true, label: "Users", formatter: () => String(users.length) } } } } },
@@ -358,7 +376,7 @@ function AdminDashboardPage() {
             <header><div><span>AI activity</span><strong>{totalAiTokens.toLocaleString()} tokens</strong></div><small>{stats?.totalAiChatsToday || 0} chats today</small></header>
             <Chart options={chartData.ai.options} series={chartData.ai.series} type="line" height={260} />
           </article>
-          <article className="admin-dashboard__chart-card">
+          <article className="admin-dashboard__chart-card admin-dashboard__chart-card--users">
             <header><div><span>User status</span><strong>{stats?.totalUsers || users.length} accounts</strong></div><small>{activeUsers} active</small></header>
             <Chart options={chartData.users.options} series={chartData.users.series} type="donut" height={250} />
           </article>

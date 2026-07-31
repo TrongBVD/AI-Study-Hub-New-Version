@@ -96,6 +96,10 @@
   transform: translateY(-3px);
 }
 
+body[data-theme="white"] .discover_user_link:hover {
+  border-color: var(--accent-color);
+}
+
 .discover_user_avatar {
   width: 3.2rem;
   height: 3.2rem;
