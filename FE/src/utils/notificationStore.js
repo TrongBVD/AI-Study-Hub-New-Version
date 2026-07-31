@@ -5,7 +5,6 @@ export const defaultNotificationSettings = {
   enabled: true,
   showBadge: true,
   sound: false,
-  browserNotification: false,
 
   discussion: {
     newTopic: true,

@@ -23,7 +23,7 @@ const ADMIN_MENU_ITEMS = [
   { icon: LuCircleHelp, label: "Issue Reports", path: "/admin/issues" },
   { icon: LuListChecks, label: "Activity Logs", path: "/admin/logs" },
   { icon: LuChartPie, label: "Usage", path: "/admin/usage" },
-  { icon: LuTrash2, label: "Deleted Workspaces", path: "/admin/workspaces/deleted" },
+  { icon: LuTrash2, label: "Workspace Deleted", path: "/admin/workspaces/deleted" },
   { icon: LuSettings, label: "Settings", path: "/admin/settings" },
 ];
 

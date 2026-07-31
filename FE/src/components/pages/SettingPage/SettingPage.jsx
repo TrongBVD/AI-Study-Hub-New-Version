@@ -730,16 +730,6 @@ function NotificationSettings({
             />
           </SettingRow>
 
-          <SettingRow
-            title="Browser notifications"
-            description="Allow desktop notifications when the browser supports them."
-          >
-            <SettingsSwitch
-              checked={notificationSettings.browserNotification}
-              onClick={() => toggleNotificationSetting("browserNotification")}
-              label="Toggle browser notifications"
-            />
-          </SettingRow>
         </div>
       </SettingsPanel>
 

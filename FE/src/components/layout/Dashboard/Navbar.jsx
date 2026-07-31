@@ -391,8 +391,6 @@ function Navbar({
           className="menu_btn"
           aria-label="Open sidebar"
           onClick={onOpenSidebar}
-          onMouseEnter={onOpenSidebar}
-          onFocus={onOpenSidebar}
         >
           <LuMenu aria-hidden="true" />
         </button>

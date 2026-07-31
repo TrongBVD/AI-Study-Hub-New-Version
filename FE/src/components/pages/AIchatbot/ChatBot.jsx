@@ -12,7 +12,6 @@ import {
   FaChevronDown,
   FaHistory,
   FaPlus,
-  FaSearch,
   FaTrash,
 } from "react-icons/fa";
 import { RiRobot2Fill } from "react-icons/ri";
@@ -71,11 +70,13 @@ function ChatBot({ defaultOpen = false, showBubble = true }) {
   const [selectedLibraryId, setSelectedLibraryId] = useState("");
   const [selectedFolderId, setSelectedFolderId] = useState("");
   const [selectedDocumentId, setSelectedDocumentId] = useState("");
+  const [isLibraryMenuOpen, setIsLibraryMenuOpen] = useState(false);
   const [isFileMenuOpen, setIsFileMenuOpen] = useState(false);
 
   const bottomRef = useRef(null);
   const chatBodyRef = useRef(null);
   const processedPendingChatRef = useRef("");
+  const librarySelectRef = useRef(null);
   const fileSelectRef = useRef(null);
   const activeChatRequestRef = useRef(null);
   const activeUserMessageRef = useRef(null);
@@ -113,6 +114,9 @@ function ChatBot({ defaultOpen = false, showBubble = true }) {
   const selectedDocument = documents.find(
     (doc) => String(doc.id) === String(selectedDocumentId),
   );
+  const selectedLibrary = libraries.find(
+    (library) => String(library.id) === String(selectedLibraryId),
+  );
   const conversationItems = history.filter((message) => message.role === "user");
   const isDefaultChat =
     messages.length === 1 && messages[0].id === INITIAL_MESSAGE.id;
@@ -130,12 +134,16 @@ function ChatBot({ defaultOpen = false, showBubble = true }) {
 
   useEffect(() => {
     const handlePointerDown = (event) => {
+      if (!librarySelectRef.current?.contains(event.target)) {
+        setIsLibraryMenuOpen(false);
+      }
       if (!fileSelectRef.current?.contains(event.target)) {
         setIsFileMenuOpen(false);
       }
     };
     const handleEscape = (event) => {
       if (event.key === "Escape") {
+        setIsLibraryMenuOpen(false);
         setIsFileMenuOpen(false);
       }
     };
@@ -377,6 +385,7 @@ function ChatBot({ defaultOpen = false, showBubble = true }) {
     );
 
     setSelectedLibraryId(libraryId);
+    setIsLibraryMenuOpen(false);
     setIsFileMenuOpen(false);
     setSelectedFolderId(libraryHasFolders ? "" : ROOT_FOLDER_VALUE);
     setSelectedDocumentId(
@@ -441,37 +450,61 @@ function ChatBot({ defaultOpen = false, showBubble = true }) {
                 <FaPlus />
                 <span>New chat</span>
               </button>
-              <button
-                type="button"
-                className="icon-search-btn"
-                aria-label="Search chat"
-              >
-                <FaSearch />
-              </button>
             </div>
 
             <div className="document-select-container">
               <label htmlFor="ai-chat-library">Library</label>
-              <div className="chat-select-shell">
+              <div
+                className={`chat-select-shell chat-custom-select ${
+                  isLibraryMenuOpen ? "is-open" : ""
+                }`}
+                ref={librarySelectRef}
+              >
                 <HiOutlineArchiveBox className="chat-select-leading-icon" />
-                <select
+                <button
+                  type="button"
                   id="ai-chat-library"
-                  value={selectedLibraryId}
-                  onChange={(event) => handleLibraryChange(event.target.value)}
-                  className="document-select"
+                  className="document-select chat-custom-select-trigger"
+                  aria-haspopup="listbox"
+                  aria-expanded={isLibraryMenuOpen}
+                  onClick={() => setIsLibraryMenuOpen((current) => !current)}
                   disabled={loading}
                 >
-                  {libraries.length === 0 && (
-                    <option value="">No libraries available</option>
-                  )}
-
-                  {libraries.map((library) => (
-                    <option key={library.id} value={library.id}>
-                      {library.name || library.libraryName || "Untitled library"}
-                    </option>
-                  ))}
-                </select>
+                  <span>
+                    {selectedLibrary
+                      ? selectedLibrary.name || selectedLibrary.libraryName || "Untitled library"
+                      : libraries.length === 0
+                        ? "No libraries available"
+                        : "Choose a library"}
+                  </span>
+                </button>
                 <FaChevronDown className="chat-select-chevron" />
+
+                {isLibraryMenuOpen && (
+                  <div className="chat-file-options chat-library-options" role="listbox">
+                    {libraries.length === 0 ? (
+                      <div className="chat-file-option-empty">No libraries available</div>
+                    ) : (
+                      libraries.map((library) => {
+                        const isSelected = String(library.id) === String(selectedLibraryId);
+                        return (
+                          <button
+                            type="button"
+                            role="option"
+                            aria-selected={isSelected}
+                            className={`chat-file-option ${isSelected ? "is-selected" : ""}`}
+                            key={library.id}
+                            onClick={() => handleLibraryChange(library.id)}
+                          >
+                            <HiOutlineArchiveBox />
+                            <span>{library.name || library.libraryName || "Untitled library"}</span>
+                            {isSelected && <FaCheck />}
+                          </button>
+                        );
+                      })
+                    )}
+                  </div>
+                )}
               </div>
             </div>
 

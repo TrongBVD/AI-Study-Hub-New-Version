@@ -45,8 +45,6 @@ function PersonalProfile() {
 
   const [userName, setUserName] = useState(getStoredProfileName);
   const [userEmail, setUserEmail] = useState(getLoggedInUserEmail);
-  const [dateOfBirth, setDateOfBirth] = useState("");
-  const [isDateOfBirthPublic, setIsDateOfBirthPublic] = useState(true);
   const [profileBio, setProfileBio] = useState(getStoredProfileBio);
   const [draftBio, setDraftBio] = useState(getStoredProfileBio);
   const [isEditingBio, setIsEditingBio] = useState(false);
@@ -87,8 +85,6 @@ function PersonalProfile() {
 
         setUserName(nextName);
         setUserEmail(profile?.email || "");
-        setDateOfBirth(profile?.date_of_birth || "");
-        setIsDateOfBirthPublic(profile?.is_dob_public !== false);
         const nextBio =
           profile?.bio ||
           (isOwnProfile ? localStorage.getItem(PROFILE_BIO_KEY) || "" : "");
@@ -269,10 +265,6 @@ function PersonalProfile() {
   }
 
   const displayAvatar = avatar || defaultAvatar;
-  const birthdayText =
-    dateOfBirth && (isOwnProfile || isDateOfBirthPublic)
-      ? new Date(dateOfBirth).toDateString()
-      : "Birthday unavailable";
   const bioWordCount = draftBio.trim() === "" ? 0 : draftBio.trim().split(/\s+/).length;
   const sortedLibraries = [...libraries].sort(
     (a, b) => getLibraryStars(b) - getLibraryStars(a),
@@ -306,7 +298,6 @@ function PersonalProfile() {
           <div className="profile_name_row">
             <h2>{userName}</h2>
             <h2>{userEmail || "Email unavailable"}</h2>
-            <h2>{birthdayText}</h2>
           </div>
         </div>
 
