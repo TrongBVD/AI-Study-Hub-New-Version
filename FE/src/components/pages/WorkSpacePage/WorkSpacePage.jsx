@@ -5,6 +5,8 @@ import {
   useNavigate,
   useSearchParams,
 } from "react-router-dom";
+import ActionPopup from "../../common/ActionPopup/ActionPopup.jsx";
+import useActionPopup from "../../common/ActionPopup/useActionPopup.js";
 import { createAppNotification } from "../../../utils/notificationStore.js";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -299,9 +301,18 @@ function WorkSpacePage() {
   const { workspaceId } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
+  const {
+    popup: actionPopup,
+    showConfirm,
+    resolvePopup: resolveActionPopup,
+  } = useActionPopup();
   const [activeTab, setActiveTab] = useState("discussion");
   const [isLeaveBlockedModalOpen, setIsLeaveBlockedModalOpen] =
     useState(false);
+  const [isDeleteWorkspaceModalOpen, setIsDeleteWorkspaceModalOpen] =
+    useState(false);
+  const [isDeletingWorkspace, setIsDeletingWorkspace] = useState(false);
+  const [deleteWorkspaceError, setDeleteWorkspaceError] = useState("");
   const [isTopicFormOpen, setIsTopicFormOpen] = useState(false);
   const [activeTopicSection, setActiveTopicSection] = useState("details");
   const [isUploadingSolution, setIsUploadingSolution] = useState(false);
@@ -370,17 +381,23 @@ function WorkSpacePage() {
   const [activeMemberProfileId, setActiveMemberProfileId] = useState("");
 
   useEffect(() => {
-    if (!isLeaveBlockedModalOpen) return undefined;
+    if (!isLeaveBlockedModalOpen && !isDeleteWorkspaceModalOpen) {
+      return undefined;
+    }
 
     const handlePopupKeyDown = (event) => {
       if (event.key === "Escape") {
         setIsLeaveBlockedModalOpen(false);
+        if (!isDeletingWorkspace) {
+          setIsDeleteWorkspaceModalOpen(false);
+          setDeleteWorkspaceError("");
+        }
       }
     };
 
     document.addEventListener("keydown", handlePopupKeyDown);
     return () => document.removeEventListener("keydown", handlePopupKeyDown);
-  }, [isLeaveBlockedModalOpen]);
+  }, [isDeleteWorkspaceModalOpen, isDeletingWorkspace, isLeaveBlockedModalOpen]);
 
   useEffect(() => {
     try {
@@ -1149,7 +1166,7 @@ function WorkSpacePage() {
 
     if (!fileToDelete) return;
 
-    const confirmDelete = window.confirm(
+    const confirmDelete = await showConfirm(
       `Delete "${fileToDelete.fileName || fileToDelete.name}" from this topic?`,
     );
 
@@ -1184,7 +1201,7 @@ function WorkSpacePage() {
     if (!selectedTopic) return;
     if (!requireTopicPermission("delete topics")) return;
 
-    const confirmDelete = window.confirm(
+    const confirmDelete = await showConfirm(
       `Delete topic "${selectedTopic.title}"?`,
     );
 
@@ -1203,7 +1220,7 @@ function WorkSpacePage() {
     }
   }
 
-  function resolveWorkspaceUploadSelection(files) {
+  async function resolveWorkspaceUploadSelection(files) {
     const { candidates, duplicateBatchFileNames } =
       buildWorkspaceUploadCandidates(files, workspaceDocuments);
 
@@ -1219,11 +1236,11 @@ function WorkSpacePage() {
   const replacementDocumentIds = [];
   const keptExistingFileNames = [];
 
-  candidates.forEach(({ file, existingDocument }) => {
+  for (const { file, existingDocument } of candidates) {
     if (!existingDocument) {
       acceptedFiles.push(file);
       replacementDocumentIds.push(null);
-      return;
+      continue;
     }
 
     const existingUploaderId = String(
@@ -1240,21 +1257,26 @@ function WorkSpacePage() {
         }. Only the original uploader or a workspace admin can replace it.`,
       );
       keptExistingFileNames.push(file.name);
-      return;
+      continue;
     }
 
-    const shouldReplace = window.confirm(
+    const shouldReplace = await showConfirm(
       `"${file.name}" has already been uploaded to this workspace.\n\nSelect OK to replace the existing document, or Cancel to keep the current version.`,
+      {
+        title: "Replace existing document?",
+        confirmText: "Replace document",
+        cancelText: "Keep current",
+      },
     );
 
     if (!shouldReplace) {
       keptExistingFileNames.push(file.name);
-      return;
+      continue;
     }
 
     acceptedFiles.push(file);
     replacementDocumentIds.push(String(existingDocument.id));
-  });
+  }
 
   return {
     acceptedFiles,
@@ -1320,7 +1342,7 @@ async function uploadWorkspaceFilesWithDuplicateConfirmation(
     const duplicateNames = duplicateDocuments
       .map((duplicate) => duplicate.fileName)
       .filter(Boolean);
-    const shouldReplace = window.confirm(
+    const shouldReplace = await showConfirm(
       `${duplicateNames.join(", ")} ${
         duplicateNames.length === 1 ? "has" : "have"
       } already been uploaded to this workspace.\n\nSelect OK to replace the existing ${
@@ -1360,7 +1382,7 @@ async function handleTopicFileChange(e) {
   }
 
 const { acceptedFiles, replacementDocumentIds, keptExistingFileNames } =
-  resolveWorkspaceUploadSelection(selectedFiles);
+  await resolveWorkspaceUploadSelection(selectedFiles);
 
 if (acceptedFiles.length === 0) {
   setDiscussionStatus(
@@ -2035,7 +2057,7 @@ async function handleUpdateMemberRole(userId, nextRole) {
 async function handleTransferAdminOwnership(targetUserId, targetUserName) {
   if (!targetUserId) return;
 
-  const isConfirmed = window.confirm(
+  const isConfirmed = await showConfirm(
     `Are you sure you want to transfer Admin ownership to ${targetUserName || "this member"}? Your role will become Contributor.`
   );
   if (!isConfirmed) return;
@@ -2060,7 +2082,7 @@ async function handleTransferAdminOwnership(targetUserId, targetUserName) {
 async function handleRemoveWorkspaceMember(userId, memberName) {
   if (!userId) return;
 
-  const isConfirmed = window.confirm(
+  const isConfirmed = await showConfirm(
     `Remove ${memberName || "this member"} from the workspace?`,
   );
 
@@ -2202,18 +2224,24 @@ async function handleRenameWorkspace(e) {
 async function handleDeleteWorkspace() {
   if (!requireWorkspaceAdminPermission("delete this workspace")) return;
 
-  const isConfirmed = window.confirm(
-    "Are you sure you want to delete this workspace?",
-  );
+  setDeleteWorkspaceError("");
+  setIsDeleteWorkspaceModalOpen(true);
+}
 
-  if (!isConfirmed) return;
-
+async function handleConfirmDeleteWorkspace() {
   try {
+    setIsDeletingWorkspace(true);
+    setDeleteWorkspaceError("");
     await deleteWorkspace(workspaceId);
+    setIsDeleteWorkspaceModalOpen(false);
     navigate("/dashboard/workspaces");
   } catch (err) {
     console.error("Failed to delete workspace:", err);
-    alert("Failed to delete workspace on server.");
+    setDeleteWorkspaceError(
+      err.response?.data?.message || "Failed to delete workspace on server.",
+    );
+  } finally {
+    setIsDeletingWorkspace(false);
   }
 }
 
@@ -2223,7 +2251,7 @@ async function handleLeaveWorkspace() {
     return;
   }
 
-  const isConfirmed = window.confirm(
+  const isConfirmed = await showConfirm(
     "Are you sure you want to leave this workspace?",
   );
 
@@ -2274,10 +2302,10 @@ async function handleGenerateWorkspaceFlashcards() {
   }
 }
 
-function handleWorkspaceDocumentFileChange(event) {
+async function handleWorkspaceDocumentFileChange(event) {
   const selectedFiles = Array.from(event.target.files || []);
   const { acceptedFiles, replacementDocumentIds, keptExistingFileNames } =
-    resolveWorkspaceUploadSelection(selectedFiles);
+    await resolveWorkspaceUploadSelection(selectedFiles);
 
   setWorkspaceUploadFiles(acceptedFiles);
   setWorkspaceReplacementDocumentIds(replacementDocumentIds);
@@ -5600,6 +5628,96 @@ return (
 
     {renderInviteMemberModal()}
 
+    {isDeleteWorkspaceModalOpen && (
+      <div
+        className="workspace_leave_blocked_overlay"
+        onMouseDown={(event) => {
+          if (
+            event.target === event.currentTarget &&
+            !isDeletingWorkspace
+          ) {
+            setIsDeleteWorkspaceModalOpen(false);
+            setDeleteWorkspaceError("");
+          }
+        }}
+      >
+        <section
+          className="workspace_leave_blocked_modal workspace_delete_confirm_modal"
+          role="alertdialog"
+          aria-modal="true"
+          aria-labelledby="workspace-delete-confirm-title"
+          aria-describedby="workspace-delete-confirm-description"
+        >
+          <button
+            type="button"
+            className="workspace_leave_blocked_close"
+            aria-label="Close delete confirmation"
+            disabled={isDeletingWorkspace}
+            onClick={() => {
+              setIsDeleteWorkspaceModalOpen(false);
+              setDeleteWorkspaceError("");
+            }}
+          >
+            <i className="ti-close"></i>
+          </button>
+
+          <div
+            className="workspace_leave_blocked_icon workspace_delete_confirm_icon"
+            aria-hidden="true"
+          >
+            <i className="ti-trash"></i>
+          </div>
+
+          <span className="workspace_leave_blocked_eyebrow">
+            Permanent action
+          </span>
+          <h2 id="workspace-delete-confirm-title">Delete this workspace?</h2>
+          <p id="workspace-delete-confirm-description">
+            This workspace and its content will be removed for every member.
+            This action cannot be undone.
+          </p>
+
+          <div className="workspace_delete_confirm_warning">
+            <i className="ti-alert" aria-hidden="true"></i>
+            <span>
+              Make sure you no longer need the workspace documents,
+              discussions and study data before continuing.
+            </span>
+          </div>
+
+          {deleteWorkspaceError && (
+            <p className="workspace_delete_confirm_error" role="alert">
+              {deleteWorkspaceError}
+            </p>
+          )}
+
+          <div className="workspace_leave_blocked_actions">
+            <button
+              type="button"
+              className="workspace_leave_blocked_cancel"
+              disabled={isDeletingWorkspace}
+              onClick={() => {
+                setIsDeleteWorkspaceModalOpen(false);
+                setDeleteWorkspaceError("");
+              }}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              className="workspace_delete_confirm_primary"
+              autoFocus
+              disabled={isDeletingWorkspace}
+              onClick={handleConfirmDeleteWorkspace}
+            >
+              <i className={isDeletingWorkspace ? "ti-reload" : "ti-trash"}></i>
+              {isDeletingWorkspace ? "Deleting..." : "Delete workspace"}
+            </button>
+          </div>
+        </section>
+      </div>
+    )}
+
     {isLeaveBlockedModalOpen && (
       <div
         className="workspace_leave_blocked_overlay"
@@ -5672,6 +5790,8 @@ return (
         </section>
       </div>
     )}
+
+    <ActionPopup popup={actionPopup} onResolve={resolveActionPopup} />
   </main>
 );
 }
