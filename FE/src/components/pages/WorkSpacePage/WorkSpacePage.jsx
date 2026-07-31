@@ -1024,22 +1024,24 @@ function WorkSpacePage() {
 
       if (newTopicAttachments.length > 0) {
         try {
-          const uploadedDocuments = await uploadDocuments(
-            newTopicAttachments,
-            workspaceId,
-          );
-          const attachments = await Promise.all(
-            (uploadedDocuments || []).map((document) =>
-              addWorkspaceDiscussionAttachment(workspaceId, createdTopic.id, {
-                fileName: document.title,
-                fileUrl: document.fileUrl || document.file_url,
-                fileSizeBytes:
-                  document.fileSizeBytes || document.file_size_bytes || 0,
-                mimeType: document.mimeType || "",
-              }),
-            ),
-          );
-          topicWithAttachments = { ...createdTopic, files: attachments };
+          const { uploadedDocuments } =
+            await uploadWorkspaceFilesWithDuplicateConfirmation(
+              newTopicAttachments,
+            );
+          if (uploadedDocuments && uploadedDocuments.length > 0) {
+            const attachments = await Promise.all(
+              uploadedDocuments.map((document) =>
+                addWorkspaceDiscussionAttachment(workspaceId, createdTopic.id, {
+                  fileName: document.title,
+                  fileUrl: document.fileUrl || document.file_url,
+                  fileSizeBytes:
+                    document.fileSizeBytes || document.file_size_bytes || 0,
+                  mimeType: document.mimeType || "",
+                }),
+              ),
+            );
+            topicWithAttachments = { ...createdTopic, files: attachments };
+          }
         } catch (error) {
           attachmentError = error;
           console.error("Cannot upload new topic attachments:", error);

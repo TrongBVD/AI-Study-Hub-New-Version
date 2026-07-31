@@ -2685,7 +2685,9 @@ exports.transferAdminOwnership = async (req, res) => {
       });
     }
 
-    const { error: transferError } = await supabase.rpc(
+    let transferError = null;
+
+    const { error: rpcError } = await supabase.rpc(
       "transfer_workspace_ownership",
       {
         p_workspace_id: workspaceId,
@@ -2693,6 +2695,65 @@ exports.transferAdminOwnership = async (req, res) => {
         p_target_user_id: targetUserId,
       },
     );
+
+    if (rpcError) {
+      const isMissingRpc =
+        rpcError.code === "PGRST202" ||
+        String(rpcError.message).includes("does not exist") ||
+        String(rpcError.message).includes("function");
+
+      if (isMissingRpc) {
+        // Fallback: Perform table updates directly using Service Role
+        const { data: wsData, error: wsError } = await supabase
+          .from("workspaces")
+          .select("created_by")
+          .eq("id", workspaceId)
+          .is("deleted_at", null)
+          .maybeSingle();
+
+        if (wsError || !wsData) {
+          return res.status(404).json({
+            status: "error",
+            message: "Workspace not found.",
+          });
+        }
+
+        if (String(wsData.created_by) !== String(currentUserId)) {
+          return res.status(403).json({
+            status: "error",
+            message: "Only the current workspace owner can transfer ownership.",
+          });
+        }
+
+        // 1. Promote target user to Admin in workspace_members
+        const { error: updateTargetError } = await supabase
+          .from("workspace_members")
+          .update({ role: "Admin" })
+          .eq("workspace_id", workspaceId)
+          .eq("user_id", targetUserId);
+
+        if (updateTargetError) throw updateTargetError;
+
+        // 2. Demote current owner to Viewer/Contributor in workspace_members
+        const { error: updateOwnerError } = await supabase
+          .from("workspace_members")
+          .update({ role: "Viewer" })
+          .eq("workspace_id", workspaceId)
+          .eq("user_id", currentUserId);
+
+        if (updateOwnerError) throw updateOwnerError;
+
+        // 3. Update created_by in workspaces table
+        const { error: updateWsOwnerError } = await supabase
+          .from("workspaces")
+          .update({ created_by: targetUserId })
+          .eq("id", workspaceId);
+
+        if (updateWsOwnerError) throw updateWsOwnerError;
+      } else {
+        transferError = rpcError;
+      }
+    }
 
     if (transferError) {
       if (String(transferError.message).includes("WORKSPACE_OWNER_REQUIRED")) {
@@ -2722,21 +2783,25 @@ exports.transferAdminOwnership = async (req, res) => {
     const workspaceName = access.workspace.name || "Workspace";
 
     // 3. Send notification letter to target user
-    await supabase.from("activity_logs").insert({
-      user_id: targetUserId,
-      admin_id: currentUserId,
-      action_type: "WORKSPACE_ROLE_CHANGED",
-      entity_type: "workspace",
-      entity_id: workspaceId,
-      old_data: { role: targetMember.role },
-      new_data: {
-        role: "Admin",
-        workspaceName,
-        changedBy: currentUserId,
-        notificationType: "roleChanged",
-      },
-      details: `You have been promoted to Admin of workspace "${workspaceName}". Admin ownership was transferred to you by ${currentAdminName}.`,
-    });
+    try {
+      await supabase.from("activity_logs").insert({
+        user_id: targetUserId,
+        admin_id: currentUserId,
+        action_type: "WORKSPACE_ROLE_CHANGED",
+        entity_type: "workspace",
+        entity_id: workspaceId,
+        old_data: { role: targetMember.role },
+        new_data: {
+          role: "Admin",
+          workspaceName,
+          changedBy: currentUserId,
+          notificationType: "roleChanged",
+        },
+        details: `You have been promoted to Admin of workspace "${workspaceName}". Admin ownership was transferred to you by ${currentAdminName}.`,
+      });
+    } catch (logError) {
+      console.warn("Could not insert activity log for ownership transfer:", logError);
+    }
 
     return res.status(200).json({
       status: "success",

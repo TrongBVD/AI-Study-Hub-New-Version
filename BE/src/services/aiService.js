@@ -226,7 +226,7 @@ ${String(text || "").slice(0, 12000)}
  *
  * Supabase pgvector column is VECTOR(768), so outputDimensionality = 768.
  */
-async function createEmbedding(text, mode = "document") {
+async function createEmbedding(text, mode = "document", maxRetries = 3) {
   const ai = await getAiClient();
 
   const prefix =
@@ -234,21 +234,42 @@ async function createEmbedding(text, mode = "document") {
       ? "Represent this question for retrieving relevant study document chunks: "
       : "Represent this study document chunk for retrieval: ";
 
-  const response = await ai.models.embedContent({
-    model: process.env.GEMINI_EMBEDDING_MODEL || "gemini-embedding-001",
-    contents: prefix + String(text || "").slice(0, 7000),
-    config: {
-      outputDimensionality: 768,
-    },
-  });
+  const promptText = prefix + String(text || "").slice(0, 7000);
 
-  const values = response.embeddings?.[0]?.values;
+  for (let attempt = 1; attempt <= maxRetries; attempt += 1) {
+    try {
+      const response = await ai.models.embedContent({
+        model: process.env.GEMINI_EMBEDDING_MODEL || "gemini-embedding-2",
+        contents: promptText,
+        config: {
+          outputDimensionality: 768,
+        },
+      });
 
-  if (!values || !Array.isArray(values)) {
-    throw new Error("Could not create embedding from Gemini.");
+      const values = response.embeddings?.[0]?.values;
+
+      if (!values || !Array.isArray(values)) {
+        throw new Error("Could not create embedding from Gemini.");
+      }
+
+      return values;
+    } catch (error) {
+      const statusCode = Number(error?.status || error?.statusCode);
+      const isQuotaError =
+        statusCode === 429 || String(error?.message).includes("quota");
+
+      if (isQuotaError && attempt < maxRetries) {
+        const delayMs = attempt * 2500;
+        console.warn(
+          `[Gemini Embedding] 429 Rate-limited/Quota exceeded. Retrying batch in ${delayMs}ms (Attempt ${attempt}/${maxRetries})...`,
+        );
+        await new Promise((resolve) => setTimeout(resolve, delayMs));
+        continue;
+      }
+
+      throw error;
+    }
   }
-
-  return values;
 }
 
 /**
