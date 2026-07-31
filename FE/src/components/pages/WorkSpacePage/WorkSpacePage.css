@@ -7277,6 +7277,63 @@ body[data-theme] .workspace_delete_btn.workspace_transfer_admin_btn:hover {
   box-shadow: 0 10px 22px color-mix(in srgb, var(--accent-color) 24%, transparent);
 }
 
+.workspace_delete_confirm_modal {
+  width: min(500px, 100%);
+}
+
+.workspace_delete_confirm_icon {
+  border-radius: 50%;
+  box-shadow: 0 12px 28px color-mix(in srgb, var(--danger-color) 24%, transparent);
+}
+
+.workspace_delete_confirm_warning {
+  border: 1px solid color-mix(in srgb, var(--danger-color) 32%, var(--border-color));
+  border-radius: 14px;
+  padding: 13px 14px;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  background: var(--danger-bg);
+  color: var(--text-secondary);
+  text-align: left;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.workspace_delete_confirm_warning i {
+  margin-top: 2px;
+  color: var(--danger-color);
+  font-size: 16px;
+}
+
+.workspace_delete_confirm_error {
+  margin: 12px 0 0 !important;
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: var(--danger-bg);
+  color: var(--danger-color) !important;
+  font-size: 12px !important;
+  font-weight: 750;
+  text-align: left;
+}
+
+.workspace_delete_confirm_primary {
+  border: 1px solid var(--danger-color);
+  background: var(--danger-color);
+  color: #fff;
+  box-shadow: 0 10px 22px color-mix(in srgb, var(--danger-color) 25%, transparent);
+}
+
+.workspace_delete_confirm_primary:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--danger-color) 84%, #000);
+}
+
+.workspace_delete_confirm_modal button:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+  transform: none;
+}
+
 @keyframes workspace-leave-overlay-in {
   from { opacity: 0; }
   to { opacity: 1; }

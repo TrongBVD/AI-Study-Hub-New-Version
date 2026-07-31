@@ -302,6 +302,10 @@ function WorkSpacePage() {
   const [activeTab, setActiveTab] = useState("discussion");
   const [isLeaveBlockedModalOpen, setIsLeaveBlockedModalOpen] =
     useState(false);
+  const [isDeleteWorkspaceModalOpen, setIsDeleteWorkspaceModalOpen] =
+    useState(false);
+  const [isDeletingWorkspace, setIsDeletingWorkspace] = useState(false);
+  const [deleteWorkspaceError, setDeleteWorkspaceError] = useState("");
   const [isTopicFormOpen, setIsTopicFormOpen] = useState(false);
   const [activeTopicSection, setActiveTopicSection] = useState("details");
   const [isUploadingSolution, setIsUploadingSolution] = useState(false);
@@ -370,17 +374,23 @@ function WorkSpacePage() {
   const [activeMemberProfileId, setActiveMemberProfileId] = useState("");
 
   useEffect(() => {
-    if (!isLeaveBlockedModalOpen) return undefined;
+    if (!isLeaveBlockedModalOpen && !isDeleteWorkspaceModalOpen) {
+      return undefined;
+    }
 
     const handlePopupKeyDown = (event) => {
       if (event.key === "Escape") {
         setIsLeaveBlockedModalOpen(false);
+        if (!isDeletingWorkspace) {
+          setIsDeleteWorkspaceModalOpen(false);
+          setDeleteWorkspaceError("");
+        }
       }
     };
 
     document.addEventListener("keydown", handlePopupKeyDown);
     return () => document.removeEventListener("keydown", handlePopupKeyDown);
-  }, [isLeaveBlockedModalOpen]);
+  }, [isDeleteWorkspaceModalOpen, isDeletingWorkspace, isLeaveBlockedModalOpen]);
 
   useEffect(() => {
     try {
@@ -2202,18 +2212,24 @@ async function handleRenameWorkspace(e) {
 async function handleDeleteWorkspace() {
   if (!requireWorkspaceAdminPermission("delete this workspace")) return;
 
-  const isConfirmed = window.confirm(
-    "Are you sure you want to delete this workspace?",
-  );
+  setDeleteWorkspaceError("");
+  setIsDeleteWorkspaceModalOpen(true);
+}
 
-  if (!isConfirmed) return;
-
+async function handleConfirmDeleteWorkspace() {
   try {
+    setIsDeletingWorkspace(true);
+    setDeleteWorkspaceError("");
     await deleteWorkspace(workspaceId);
+    setIsDeleteWorkspaceModalOpen(false);
     navigate("/dashboard/workspaces");
   } catch (err) {
     console.error("Failed to delete workspace:", err);
-    alert("Failed to delete workspace on server.");
+    setDeleteWorkspaceError(
+      err.response?.data?.message || "Failed to delete workspace on server.",
+    );
+  } finally {
+    setIsDeletingWorkspace(false);
   }
 }
 
@@ -5599,6 +5615,96 @@ return (
     {activeTab === "settings" && renderSettingsTab()}
 
     {renderInviteMemberModal()}
+
+    {isDeleteWorkspaceModalOpen && (
+      <div
+        className="workspace_leave_blocked_overlay"
+        onMouseDown={(event) => {
+          if (
+            event.target === event.currentTarget &&
+            !isDeletingWorkspace
+          ) {
+            setIsDeleteWorkspaceModalOpen(false);
+            setDeleteWorkspaceError("");
+          }
+        }}
+      >
+        <section
+          className="workspace_leave_blocked_modal workspace_delete_confirm_modal"
+          role="alertdialog"
+          aria-modal="true"
+          aria-labelledby="workspace-delete-confirm-title"
+          aria-describedby="workspace-delete-confirm-description"
+        >
+          <button
+            type="button"
+            className="workspace_leave_blocked_close"
+            aria-label="Close delete confirmation"
+            disabled={isDeletingWorkspace}
+            onClick={() => {
+              setIsDeleteWorkspaceModalOpen(false);
+              setDeleteWorkspaceError("");
+            }}
+          >
+            <i className="ti-close"></i>
+          </button>
+
+          <div
+            className="workspace_leave_blocked_icon workspace_delete_confirm_icon"
+            aria-hidden="true"
+          >
+            <i className="ti-trash"></i>
+          </div>
+
+          <span className="workspace_leave_blocked_eyebrow">
+            Permanent action
+          </span>
+          <h2 id="workspace-delete-confirm-title">Delete this workspace?</h2>
+          <p id="workspace-delete-confirm-description">
+            This workspace and its content will be removed for every member.
+            This action cannot be undone.
+          </p>
+
+          <div className="workspace_delete_confirm_warning">
+            <i className="ti-alert" aria-hidden="true"></i>
+            <span>
+              Make sure you no longer need the workspace documents,
+              discussions and study data before continuing.
+            </span>
+          </div>
+
+          {deleteWorkspaceError && (
+            <p className="workspace_delete_confirm_error" role="alert">
+              {deleteWorkspaceError}
+            </p>
+          )}
+
+          <div className="workspace_leave_blocked_actions">
+            <button
+              type="button"
+              className="workspace_leave_blocked_cancel"
+              disabled={isDeletingWorkspace}
+              onClick={() => {
+                setIsDeleteWorkspaceModalOpen(false);
+                setDeleteWorkspaceError("");
+              }}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              className="workspace_delete_confirm_primary"
+              autoFocus
+              disabled={isDeletingWorkspace}
+              onClick={handleConfirmDeleteWorkspace}
+            >
+              <i className={isDeletingWorkspace ? "ti-reload" : "ti-trash"}></i>
+              {isDeletingWorkspace ? "Deleting..." : "Delete workspace"}
+            </button>
+          </div>
+        </section>
+      </div>
+    )}
 
     {isLeaveBlockedModalOpen && (
       <div
