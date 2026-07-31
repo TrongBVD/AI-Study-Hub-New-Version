@@ -162,14 +162,14 @@ function PersonalProfile() {
     const { naturalWidth, naturalHeight } = e.target;
     const containerSize = 300;
     const isLandscape = naturalWidth > naturalHeight;
-    const w = isLandscape
+    const imageWidth = isLandscape
       ? (naturalWidth / naturalHeight) * containerSize
       : containerSize;
-    const h = isLandscape
+    const imageHeight = isLandscape
       ? containerSize
       : (naturalHeight / naturalWidth) * containerSize;
 
-    setImgSize({ width: w, height: h });
+    setImgSize({ width: imageWidth, height: imageHeight });
     setPos({ x: 0, y: 0 });
     setZoom(1);
   };
