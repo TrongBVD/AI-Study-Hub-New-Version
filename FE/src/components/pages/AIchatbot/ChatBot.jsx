@@ -1,5 +1,15 @@
 import { useEffect, useRef, useState } from "react";
 import api from "../../../utils/api.js";
+import {
+  clearChatHistory as clearPersistedChatHistory,
+  deleteChatHistory as deletePersistedChatHistory,
+  getChatHistory as getPersistedChatHistory,
+} from "../../../utils/aiApi.js";
+import {
+  getUserStoredItem,
+  removeUserStoredItem,
+  setUserStoredItem,
+} from "../../../utils/userStorage.js";
 import "./ChatBot.css";
 import chatBookLogo from "../../../assets/images/ChatBookLogo.svg";
 
@@ -12,7 +22,6 @@ import {
   FaChevronDown,
   FaHistory,
   FaPlus,
-  FaSearch,
   FaTrash,
 } from "react-icons/fa";
 import { RiRobot2Fill } from "react-icons/ri";
@@ -42,7 +51,7 @@ const STARTER_PROMPTS = [
 
 function loadStoredHistory() {
   try {
-    const parsed = JSON.parse(localStorage.getItem(CHAT_HISTORY_KEY) || "[]");
+    const parsed = JSON.parse(getUserStoredItem(CHAT_HISTORY_KEY) || "[]");
     return Array.isArray(parsed) ? parsed : [];
   } catch {
     return [];
@@ -71,11 +80,13 @@ function ChatBot({ defaultOpen = false, showBubble = true }) {
   const [selectedLibraryId, setSelectedLibraryId] = useState("");
   const [selectedFolderId, setSelectedFolderId] = useState("");
   const [selectedDocumentId, setSelectedDocumentId] = useState("");
+  const [isLibraryMenuOpen, setIsLibraryMenuOpen] = useState(false);
   const [isFileMenuOpen, setIsFileMenuOpen] = useState(false);
 
   const bottomRef = useRef(null);
   const chatBodyRef = useRef(null);
   const processedPendingChatRef = useRef("");
+  const librarySelectRef = useRef(null);
   const fileSelectRef = useRef(null);
   const activeChatRequestRef = useRef(null);
   const activeUserMessageRef = useRef(null);
@@ -113,13 +124,45 @@ function ChatBot({ defaultOpen = false, showBubble = true }) {
   const selectedDocument = documents.find(
     (doc) => String(doc.id) === String(selectedDocumentId),
   );
+  const selectedLibrary = libraries.find(
+    (library) => String(library.id) === String(selectedLibraryId),
+  );
   const conversationItems = history.filter((message) => message.role === "user");
   const isDefaultChat =
     messages.length === 1 && messages[0].id === INITIAL_MESSAGE.id;
 
   useEffect(() => {
-    localStorage.setItem(CHAT_HISTORY_KEY, JSON.stringify(history));
+    setUserStoredItem(CHAT_HISTORY_KEY, JSON.stringify(history));
   }, [history]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadPersistedHistory() {
+      try {
+        const conversations = await getPersistedChatHistory();
+        if (!isMounted) return;
+
+        const restoredHistory = conversations.flatMap((conversation) =>
+          (conversation.messages || []).map((message) => ({
+            ...message,
+            conversationId: conversation.id,
+          })),
+        );
+        setHistory((currentHistory) => [
+          ...restoredHistory,
+          ...currentHistory.filter((message) => !message.conversationId),
+        ]);
+      } catch (error) {
+        console.warn("Could not load saved chat history:", error);
+      }
+    }
+
+    loadPersistedHistory();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   useEffect(() => {
     chatBodyRef.current?.scrollTo({
@@ -130,12 +173,16 @@ function ChatBot({ defaultOpen = false, showBubble = true }) {
 
   useEffect(() => {
     const handlePointerDown = (event) => {
+      if (!librarySelectRef.current?.contains(event.target)) {
+        setIsLibraryMenuOpen(false);
+      }
       if (!fileSelectRef.current?.contains(event.target)) {
         setIsFileMenuOpen(false);
       }
     };
     const handleEscape = (event) => {
       if (event.key === "Escape") {
+        setIsLibraryMenuOpen(false);
         setIsFileMenuOpen(false);
       }
     };
@@ -206,7 +253,7 @@ function ChatBot({ defaultOpen = false, showBubble = true }) {
           processedPendingChatRef.current !== pendingChat.id
         ) {
           processedPendingChatRef.current = pendingChat.id;
-          localStorage.removeItem(PENDING_DOCUMENT_CHAT_KEY);
+          removeUserStoredItem(PENDING_DOCUMENT_CHAT_KEY);
           setMessages([INITIAL_MESSAGE]);
           submitChatQuestion(
             pendingChat.question,
@@ -272,14 +319,21 @@ function ChatBot({ defaultOpen = false, showBubble = true }) {
       );
       const result = response.data;
 
+      const savedMessages = result.data?.chatHistory?.messages || [];
+      const savedUserMessage = savedMessages.find((message) => message.role === "user");
+      const savedAiMessage = savedMessages.find((message) => message.role === "ai");
+      const conversationId = result.data?.chatHistory?.conversationId;
       const aiMessage = {
-        id: Date.now() + 1,
+        id: savedAiMessage?.id || Date.now() + 1,
+        conversationId,
         role: "ai",
-        text: result.data?.answer || "I could not find an answer for that.",
+        text: savedAiMessage?.content || result.data?.answer || "I could not find an answer for that.",
       };
+      userMessage.id = savedUserMessage?.id || userMessage.id;
+      userMessage.conversationId = conversationId;
 
       if (documentOverride) {
-        localStorage.setItem(
+        setUserStoredItem(
           "aiStudyHubLastChatDocument",
           JSON.stringify({
             id: documentOverride.id,
@@ -343,12 +397,26 @@ function ChatBot({ defaultOpen = false, showBubble = true }) {
     setMessages([INITIAL_MESSAGE]);
   };
 
-  const clearHistory = () => {
-    setHistory([]);
+  const clearHistory = async () => {
+    try {
+      await clearPersistedChatHistory();
+      setHistory([]);
+    } catch (error) {
+      console.error("Could not clear saved chat history:", error);
+    }
   };
 
-  const deleteHistoryItem = (event, message) => {
+  const deleteHistoryItem = async (event, message) => {
     event.stopPropagation();
+
+    if (message.conversationId) {
+      try {
+        await deletePersistedChatHistory(message.conversationId);
+      } catch (error) {
+        console.error("Could not delete saved chat history:", error);
+        return;
+      }
+    }
 
     const itemIndex = history.findIndex((item) => item.id === message.id);
     if (itemIndex === -1) return;
@@ -377,6 +445,7 @@ function ChatBot({ defaultOpen = false, showBubble = true }) {
     );
 
     setSelectedLibraryId(libraryId);
+    setIsLibraryMenuOpen(false);
     setIsFileMenuOpen(false);
     setSelectedFolderId(libraryHasFolders ? "" : ROOT_FOLDER_VALUE);
     setSelectedDocumentId(
@@ -441,37 +510,61 @@ function ChatBot({ defaultOpen = false, showBubble = true }) {
                 <FaPlus />
                 <span>New chat</span>
               </button>
-              <button
-                type="button"
-                className="icon-search-btn"
-                aria-label="Search chat"
-              >
-                <FaSearch />
-              </button>
             </div>
 
             <div className="document-select-container">
               <label htmlFor="ai-chat-library">Library</label>
-              <div className="chat-select-shell">
+              <div
+                className={`chat-select-shell chat-custom-select ${
+                  isLibraryMenuOpen ? "is-open" : ""
+                }`}
+                ref={librarySelectRef}
+              >
                 <HiOutlineArchiveBox className="chat-select-leading-icon" />
-                <select
+                <button
+                  type="button"
                   id="ai-chat-library"
-                  value={selectedLibraryId}
-                  onChange={(event) => handleLibraryChange(event.target.value)}
-                  className="document-select"
+                  className="document-select chat-custom-select-trigger"
+                  aria-haspopup="listbox"
+                  aria-expanded={isLibraryMenuOpen}
+                  onClick={() => setIsLibraryMenuOpen((current) => !current)}
                   disabled={loading}
                 >
-                  {libraries.length === 0 && (
-                    <option value="">No libraries available</option>
-                  )}
-
-                  {libraries.map((library) => (
-                    <option key={library.id} value={library.id}>
-                      {library.name || library.libraryName || "Untitled library"}
-                    </option>
-                  ))}
-                </select>
+                  <span>
+                    {selectedLibrary
+                      ? selectedLibrary.name || selectedLibrary.libraryName || "Untitled library"
+                      : libraries.length === 0
+                        ? "No libraries available"
+                        : "Choose a library"}
+                  </span>
+                </button>
                 <FaChevronDown className="chat-select-chevron" />
+
+                {isLibraryMenuOpen && (
+                  <div className="chat-file-options chat-library-options" role="listbox">
+                    {libraries.length === 0 ? (
+                      <div className="chat-file-option-empty">No libraries available</div>
+                    ) : (
+                      libraries.map((library) => {
+                        const isSelected = String(library.id) === String(selectedLibraryId);
+                        return (
+                          <button
+                            type="button"
+                            role="option"
+                            aria-selected={isSelected}
+                            className={`chat-file-option ${isSelected ? "is-selected" : ""}`}
+                            key={library.id}
+                            onClick={() => handleLibraryChange(library.id)}
+                          >
+                            <HiOutlineArchiveBox />
+                            <span>{library.name || library.libraryName || "Untitled library"}</span>
+                            {isSelected && <FaCheck />}
+                          </button>
+                        );
+                      })
+                    )}
+                  </div>
+                )}
               </div>
             </div>
 
@@ -764,7 +857,7 @@ function ChatBot({ defaultOpen = false, showBubble = true }) {
 function getPendingDocumentChat() {
   try {
     const pendingChat = JSON.parse(
-      localStorage.getItem(PENDING_DOCUMENT_CHAT_KEY) || "null",
+      getUserStoredItem(PENDING_DOCUMENT_CHAT_KEY) || "null",
     );
 
     if (!pendingChat?.documentId || !pendingChat?.question) {

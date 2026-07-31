@@ -97,14 +97,11 @@
 }
 
 .chat-sidebar-actions {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 38px;
-  gap: 10px;
+  display: block;
   margin-top: 10px;
 }
 
 .new-chat-btn,
-.icon-search-btn,
 .history-toggle,
 .header-actions button,
 .conversation-heading button,
@@ -114,6 +111,7 @@
 }
 
 .new-chat-btn {
+  width: 100%;
   min-height: 36px;
   border: 0;
   border-radius: 999px;
@@ -127,16 +125,6 @@
   font-weight: 800;
   cursor: pointer;
   box-shadow: var(--shadow-soft, 0 16px 28px rgba(180, 83, 26, 0.2));
-}
-
-.icon-search-btn {
-  width: 38px;
-  height: 38px;
-  border: 0;
-  border-radius: 50%;
-  background: var(--text-primary, #3b2a1a);
-  color: var(--bg-card, #fffaf2);
-  cursor: pointer;
 }
 
 .document-select-container {

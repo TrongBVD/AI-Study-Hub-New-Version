@@ -208,6 +208,11 @@
 .admin-dashboard__chart-card .apexcharts-canvas { margin: 0 auto; }
 .admin-dashboard__chart-card .apexcharts-text,
 .admin-dashboard__chart-card .apexcharts-legend-text { fill: var(--admin-muted) !important; color: var(--admin-muted) !important; }
+.admin-dashboard__chart-card--users .apexcharts-pie-label,
+.admin-dashboard__chart-card--users .apexcharts-datalabel {
+  fill: #ffffff !important;
+  color: #ffffff !important;
+}
 
 .admin-dashboard__notice {
   min-height: 46px;
@@ -738,6 +743,11 @@
 
 body[data-theme="white"] .admin-dashboard__log-dot.is-ai {
   background: var(--accent-color);
+}
+
+body[data-theme="white"] .admin-dashboard__outline-btn,
+body[data-theme="white"] .admin-dashboard__queue-item button:not(:last-child) {
+  color: var(--accent-color);
 }
 
 .admin-dashboard__log-dot.is-workspace {

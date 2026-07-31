@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { getDocumentView } from "../../../utils/documentApi";
 import { viewPublicDocument } from "../../../utils/publicApi";
 import { getStoredUser } from "../../../utils/authToken";
+import { setUserStoredItem } from "../../../utils/userStorage.js";
 import FileViewer from "../FileViewer/FileViewer";
 import "./DocumentViewerPage.css";
 
@@ -103,7 +104,7 @@ function DocumentViewerPage() {
     const trimmedQuestion = nextQuestion.trim();
     if (!trimmedQuestion) return;
 
-    localStorage.setItem(
+    setUserStoredItem(
       PENDING_DOCUMENT_CHAT_KEY,
       JSON.stringify({
         id: `${documentData.documentId}-${Date.now()}`,

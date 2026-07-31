@@ -5,8 +5,10 @@ import {
   useNavigate,
   useSearchParams,
 } from "react-router-dom";
+import ActionPopup from "../../common/ActionPopup/ActionPopup.jsx";
+import useActionPopup from "../../common/ActionPopup/useActionPopup.js";
 import { createAppNotification } from "../../../utils/notificationStore.js";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   addWorkspaceMember,
   addWorkspaceDiscussionComment,
@@ -299,7 +301,18 @@ function WorkSpacePage() {
   const { workspaceId } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
+  const {
+    popup: actionPopup,
+    showConfirm,
+    resolvePopup: resolveActionPopup,
+  } = useActionPopup();
   const [activeTab, setActiveTab] = useState("discussion");
+  const [isLeaveBlockedModalOpen, setIsLeaveBlockedModalOpen] =
+    useState(false);
+  const [isDeleteWorkspaceModalOpen, setIsDeleteWorkspaceModalOpen] =
+    useState(false);
+  const [isDeletingWorkspace, setIsDeletingWorkspace] = useState(false);
+  const [deleteWorkspaceError, setDeleteWorkspaceError] = useState("");
   const [isTopicFormOpen, setIsTopicFormOpen] = useState(false);
   const [activeTopicSection, setActiveTopicSection] = useState("details");
   const [isUploadingSolution, setIsUploadingSolution] = useState(false);
@@ -366,6 +379,25 @@ function WorkSpacePage() {
   const [candidateUsers, setCandidateUsers] = useState([]);
   const [selectedUserId, setSelectedUserId] = useState("");
   const [activeMemberProfileId, setActiveMemberProfileId] = useState("");
+
+  useEffect(() => {
+    if (!isLeaveBlockedModalOpen && !isDeleteWorkspaceModalOpen) {
+      return undefined;
+    }
+
+    const handlePopupKeyDown = (event) => {
+      if (event.key === "Escape") {
+        setIsLeaveBlockedModalOpen(false);
+        if (!isDeletingWorkspace) {
+          setIsDeleteWorkspaceModalOpen(false);
+          setDeleteWorkspaceError("");
+        }
+      }
+    };
+
+    document.addEventListener("keydown", handlePopupKeyDown);
+    return () => document.removeEventListener("keydown", handlePopupKeyDown);
+  }, [isDeleteWorkspaceModalOpen, isDeletingWorkspace, isLeaveBlockedModalOpen]);
 
   useEffect(() => {
     try {
@@ -437,6 +469,8 @@ function WorkSpacePage() {
   const [isUploadingWorkspaceDocuments, setIsUploadingWorkspaceDocuments] =
     useState(false);
   const [selectedStudyDocumentId, setSelectedStudyDocumentId] = useState("");
+  const [isStudyDocumentMenuOpen, setIsStudyDocumentMenuOpen] = useState(false);
+  const studyDocumentPickerRef = useRef(null);
   const [isLoadingStudySets, setIsLoadingStudySets] = useState(false);
   const [isGeneratingStudyCards, setIsGeneratingStudyCards] = useState(false);
   const [studySetStatus, setStudySetStatus] = useState("");
@@ -719,6 +753,9 @@ function WorkSpacePage() {
       ),
     [workspaceDocuments],
   );
+  const selectedStudyDocument = approvedWorkspaceDocuments.find(
+    (document) => String(document.id) === String(selectedStudyDocumentId),
+  );
 
   const loadWorkspaceDocuments = useCallback(async () => {
     if (!workspaceId) return;
@@ -777,6 +814,24 @@ function WorkSpacePage() {
       setSelectedStudyDocumentId(approvedWorkspaceDocuments[0].id);
     }
   }, [approvedWorkspaceDocuments, selectedStudyDocumentId]);
+
+  useEffect(() => {
+    const handlePointerDown = (event) => {
+      if (!studyDocumentPickerRef.current?.contains(event.target)) {
+        setIsStudyDocumentMenuOpen(false);
+      }
+    };
+    const handleEscape = (event) => {
+      if (event.key === "Escape") setIsStudyDocumentMenuOpen(false);
+    };
+
+    document.addEventListener("mousedown", handlePointerDown);
+    document.addEventListener("keydown", handleEscape);
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, []);
 
   useEffect(() => {
     if (studySets.length === 0) {
@@ -1113,7 +1168,7 @@ function WorkSpacePage() {
 
     if (!fileToDelete) return;
 
-    const confirmDelete = window.confirm(
+    const confirmDelete = await showConfirm(
       `Delete "${fileToDelete.fileName || fileToDelete.name}" from this topic?`,
     );
 
@@ -1148,7 +1203,7 @@ function WorkSpacePage() {
     if (!selectedTopic) return;
     if (!requireTopicPermission("delete topics")) return;
 
-    const confirmDelete = window.confirm(
+    const confirmDelete = await showConfirm(
       `Delete topic "${selectedTopic.title}"?`,
     );
 
@@ -1167,7 +1222,7 @@ function WorkSpacePage() {
     }
   }
 
-  function resolveWorkspaceUploadSelection(files) {
+  async function resolveWorkspaceUploadSelection(files) {
     const { candidates, duplicateBatchFileNames } =
       buildWorkspaceUploadCandidates(files, workspaceDocuments);
 
@@ -1183,11 +1238,11 @@ function WorkSpacePage() {
   const replacementDocumentIds = [];
   const keptExistingFileNames = [];
 
-  candidates.forEach(({ file, existingDocument }) => {
+  for (const { file, existingDocument } of candidates) {
     if (!existingDocument) {
       acceptedFiles.push(file);
       replacementDocumentIds.push(null);
-      return;
+      continue;
     }
 
     const existingUploaderId = String(
@@ -1204,21 +1259,26 @@ function WorkSpacePage() {
         }. Only the original uploader or a workspace admin can replace it.`,
       );
       keptExistingFileNames.push(file.name);
-      return;
+      continue;
     }
 
-    const shouldReplace = window.confirm(
+    const shouldReplace = await showConfirm(
       `"${file.name}" has already been uploaded to this workspace.\n\nSelect OK to replace the existing document, or Cancel to keep the current version.`,
+      {
+        title: "Replace existing document?",
+        confirmText: "Replace document",
+        cancelText: "Keep current",
+      },
     );
 
     if (!shouldReplace) {
       keptExistingFileNames.push(file.name);
-      return;
+      continue;
     }
 
     acceptedFiles.push(file);
     replacementDocumentIds.push(String(existingDocument.id));
-  });
+  }
 
   return {
     acceptedFiles,
@@ -1284,7 +1344,7 @@ async function uploadWorkspaceFilesWithDuplicateConfirmation(
     const duplicateNames = duplicateDocuments
       .map((duplicate) => duplicate.fileName)
       .filter(Boolean);
-    const shouldReplace = window.confirm(
+    const shouldReplace = await showConfirm(
       `${duplicateNames.join(", ")} ${
         duplicateNames.length === 1 ? "has" : "have"
       } already been uploaded to this workspace.\n\nSelect OK to replace the existing ${
@@ -1324,7 +1384,7 @@ async function handleTopicFileChange(e) {
   }
 
 const { acceptedFiles, replacementDocumentIds, keptExistingFileNames } =
-  resolveWorkspaceUploadSelection(selectedFiles);
+  await resolveWorkspaceUploadSelection(selectedFiles);
 
 if (acceptedFiles.length === 0) {
   setDiscussionStatus(
@@ -1999,7 +2059,7 @@ async function handleUpdateMemberRole(userId, nextRole) {
 async function handleTransferAdminOwnership(targetUserId, targetUserName) {
   if (!targetUserId) return;
 
-  const isConfirmed = window.confirm(
+  const isConfirmed = await showConfirm(
     `Are you sure you want to transfer Admin ownership to ${targetUserName || "this member"}? Your role will become Contributor.`
   );
   if (!isConfirmed) return;
@@ -2024,7 +2084,7 @@ async function handleTransferAdminOwnership(targetUserId, targetUserName) {
 async function handleRemoveWorkspaceMember(userId, memberName) {
   if (!userId) return;
 
-  const isConfirmed = window.confirm(
+  const isConfirmed = await showConfirm(
     `Remove ${memberName || "this member"} from the workspace?`,
   );
 
@@ -2166,23 +2226,34 @@ async function handleRenameWorkspace(e) {
 async function handleDeleteWorkspace() {
   if (!requireWorkspaceAdminPermission("delete this workspace")) return;
 
-  const isConfirmed = window.confirm(
-    "Are you sure you want to delete this workspace?",
-  );
+  setDeleteWorkspaceError("");
+  setIsDeleteWorkspaceModalOpen(true);
+}
 
-  if (!isConfirmed) return;
-
+async function handleConfirmDeleteWorkspace() {
   try {
+    setIsDeletingWorkspace(true);
+    setDeleteWorkspaceError("");
     await deleteWorkspace(workspaceId);
+    setIsDeleteWorkspaceModalOpen(false);
     navigate("/dashboard/workspaces");
   } catch (err) {
     console.error("Failed to delete workspace:", err);
-    alert("Failed to delete workspace on server.");
+    setDeleteWorkspaceError(
+      err.response?.data?.message || "Failed to delete workspace on server.",
+    );
+  } finally {
+    setIsDeletingWorkspace(false);
   }
 }
 
 async function handleLeaveWorkspace() {
-  const isConfirmed = window.confirm(
+  if (canManageWorkspace) {
+    setIsLeaveBlockedModalOpen(true);
+    return;
+  }
+
+  const isConfirmed = await showConfirm(
     "Are you sure you want to leave this workspace?",
   );
 
@@ -2233,10 +2304,10 @@ async function handleGenerateWorkspaceFlashcards() {
   }
 }
 
-function handleWorkspaceDocumentFileChange(event) {
+async function handleWorkspaceDocumentFileChange(event) {
   const selectedFiles = Array.from(event.target.files || []);
   const { acceptedFiles, replacementDocumentIds, keptExistingFileNames } =
-    resolveWorkspaceUploadSelection(selectedFiles);
+    await resolveWorkspaceUploadSelection(selectedFiles);
 
   setWorkspaceUploadFiles(acceptedFiles);
   setWorkspaceReplacementDocumentIds(replacementDocumentIds);
@@ -4653,26 +4724,57 @@ function renderStudyTab() {
           {isGeneratingStudyCards ? "Generating..." : "Generate New"}
         </button>
 
-        <label className="workspace_study_document_picker">
-          <span>Approved document</span>
-          <select
-            value={selectedStudyDocumentId}
-            onChange={(event) => setSelectedStudyDocumentId(event.target.value)}
+        <div
+          className={`workspace_study_document_picker ${
+            isStudyDocumentMenuOpen ? "is-open" : ""
+          }`}
+          ref={studyDocumentPickerRef}
+        >
+          <span id="workspace-study-document-label">Approved document</span>
+          <button
+            type="button"
+            className="workspace_study_document_trigger"
+            aria-labelledby="workspace-study-document-label"
+            aria-haspopup="listbox"
+            aria-expanded={isStudyDocumentMenuOpen}
             disabled={
               isGeneratingStudyCards || approvedWorkspaceDocuments.length === 0
             }
+            onClick={() => setIsStudyDocumentMenuOpen((current) => !current)}
           >
-            {approvedWorkspaceDocuments.length === 0 && (
-              <option value="">No approved workspace documents</option>
-            )}
+            <i className="ti-file"></i>
+            <span title={selectedStudyDocument?.title || ""}>
+              {selectedStudyDocument?.title || "No approved workspace documents"}
+            </span>
+            <i className="ti-angle-down"></i>
+          </button>
 
-            {approvedWorkspaceDocuments.map((document) => (
-              <option key={document.id} value={document.id}>
-                {document.title}
-              </option>
-            ))}
-          </select>
-        </label>
+          {isStudyDocumentMenuOpen && (
+            <div className="workspace_study_document_options" role="listbox">
+              {approvedWorkspaceDocuments.map((document) => {
+                const isSelected =
+                  String(document.id) === String(selectedStudyDocumentId);
+                return (
+                  <button
+                    type="button"
+                    role="option"
+                    aria-selected={isSelected}
+                    className={isSelected ? "is-selected" : ""}
+                    key={document.id}
+                    onClick={() => {
+                      setSelectedStudyDocumentId(document.id);
+                      setIsStudyDocumentMenuOpen(false);
+                    }}
+                  >
+                    <i className="ti-file"></i>
+                    <span title={document.title}>{document.title}</span>
+                    {isSelected && <i className="ti-check"></i>}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
 
         <div className="workspace_study_set_list">
           {isLoadingStudySets && (
@@ -4733,7 +4835,7 @@ function renderStudyTab() {
             </p>
           </div>
 
-          <div className="workspace_study_progress">
+          {hasStudyCards && <div className="workspace_study_progress">
             <div>
               <span
                 style={{
@@ -4753,10 +4855,30 @@ function renderStudyTab() {
               {hasStudyCards ? currentStudyCardIndex + 1 : 0} of{" "}
               {selectedStudySet?.cards?.length || 0} cards
             </p>
-          </div>
+          </div>}
         </header>
 
-        <section className="workspace_study_stage">
+        {!hasStudyCards && (
+          <section className="workspace_study_empty_state">
+            <div className="workspace_study_empty_icon">
+              <i className="ti-light-bulb"></i>
+            </div>
+            <span className="workspace_study_empty_badge">Start studying</span>
+            <h3>Turn a document into your first flashcard set</h3>
+            <p>
+              Choose an approved workspace document, then generate a set to
+              begin reviewing key ideas.
+            </p>
+            <div className="workspace_study_empty_steps">
+              <span><strong>1</strong>Select a document</span>
+              <span><strong>2</strong>Generate flashcards</span>
+              <span><strong>3</strong>Start reviewing</span>
+            </div>
+          </section>
+        )}
+
+        {hasStudyCards && <>
+          <section className="workspace_study_stage">
           <button
             type="button"
             className={`workspace_flashcard ${
@@ -4811,9 +4933,9 @@ function renderStudyTab() {
               <i className="ti-arrow-right"></i>
             </button>
           </div>
-        </section>
+          </section>
 
-        <section className="workspace_study_stats">
+          <section className="workspace_study_stats">
           <article>
             <div className="workspace_study_stat_icon">
               <i className="ti-timer"></i>
@@ -4852,7 +4974,8 @@ function renderStudyTab() {
               <p>{selectedStudySet?.cards?.length || 0} cards in this set</p>
             </section>
           </article>
-        </section>
+          </section>
+        </>}
       </section>
     </section>
   );
@@ -5113,7 +5236,7 @@ function renderSettingsTab() {
       {canManageWorkspace && (
         <section className="workspace_settings_card" style={{ marginTop: "16px" }}>
           <div className="workspace_settings_card_header">
-            <div className="workspace_settings_icon" style={{ background: "#eff6ff", color: "#2563eb" }}>
+            <div className="workspace_settings_icon workspace_transfer_admin_icon">
               <i className="ti-crown"></i>
             </div>
 
@@ -5145,8 +5268,8 @@ function renderSettingsTab() {
             </select>
             <button
               type="button"
-              className="workspace_delete_btn"
-              style={{ backgroundColor: "#2563eb", marginTop: 0 }}
+              className="workspace_delete_btn workspace_transfer_admin_btn"
+              style={{ marginTop: 0 }}
               onClick={() => {
                 const selectEl = document.getElementById("transferAdminSelect");
                 const targetId = selectEl?.value;
@@ -5463,10 +5586,16 @@ return (
         Setting
       </button>
 
-      {!canManageWorkspace && (
-        <button
+      <button
           type="button"
-          className="workspace_leave_tab_btn"
+          className={`workspace_leave_tab_btn ${
+            canManageWorkspace ? "is-admin-blocked" : ""
+          }`}
+          title={
+            canManageWorkspace
+              ? "Transfer Admin ownership before leaving this workspace"
+              : "Leave workspace"
+          }
           style={{
             marginLeft: "auto",
             color: "#dc2626",
@@ -5485,7 +5614,6 @@ return (
           <i className="ti-export"></i>
           Leave workspace
         </button>
-      )}
     </nav>
 
     {activeTab === "messages" && renderMessagesTab()}
@@ -5501,6 +5629,171 @@ return (
     {activeTab === "settings" && renderSettingsTab()}
 
     {renderInviteMemberModal()}
+
+    {isDeleteWorkspaceModalOpen && (
+      <div
+        className="workspace_leave_blocked_overlay"
+        onMouseDown={(event) => {
+          if (
+            event.target === event.currentTarget &&
+            !isDeletingWorkspace
+          ) {
+            setIsDeleteWorkspaceModalOpen(false);
+            setDeleteWorkspaceError("");
+          }
+        }}
+      >
+        <section
+          className="workspace_leave_blocked_modal workspace_delete_confirm_modal"
+          role="alertdialog"
+          aria-modal="true"
+          aria-labelledby="workspace-delete-confirm-title"
+          aria-describedby="workspace-delete-confirm-description"
+        >
+          <button
+            type="button"
+            className="workspace_leave_blocked_close"
+            aria-label="Close delete confirmation"
+            disabled={isDeletingWorkspace}
+            onClick={() => {
+              setIsDeleteWorkspaceModalOpen(false);
+              setDeleteWorkspaceError("");
+            }}
+          >
+            <i className="ti-close"></i>
+          </button>
+
+          <div
+            className="workspace_leave_blocked_icon workspace_delete_confirm_icon"
+            aria-hidden="true"
+          >
+            <i className="ti-trash"></i>
+          </div>
+
+          <span className="workspace_leave_blocked_eyebrow">
+            Permanent action
+          </span>
+          <h2 id="workspace-delete-confirm-title">Delete this workspace?</h2>
+          <p id="workspace-delete-confirm-description">
+            This workspace and its content will be removed for every member.
+            This action cannot be undone.
+          </p>
+
+          <div className="workspace_delete_confirm_warning">
+            <i className="ti-alert" aria-hidden="true"></i>
+            <span>
+              Make sure you no longer need the workspace documents,
+              discussions and study data before continuing.
+            </span>
+          </div>
+
+          {deleteWorkspaceError && (
+            <p className="workspace_delete_confirm_error" role="alert">
+              {deleteWorkspaceError}
+            </p>
+          )}
+
+          <div className="workspace_leave_blocked_actions">
+            <button
+              type="button"
+              className="workspace_leave_blocked_cancel"
+              disabled={isDeletingWorkspace}
+              onClick={() => {
+                setIsDeleteWorkspaceModalOpen(false);
+                setDeleteWorkspaceError("");
+              }}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              className="workspace_delete_confirm_primary"
+              autoFocus
+              disabled={isDeletingWorkspace}
+              onClick={handleConfirmDeleteWorkspace}
+            >
+              <i className={isDeletingWorkspace ? "ti-reload" : "ti-trash"}></i>
+              {isDeletingWorkspace ? "Deleting..." : "Delete workspace"}
+            </button>
+          </div>
+        </section>
+      </div>
+    )}
+
+    {isLeaveBlockedModalOpen && (
+      <div
+        className="workspace_leave_blocked_overlay"
+        onMouseDown={(event) => {
+          if (event.target === event.currentTarget) {
+            setIsLeaveBlockedModalOpen(false);
+          }
+        }}
+      >
+        <section
+          className="workspace_leave_blocked_modal"
+          role="alertdialog"
+          aria-modal="true"
+          aria-labelledby="workspace-leave-blocked-title"
+          aria-describedby="workspace-leave-blocked-description"
+        >
+          <button
+            type="button"
+            className="workspace_leave_blocked_close"
+            aria-label="Close popup"
+            onClick={() => setIsLeaveBlockedModalOpen(false)}
+          >
+            <i className="ti-close"></i>
+          </button>
+
+          <div className="workspace_leave_blocked_icon" aria-hidden="true">
+            <i className="ti-lock"></i>
+          </div>
+
+          <span className="workspace_leave_blocked_eyebrow">
+            Admin ownership required
+          </span>
+          <h2 id="workspace-leave-blocked-title">
+            Transfer Admin before leaving
+          </h2>
+          <p id="workspace-leave-blocked-description">
+            You are still the Admin of this workspace. Transfer Admin ownership
+            to another member before you leave.
+          </p>
+
+          <div className="workspace_leave_blocked_hint">
+            <i className="ti-info-alt" aria-hidden="true"></i>
+            <span>
+              Open workspace settings and use <strong>Transfer Admin</strong> to
+              choose a new owner.
+            </span>
+          </div>
+
+          <div className="workspace_leave_blocked_actions">
+            <button
+              type="button"
+              className="workspace_leave_blocked_cancel"
+              onClick={() => setIsLeaveBlockedModalOpen(false)}
+            >
+              Close
+            </button>
+            <button
+              type="button"
+              className="workspace_leave_blocked_primary"
+              autoFocus
+              onClick={() => {
+                setIsLeaveBlockedModalOpen(false);
+                setActiveTab("settings");
+              }}
+            >
+              <i className="ti-settings"></i>
+              Go to settings
+            </button>
+          </div>
+        </section>
+      </div>
+    )}
+
+    <ActionPopup popup={actionPopup} onResolve={resolveActionPopup} />
   </main>
 );
 }

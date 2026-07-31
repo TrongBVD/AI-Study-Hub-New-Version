@@ -8,6 +8,7 @@ import {
 } from "../../../utils/profileApi";
 import defaultAvatar from "../../../assets/images/account.png";
 import { getStoredUser } from "../../../utils/authToken.js";
+import { getUserStoredItem, setUserStoredItem } from "../../../utils/userStorage.js";
 import "./PersonalProfilePage.css";
 
 const PROFILE_BIO_KEY = "aiStudyHubProfileBio";
@@ -24,15 +25,15 @@ function getLoggedInUserEmail() {
 
 function getStoredProfileBio() {
   const storedUser = getStoredUser();
-  return storedUser?.bio || localStorage.getItem(PROFILE_BIO_KEY) || "";
+  return storedUser?.bio || getUserStoredItem(PROFILE_BIO_KEY) || "";
 }
 
 function getStoredProfileName() {
   const storedUser = getStoredUser();
   return (
-    localStorage.getItem(PROFILE_NAME_KEY) ||
-    storedUser.full_name ||
+    getUserStoredItem(PROFILE_NAME_KEY) ||
     storedUser.username ||
+    storedUser.full_name ||
     "User"
   );
 }
@@ -45,8 +46,6 @@ function PersonalProfile() {
 
   const [userName, setUserName] = useState(getStoredProfileName);
   const [userEmail, setUserEmail] = useState(getLoggedInUserEmail);
-  const [dateOfBirth, setDateOfBirth] = useState("");
-  const [isDateOfBirthPublic, setIsDateOfBirthPublic] = useState(true);
   const [profileBio, setProfileBio] = useState(getStoredProfileBio);
   const [draftBio, setDraftBio] = useState(getStoredProfileBio);
   const [isEditingBio, setIsEditingBio] = useState(false);
@@ -83,15 +82,13 @@ function PersonalProfile() {
           : profileData?.libraries || [];
         const nextAvatar = profile?.avatar_url || "";
         const nextName =
-          profile?.full_name || profile?.username || profile?.email || "User";
+          profile?.username || profile?.full_name || profile?.email || "User";
 
         setUserName(nextName);
         setUserEmail(profile?.email || "");
-        setDateOfBirth(profile?.date_of_birth || "");
-        setIsDateOfBirthPublic(profile?.is_dob_public !== false);
         const nextBio =
           profile?.bio ||
-          (isOwnProfile ? localStorage.getItem(PROFILE_BIO_KEY) || "" : "");
+          (isOwnProfile ? getUserStoredItem(PROFILE_BIO_KEY) || "" : "");
         setProfileBio(nextBio);
         setDraftBio(nextBio);
         setAvatar(nextAvatar);
@@ -166,14 +163,14 @@ function PersonalProfile() {
     const { naturalWidth, naturalHeight } = e.target;
     const containerSize = 300;
     const isLandscape = naturalWidth > naturalHeight;
-    const w = isLandscape
+    const imageWidth = isLandscape
       ? (naturalWidth / naturalHeight) * containerSize
       : containerSize;
-    const h = isLandscape
+    const imageHeight = isLandscape
       ? containerSize
       : (naturalHeight / naturalWidth) * containerSize;
 
-    setImgSize({ width: w, height: h });
+    setImgSize({ width: imageWidth, height: imageHeight });
     setPos({ x: 0, y: 0 });
     setZoom(1);
   };
@@ -247,7 +244,7 @@ function PersonalProfile() {
 
       setProfileBio(nextBio);
       setDraftBio(nextBio);
-      localStorage.setItem(PROFILE_BIO_KEY, nextBio);
+      setUserStoredItem(PROFILE_BIO_KEY, nextBio);
       setIsEditingBio(false);
       setBioStatus("Bio updated.");
     } catch (error) {
@@ -269,10 +266,6 @@ function PersonalProfile() {
   }
 
   const displayAvatar = avatar || defaultAvatar;
-  const birthdayText =
-    dateOfBirth && (isOwnProfile || isDateOfBirthPublic)
-      ? new Date(dateOfBirth).toDateString()
-      : "Birthday unavailable";
   const bioWordCount = draftBio.trim() === "" ? 0 : draftBio.trim().split(/\s+/).length;
   const sortedLibraries = [...libraries].sort(
     (a, b) => getLibraryStars(b) - getLibraryStars(a),
@@ -306,7 +299,6 @@ function PersonalProfile() {
           <div className="profile_name_row">
             <h2>{userName}</h2>
             <h2>{userEmail || "Email unavailable"}</h2>
-            <h2>{birthdayText}</h2>
           </div>
         </div>
 

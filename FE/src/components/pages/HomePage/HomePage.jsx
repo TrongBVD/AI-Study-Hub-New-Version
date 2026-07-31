@@ -163,7 +163,7 @@ function HomePage() {
         const profile = await getMyProfile();
         if (!isMounted) return;
 
-        setProfileName(profile?.full_name || profile?.username || profile?.email || "User");
+        setProfileName(profile?.username || profile?.full_name || profile?.email || "User");
       } catch (error) {
         console.error("Cannot load profile name:", error);
       }

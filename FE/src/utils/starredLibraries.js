@@ -1,6 +1,10 @@
+import { getUserStoredItem, setUserStoredItem } from "./userStorage.js";
+
+const STARRED_LIBRARIES_KEY = "aiStudyHubStarredLibraries";
+
 export function getStarredLibraryIds() {
   try {
-    const raw = localStorage.getItem("aiStudyHubStarredLibraries");
+    const raw = getUserStoredItem(STARRED_LIBRARIES_KEY);
     return raw ? JSON.parse(raw) : [];
   } catch {
     return [];
@@ -23,6 +27,6 @@ export function toggleStarLibrary(libraryId) {
   } else {
     nextStarred = [...starred, idStr];
   }
-  localStorage.setItem("aiStudyHubStarredLibraries", JSON.stringify(nextStarred));
+  setUserStoredItem(STARRED_LIBRARIES_KEY, JSON.stringify(nextStarred));
   return nextStarred.includes(idStr);
 }
