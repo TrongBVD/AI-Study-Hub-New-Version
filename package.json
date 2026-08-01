@@ -1,4 +1,7 @@
 {
+  "scripts": {
+    "test:system": "node tools/system-smoke-test.mjs"
+  },
   "dependencies": {
     "react-router-dom": "^7.15.1"
   }

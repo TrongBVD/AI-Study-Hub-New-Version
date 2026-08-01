@@ -31,6 +31,22 @@ function getStoredUserRole() {
   }
 }
 
+function mergeLibraries(publicLibraries = [], myLibraries = []) {
+  const librariesById = new Map();
+
+  publicLibraries.forEach((library) => {
+    if (library?.id) librariesById.set(String(library.id), library);
+  });
+
+  myLibraries.forEach((library) => {
+    if (!library?.id) return;
+    const key = String(library.id);
+    librariesById.set(key, { ...librariesById.get(key), ...library });
+  });
+
+  return [...librariesById.values()];
+}
+
 function getNotificationMessage(message) {
   return String(message || "").replace(/\bViewer\b/gi, "Contributor");
 }
@@ -254,12 +270,13 @@ function Navbar({
           return;
         }
 
-        const [libs, wspaces] = await Promise.all([
+        const [publicLibraries, myLibraries, wspaces] = await Promise.all([
+          getPublicLibraries(),
           getMyLibraries(),
           getWorkspaces()
         ]);
         if (isMounted) {
-          setLibraries(libs || []);
+          setLibraries(mergeLibraries(publicLibraries, myLibraries));
           setWorkspaces(wspaces || []);
         }
       } catch (err) {

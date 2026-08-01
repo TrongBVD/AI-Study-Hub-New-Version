@@ -27,6 +27,22 @@ function normalize(value) {
   return String(value || "").trim().toLocaleLowerCase();
 }
 
+function mergeLibraries(publicLibraries = [], myLibraries = []) {
+  const librariesById = new Map();
+
+  publicLibraries.forEach((library) => {
+    if (library?.id) librariesById.set(String(library.id), library);
+  });
+
+  myLibraries.forEach((library) => {
+    if (!library?.id) return;
+    const key = String(library.id);
+    librariesById.set(key, { ...librariesById.get(key), ...library });
+  });
+
+  return [...librariesById.values()];
+}
+
 function getUserName(user) {
   return user.full_name || user.username || user.email || "Unknown user";
 }
@@ -65,18 +81,21 @@ function SearchResultPage() {
         setIsLoading(true);
         setError("");
 
-        const [matchedUsers, joinedWorkspaces, matchedLibraries] = await Promise.all([
+        const [matchedUsers, joinedWorkspaces, publicLibraries, myLibraries] = await Promise.all([
           query.trim().length >= 2 ? searchUsers(query.trim()) : [],
           !isGuest ? getWorkspaces().catch(() => []) : [],
-          isGuest 
-            ? getPublicLibraries().catch(() => []) 
-            : getMyLibraries().catch(() => []),
+          getPublicLibraries().catch(() => []),
+          !isGuest ? getMyLibraries().catch(() => []) : [],
         ]);
 
         if (!isMounted) return;
         setUsers(matchedUsers || []);
         setWorkspaces(joinedWorkspaces || []);
-        setLibraries(matchedLibraries || []);
+        setLibraries(
+          isGuest
+            ? publicLibraries || []
+            : mergeLibraries(publicLibraries, myLibraries),
+        );
       } catch (requestError) {
         if (!isMounted) return;
         setUsers([]);
@@ -204,7 +223,7 @@ function SearchResultPage() {
         <p>
           {isGuest
             ? "Guest search includes public libraries and visible user profiles."
-            : "Find people in the system, your libraries, and workspaces you have joined."}
+            : "Find people, public libraries, your private libraries, and workspaces you have joined."}
         </p>
       </header>
 
