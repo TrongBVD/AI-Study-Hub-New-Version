@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { getDocumentView } from "../../../utils/documentApi";
 import { viewPublicDocument } from "../../../utils/publicApi";
 import { getStoredUser } from "../../../utils/authToken";
@@ -33,6 +33,7 @@ function formatDisplayFileName(fileName) {
 
 function DocumentViewerPage() {
   const { documentId, workspaceId, topicId, attachmentId } = useParams();
+  const location = useLocation();
   const navigate = useNavigate();
   const [documentData, setDocumentData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -40,6 +41,22 @@ function DocumentViewerPage() {
   const [question, setQuestion] = useState("");
   const isGuest = getStoredUser()?.role === "GUEST";
   const isWorkspaceAttachment = Boolean(attachmentId);
+  const returnContext = location.state?.returnContext;
+
+  function handleReturnToWorkspace() {
+    const destination = location.state?.from;
+    if (!destination) {
+      navigate(-1);
+      return;
+    }
+
+    navigate(destination, {
+      state:
+        returnContext === "files"
+          ? { workspaceTab: "documents" }
+          : undefined,
+    });
+  }
 
   useEffect(() => {
     let isMounted = true;
@@ -144,6 +161,14 @@ function DocumentViewerPage() {
         documentName={documentData.fileName}
         displayName={formatDisplayFileName(documentData.fileName)}
         documentId={documentData.documentId}
+        backLabel={
+          returnContext === "solution"
+            ? "Back to Solution"
+            : returnContext === "files"
+              ? "Back to Files"
+              : ""
+        }
+        onBack={returnContext ? handleReturnToWorkspace : undefined}
       />
 
       {!isGuest && !isWorkspaceAttachment && (
