@@ -49,34 +49,6 @@ const STEPS = [
   },
 ];
 
-const STATS = [
-  { value: "50K+", label: "Active Students" },
-  { value: "1.2M", label: "Documents Processed" },
-  { value: "98%", label: "Satisfaction Rate" },
-  { value: "4.9", label: "Average Rating" },
-];
-
-const TESTIMONIALS = [
-  {
-    name: "Sarah Nguyen",
-    role: "Medical Student",
-    avatar: "SN",
-    text: "AI Study Hub completely changed how I prepare for exams. I upload lecture slides and get instant summaries — saved me dozens of hours.",
-  },
-  {
-    name: "David Kim",
-    role: "Computer Science",
-    avatar: "DK",
-    text: "The AI chat feature feels like having a personal tutor. It explains complex algorithms using examples from my own notes.",
-  },
-  {
-    name: "Emily Carter",
-    role: "Law Student",
-    avatar: "EC",
-    text: "Finally, a tool that understands legal documents. I can ask specific questions about case law and get precise answers.",
-  },
-];
-
 const STUDY_FLOW = [
   {
     number: "01",
@@ -291,52 +263,6 @@ function ShowcaseSection() {
   );
 }
 
-function StatsSection() {
-  return (
-    <section className="landing_stats">
-      <div className="landing_container landing_stats_grid">
-        {STATS.map((stat) => (
-          <article key={stat.label}>
-            <strong>{stat.value}</strong>
-            <span>{stat.label}</span>
-          </article>
-        ))}
-      </div>
-    </section>
-  );
-}
-
-function TestimonialsSection() {
-  return (
-    <section className="landing_section landing_testimonials">
-      <div className="landing_container">
-        <SectionHeading
-          eyebrow="Testimonials"
-          title="Loved by students worldwide"
-        />
-        <div className="landing_testimonial_grid">
-          {TESTIMONIALS.map((testimonial) => (
-            <article
-              className="landing_testimonial_card"
-              key={testimonial.name}
-            >
-              <div className="landing_stars">★★★★★</div>
-              <blockquote>&ldquo;{testimonial.text}&rdquo;</blockquote>
-              <div className="landing_testimonial_author">
-                <span>{testimonial.avatar}</span>
-                <div>
-                  <strong>{testimonial.name}</strong>
-                  <small>{testimonial.role}</small>
-                </div>
-              </div>
-            </article>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
-
 function StudyFlowSection() {
   return (
     <section className="landing_section landing_study_flow" id="workflow">
@@ -456,8 +382,6 @@ function LandingPage() {
       <FeaturesSection />
       <HowItWorksSection />
       <ShowcaseSection />
-      <StatsSection />
-      <TestimonialsSection />
       <StudyFlowSection />
       <CTASection />
       <Footer />

@@ -20,6 +20,7 @@ import {
   suggestDocumentTags,
   downloadDocument,
   deleteDocument,
+  getMyLibraries,
   getLibrary,
   updateLibrary,
   deleteLibrary,
@@ -163,7 +164,9 @@ function LibraryPage() {
     if (routeLibrary?.id) {
       return {
         ...routeLibrary,
-        visibility: routeLibrary.visibility || (routeLibrary.is_public !== undefined ? (routeLibrary.is_public ? "public" : "private") : "public"),
+        visibility:
+          routeLibrary.visibility ||
+          (routeLibrary.is_public ? "public" : "private"),
         stars: Number(routeLibrary.stars) || 0,
         isStarred: Boolean(routeLibrary.isStarred),
       };
@@ -190,13 +193,15 @@ function LibraryPage() {
   const folderIdRef = useRef(1);
   const [libraryData, setLibraryData] = useState(getInitialLibraryData);
   const currentUser = getStoredUser() || {};
-  const currentUserId = currentUser.id || currentUser.user_id || "";
+  const currentUserId =
+    currentUser.id || currentUser._id || currentUser.user_id || "";
   const libraryOwnerId =
     libraryData.user_id || libraryData.owner?.id || libraryData.owner_id || "";
   const isLibraryOwner =
-    Boolean(currentUserId) &&
-    Boolean(libraryOwnerId) &&
-    String(currentUserId) === String(libraryOwnerId);
+    Boolean(libraryData.isOwned) ||
+    (Boolean(currentUserId) &&
+      Boolean(libraryOwnerId) &&
+      String(currentUserId) === String(libraryOwnerId));
   const canManageLibrary = isLibraryOwner;
   const ownerDisplayName = isLibraryOwner
     ? "You"
@@ -655,35 +660,77 @@ function LibraryPage() {
       let currentLibData = libraryData;
       if (!isGuest) {
         if (libraryId) {
+          const routeLibrary =
+            String(location.state?.library?.id) === String(libraryId)
+              ? location.state.library
+              : null;
+          let myLibraries = [];
+
           try {
-            const lib = await getLibrary(libraryId);
-            if (lib) {
-              currentLibData = {
-                id: lib.id,
-                user_id: lib.user_id,
-                name: lib.name,
-                description: lib.description || "",
-                visibility: lib.is_public ? "public" : "private",
-                shareOnProfile: lib.share_on_profile ?? false,
-                updatedAt: lib.updated_at ? new Date(lib.updated_at).toLocaleString() : "Updated just now",
-                icon: "ti-archive",
-                stars: Number(lib.stars) || 0,
-                downloads: Number(lib.downloads) || 0,
-                isStarred: Boolean(lib.isStarred),
-              };
-              setLibraryData(currentLibData);
-              setLibraryName(currentLibData.name);
-              setLibraryDescription(currentLibData.description);
-              setLibraryVisibility(currentLibData.visibility);
-              setShareOnProfile(currentLibData.shareOnProfile);
-              setStars(currentLibData.stars);
-              setIsStarred(currentLibData.isStarred);
-            }
+            myLibraries = await getMyLibraries();
           } catch (err) {
-            if (err.response?.status !== 404) {
-              console.error("Failed to load library metadata from backend:", err);
+            if (!routeLibrary?.isOwned) throw err;
+            console.error(
+              "Using the owned library supplied by Recent Library:",
+              err,
+            );
+          }
+
+          const ownedLibrary = (myLibraries || []).find(
+            (item) => String(item.id) === String(libraryId),
+          ) || (routeLibrary?.isOwned ? routeLibrary : null);
+
+          if (ownedLibrary) {
+            let lib = ownedLibrary;
+
+            try {
+              lib = (await getLibrary(libraryId)) || ownedLibrary;
+            } catch (err) {
+              console.error(
+                "Using owned library metadata from the library list:",
+                err,
+              );
             }
 
+            currentLibData = {
+              ...lib,
+              ...ownedLibrary,
+              id: ownedLibrary.id || lib.id,
+              user_id:
+                ownedLibrary.user_id || lib.user_id || currentUserId,
+              name: ownedLibrary.name || lib.name || "Untitled Library",
+              description: ownedLibrary.description || lib.description || "",
+              visibility:
+                (ownedLibrary.is_public ?? lib.is_public)
+                  ? "public"
+                  : "private",
+              shareOnProfile:
+                ownedLibrary.share_on_profile ??
+                lib.share_on_profile ??
+                false,
+              updatedAt: (ownedLibrary.updated_at || lib.updated_at)
+                ? new Date(
+                    ownedLibrary.updated_at || lib.updated_at,
+                  ).toLocaleString()
+                : "Updated just now",
+              icon: "ti-archive",
+              stars: Number(lib.stars ?? ownedLibrary.stars) || 0,
+              downloads:
+                Number(lib.downloads ?? ownedLibrary.downloads) || 0,
+              isStarred: Boolean(
+                lib.isStarred ?? ownedLibrary.isStarred,
+              ),
+              isOwned: true,
+              isPublicView: false,
+            };
+            setLibraryData(currentLibData);
+            setLibraryName(currentLibData.name);
+            setLibraryDescription(currentLibData.description);
+            setLibraryVisibility(currentLibData.visibility);
+            setShareOnProfile(currentLibData.shareOnProfile);
+            setStars(currentLibData.stars);
+            setIsStarred(currentLibData.isStarred);
+          } else {
             const publicLibrary = await getPublicLibrary(libraryId);
             const engagement = await getLibraryEngagement(libraryId);
             const nextLibraryData = {
@@ -800,9 +847,11 @@ function LibraryPage() {
       await loadBackendDocuments();
     }
 
+    setActiveTab("documents");
+    setCurrentFolder(null);
     fetchDocuments();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [libraryId, isGuest]);
 
   useEffect(() => {
     if (isGuest || !hasFinishedInitialDocumentLoadRef.current) return;
@@ -1596,7 +1645,10 @@ function LibraryPage() {
       navigate("/dashboard/libraries", { replace: true });
     } catch (error) {
       console.error("Failed to delete library:", error);
-      alert("Failed to delete this library. Please try again.");
+      alert(
+        error.response?.data?.message ||
+          "Failed to delete this library. Please try again.",
+      );
     }
   }
 

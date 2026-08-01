@@ -2,12 +2,16 @@ import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { HiOutlineSquares2X2, HiOutlineSquaresPlus } from "react-icons/hi2";
 import { getWorkspaces } from "../../../utils/workspaceApi";
+import { getStoredUser } from "../../../utils/authToken.js";
 import "./MyWorkSpace.css";
 import "../../../assets/icons/themify-icons-font/themify-icons/themify-icons.css";
 
 const ITEMS_PER_PAGE = 6;
 
 function MyWorkSpace() {
+  const currentUser = getStoredUser() || {};
+  const currentUserId =
+    currentUser.id || currentUser._id || currentUser.user_id || "";
   const [currentPage, setCurrentPage] = useState(1);
   const [workspaces, setWorkspaces] = useState([]);
 
@@ -183,6 +187,18 @@ function MyWorkSpace() {
 
                 <div className="workspace_body">
                   <h3>{workspace.name}</h3>
+                  {Boolean(currentUserId) &&
+                    String(
+                      workspace.created_by ||
+                        workspace.createdBy ||
+                        workspace.owner_id ||
+                        "",
+                    ) === String(currentUserId) && (
+                      <span className="workspace_creator_badge">
+                        <i className="ti-user" />
+                        You created this workspace
+                      </span>
+                    )}
                   <p>
                     {workspace.description ||
                       "Open this workspace to manage topics, members and files."}

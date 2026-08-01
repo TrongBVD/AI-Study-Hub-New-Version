@@ -7576,8 +7576,7 @@ body[data-theme] .workspace_delete_btn.workspace_transfer_admin_btn:hover {
   -webkit-backdrop-filter: blur(12px);
 }
 
-.workspace_top_tabs::before {
-  content: "Workspace";
+.workspace_nav_title {
   min-height: 34px;
   padding: 0 10px;
   display: flex;
@@ -7586,6 +7585,8 @@ body[data-theme] .workspace_delete_btn.workspace_transfer_admin_btn:hover {
   font-size: 12px;
   font-weight: 900;
   letter-spacing: 0.04em;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
 }
 
 .workspace_top_tabs button {
@@ -7782,7 +7783,7 @@ body[data-theme] .workspace_delete_btn.workspace_transfer_admin_btn:hover {
     border-radius: 18px;
   }
 
-  .workspace_top_tabs::before {
+  .workspace_nav_title {
     display: none;
   }
 

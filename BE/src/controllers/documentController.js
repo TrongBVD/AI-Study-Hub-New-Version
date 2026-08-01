@@ -1674,14 +1674,20 @@ exports.deleteLibrary = async (req, res) => {
             message: "You can only delete your own library.",
           });
         }
-        if (!String(rpcError.message).includes("schema cache") && !String(rpcError.message).includes("Could not find the function")) {
+        if (
+          !String(rpcError.message).includes("schema cache") &&
+          !String(rpcError.message).includes("Could not find the function")
+        ) {
           console.warn("RPC delete_owned_library failed, falling back to direct queries:", rpcError.message);
         }
       } else {
         rpcSuccess = true;
       }
     } catch (rpcErr) {
-      if (!String(rpcErr?.message).includes("schema cache") && !String(rpcErr?.message).includes("Could not find the function")) {
+      if (
+        !String(rpcErr?.message).includes("schema cache") &&
+        !String(rpcErr?.message).includes("Could not find the function")
+      ) {
         console.warn("RPC delete_owned_library threw exception, falling back to direct queries:", rpcErr.message);
       }
     }

@@ -193,6 +193,20 @@ body[data-theme="white"] .discover_user_link:hover {
   line-height: 1.25;
 }
 
+.discover_card_owner {
+  margin-top: 0.38rem;
+  display: flex;
+  align-items: center;
+  gap: 0.38rem;
+  color: #8b6548;
+  font-size: 0.76rem;
+  font-weight: 800;
+}
+
+.discover_card_owner i {
+  font-size: 0.72rem;
+}
+
 .discover_card_body p {
   margin: 0.35rem 0 0;
   color: #6f5a49;
@@ -395,6 +409,11 @@ body[data-theme="black"] .discover_library_card {
 body[data-theme="white"] .discover_card_body p,
 body[data-theme="black"] .discover_card_body p {
   color: var(--text-secondary);
+}
+
+body[data-theme="white"] .discover_card_owner,
+body[data-theme="black"] .discover_card_owner {
+  color: var(--accent-color);
 }
 
 body[data-theme="white"] .discover_card_body footer,

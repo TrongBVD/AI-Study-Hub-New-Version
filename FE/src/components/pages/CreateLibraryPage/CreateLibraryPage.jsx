@@ -5,6 +5,7 @@ import "./CreateLibraryPage.css";
 import api from "../../../utils/api.js";
 import { getMyLibraries } from "../../../utils/documentApi.js";
 import { getMyProfile } from "../../../utils/profileApi.js";
+import ActionPopup from "../../common/ActionPopup/ActionPopup.jsx";
 
 function normalizeLibraryName(value) {
   return String(value || "")
@@ -57,6 +58,8 @@ function CreateLibraryPage() {
   const [userLibraries, setUserLibraries] = useState([]);
   const [ownerName, setOwnerName] = useState("User");
   const [ownerAvatar, setOwnerAvatar] = useState("");
+  const [limitPopup, setLimitPopup] = useState(null);
+  const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
   const ownerInitials = getInitials(ownerName);
 
   useEffect(() => {
@@ -69,7 +72,10 @@ function CreateLibraryPage() {
         ]);
 
         if (isMounted) {
-          setUserLibraries(librariesData || []);
+          const safeLibraries = Array.isArray(librariesData)
+            ? librariesData
+            : [];
+          setUserLibraries(safeLibraries);
           setOwnerName(profile?.full_name || profile?.username || profile?.email || "User");
           setOwnerAvatar(profile?.avatar_url || "");
         }
@@ -89,7 +95,6 @@ function CreateLibraryPage() {
     trimmedLibraryName.length > 0 &&
     hasDuplicateLibraryName(userLibraries, trimmedLibraryName);
   const hasReachedLibraryLimit = userLibraries.length >= MAX_LIBRARIES_PER_USER;
-  const canCreate = trimmedLibraryName.length > 0 && !isDuplicateName && !hasReachedLibraryLimit;
 
   const previewName = trimmedLibraryName || "Untitled library";
   const previewDescription =
@@ -108,8 +113,19 @@ function CreateLibraryPage() {
   async function handleCreateLibrary(e) {
     e.preventDefault();
 
+    if (hasReachedLibraryLimit) {
+      setLimitPopup({
+        type: "alert",
+        title: "Library limit reached",
+        message: `You can create up to ${MAX_LIBRARIES_PER_USER} libraries. Delete an existing library before creating another one.`,
+        confirmText: "Got it",
+      });
+      return;
+    }
+
+    setHasAttemptedSubmit(true);
+
     if (trimmedLibraryName === "") {
-      alert("Please enter library name");
       return;
     }
 
@@ -128,11 +144,6 @@ function CreateLibraryPage() {
       return;
     }
 
-    if (hasReachedLibraryLimit) {
-      alert(`You can create up to ${MAX_LIBRARIES_PER_USER} libraries. Delete an existing library before creating another one.`);
-      return;
-    }
-
     try {
       const latestLibraries = await getMyLibraries();
       const safeLatestLibraries = Array.isArray(latestLibraries)
@@ -142,7 +153,12 @@ function CreateLibraryPage() {
       setUserLibraries(safeLatestLibraries);
 
       if (safeLatestLibraries.length >= MAX_LIBRARIES_PER_USER) {
-        alert(`You can create up to ${MAX_LIBRARIES_PER_USER} libraries. Delete an existing library before creating another one.`);
+        setLimitPopup({
+          type: "alert",
+          title: "Library limit reached",
+          message: `You can create up to ${MAX_LIBRARIES_PER_USER} libraries. Delete an existing library before creating another one.`,
+          confirmText: "Got it",
+        });
         return;
       }
 
@@ -300,13 +316,17 @@ function CreateLibraryPage() {
                       ? "This library name already exists."
                       : `${libraryName.length} / ${TITLE_LIMIT} characters`}
                   </p>
-                  <span>
-                    {isDuplicateName
-                      ? "Unavailable"
-                      : canCreate
-                        ? "Ready"
-                        : "Required"}
-                  </span>
+                  {(isDuplicateName ||
+                    trimmedLibraryName.length > 0 ||
+                    hasAttemptedSubmit) && (
+                    <span>
+                      {isDuplicateName
+                        ? "Unavailable"
+                        : trimmedLibraryName.length > 0
+                          ? "Ready"
+                          : "Required"}
+                    </span>
+                  )}
                 </div>
               </div>
             </div>
@@ -397,13 +417,17 @@ function CreateLibraryPage() {
               <i className="ti-import" />
               Import library
             </button>
-            <button type="submit" className="create_library_btn" disabled={!canCreate}>
+            <button type="submit" className="create_library_btn">
               <LuBookPlus aria-hidden="true" />
               Create library
             </button>
           </div>
         </form>
       </section>
+      <ActionPopup
+        popup={limitPopup}
+        onResolve={() => setLimitPopup(null)}
+      />
     </main>
   );
 }
