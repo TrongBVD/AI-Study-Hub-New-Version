@@ -4,6 +4,7 @@ import { getDocumentView } from "../../../utils/documentApi";
 import { viewPublicDocument } from "../../../utils/publicApi";
 import { getStoredUser } from "../../../utils/authToken";
 import { setUserStoredItem } from "../../../utils/userStorage.js";
+import { viewWorkspaceDiscussionAttachment } from "../../../utils/workspaceApi.js";
 import FileViewer from "../FileViewer/FileViewer";
 import "./DocumentViewerPage.css";
 
@@ -31,13 +32,14 @@ function formatDisplayFileName(fileName) {
 }
 
 function DocumentViewerPage() {
-  const { documentId } = useParams();
+  const { documentId, workspaceId, topicId, attachmentId } = useParams();
   const navigate = useNavigate();
   const [documentData, setDocumentData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
   const [question, setQuestion] = useState("");
   const isGuest = getStoredUser()?.role === "GUEST";
+  const isWorkspaceAttachment = Boolean(attachmentId);
 
   useEffect(() => {
     let isMounted = true;
@@ -47,9 +49,15 @@ function DocumentViewerPage() {
         setIsLoading(true);
         setErrorMessage("");
 
-        const data = isGuest
-          ? await viewPublicDocument(documentId)
-          : await getDocumentView(documentId);
+        const data = isWorkspaceAttachment
+          ? await viewWorkspaceDiscussionAttachment(
+              workspaceId,
+              topicId,
+              attachmentId,
+            )
+          : isGuest
+            ? await viewPublicDocument(documentId)
+            : await getDocumentView(documentId);
         if (!isMounted) return;
 
         setDocumentData(data);
@@ -71,7 +79,7 @@ function DocumentViewerPage() {
     return () => {
       isMounted = false;
     };
-  }, [documentId, isGuest]);
+  }, [attachmentId, documentId, isGuest, isWorkspaceAttachment, topicId, workspaceId]);
 
   if (isLoading) {
     return (
@@ -138,7 +146,7 @@ function DocumentViewerPage() {
         documentId={documentData.documentId}
       />
 
-      {!isGuest && (
+      {!isGuest && !isWorkspaceAttachment && (
         <section className="document_chat_assistant" aria-label="Document AI assistant">
           <div className="document_chat_quick_actions">
             {QUICK_PROMPTS.map((item) => (

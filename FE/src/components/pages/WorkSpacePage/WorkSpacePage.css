@@ -2654,6 +2654,104 @@ body[data-theme] .workspace_delete_btn.workspace_transfer_admin_btn:hover {
   gap: 7px;
 }
 
+.workspace_study_completion {
+  width: min(640px, 88%);
+  min-height: 420px;
+  margin: auto;
+  border: 1px solid var(--border-color);
+  border-radius: 24px;
+  background: var(--bg-card);
+  padding: 42px;
+  box-shadow: var(--shadow-soft);
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.workspace_study_completion_icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 20px;
+  background: var(--accent-soft);
+  color: var(--accent-color);
+  display: grid;
+  place-items: center;
+  font-size: 28px;
+}
+
+.workspace_study_completion > span {
+  margin-top: 18px;
+  color: var(--accent-color);
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+}
+
+.workspace_study_completion h3 {
+  margin: 10px 0 8px;
+  color: var(--text-primary);
+  font-size: 24px;
+}
+
+.workspace_study_completion > p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.workspace_study_completion_summary {
+  width: min(100%, 360px);
+  margin: 26px 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.workspace_study_completion_summary div {
+  border: 1px solid var(--border-color);
+  border-radius: 14px;
+  padding: 16px 12px;
+  display: grid;
+  gap: 5px;
+}
+
+.workspace_study_completion_summary i {
+  color: var(--accent-color);
+  font-size: 18px;
+}
+
+.workspace_study_completion_summary strong {
+  color: var(--text-primary);
+  font-size: 20px;
+}
+
+.workspace_study_completion_summary span {
+  color: var(--text-secondary);
+  font-size: 11px;
+}
+
+.workspace_study_completion > button {
+  min-height: 44px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--button-bg, var(--accent-color));
+  color: var(--bg-card);
+  padding: 0 24px;
+  cursor: pointer;
+  font-weight: 900;
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.workspace_study_completion > button:hover {
+  background: var(--button-hover-bg, var(--accent-hover));
+}
+
 .workspace_study_controls {
   margin-top: 110px;
   display: flex;
@@ -2926,6 +3024,15 @@ body[data-theme] .workspace_delete_btn.workspace_transfer_admin_btn:hover {
 .workspace_document_actions button.reject {
   background: #b45309;
   color: #ffffff;
+}
+
+.workspace_document_actions button.view {
+  background: var(--button-bg);
+  color: var(--button-text);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
 }
 
 .workspace_document_info {
@@ -5842,21 +5949,6 @@ body[data-theme] .workspace_delete_btn.workspace_transfer_admin_btn:hover {
   line-height: 1.5;
 }
 
-.workspace_clickup_comment footer {
-  border-top: 1px solid var(--border-color);
-  padding-top: 10px;
-  display: flex;
-  justify-content: space-between;
-}
-
-.workspace_clickup_comment footer button {
-  border: none;
-  background: transparent;
-  color: var(--text-secondary);
-  cursor: pointer;
-  font-weight: 800;
-}
-
 .workspace_clickup_comment_form {
   border-top: 1px solid var(--border-color);
   padding: 14px;
@@ -7187,6 +7279,10 @@ body[data-theme] .workspace_delete_btn.workspace_transfer_admin_btn:hover {
   margin-top: 40px;
 }
 
+.workspace_clickup_attachment_section + .workspace_topic_solutions {
+  margin-top: 28px;
+}
+
 .workspace_clickup_drop_zone {
   min-height: 58px;
   border-radius: 16px;
@@ -7221,7 +7317,15 @@ body[data-theme] .workspace_delete_btn.workspace_transfer_admin_btn:hover {
 }
 
 .workspace_clickup_comment_form textarea {
-  min-height: 78px;
+  min-height: 98px;
+  padding: 12px 58px 48px 12px;
+}
+
+.workspace_clickup_comment_form > div {
+  position: absolute;
+  right: 25px;
+  bottom: 25px;
+  margin: 0;
 }
 
 /* ---------- Study tab repairs ---------- */
@@ -7972,6 +8076,11 @@ body[data-theme] .workspace_delete_btn.workspace_transfer_admin_btn:hover {
 .workspace_study_main,
 .workspace_clickup_detail {
   box-shadow: var(--shadow-soft);
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.workspace_clickup_detail .workspace_clickup_main {
+  border-radius: 26px;
 }
 
 .discussion_topic_card,
@@ -9064,7 +9173,8 @@ body[data-theme="white"] .workspace_invite_candidate.is-selected {
   font-size: 12px;
 }
 
-.workspace_solution_detail_files a {
+.workspace_solution_detail_files a,
+.workspace_solution_attachment_view {
   min-height: 38px;
   border: 1px solid var(--border-color);
   border-radius: 9px;
@@ -9078,7 +9188,18 @@ body[data-theme="white"] .workspace_invite_candidate.is-selected {
   font-weight: 800;
 }
 
-.workspace_solution_detail_files a small {
+.workspace_solution_attachment_view {
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.workspace_solution_attachment_view span {
+  margin-left: 5px;
+  color: var(--text-primary);
+}
+
+.workspace_solution_detail_files a small,
+.workspace_solution_attachment_view small {
   color: var(--text-muted);
   font-size: 9px;
 }
@@ -9103,6 +9224,22 @@ body[data-theme="white"] .workspace_invite_candidate.is-selected {
   text-decoration: none;
   font-size: 10px;
   font-weight: 800;
+}
+
+.workspace_solution_file_label {
+  min-height: 34px;
+  padding: 0 10px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--accent-color);
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.workspace_solution_file_label small {
+  margin: 0;
+  color: var(--text-muted);
 }
 
 .workspace_topic_solution_files a small { margin: 0; }
@@ -9133,6 +9270,25 @@ body[data-theme="white"] .workspace_invite_candidate.is-selected {
 }
 
 .workspace_topic_solution_files > span > button:hover { background: var(--danger-bg); }
+
+.workspace_topic_solution_files > span > button.view {
+  width: auto;
+  min-width: 82px;
+  padding: 0 10px;
+  border-radius: 8px;
+  color: var(--accent-color);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-family: inherit;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.workspace_topic_solution_files > span > button.view:hover {
+  background: var(--accent-soft);
+}
 
 .workspace_topic_solution_grid article > a {
   min-height: 34px;
