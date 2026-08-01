@@ -88,6 +88,7 @@ function LibraryPage() {
     popup: actionPopup,
     showConfirm,
     showPrompt,
+    showAlert,
     resolvePopup: resolveActionPopup,
   } = useActionPopup();
   const isGuest = getStoredUserRole() === "GUEST";
@@ -1002,15 +1003,25 @@ function LibraryPage() {
     });
 
     if (unsupportedFiles.length > 0) {
-      alert(
+      await showAlert(
         `Only PDF, DOCX, and TXT files are allowed:\n- ${unsupportedFiles.join(
           "\n- ",
         )}\n\nPlease convert old DOC files to DOCX before uploading.`,
+        {
+          title: "Unsupported file format",
+          confirmText: "Choose another file",
+        },
       );
     }
 
     if (tooLargeFiles.length > 0) {
-      alert(`These files exceed 50MB limit:\n- ${tooLargeFiles.join("\n- ")}`);
+      await showAlert(
+        `These files exceed the 50MB limit:\n- ${tooLargeFiles.join("\n- ")}`,
+        {
+          title: "File is too large",
+          confirmText: "Got it",
+        },
+      );
     }
 
     if (validFiles.length === 0) {
@@ -1033,10 +1044,14 @@ function LibraryPage() {
     });
 
     if (duplicateBatchFileNames.length > 0) {
-      alert(
+      await showAlert(
         `These files were selected more than once and will only be uploaded once:\n- ${duplicateBatchFileNames.join(
           "\n- ",
         )}`,
+        {
+          title: "Duplicate file selection",
+          confirmText: "Continue",
+        },
       );
     }
 

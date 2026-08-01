@@ -129,5 +129,8 @@ export const respondToInvitation = (invitationId, action) =>
 export const markWorkspaceNotificationsAsReadApi = () =>
   api.post("/workspaces/notifications/mark-read").then((res) => res.data);
 
-export const transferAdminOwnership = (workspaceId, targetUserId) =>
-  api.post(`/workspaces/${workspaceId}/transfer-admin`, { targetUserId }).then((res) => res.data);
+export const transferAdminOwnership = (workspaceId, targetUserId, currentUserRole) =>
+  api.post(`/workspaces/${workspaceId}/transfer-admin`, {
+    targetUserId,
+    currentUserRole,
+  }).then((res) => res.data);

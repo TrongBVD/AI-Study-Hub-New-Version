@@ -40,8 +40,18 @@ jest.mock("../../src/services/workspaceLimitService", () => ({
   countActiveOwnedWorkspaces: jest.fn().mockResolvedValue(1),
 }));
 
+jest.mock("../../src/services/textExtractService", () => ({
+  extractTextFromFile: jest.fn(),
+}));
+
+jest.mock("../../src/services/aiService", () => ({
+  moderateDocument: jest.fn(),
+}));
+
 const supabase = require("../../src/config/supabase");
 const { createMailTransporter } = require("../../src/utils/mailerService");
+const { extractTextFromFile } = require("../../src/services/textExtractService");
+const { moderateDocument } = require("../../src/services/aiService");
 const workspaceController = require("../../src/controllers/workspaceController");
 
 describe("Workspace & Collaboration Main Flow Tests", () => {
@@ -198,5 +208,45 @@ describe("Workspace & Collaboration Main Flow Tests", () => {
 
       expect(res.status).toHaveBeenCalledWith(200);
     });
+
+    test.each(["attachment", "solution"])(
+      "rejects a %s file when AI moderation rejects its content",
+      async (kind) => {
+        const mockChain = supabase.from();
+        mockChain.maybeSingle
+          .mockResolvedValueOnce({ data: { id: "ws-100" }, error: null })
+          .mockResolvedValueOnce({ data: { role: "Editor" }, error: null })
+          .mockResolvedValueOnce({ data: { id: "topic-1", created_by: "user-admin" }, error: null });
+
+        extractTextFromFile.mockResolvedValue(
+          "This is readable but non-academic entertainment content for moderation.",
+        );
+        moderateDocument.mockResolvedValue({
+          status: "REJECTED",
+          reason: "Content is unrelated to academic study.",
+          suspicious_text: ["non-academic entertainment"],
+        });
+
+        req.params = { workspaceId: "ws-100", topicId: "topic-1" };
+        req.body = { kind };
+        req.files = [
+          {
+            originalname: `${kind}.txt`,
+            mimetype: "text/plain",
+            size: 72,
+            buffer: Buffer.from("rejected content"),
+          },
+        ];
+
+        await workspaceController.uploadDiscussionAttachments(req, res);
+
+        expect(extractTextFromFile).toHaveBeenCalledWith(req.files[0]);
+        expect(moderateDocument).toHaveBeenCalled();
+        expect(res.status).toHaveBeenCalledWith(422);
+        expect(res.json).toHaveBeenCalledWith(
+          expect.objectContaining({ code: "AI_MODERATION_REJECTED" }),
+        );
+      },
+    );
   });
 });

@@ -80,6 +80,21 @@ function formatDisplayFileName(fileName) {
     .trim();
 }
 
+function removeChunkReferences(answer) {
+  return String(answer || "")
+    .replace(
+      /(?:^|\n)\s*(?:this\s+(?:answer|response)|the\s+answer|support(?:ing)?\s+evidence)\s+(?:is\s+)?(?:supported|grounded|based)\s+by\s+\*{0,2}chunks?\s*\d+(?:\s*(?:,|and)\s*\d+)*\*{0,2}\s*\.?\s*(?=\n|$)/gim,
+      "\n",
+    )
+    .replace(
+      /\s*\(?\[?\*{0,2}(?:source:\s*)?chunks?\s*\d+(?:\s*(?:,|and)\s*\d+)*\*{0,2}\]?\)?\s*\.?/gi,
+      "",
+    )
+    .replace(/\*+/g, "")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
 function ChatBot({ defaultOpen = false, showBubble = true }) {
   const [open, setOpen] = useState(defaultOpen);
   const [input, setInput] = useState("");
@@ -832,7 +847,7 @@ function ChatBot({ defaultOpen = false, showBubble = true }) {
                           m.role === "user" ? "user-msg" : "ai-msg"
                         }`}
                       >
-                        {m.text}
+                        {m.role === "ai" ? removeChunkReferences(m.text) : m.text}
                       </div>
                     </div>
                   </div>

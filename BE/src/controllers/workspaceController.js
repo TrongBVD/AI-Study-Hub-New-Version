@@ -4,6 +4,8 @@ const path = require("path");
 const { createMailTransporter } = require("../utils/mailerService");
 const { createActivityLog } = require("../services/activityLogService");
 const { MAX_OWNED_WORKSPACES, countActiveOwnedWorkspaces } = require("../services/workspaceLimitService");
+const { extractTextFromFile } = require("../services/textExtractService");
+const { moderateDocument } = require("../services/aiService");
 
 const MEMBER_ROLES = ["Editor", "Viewer"];
 const ASSIGNABLE_MEMBER_ROLES = ["Editor", "Viewer"];
@@ -2268,6 +2270,46 @@ exports.uploadDiscussionAttachments = async (req, res) => {
       return res.status(400).json({ status: "error", message: "Please select at least one file." });
     }
 
+    const rejectedFiles = [];
+    try {
+      for (const file of req.files) {
+        const extractedText = await extractTextFromFile(file);
+
+        if (!extractedText || extractedText.trim().length < 20) {
+          rejectedFiles.push({
+            fileName: file.originalname,
+            reason: "Could not extract enough readable text for AI moderation.",
+          });
+          continue;
+        }
+
+        const moderation = await moderateDocument(extractedText);
+        if (moderation.status === "REJECTED") {
+          rejectedFiles.push({
+            fileName: file.originalname,
+            reason: moderation.reason || "The file did not pass AI content moderation.",
+            suspiciousText: moderation.suspicious_text || [],
+          });
+        }
+      }
+    } catch (moderationError) {
+      console.error("Discussion attachment AI moderation failed:", moderationError);
+      return res.status(503).json({
+        status: "error",
+        code: "AI_MODERATION_UNAVAILABLE",
+        message: "AI moderation is temporarily unavailable. No files were uploaded. Please try again.",
+      });
+    }
+
+    if (rejectedFiles.length > 0) {
+      return res.status(422).json({
+        status: "error",
+        code: "AI_MODERATION_REJECTED",
+        message: `${rejectedFiles.map((file) => `\"${file.fileName}\"`).join(", ")} did not pass AI content moderation. No files were uploaded.`,
+        rejectedFiles,
+      });
+    }
+
     const rows = [];
     for (const file of req.files) {
       const safeName = path.basename(file.originalname).replace(/[^a-zA-Z0-9._-]/g, "_");
@@ -2747,6 +2789,8 @@ exports.transferAdminOwnership = async (req, res) => {
   try {
     const { workspaceId } = req.params;
     const { targetUserId } = req.body;
+    const currentUserRole = req.body.currentUserRole === "Editor" ? "Editor" : "Viewer";
+    const currentUserRolePhrase = currentUserRole === "Editor" ? "an Editor" : "a Contributor";
     const currentUserId = req.user.id;
 
     if (!targetUserId) {
@@ -2835,10 +2879,10 @@ exports.transferAdminOwnership = async (req, res) => {
 
         if (updateTargetError) throw updateTargetError;
 
-        // 2. Demote current owner to Viewer/Contributor in workspace_members
+        // 2. Move the current owner to their selected non-admin role.
         const { error: updateOwnerError } = await supabase
           .from("workspace_members")
-          .update({ role: "Viewer" })
+          .update({ role: currentUserRole })
           .eq("workspace_id", workspaceId)
           .eq("user_id", currentUserId);
 
@@ -2871,6 +2915,17 @@ exports.transferAdminOwnership = async (req, res) => {
       }
       throw transferError;
     }
+
+    // The database RPC predates role selection and demotes to Viewer. Apply the
+    // selected role after a successful transfer so both RPC and fallback paths
+    // have the same result.
+    const { error: selectedRoleError } = await supabase
+      .from("workspace_members")
+      .update({ role: currentUserRole })
+      .eq("workspace_id", workspaceId)
+      .eq("user_id", currentUserId);
+
+    if (selectedRoleError) throw selectedRoleError;
 
     // Fetch profile names for notifications
     const { data: profiles } = await supabase
@@ -2906,7 +2961,7 @@ exports.transferAdminOwnership = async (req, res) => {
 
     return res.status(200).json({
       status: "success",
-      message: `Admin ownership transferred to ${targetUserName}. You are now a Contributor.`,
+      message: `Admin ownership transferred to ${targetUserName}. You are now ${currentUserRolePhrase}.`,
     });
   } catch (error) {
     console.error("transferAdminOwnership error:", error);

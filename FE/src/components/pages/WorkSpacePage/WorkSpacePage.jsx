@@ -373,6 +373,12 @@ function WorkSpacePage() {
   const [memberActionStatus, setMemberActionStatus] = useState("");
   const [memberActionId, setMemberActionId] = useState("");
   const [openRoleMenuId, setOpenRoleMenuId] = useState("");
+  const [isTransferAdminMenuOpen, setIsTransferAdminMenuOpen] =
+    useState(false);
+  const [transferAdminTargetId, setTransferAdminTargetId] = useState("");
+  const [roleAfterAdminTransfer, setRoleAfterAdminTransfer] =
+    useState("Viewer");
+  const [pendingAdminTransfer, setPendingAdminTransfer] = useState(null);
   const [pendingInvitations, setPendingInvitations] = useState([]);
   const [candidateUsers, setCandidateUsers] = useState([]);
   const [selectedUserId, setSelectedUserId] = useState("");
@@ -454,7 +460,6 @@ function WorkSpacePage() {
     setWorkspaceSettingMessage("");
   }
   const [messageText, setMessageText] = useState("");
-  const [messageAttachment, setMessageAttachment] = useState(null);
   const [messageStatus, setMessageStatus] = useState("");
   const [isLoadingMessages, setIsLoadingMessages] = useState(false);
   const [isSendingMessage, setIsSendingMessage] = useState(false);
@@ -1063,7 +1068,13 @@ function WorkSpacePage() {
       workspaceStorageUsedBytes + attachmentSize >
       WORKSPACE_STORAGE_LIMIT_BYTES
     ) {
-      alert("These attachments exceed the workspace 50MB storage limit.");
+      await showAlert(
+        "These attachments would exceed the workspace 50MB storage limit. Delete some files before uploading more attachments.",
+        {
+          title: "Workspace storage limit reached",
+          confirmText: "I understand",
+        },
+      );
       return;
     }
 
@@ -1393,8 +1404,12 @@ if (nextStorageUsed > WORKSPACE_STORAGE_LIMIT_BYTES) {
     link: `/dashboard/workspaces/${workspaceId}`,
   });
 
-  alert(
-    "This workspace has reached the 50MB storage limit. You cannot upload more files.",
+  await showAlert(
+    "This upload would exceed the workspace 50MB storage limit. Delete some files before uploading more attachments.",
+    {
+      title: "Workspace storage limit reached",
+      confirmText: "I understand",
+    },
   );
 
   e.target.value = "";
@@ -1467,7 +1482,13 @@ async function handleSubmitSolution(event) {
     workspaceStorageUsedBytes + selectedFilesSize >
     WORKSPACE_STORAGE_LIMIT_BYTES
   ) {
-    alert("These solution files exceed the workspace 50MB storage limit.");
+    await showAlert(
+      "These solution files would exceed the workspace 50MB storage limit. Delete some files before uploading more files.",
+      {
+        title: "Workspace storage limit reached",
+        confirmText: "I understand",
+      },
+    );
     return;
   }
 
@@ -2015,11 +2036,17 @@ async function handleUpdateMemberRole(userId, nextRole) {
   }
 }
 
-async function handleTransferAdminOwnership(targetUserId, targetUserName) {
+async function handleTransferAdminOwnership(
+  targetUserId,
+  targetUserName,
+  nextCurrentUserRole = "Viewer",
+) {
   if (!targetUserId) return;
 
+  const nextRoleLabel = getWorkspaceRoleLabel(nextCurrentUserRole);
+
   const isConfirmed = await showConfirm(
-    `Are you sure you want to transfer Admin ownership to ${targetUserName || "this member"}? Your role will become Contributor.`
+    `Are you sure you want to transfer Admin ownership to ${targetUserName || "this member"}? Your role will become ${nextRoleLabel}.`
   );
   if (!isConfirmed) return;
 
@@ -2028,7 +2055,11 @@ async function handleTransferAdminOwnership(targetUserId, targetUserName) {
     setMemberActionId(targetUserId);
     setMemberActionStatus("");
 
-    const res = await transferAdminOwnership(workspaceId, targetUserId);
+    const res = await transferAdminOwnership(
+      workspaceId,
+      targetUserId,
+      nextCurrentUserRole,
+    );
     await showAlert(
       res?.message || `Admin ownership transferred to ${targetUserName}.`,
       {
@@ -2093,21 +2124,6 @@ function handleResendPendingInvitation(invitation) {
   );
 }
 
-function handleMessageAttachmentChange(e) {
-  setMessageStatus(
-    "Message attachments are not available until workspace file-message storage is added.",
-  );
-  e.target.value = "";
-}
-
-function handleRemoveMessageAttachment() {
-  if (messageAttachment?.previewUrl) {
-    URL.revokeObjectURL(messageAttachment.previewUrl);
-  }
-
-  setMessageAttachment(null);
-}
-
 async function handleSendMessage() {
   const trimmedMessage = messageText.trim();
 
@@ -2127,19 +2143,11 @@ async function handleSendMessage() {
       text: savedMessage.text,
       time: getCurrentMessageTime(),
       isOwn: true,
-      file: messageAttachment
-        ? {
-            name: messageAttachment.name,
-            sizeLabel: messageAttachment.sizeLabel,
-            isImage: messageAttachment.isImage,
-            previewUrl: messageAttachment.previewUrl,
-          }
-        : null,
+      file: null,
     };
 
     setChatMessages((currentMessages) => [...currentMessages, newMessage]);
     setMessageText("");
-    setMessageAttachment(null);
   } catch (error) {
     console.error("Cannot send workspace message:", error);
     setMessageStatus(
@@ -2546,23 +2554,6 @@ function renderMessagesTab() {
         )}
       </section>
 
-      {messageAttachment && (
-        <div className="workspace_message_selected_file">
-          <div>
-            <i
-              className={messageAttachment.isImage ? "ti-image" : "ti-file"}
-            ></i>
-            <span>
-              {messageAttachment.name} · {messageAttachment.sizeLabel}
-            </span>
-          </div>
-
-          <button type="button" onClick={handleRemoveMessageAttachment}>
-            ×
-          </button>
-        </div>
-      )}
-
       <section className="workspace_message_composer">
         <textarea
           value={messageText}
@@ -2573,17 +2564,6 @@ function renderMessagesTab() {
         />
 
         <div className="workspace_message_composer_actions">
-          <div>
-            <label title="Attach file">
-              <i className="ti-clip"></i>
-              <input type="file" onChange={handleMessageAttachmentChange} />
-            </label>
-
-            <button type="button" aria-label="Add emoji">
-              <i className="ti-face-smile"></i>
-            </button>
-          </div>
-
           <button
             type="button"
             className="workspace_message_send_btn"
@@ -2798,10 +2778,11 @@ function renderMembersTab() {
                                   key={role}
                                   onClick={() => {
                                     if (role === "Admin") {
-                                      handleTransferAdminOwnership(
-                                        member.id,
-                                        member.name || member.username,
-                                      );
+                                      setOpenRoleMenuId("");
+                                      setPendingAdminTransfer({
+                                        id: member.id,
+                                        name: member.name || member.username,
+                                      });
                                     } else {
                                       handleUpdateMemberRole(member.id, role);
                                     }
@@ -3287,8 +3268,7 @@ function renderDiscussionTab() {
               </form>
 
               {showLegacySubtaskPanel && (
-                <>
-                  <section className="workspace_clickup_section">
+                <section className="workspace_clickup_section">
                     <div className="workspace_clickup_subtask_header">
                       <h2>Add subtask</h2>
 
@@ -3574,8 +3554,10 @@ function renderDiscussionTab() {
                         ))}
                       </div>
                     )}
-                  </section>
-                  <section className="workspace_clickup_attachment_section">
+                </section>
+              )}
+
+              <section className="workspace_clickup_attachment_section">
                     <div className="workspace_clickup_attachment_header">
                       <div>
                         <h2>Attachments</h2>
@@ -3683,9 +3665,7 @@ function renderDiscussionTab() {
                         ))}
                       </div>
                     )}
-                  </section>
-                </>
-              )}
+              </section>
             </>
           )}
 
@@ -4248,10 +4228,6 @@ function renderDiscussionTab() {
               />
 
               <div>
-                <button type="button">
-                  <i className="ti-plus"></i>
-                </button>
-
                 <button type="submit">
                   <i className="ti-control-play"></i>
                 </button>
@@ -5111,6 +5087,14 @@ function renderSettingsTab() {
     );
   }
 
+  const transferableMembers = visibleWorkspaceMembers.filter(
+    (member) => String(member.id || member.userId) !== currentUserId,
+  );
+  const transferAdminTarget = transferableMembers.find(
+    (member) =>
+      String(member.id || member.userId) === String(transferAdminTargetId),
+  );
+
   return (
     <section className="workspace_settings_tab">
       <header className="workspace_settings_header">
@@ -5197,37 +5181,128 @@ function renderSettingsTab() {
 
             <div>
               <h3>Transfer Admin ownership</h3>
-              <p>Promote a member to Admin. Your role will become Contributor.</p>
+              <p>
+                Promote a member to Admin and choose your role after the
+                transfer.
+              </p>
             </div>
           </div>
 
-          <div style={{ display: "flex", gap: "10px", marginTop: "12px", alignItems: "center" }}>
-            <select
-              id="transferAdminSelect"
-              style={{
-                flex: 1,
-                padding: "8px 12px",
-                borderRadius: "8px",
-                border: "1px solid #cbd5e1",
-                fontSize: "14px",
+          <div className="workspace_transfer_role_choice">
+            <span>Your role after transfer</span>
+            <div role="radiogroup" aria-label="Your role after Admin transfer">
+              {[
+                { value: "Editor", label: "Editor", description: "Can manage content" },
+                { value: "Viewer", label: "Contributor", description: "Can view and contribute" },
+              ].map((roleOption) => (
+                <button
+                  type="button"
+                  role="radio"
+                  aria-checked={roleAfterAdminTransfer === roleOption.value}
+                  className={
+                    roleAfterAdminTransfer === roleOption.value ? "selected" : ""
+                  }
+                  key={roleOption.value}
+                  onClick={() => setRoleAfterAdminTransfer(roleOption.value)}
+                >
+                  <i
+                    className={
+                      roleOption.value === "Editor" ? "ti-pencil-alt" : "ti-user"
+                    }
+                    aria-hidden="true"
+                  ></i>
+                  <span>
+                    <strong>{roleOption.label}</strong>
+                    <small>{roleOption.description}</small>
+                  </span>
+                  <i className="ti-check" aria-hidden="true"></i>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="workspace_transfer_admin_controls">
+            <div
+              className={`workspace_transfer_admin_select ${
+                isTransferAdminMenuOpen ? "is_open" : ""
+              }`}
+              onBlur={(event) => {
+                if (!event.currentTarget.contains(event.relatedTarget)) {
+                  setIsTransferAdminMenuOpen(false);
+                }
               }}
             >
-              <option value="">Select a member to promote...</option>
-              {visibleWorkspaceMembers
-                .filter((m) => String(m.id || m.userId) !== currentUserId)
-                .map((m) => (
-                  <option key={m.id || m.userId} value={m.id || m.userId}>
-                    {m.name || m.username || m.email} ({m.role})
-                  </option>
-                ))}
-            </select>
+              <button
+                type="button"
+                className="workspace_transfer_admin_trigger"
+                aria-haspopup="listbox"
+                aria-expanded={isTransferAdminMenuOpen}
+                onClick={() =>
+                  setIsTransferAdminMenuOpen((isOpen) => !isOpen)
+                }
+              >
+                <span className="workspace_transfer_admin_trigger_content">
+                  <i className="ti-user" aria-hidden="true"></i>
+                  <span>
+                    <strong>
+                      {transferAdminTarget
+                        ? transferAdminTarget.name ||
+                          transferAdminTarget.username ||
+                          transferAdminTarget.email
+                        : "Select a member to promote"}
+                    </strong>
+                    <small>
+                      {transferAdminTarget
+                        ? getWorkspaceRoleLabel(transferAdminTarget.role)
+                        : "Choose the next workspace administrator"}
+                    </small>
+                  </span>
+                </span>
+                <i className="ti-angle-down" aria-hidden="true"></i>
+              </button>
+
+              {isTransferAdminMenuOpen && (
+                <div className="workspace_transfer_admin_menu" role="listbox">
+                  {transferableMembers.length === 0 ? (
+                    <p>No eligible workspace members</p>
+                  ) : (
+                    transferableMembers.map((member) => {
+                      const memberId = String(member.id || member.userId);
+                      const isSelected = memberId === String(transferAdminTargetId);
+                      return (
+                        <button
+                          type="button"
+                          role="option"
+                          aria-selected={isSelected}
+                          className={isSelected ? "selected" : ""}
+                          key={memberId}
+                          onClick={() => {
+                            setTransferAdminTargetId(memberId);
+                            setIsTransferAdminMenuOpen(false);
+                          }}
+                        >
+                          <span className="workspace_transfer_admin_avatar">
+                            {(member.name || member.username || member.email || "M")
+                              .slice(0, 1)
+                              .toUpperCase()}
+                          </span>
+                          <span>
+                            <strong>{member.name || member.username || member.email}</strong>
+                            <small>{getWorkspaceRoleLabel(member.role)}</small>
+                          </span>
+                          {isSelected && <i className="ti-check" aria-hidden="true"></i>}
+                        </button>
+                      );
+                    })
+                  )}
+                </div>
+              )}
+            </div>
             <button
               type="button"
               className="workspace_delete_btn workspace_transfer_admin_btn"
-              style={{ marginTop: 0 }}
               onClick={() => {
-                const selectEl = document.getElementById("transferAdminSelect");
-                const targetId = selectEl?.value;
+                const targetId = transferAdminTargetId;
                 if (!targetId) {
                   showAlert(
                     "Choose a workspace member before transferring Admin ownership.",
@@ -5238,10 +5313,11 @@ function renderSettingsTab() {
                   );
                   return;
                 }
-                const selectedMember = visibleWorkspaceMembers.find(
-                  (m) => String(m.id || m.userId) === String(targetId)
+                handleTransferAdminOwnership(
+                  targetId,
+                  transferAdminTarget?.name || transferAdminTarget?.username,
+                  roleAfterAdminTransfer,
                 );
-                handleTransferAdminOwnership(targetId, selectedMember?.name || selectedMember?.username);
               }}
             >
               Transfer Admin
@@ -5595,6 +5671,96 @@ return (
     {activeTab === "settings" && renderSettingsTab()}
 
     {renderInviteMemberModal()}
+
+    {pendingAdminTransfer && (
+      <div
+        className="workspace_leave_blocked_overlay"
+        onMouseDown={(event) => {
+          if (event.target === event.currentTarget) {
+            setPendingAdminTransfer(null);
+          }
+        }}
+      >
+        <section
+          className="workspace_leave_blocked_modal workspace_transfer_role_modal"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="workspace-transfer-role-title"
+        >
+          <button
+            type="button"
+            className="workspace_leave_blocked_close"
+            aria-label="Close role selection"
+            onClick={() => setPendingAdminTransfer(null)}
+          >
+            <i className="ti-close"></i>
+          </button>
+
+          <div className="workspace_leave_blocked_icon" aria-hidden="true">
+            <i className="ti-crown"></i>
+          </div>
+          <span className="workspace_leave_blocked_eyebrow">Role after transfer</span>
+          <h2 id="workspace-transfer-role-title">Choose your new role</h2>
+          <p>
+            {pendingAdminTransfer.name} will become Admin. Choose the access
+            level you want to keep in this workspace.
+          </p>
+
+          <div className="workspace_transfer_role_choice workspace_transfer_role_choice_modal">
+            <div role="radiogroup" aria-label="Your role after Admin transfer">
+              {[
+                { value: "Editor", label: "Editor", description: "Can manage content" },
+                { value: "Viewer", label: "Contributor", description: "Can view and contribute" },
+              ].map((roleOption) => (
+                <button
+                  type="button"
+                  role="radio"
+                  aria-checked={roleAfterAdminTransfer === roleOption.value}
+                  className={roleAfterAdminTransfer === roleOption.value ? "selected" : ""}
+                  key={roleOption.value}
+                  onClick={() => setRoleAfterAdminTransfer(roleOption.value)}
+                >
+                  <i
+                    className={roleOption.value === "Editor" ? "ti-pencil-alt" : "ti-user"}
+                    aria-hidden="true"
+                  ></i>
+                  <span>
+                    <strong>{roleOption.label}</strong>
+                    <small>{roleOption.description}</small>
+                  </span>
+                  <i className="ti-check" aria-hidden="true"></i>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="workspace_leave_blocked_actions">
+            <button
+              type="button"
+              className="workspace_leave_blocked_cancel"
+              onClick={() => setPendingAdminTransfer(null)}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              className="workspace_leave_blocked_transfer"
+              onClick={() => {
+                const transferTarget = pendingAdminTransfer;
+                setPendingAdminTransfer(null);
+                handleTransferAdminOwnership(
+                  transferTarget.id,
+                  transferTarget.name,
+                  roleAfterAdminTransfer,
+                );
+              }}
+            >
+              Continue
+            </button>
+          </div>
+        </section>
+      </div>
+    )}
 
     {isDeleteWorkspaceModalOpen && (
       <div

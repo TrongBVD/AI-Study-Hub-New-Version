@@ -291,6 +291,21 @@ function toVectorLiteral(values) {
 /**
  * Answer a question using retrieved document chunks.
  */
+function removeChunkReferences(answer) {
+  return String(answer || "")
+    .replace(
+      /(?:^|\n)\s*(?:this\s+(?:answer|response)|the\s+answer|support(?:ing)?\s+evidence)\s+(?:is\s+)?(?:supported|grounded|based)\s+by\s+\*{0,2}chunks?\s*\d+(?:\s*(?:,|and)\s*\d+)*\*{0,2}\s*\.?\s*(?=\n|$)/gim,
+      "\n",
+    )
+    .replace(
+      /\s*\(?\[?\*{0,2}(?:source:\s*)?chunks?\s*\d+(?:\s*(?:,|and)\s*\d+)*\*{0,2}\]?\)?\s*\.?/gi,
+      "",
+    )
+    .replace(/\*+/g, "")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
 async function answerWithContext(question, chunks) {
   const context = chunks
     .map((chunk, index) => {
@@ -307,7 +322,8 @@ Answer the student's question using ONLY the document context below.
 Rules:
 - If the answer is not in the context, say: "I cannot find this in the uploaded document."
 - Give a clear student-friendly answer.
-- Mention which chunk numbers support the answer.
+- Do not mention chunks, chunk numbers, retrieval metadata, or source labels.
+- Return plain text without Markdown asterisks or bold formatting.
 - Do not invent facts outside the document.
 
 Question:
@@ -317,7 +333,8 @@ Document context:
 ${context}
 `;
 
-  return generateText(prompt);
+  const answer = await generateText(prompt);
+  return removeChunkReferences(answer);
 }
 
 /**
@@ -582,6 +599,7 @@ async function validateTagsAndContent(
 }
 
 module.exports = {
+  removeChunkReferences,
   moderateDocument,
   createEmbedding,
   createBatchEmbeddings,
