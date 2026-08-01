@@ -184,6 +184,10 @@ function DiscoverLibraryCard({ library, rank, metricLabel, wide }) {
       <div className="discover_card_body">
         <div>
           <strong>{library.name}</strong>
+          <span className="discover_card_owner">
+            <i className="ti-user" />
+            {library.ownerName}
+          </span>
           <p>{library.description}</p>
         </div>
         <footer>

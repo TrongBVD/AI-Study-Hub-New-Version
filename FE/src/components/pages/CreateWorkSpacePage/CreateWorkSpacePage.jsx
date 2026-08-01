@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { HiOutlineSquares2X2, HiOutlineSquaresPlus } from "react-icons/hi2";
 import { createWorkspace, getWorkspaces } from "../../../utils/workspaceApi";
 import { getMyProfile } from "../../../utils/profileApi";
+import ActionPopup from "../../common/ActionPopup/ActionPopup.jsx";
 import "./CreateWorkSpacePage.css";
 
 function getInitials(name) {
@@ -33,6 +34,7 @@ function CreateWorkSpacePage() {
   const [ownerName, setOwnerName] = useState("User");
   const [ownerAvatar, setOwnerAvatar] = useState("");
   const [ownedWorkspaceCount, setOwnedWorkspaceCount] = useState(0);
+  const [limitPopup, setLimitPopup] = useState(null);
   const MAX_OWNED_WORKSPACES = 3;
   const ownerInitials = getInitials(ownerName);
 
@@ -78,15 +80,6 @@ function CreateWorkSpacePage() {
     trimmedDescription ||
     "This workspace helps you organize private projects, manage documents, and collaborate with selected members.";
 
-  const canCreate = useMemo(() => {
-    return (
-      trimmedWorkspaceName.length > 0 &&
-      trimmedWorkspaceName.length <= TITLE_LIMIT &&
-      trimmedDescription.length <= DESCRIPTION_LIMIT &&
-      ownedWorkspaceCount < MAX_OWNED_WORKSPACES
-    );
-  }, [ownedWorkspaceCount, trimmedWorkspaceName, trimmedDescription]);
-
   function handleReturn() {
     if (window.history.length > 1) {
       navigate(-1);
@@ -98,6 +91,16 @@ function CreateWorkSpacePage() {
 
   async function handleCreateWorkSpace(e) {
     e.preventDefault();
+
+    if (ownedWorkspaceCount >= MAX_OWNED_WORKSPACES) {
+      setLimitPopup({
+        type: "alert",
+        title: "Workspace limit reached",
+        message: `You can create up to ${MAX_OWNED_WORKSPACES} workspaces. Delete an existing workspace before creating another one.`,
+        confirmText: "Got it",
+      });
+      return;
+    }
 
     if (trimmedWorkspaceName === "") {
       alert("Please enter workspace name");
@@ -111,11 +114,6 @@ function CreateWorkSpacePage() {
 
     if (trimmedDescription.length > DESCRIPTION_LIMIT) {
       alert(`Workspace description cannot exceed ${DESCRIPTION_LIMIT} characters.`);
-      return;
-    }
-
-    if (ownedWorkspaceCount >= MAX_OWNED_WORKSPACES) {
-      alert(`You can create up to ${MAX_OWNED_WORKSPACES} workspaces. Delete an existing workspace before creating another one.`);
       return;
     }
 
@@ -133,6 +131,18 @@ function CreateWorkSpacePage() {
       });
     } catch (error) {
       console.error("Cannot create workspace:", error);
+      if (error?.response?.data?.code === "WORKSPACE_LIMIT_REACHED") {
+        setOwnedWorkspaceCount(MAX_OWNED_WORKSPACES);
+        setLimitPopup({
+          type: "alert",
+          title: "Workspace limit reached",
+          message:
+            error.response.data.message ||
+            `You can create up to ${MAX_OWNED_WORKSPACES} workspaces. Delete an existing workspace before creating another one.`,
+          confirmText: "Got it",
+        });
+        return;
+      }
       alert(error?.response?.data?.message || "Cannot create workspace. Please login again and try later.");
     }
   }
@@ -301,7 +311,6 @@ function CreateWorkSpacePage() {
             <button
               type="submit"
               className="create_workspace_btn"
-              disabled={!canCreate}
             >
               <HiOutlineSquaresPlus aria-hidden="true" />
               Create workspace
@@ -309,6 +318,10 @@ function CreateWorkSpacePage() {
           </div>
         </form>
       </section>
+      <ActionPopup
+        popup={limitPopup}
+        onResolve={() => setLimitPopup(null)}
+      />
     </main>
   );
 }

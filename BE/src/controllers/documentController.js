@@ -1635,25 +1635,47 @@ exports.deleteLibrary = async (req, res) => {
     // The database function verifies ownership again while locking the
     // library row, then cleans up dependent records and deletes the library in
     // one transaction.
-    const { error } = await supabase.rpc("delete_owned_library", {
+    const { error: rpcError } = await supabase.rpc("delete_owned_library", {
       p_library_id: id,
       p_user_id: userID,
     });
 
-    if (error) {
-      if (String(error.message).includes("LIBRARY_NOT_FOUND")) {
+    if (rpcError) {
+      if (String(rpcError.message).includes("LIBRARY_NOT_FOUND")) {
         return res.status(404).json({
           status: "error",
           message: "Library not found.",
         });
       }
-      if (String(error.message).includes("LIBRARY_OWNER_REQUIRED")) {
+      if (String(rpcError.message).includes("LIBRARY_OWNER_REQUIRED")) {
         return res.status(403).json({
           status: "error",
           message: "You can only delete your own library.",
         });
       }
-      throw error;
+
+      // Keep deletion working in environments where the database RPC
+      // migration has not been applied yet.
+      const cleanupOperations = [
+        supabase.from("library_stars").delete().eq("library_id", id),
+        supabase.from("library_downloads").delete().eq("library_id", id),
+        supabase
+          .from("documents")
+          .update({ library_id: null, is_public: false })
+          .eq("library_id", id),
+      ];
+      const cleanupResults = await Promise.all(cleanupOperations);
+      const cleanupError = cleanupResults.find((result) => result.error)?.error;
+
+      if (cleanupError) throw cleanupError;
+
+      const { error: deleteError } = await supabase
+        .from("libraries")
+        .delete()
+        .eq("id", id)
+        .eq("user_id", userID);
+
+      if (deleteError) throw deleteError;
     }
 
     return res.status(200).json({

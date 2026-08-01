@@ -107,6 +107,11 @@
   gap: 10px;
 }
 
+.action_popup--alert .action_popup_actions,
+.action_popup--confirm .action_popup_actions {
+  justify-content: center;
+}
+
 .action_popup_actions button {
   min-height: 46px;
   border-radius: 12px;

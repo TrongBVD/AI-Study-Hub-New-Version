@@ -170,15 +170,18 @@ function LoginPage() {
         error.response?.data?.error ||
         "Login failed. Please check your username/password.";
 
-      const isWrongPassword =
+      const hasInvalidCredentials =
         error.response?.status === 401 &&
-        backendMessage.toLowerCase().includes("password");
+        (error.response?.data?.code === "WRONG_PASSWORD" ||
+          backendMessage.toLowerCase().includes("account does not exist"));
 
       setLoginNotice({
         type: "error",
-        title: isWrongPassword ? "Incorrect Password" : "Login Failed",
-        message: isWrongPassword
-          ? "The password you entered is incorrect. Please check again or use Forgot Password to reset."
+        title: hasInvalidCredentials
+          ? "Incorrect username or password"
+          : "Login Failed",
+        message: hasInvalidCredentials
+          ? "Please check your username and password and try again."
           : backendMessage,
       });
     }
