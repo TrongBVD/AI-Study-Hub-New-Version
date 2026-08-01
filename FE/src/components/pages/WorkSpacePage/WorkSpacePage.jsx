@@ -843,8 +843,11 @@ function WorkSpacePage() {
       return;
     }
 
-    if (!studySets.some((studySet) => studySet.id === selectedStudySetId)) {
-      setSelectedStudySetId(studySets[0].id);
+    if (
+      selectedStudySetId &&
+      !studySets.some((studySet) => studySet.id === selectedStudySetId)
+    ) {
+      setSelectedStudySetId("");
       setCurrentStudyCardIndex(0);
       setIsStudyCardFlipped(false);
       setReviewedStudyCardIds([]);
@@ -4826,10 +4829,17 @@ function renderStudyTab() {
       <section className="workspace_study_main">
         <header className="workspace_study_header">
           <div>
-            <h2>{selectedStudySet?.title || "No flashcards yet"}</h2>
+            <h2>
+              {selectedStudySet?.title ||
+                (studySets.length > 0
+                  ? "Choose a flashcard set"
+                  : "No flashcards yet")}
+            </h2>
             <p>
               {selectedStudySet?.subtitle ||
-                "Generate flashcards from an approved workspace document to study here."}
+                (studySets.length > 0
+                  ? "Select the flashcard set you want to study from the list."
+                  : "Generate flashcards from an approved workspace document to study here.")}
             </p>
           </div>
 
@@ -4861,17 +4871,26 @@ function renderStudyTab() {
             <div className="workspace_study_empty_icon">
               <i className="ti-light-bulb"></i>
             </div>
-            <span className="workspace_study_empty_badge">Start studying</span>
-            <h3>Turn a document into your first flashcard set</h3>
+            <span className="workspace_study_empty_badge">
+              {studySets.length > 0 ? "Choose a set" : "Start studying"}
+            </span>
+            <h3>
+              {studySets.length > 0
+                ? "Select the flashcards you want to study"
+                : "Turn a document into your first flashcard set"}
+            </h3>
             <p>
-              Choose an approved workspace document, then generate a set to
-              begin reviewing key ideas.
+              {studySets.length > 0
+                ? "Your flashcard content will appear here after you choose a set from the list."
+                : "Choose an approved workspace document, then generate a set to begin reviewing key ideas."}
             </p>
-            <div className="workspace_study_empty_steps">
-              <span><strong>1</strong>Select a document</span>
-              <span><strong>2</strong>Generate flashcards</span>
-              <span><strong>3</strong>Start reviewing</span>
-            </div>
+            {studySets.length === 0 && (
+              <div className="workspace_study_empty_steps">
+                <span><strong>1</strong>Select a document</span>
+                <span><strong>2</strong>Generate flashcards</span>
+                <span><strong>3</strong>Start reviewing</span>
+              </div>
+            )}
           </section>
         )}
 
@@ -5536,6 +5555,9 @@ function renderInviteMemberModal() {
 return (
   <main className="workspace_page">
     <nav className="workspace_top_tabs">
+      <span className="workspace_nav_title">
+        {workspace?.name || workspaceNameInput || "Workspace"}
+      </span>
       <button
         className={activeTab === "discussion" ? "active" : ""}
         onClick={() => setActiveTab("discussion")}

@@ -14,6 +14,7 @@ import { getAiSummary } from "../../../utils/aiApi.js";
 import { getPublicLibraries } from "../../../utils/publicApi.js";
 
 import { getStoredUser } from "../../../utils/authToken.js";
+import { getUserStoredItem } from "../../../utils/userStorage.js";
 
 function getItemId(item) {
   return item?.id || item?._id || item?.libraryId || item?.workspaceId || "";
@@ -57,6 +58,14 @@ function getStoredUserRole() {
 function getStoredJson(key) {
   try {
     return JSON.parse(localStorage.getItem(key) || "null");
+  } catch {
+    return null;
+  }
+}
+
+function getUserStoredJson(key) {
+  try {
+    return JSON.parse(getUserStoredItem(key) || "null");
   } catch {
     return null;
   }
@@ -141,12 +150,26 @@ function HomePage() {
       }
     }
 
-    setLatestChatDocument(getStoredJson("aiStudyHubLastChatDocument"));
+    const refreshLatestChatDocument = (event) => {
+      setLatestChatDocument(
+        event?.detail || getUserStoredJson("aiStudyHubLastChatDocument"),
+      );
+    };
+
+    refreshLatestChatDocument();
     setLatestStudyCard(getStoredJson("aiStudyHubLastStudyCard"));
     loadAiOverview();
+    window.addEventListener(
+      "aiStudyHubLastChatDocumentChanged",
+      refreshLatestChatDocument,
+    );
 
     return () => {
       isMounted = false;
+      window.removeEventListener(
+        "aiStudyHubLastChatDocumentChanged",
+        refreshLatestChatDocument,
+      );
     };
   }, [isGuest]);
 
@@ -360,7 +383,7 @@ function HomePage() {
 </div>
           </div>
 
-          <aside className="home_focus_panel" aria-label="Latest activity preview">
+          <aside className="home_focus_panel" aria-label="Recent activity preview">
             <div className="focus_panel_header">
               <span className="home_label">Today</span>
               <strong>Focus board</strong>
@@ -370,7 +393,7 @@ function HomePage() {
               <div className="focus_card_icon" aria-hidden="true">
                 <LuLibraryBig />
               </div>
-              <span>{isGuest ? "Newest public library" : "Latest library"}</span>
+              <span>{isGuest ? "Newest public library" : "Recent library"}</span>
               <h2>
                 {latestLibrary?.name ||
                   latestLibrary?.libraryName ||
@@ -378,7 +401,7 @@ function HomePage() {
               </h2>
               <p>
                 {latestLibrary
-                  ? `${latestLibrary.documents || 0} public documents`
+                  ? `${latestLibrary.documents || 0}${isGuest ? " public" : ""} documents`
                   : isGuest
                     ? "Public libraries will appear here once available."
                     : "Open a library once to place it here."}
@@ -390,6 +413,13 @@ function HomePage() {
                       ? `/dashboard/libraries/${latestLibraryId}`
                       : "/dashboard/libraries"
                   }
+                  state={{
+                    library: {
+                      ...latestLibrary,
+                      isOwned: !isGuest,
+                      isPublicView: isGuest,
+                    },
+                  }}
                 >
                   Open library
                 </Link>
@@ -398,7 +428,7 @@ function HomePage() {
 
             {!isGuest ? (
               <div className="focus_card focus_card_light">
-                <span>Latest workspace</span>
+                <span>Recent workspace</span>
                 <h2>{latestWorkspace?.name || "No workspace opened yet"}</h2>
                 {latestWorkspace && (
                   <Link

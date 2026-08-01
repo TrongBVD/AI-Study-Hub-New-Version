@@ -333,14 +333,21 @@ function ChatBot({ defaultOpen = false, showBubble = true }) {
       userMessage.conversationId = conversationId;
 
       if (documentOverride) {
+        const latestChatDocument = {
+          id: documentOverride.id,
+          title: formatDisplayFileName(documentOverride.title),
+          libraryId: getDocumentLibraryId(documentOverride),
+          workspaceId: documentOverride.workspace_id || documentOverride.workspaceId,
+          chattedAt: new Date().toISOString(),
+        };
+
         setUserStoredItem(
           "aiStudyHubLastChatDocument",
-          JSON.stringify({
-            id: documentOverride.id,
-            title: formatDisplayFileName(documentOverride.title),
-            libraryId: documentOverride.library_id,
-            workspaceId: documentOverride.workspace_id,
-            chattedAt: new Date().toISOString(),
+          JSON.stringify(latestChatDocument),
+        );
+        window.dispatchEvent(
+          new CustomEvent("aiStudyHubLastChatDocumentChanged", {
+            detail: latestChatDocument,
           }),
         );
       }

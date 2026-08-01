@@ -47,7 +47,11 @@ function ActionPopup({ popup, onResolve }) {
         </div>
 
         <span className="action_popup_eyebrow">
-          {popup.type === "prompt" ? "Enter information" : "Confirmation required"}
+          {popup.type === "prompt"
+            ? "Enter information"
+            : popup.type === "alert"
+              ? "Notice"
+              : "Confirmation required"}
         </span>
         <h2 id="action-popup-title">{popup.title}</h2>
         <p id="action-popup-message">{popup.message}</p>
@@ -66,18 +70,22 @@ function ActionPopup({ popup, onResolve }) {
         )}
 
         <div className="action_popup_actions">
-          <button
-            type="button"
-            className="action_popup_cancel"
-            onClick={() => onResolve(null)}
-          >
-            {popup.cancelText}
-          </button>
+          {popup.type !== "alert" && (
+            <button
+              type="button"
+              className="action_popup_cancel"
+              onClick={() => onResolve(null)}
+            >
+              {popup.cancelText}
+            </button>
+          )}
           <button
             type="button"
             className="action_popup_confirm"
             autoFocus={popup.type !== "prompt"}
-            onClick={() => onResolve(popup.type === "prompt" ? popup.value : true)}
+            onClick={() =>
+              onResolve(popup.type === "prompt" ? popup.value : true)
+            }
           >
             {popup.confirmText}
           </button>
