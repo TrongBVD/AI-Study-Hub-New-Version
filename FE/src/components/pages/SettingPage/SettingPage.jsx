@@ -71,10 +71,9 @@ const NOTIFICATION_CATEGORIES = [
     key: "discussion",
     icon: "ti-comments",
     title: "Discussion",
-    description: "Topics, replies, and solved discussions.",
+    description: "New topics and solved discussions.",
     options: [
       ["newTopic", "New topic"],
-      ["newReply", "New reply"],
       ["solved", "Topic solved"],
     ],
   },
@@ -82,11 +81,10 @@ const NOTIFICATION_CATEGORIES = [
     key: "file",
     icon: "ti-folder",
     title: "File",
-    description: "Uploads, deletions, and storage alerts.",
+    description: "Document uploads and deletions.",
     options: [
       ["uploaded", "File uploaded"],
       ["deleted", "File deleted"],
-      ["storageWarning", "Storage warning"],
     ],
   },
   {
@@ -731,7 +729,14 @@ function NotificationSettings({
       >
         <div className="notification_category_grid">
           {NOTIFICATION_CATEGORIES.map((category) => (
-            <article className="notification_category_card" key={category.key}>
+            <article
+              className={`notification_category_card ${
+                ["discussion", "file"].includes(category.key)
+                  ? "is_compact"
+                  : ""
+              }`}
+              key={category.key}
+            >
               <header className="notification_category_header">
                 <i className={category.icon} aria-hidden="true"></i>
                 <div>
@@ -802,6 +807,18 @@ function PasswordSettings() {
   });
   const [status, setStatus] = useState({ type: "", message: "" });
   const [isSaving, setIsSaving] = useState(false);
+  const [visiblePasswords, setVisiblePasswords] = useState({
+    currentPassword: false,
+    newPassword: false,
+    confirmPassword: false,
+  });
+
+  function togglePasswordVisibility(fieldName) {
+    setVisiblePasswords((previous) => ({
+      ...previous,
+      [fieldName]: !previous[fieldName],
+    }));
+  }
 
   function updateField(event) {
     const { name, value } = event.target;
@@ -858,38 +875,104 @@ function PasswordSettings() {
         <form className="settings_password_form" onSubmit={handleSubmit}>
           <label className="settings_field">
             <span>Current password</span>
-            <input
-              type="password"
-              name="currentPassword"
-              value={form.currentPassword}
-              onChange={updateField}
-              autoComplete="current-password"
-              required
-            />
+            <div className="settings_password_input_wrap">
+              <input
+                type={visiblePasswords.currentPassword ? "text" : "password"}
+                name="currentPassword"
+                value={form.currentPassword}
+                onChange={updateField}
+                autoComplete="current-password"
+                required
+              />
+              <button
+                type="button"
+                className={`settings_password_visibility ${
+                  visiblePasswords.currentPassword ? "is_visible" : "is_hidden"
+                }`}
+                onClick={() => togglePasswordVisibility("currentPassword")}
+                aria-label={
+                  visiblePasswords.currentPassword
+                    ? "Hide current password"
+                    : "Show current password"
+                }
+                aria-pressed={visiblePasswords.currentPassword}
+                title={
+                  visiblePasswords.currentPassword
+                    ? "Hide password"
+                    : "Show password"
+                }
+              >
+                <i className="ti-eye" aria-hidden="true"></i>
+              </button>
+            </div>
           </label>
           <label className="settings_field">
             <span>New password</span>
-            <input
-              type="password"
-              name="newPassword"
-              value={form.newPassword}
-              onChange={updateField}
-              autoComplete="new-password"
-              minLength={8}
-              required
-            />
+            <div className="settings_password_input_wrap">
+              <input
+                type={visiblePasswords.newPassword ? "text" : "password"}
+                name="newPassword"
+                value={form.newPassword}
+                onChange={updateField}
+                autoComplete="new-password"
+                minLength={8}
+                required
+              />
+              <button
+                type="button"
+                className={`settings_password_visibility ${
+                  visiblePasswords.newPassword ? "is_visible" : "is_hidden"
+                }`}
+                onClick={() => togglePasswordVisibility("newPassword")}
+                aria-label={
+                  visiblePasswords.newPassword
+                    ? "Hide new password"
+                    : "Show new password"
+                }
+                aria-pressed={visiblePasswords.newPassword}
+                title={
+                  visiblePasswords.newPassword
+                    ? "Hide password"
+                    : "Show password"
+                }
+              >
+                <i className="ti-eye" aria-hidden="true"></i>
+              </button>
+            </div>
           </label>
           <label className="settings_field">
             <span>Confirm new password</span>
-            <input
-              type="password"
-              name="confirmPassword"
-              value={form.confirmPassword}
-              onChange={updateField}
-              autoComplete="new-password"
-              minLength={8}
-              required
-            />
+            <div className="settings_password_input_wrap">
+              <input
+                type={visiblePasswords.confirmPassword ? "text" : "password"}
+                name="confirmPassword"
+                value={form.confirmPassword}
+                onChange={updateField}
+                autoComplete="new-password"
+                minLength={8}
+                required
+              />
+              <button
+                type="button"
+                className={`settings_password_visibility ${
+                  visiblePasswords.confirmPassword ? "is_visible" : "is_hidden"
+                }`}
+                onClick={() => togglePasswordVisibility("confirmPassword")}
+                aria-label={
+                  visiblePasswords.confirmPassword
+                    ? "Hide password confirmation"
+                    : "Show password confirmation"
+                }
+                aria-pressed={visiblePasswords.confirmPassword}
+                title={
+                  visiblePasswords.confirmPassword
+                    ? "Hide password"
+                    : "Show password"
+                }
+              >
+                <i className="ti-eye" aria-hidden="true"></i>
+              </button>
+            </div>
           </label>
 
           {status.message && (

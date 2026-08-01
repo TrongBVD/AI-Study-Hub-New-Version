@@ -14,6 +14,18 @@ const WAITING_BUCKET =
   process.env.SUPABASE_DOCUMENT_WAITING_ADMIN_APPROVED ||
   "document_waiting_admin";
 
+function normalizeUploadedFileName(fileName) {
+  const value = String(fileName || "");
+  if (!value || [...value].some((character) => character.charCodeAt(0) > 255)) {
+    return value.normalize("NFC");
+  }
+
+  const decoded = Buffer.from(value, "latin1").toString("utf8");
+  return decoded.includes("\uFFFD")
+    ? value.normalize("NFC")
+    : decoded.normalize("NFC");
+}
+
 async function moveWorkspaceDocumentToBucket(document, targetBucket) {
   if (!document?.file_url) {
     return { moved: false, sourceBucket: null, targetBucket };
@@ -505,7 +517,7 @@ function mapDiscussionAttachment(row) {
     id: row.id,
     topicId: row.topic_id,
     uploadedBy: row.uploaded_by,
-    fileName: row.file_name,
+    fileName: normalizeUploadedFileName(row.file_name),
     fileUrl: row.file_url,
     fileSizeBytes: row.file_size_bytes || 0,
     mimeType: isSolution ? cleanMimeType : storedMimeType,
@@ -2269,6 +2281,10 @@ exports.uploadDiscussionAttachments = async (req, res) => {
     if (!req.files?.length) {
       return res.status(400).json({ status: "error", message: "Please select at least one file." });
     }
+
+    req.files.forEach((file) => {
+      file.originalname = normalizeUploadedFileName(file.originalname);
+    });
 
     const rejectedFiles = [];
     try {

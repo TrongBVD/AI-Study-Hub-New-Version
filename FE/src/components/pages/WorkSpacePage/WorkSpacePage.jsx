@@ -242,8 +242,9 @@ function getDocumentStatusLabel(status) {
   if (value === "FLAGGED") return "Flagged";
   if (value === "REJECTED") return "Rejected";
   if (value === "DELETED") return "Deleted";
+  if (value === "PENDING_RETRY") return "Waiting for review";
 
-  return "Pending";
+  return "Waiting approval";
 }
 
 function formatStudySessionDuration(totalSeconds) {
@@ -753,6 +754,15 @@ function WorkSpacePage() {
       workspaceDocuments.filter(
         (document) =>
           String(document.status || "").toUpperCase() === "APPROVED",
+      ),
+    [workspaceDocuments],
+  );
+  const waitingWorkspaceDocuments = useMemo(
+    () =>
+      workspaceDocuments.filter((document) =>
+        ["PENDING", "PENDING_RETRY", "FLAGGED"].includes(
+          String(document.status || "PENDING").toUpperCase(),
+        ),
       ),
     [workspaceDocuments],
   );
@@ -2334,7 +2344,12 @@ async function handleUploadWorkspaceDocuments() {
       return;
     }
 
-    const uploadedDocuments = uploadResult.uploadedDocuments;
+    const uploadedDocuments = Array.isArray(uploadResult.uploadedDocuments)
+      ? uploadResult.uploadedDocuments.map((document) => ({
+          ...document,
+          status: document.status || "PENDING",
+        }))
+      : [];
     const replacedDocumentIds = new Set([
       ...uploadResult.replacementDocumentIds.filter(Boolean).map(String),
       ...(uploadedDocuments || []).flatMap((document) =>
@@ -2344,9 +2359,37 @@ async function handleUploadWorkspaceDocuments() {
       ),
     ]);
 
+    // Show newly uploaded files immediately while the server performs its
+    // moderation work and the workspace list catches up.
+    setWorkspaceDocuments((currentDocuments) => {
+      const uploadedIds = new Set(
+        uploadedDocuments.map((document) => String(document.id)),
+      );
+      const retainedDocuments = currentDocuments.filter(
+        (document) =>
+          !replacedDocumentIds.has(String(document.id)) &&
+          !uploadedIds.has(String(document.id)),
+      );
+
+      return [...uploadedDocuments, ...retainedDocuments];
+    });
+
     setWorkspaceUploadFiles([]);
     setWorkspaceReplacementDocumentIds([]);
     await loadWorkspaceDocuments();
+
+    // A background moderation transaction can make the list endpoint lag
+    // briefly. Keep any just-uploaded entry visible until the next refresh.
+    setWorkspaceDocuments((currentDocuments) => {
+      const currentIds = new Set(
+        currentDocuments.map((document) => String(document.id)),
+      );
+      const missingUploads = uploadedDocuments.filter(
+        (document) => !currentIds.has(String(document.id)),
+      );
+
+      return [...missingUploads, ...currentDocuments];
+    });
 
     const hasFlagged = (uploadedDocuments || []).some(
       (document) => document.status === "FLAGGED",
@@ -4162,20 +4205,6 @@ function renderDiscussionTab() {
         <aside className="workspace_clickup_activity">
           <header>
             <h2>Activity</h2>
-
-            <div>
-              <button type="button">
-                <i className="ti-search"></i>
-              </button>
-
-              <button type="button">
-                <i className="ti-bell"></i>
-              </button>
-
-              <button type="button">
-                <i className="ti-filter"></i>
-              </button>
-            </div>
           </header>
 
           <section className="workspace_clickup_activity_body">
@@ -4205,10 +4234,6 @@ function renderDiscussionTab() {
                   <p>{comment.content}</p>
 
                   <footer>
-                    <button type="button">
-                      <i className="ti-thumb-up"></i>
-                    </button>
-
                     <button type="button">Reply</button>
                   </footer>
                 </article>
@@ -4994,7 +5019,10 @@ function renderDocumentsTab() {
       <section className="workspace_documents_list_card">
         <div className="workspace_documents_list_header">
           <h3>Workspace document list</h3>
-          <span>{approvedWorkspaceDocuments.length} approved</span>
+          <span>
+            {approvedWorkspaceDocuments.length} approved ·{" "}
+            {waitingWorkspaceDocuments.length} waiting approval
+          </span>
         </div>
 
         {workspaceDocuments.length === 0 ? (
@@ -5025,9 +5053,13 @@ function renderDocumentsTab() {
                   <div className="workspace_document_info">
                     <h3>{document.title}</h3>
                     <p>
-                      {formatWorkspaceFileSize(document.file_size_bytes)} ·{" "}
-                      {document.created_at
-                        ? new Date(document.created_at).toLocaleDateString()
+                      {formatWorkspaceFileSize(
+                        document.fileSizeBytes ?? document.file_size_bytes,
+                      )} ·{" "}
+                      {document.createdAt || document.created_at
+                        ? new Date(
+                            document.createdAt || document.created_at,
+                          ).toLocaleDateString()
                         : "Recently uploaded"}
                     </p>
                   </div>
