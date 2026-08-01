@@ -3005,6 +3005,37 @@ body[data-theme] .workspace_delete_btn.workspace_transfer_admin_btn:hover {
   line-height: 1.55;
 }
 
+.discussion_intro_actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.discussion_back_workspaces_btn {
+  min-height: 52px;
+  border: 1px solid var(--border-color);
+  border-radius: 14px;
+  background: var(--bg-card);
+  color: var(--text-primary);
+  padding: 0 18px;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 900;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  transition: border-color 0.2s ease, color 0.2s ease, transform 0.2s ease;
+}
+
+.discussion_back_workspaces_btn:hover {
+  border-color: var(--accent-color);
+  color: var(--accent-color);
+  transform: translateY(-1px);
+}
+
 .new_discussion_topic_btn {
   min-width: 170px;
   min-height: 52px;
@@ -3069,51 +3100,6 @@ body[data-theme] .workspace_delete_btn.workspace_transfer_admin_btn:hover {
   display: flex;
   flex-direction: column;
   gap: 18px;
-}
-
-.discussion_pinned_card {
-  min-height: 132px;
-  border: 1px solid var(--border-color);
-  border-radius: 18px;
-  background: var(--bg-card);
-  padding: 22px 24px;
-  display: flex;
-  justify-content: space-between;
-  gap: 18px;
-  margin-bottom: 18px;
-  box-shadow: var(--shadow-soft);
-}
-
-.discussion_pinned_card span {
-  color: var(--accent-color);
-  font-size: 11px;
-  font-weight: 900;
-  letter-spacing: 1.4px;
-}
-
-.discussion_pinned_card h3 {
-  margin: 9px 0 8px;
-  color: var(--text-primary);
-  font-size: 20px;
-  font-weight: 900;
-}
-
-.discussion_pinned_card p {
-  margin: 0;
-  color: var(--text-secondary);
-  line-height: 1.5;
-}
-
-.discussion_pinned_card > i {
-  width: 42px;
-  height: 42px;
-  border-radius: 12px;
-  background: var(--bg-secondary, var(--accent-soft));
-  color: var(--accent-color);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
 }
 
 .discussion_topic_list {
@@ -4209,6 +4195,11 @@ body[data-theme] .workspace_delete_btn.workspace_transfer_admin_btn:hover {
   }
 
   .new_discussion_topic_btn {
+    width: 100%;
+  }
+
+  .discussion_intro_actions,
+  .discussion_back_workspaces_btn {
     width: 100%;
   }
 
@@ -7245,7 +7236,7 @@ body[data-theme] .workspace_delete_btn.workspace_transfer_admin_btn:hover {
 .workspace_leave_blocked_actions {
   margin-top: 24px;
   display: flex;
-  justify-content: flex-end;
+  justify-content: center;
   gap: 10px;
 }
 
@@ -7674,7 +7665,6 @@ body[data-theme] .workspace_delete_btn.workspace_transfer_admin_btn:hover {
   box-shadow: none !important;
 }
 
-.discussion_pinned_card,
 .discussion_topic_card,
 .discussion_side_card,
 .workspace_member_table,
@@ -7940,7 +7930,6 @@ body[data-theme="white"] .workspace_settings_icon:not(.danger) {
 
 body[data-theme="white"] .workspace_top_tabs,
 body[data-theme="white"] .discussion_intro_row,
-body[data-theme="white"] .discussion_pinned_card,
 body[data-theme="white"] .discussion_topic_card,
 body[data-theme="white"] .discussion_side_card,
 body[data-theme="white"] .discussion_content_sidebar .workspace_about_card,
@@ -8164,6 +8153,12 @@ body[data-theme="white"] .workspace_invite_candidate.is-selected {
   cursor: pointer;
   font-size: 12px;
   font-weight: 900;
+}
+
+.workspace_topic_solutions > header > button:disabled {
+  cursor: not-allowed;
+  opacity: 0.68;
+  box-shadow: none;
 }
 
 .workspace_solution_form {

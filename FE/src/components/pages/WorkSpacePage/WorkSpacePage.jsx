@@ -13,7 +13,7 @@ import {
   addWorkspaceMember,
   addWorkspaceDiscussionComment,
   updateWorkspaceDiscussionComment,
-  addWorkspaceDiscussionAttachment,
+  uploadWorkspaceDiscussionAttachments,
   addWorkspaceDiscussionSubtask,
   getWorkspaceMembers,
   getWorkspaceDiscussionTopics,
@@ -304,6 +304,7 @@ function WorkSpacePage() {
   const {
     popup: actionPopup,
     showConfirm,
+    showAlert,
     resolvePopup: resolveActionPopup,
   } = useActionPopup();
   const [activeTab, setActiveTab] = useState("discussion");
@@ -311,6 +312,7 @@ function WorkSpacePage() {
     useState(false);
   const [isDeleteWorkspaceModalOpen, setIsDeleteWorkspaceModalOpen] =
     useState(false);
+  const [isSoleAdminLeaving, setIsSoleAdminLeaving] = useState(false);
   const [isDeletingWorkspace, setIsDeletingWorkspace] = useState(false);
   const [deleteWorkspaceError, setDeleteWorkspaceError] = useState("");
   const [isTopicFormOpen, setIsTopicFormOpen] = useState(false);
@@ -335,10 +337,6 @@ function WorkSpacePage() {
   const [newTopicDescription, setNewTopicDescription] = useState("");
   const [newTopicType, setNewTopicType] = useState("Question");
   const [newTopicStatus, setNewTopicStatus] = useState("Open");
-  const [newTopicPriority, setNewTopicPriority] = useState("Normal");
-  const [newTopicDateMode, setNewTopicDateMode] = useState("none");
-  const [newTopicStartDate, setNewTopicStartDate] = useState("");
-  const [newTopicEndDate, setNewTopicEndDate] = useState("");
   const [newTopicAttachments, setNewTopicAttachments] = useState([]);
   const [isCreatingTopic, setIsCreatingTopic] = useState(false);
   const [topicCommentInput, setTopicCommentInput] = useState("");
@@ -1041,12 +1039,18 @@ function WorkSpacePage() {
     if (!requireTopicPermission("create or edit topics")) return;
 
     if (topicTitle.trim() === "") {
-      alert("Please enter topic title");
+      await showAlert("Enter a title before creating this topic.", {
+        title: "Topic title required",
+        confirmText: "Got it",
+      });
       return;
     }
 
     if (newTopicDescription.trim() === "") {
-      alert("Please enter topic description");
+      await showAlert("Enter a description before creating this topic.", {
+        title: "Topic description required",
+        confirmText: "Got it",
+      });
       return;
     }
 
@@ -1071,10 +1075,10 @@ function WorkSpacePage() {
         content: newTopicDescription.trim(),
         topicType: newTopicType,
         status: newTopicStatus,
-        priority: newTopicPriority,
-        dateMode: newTopicDateMode,
-        startDate: newTopicDateMode === "deadline" ? newTopicStartDate : "",
-        endDate: newTopicDateMode === "deadline" ? newTopicEndDate : "",
+        priority: "Normal",
+        dateMode: "none",
+        startDate: "",
+        endDate: "",
       });
 
       let topicWithAttachments = createdTopic;
@@ -1082,22 +1086,12 @@ function WorkSpacePage() {
 
       if (newTopicAttachments.length > 0) {
         try {
-          const { uploadedDocuments } =
-            await uploadWorkspaceFilesWithDuplicateConfirmation(
-              newTopicAttachments,
-            );
-          if (uploadedDocuments && uploadedDocuments.length > 0) {
-            const attachments = await Promise.all(
-              uploadedDocuments.map((document) =>
-                addWorkspaceDiscussionAttachment(workspaceId, createdTopic.id, {
-                  fileName: document.title,
-                  fileUrl: document.fileUrl || document.file_url,
-                  fileSizeBytes:
-                    document.fileSizeBytes || document.file_size_bytes || 0,
-                  mimeType: document.mimeType || "",
-                }),
-              ),
-            );
+          const attachments = await uploadWorkspaceDiscussionAttachments(
+            workspaceId,
+            createdTopic.id,
+            newTopicAttachments,
+          );
+          if (attachments.length > 0) {
             topicWithAttachments = { ...createdTopic, files: attachments };
           }
         } catch (error) {
@@ -1126,10 +1120,6 @@ function WorkSpacePage() {
       setNewTopicDescription("");
       setNewTopicType("Question");
       setNewTopicStatus("Open");
-      setNewTopicPriority("Normal");
-      setNewTopicDateMode("none");
-      setNewTopicStartDate("");
-      setNewTopicEndDate("");
       setNewTopicAttachments([]);
 
       setIsTopicFormOpen(false);
@@ -1386,20 +1376,7 @@ async function handleTopicFileChange(e) {
     return;
   }
 
-const { acceptedFiles, replacementDocumentIds, keptExistingFileNames } =
-  await resolveWorkspaceUploadSelection(selectedFiles);
-
-if (acceptedFiles.length === 0) {
-  setDiscussionStatus(
-    keptExistingFileNames.length > 0
-      ? "The existing document was kept and was not uploaded again."
-      : "No new files were selected for upload.",
-  );
-  e.target.value = "";
-  return;
-}
-
-const selectedFilesSize = acceptedFiles.reduce(
+const selectedFilesSize = selectedFiles.reduce(
   (total, file) => total + file.size,
   0,
 );
@@ -1425,30 +1402,10 @@ if (nextStorageUsed > WORKSPACE_STORAGE_LIMIT_BYTES) {
 }
 
 try {
-  const uploadResult = await uploadWorkspaceFilesWithDuplicateConfirmation(
-    acceptedFiles,
-    replacementDocumentIds,
-  );
-
-  if (uploadResult.cancelled) {
-    setDiscussionStatus(
-      uploadResult.reason === "kept-existing"
-        ? "The existing document was kept and was not uploaded again."
-        : "Duplicate files were not uploaded.",
-    );
-    return;
-  }
-
-  const uploadedDocuments = uploadResult.uploadedDocuments;
-  const attachments = await Promise.all(
-    (uploadedDocuments || []).map((document) =>
-      addWorkspaceDiscussionAttachment(workspaceId, selectedTopic.id, {
-        fileName: document.title,
-        fileUrl: document.fileUrl || document.file_url,
-        fileSizeBytes: document.fileSizeBytes || document.file_size_bytes || 0,
-        mimeType: document.mimeType || "",
-      }),
-    ),
+  const attachments = await uploadWorkspaceDiscussionAttachments(
+    workspaceId,
+    selectedTopic.id,
+    selectedFiles,
   );
 
   setDiscussionTopics((currentTopics) =>
@@ -1458,8 +1415,6 @@ try {
         : topic,
     ),
   );
-  await loadWorkspaceDocuments();
-
   createAppNotification({
     category: "file",
     action: "uploaded",
@@ -1486,6 +1441,18 @@ async function handleSubmitSolution(event) {
   event.preventDefault();
 
   if (!selectedTopic || isUploadingSolution) return;
+  const alreadySubmittedSolution = Boolean(
+    currentUserId &&
+      (selectedTopic.solutions || []).some(
+        (solution) =>
+          String(solution.userId || solution.author?.id || "") ===
+          currentUserId,
+      ),
+  );
+  if (alreadySubmittedSolution && !editingSolutionId) {
+    alert("You have already submitted a solution for this topic.");
+    return;
+  }
   if (!solutionContent.trim()) {
     alert("Please describe your solution before submitting it.");
     return;
@@ -1520,22 +1487,11 @@ async function handleSubmitSolution(event) {
     let uploadedSolutions = [];
 
     if (solutionAttachments.length > 0) {
-      const uploadedDocuments = await uploadDocuments(
-        solutionAttachments,
+      uploadedSolutions = await uploadWorkspaceDiscussionAttachments(
         workspaceId,
-      );
-      uploadedSolutions = await Promise.all(
-        (uploadedDocuments || []).map((document) =>
-          addWorkspaceDiscussionAttachment(workspaceId, selectedTopic.id, {
-            kind: "solution",
-            solutionId: savedSolution.id,
-            fileName: document.title,
-            fileUrl: document.fileUrl || document.file_url,
-            fileSizeBytes:
-              document.fileSizeBytes || document.file_size_bytes || 0,
-            mimeType: document.mimeType || "",
-          }),
-        ),
+        selectedTopic.id,
+        solutionAttachments,
+        { kind: "solution", solutionId: savedSolution.id },
       );
     }
 
@@ -2073,7 +2029,13 @@ async function handleTransferAdminOwnership(targetUserId, targetUserName) {
     setMemberActionStatus("");
 
     const res = await transferAdminOwnership(workspaceId, targetUserId);
-    alert(res?.message || `Admin ownership transferred to ${targetUserName}.`);
+    await showAlert(
+      res?.message || `Admin ownership transferred to ${targetUserName}.`,
+      {
+        title: "Admin ownership transferred",
+        confirmText: "Got it",
+      },
+    );
     await loadWorkspaceMembers();
     setWorkspace(await getWorkspace(workspaceId));
   } catch (error) {
@@ -2230,6 +2192,7 @@ async function handleDeleteWorkspace() {
   if (!requireWorkspaceAdminPermission("delete this workspace")) return;
 
   setDeleteWorkspaceError("");
+  setIsSoleAdminLeaving(false);
   setIsDeleteWorkspaceModalOpen(true);
 }
 
@@ -2252,7 +2215,13 @@ async function handleConfirmDeleteWorkspace() {
 
 async function handleLeaveWorkspace() {
   if (canManageWorkspace) {
-    setIsLeaveBlockedModalOpen(true);
+    if (backendMembers.length <= 1) {
+      setDeleteWorkspaceError("");
+      setIsSoleAdminLeaving(true);
+      setIsDeleteWorkspaceModalOpen(true);
+    } else {
+      setIsLeaveBlockedModalOpen(true);
+    }
     return;
   }
 
@@ -2997,8 +2966,6 @@ function renderDiscussionTab() {
     (total, topic) => total + (topic.files?.length || 0),
     0,
   );
-  const pinnedTopic = discussionTopics[0] || null;
-
   const filteredDiscussionTopics = discussionTopics.filter((topic) => {
     if (topicFilter === "All") return true;
     if (topicFilter === "Solved") return topic.status === "Solved";
@@ -3735,7 +3702,15 @@ function renderDiscussionTab() {
                 </div>
                 <button
                   type="button"
+                  disabled={hasCurrentUserSubmittedSolution}
+                  aria-disabled={hasCurrentUserSubmittedSolution}
+                  title={
+                    hasCurrentUserSubmittedSolution
+                      ? "You have already submitted a solution. Use Edit to update it."
+                      : "Upload your solution"
+                  }
                   onClick={() => {
+                    if (hasCurrentUserSubmittedSolution) return;
                     setEditingSolutionId(null);
                     setSolutionContent("");
                     setSolutionAttachments([]);
@@ -3785,6 +3760,44 @@ function renderDiscussionTab() {
                     </label>
                     <span>Optional · PDF, DOCX or TXT · up to 10 files</span>
                   </div>
+
+                  {editingSolutionId &&
+                    solutionFiles.some(
+                      (file) => file.solutionId === editingSolutionId,
+                    ) && (
+                      <div className="workspace_solution_selected_files">
+                        {solutionFiles
+                          .filter(
+                            (file) => file.solutionId === editingSolutionId,
+                          )
+                          .map((file) => (
+                            <div key={file.id}>
+                              <span>
+                                <i className="ti-file"></i>
+                                {normalizeDisplayFileName(
+                                  file.fileName || file.name,
+                                )}
+                                <small>
+                                  {formatWorkspaceFileSize(
+                                    file.fileSizeBytes,
+                                  )}
+                                </small>
+                              </span>
+                              <button
+                                type="button"
+                                aria-label={`Remove ${file.fileName || file.name}`}
+                                title="Remove attachment"
+                                disabled={isUploadingSolution}
+                                onClick={() =>
+                                  handleDeleteSolutionFile(file.id)
+                                }
+                              >
+                                ×
+                              </button>
+                            </div>
+                          ))}
+                      </div>
+                    )}
 
                   {solutionAttachments.length > 0 && (
                     <div className="workspace_solution_selected_files">
@@ -3916,24 +3929,10 @@ function renderDiscussionTab() {
                                       )}
                                     </small>
                                   </a>
-                                  {currentUserId &&
-                                    String(solution.author?.id) ===
-                                      currentUserId && (
-                                      <button
-                                        type="button"
-                                        title="Remove attachment"
-                                        onClick={() =>
-                                          handleDeleteSolutionFile(file.id)
-                                        }
-                                      >
-                                        ×
-                                      </button>
-                                    )}
                                 </span>
                               ))}
                             </div>
                           )}
-                          {renderSolutionComments(solution)}
                         </div>
                       </article>
                     );
@@ -4020,6 +4019,7 @@ function renderDiscussionTab() {
                               ))}
                             </div>
                           )}
+                          {renderSolutionComments(solution)}
                         </div>
                       </article>
                     );
@@ -4275,21 +4275,31 @@ function renderDiscussionTab() {
           </p>
         </div>
 
-        {canManageTopics ? (
-          <button
-            type="button"
-            className="new_discussion_topic_btn"
-            onClick={() => setIsTopicFormOpen(true)}
+        <div className="discussion_intro_actions">
+          <Link
+            to="/dashboard/workspaces"
+            className="discussion_back_workspaces_btn"
           >
-            <i className="ti-plus"></i>
-            New Topic
-          </button>
-        ) : (
-          <span className="workspace_permission_pill">
-            <i className="ti-eye"></i>
-            Contributor mode
-          </span>
-        )}
+            <i className="ti-arrow-left"></i>
+            My Workspaces
+          </Link>
+
+          {canManageTopics ? (
+            <button
+              type="button"
+              className="new_discussion_topic_btn"
+              onClick={() => setIsTopicFormOpen(true)}
+            >
+              <i className="ti-plus"></i>
+              New Topic
+            </button>
+          ) : (
+            <span className="workspace_permission_pill">
+              <i className="ti-eye"></i>
+              Contributor mode
+            </span>
+          )}
+        </div>
       </div>
 
       <div className="discussion_filter_row">
@@ -4381,62 +4391,6 @@ function renderDiscussionTab() {
               />
             </div>
 
-            <div className="discussion_topic_form_grid">
-              <div className="discussion_form_group">
-                <label>Priority</label>
-                <select
-                  value={newTopicPriority}
-                  onChange={(e) => setNewTopicPriority(e.target.value)}
-                >
-                  <option value="Low">Low</option>
-                  <option value="Normal">Normal</option>
-                  <option value="High">High</option>
-                  <option value="Urgent">Urgent</option>
-                </select>
-              </div>
-
-              <div className="discussion_form_group">
-                <label>Deadline option</label>
-                <select
-                  value={newTopicDateMode}
-                  onChange={(e) => {
-                    setNewTopicDateMode(e.target.value);
-
-                    if (e.target.value === "none") {
-                      setNewTopicStartDate("");
-                      setNewTopicEndDate("");
-                    }
-                  }}
-                >
-                  <option value="none">No deadline</option>
-                  <option value="deadline">Set deadline</option>
-                </select>
-              </div>
-            </div>
-
-            {newTopicDateMode === "deadline" && (
-              <div className="discussion_topic_form_grid">
-                <div className="discussion_form_group">
-                  <label>Start date</label>
-                  <input
-                    type="date"
-                    value={newTopicStartDate}
-                    onChange={(e) => setNewTopicStartDate(e.target.value)}
-                  />
-                </div>
-
-                <div className="discussion_form_group">
-                  <label>End date</label>
-                  <input
-                    type="date"
-                    value={newTopicEndDate}
-                    min={newTopicStartDate}
-                    onChange={(e) => setNewTopicEndDate(e.target.value)}
-                  />
-                </div>
-              </div>
-            )}
-
             <div className="discussion_form_group discussion_new_topic_attachments">
               <label>Upload attachment</label>
               <label className="discussion_attachment_picker">
@@ -4526,24 +4480,6 @@ function renderDiscussionTab() {
 
           {filteredDiscussionTopics.length > 0 && (
             <>
-              <section className="discussion_pinned_card">
-                <div>
-                  <span>PINNED</span>
-                  <h3>
-                    {pinnedTopic
-                      ? pinnedTopic.title
-                      : "No pinned discussion yet"}
-                  </h3>
-                  <p>
-                    {pinnedTopic
-                      ? `${pinnedTopic.creator || "Workspace"} shared this topic${pinnedTopic.status ? ` · ${pinnedTopic.status}` : ""} · ${pinnedTopic.comments?.length || 0} replies.`
-                      : "Create a topic to surface an important discussion here."}
-                  </p>
-                </div>
-
-                <i className="ti-pin-alt"></i>
-              </section>
-
               <section className="discussion_topic_list">
                 {filteredDiscussionTopics.map((topic) => (
                   <article
@@ -5293,7 +5229,13 @@ function renderSettingsTab() {
                 const selectEl = document.getElementById("transferAdminSelect");
                 const targetId = selectEl?.value;
                 if (!targetId) {
-                  alert("Please select a member first.");
+                  showAlert(
+                    "Choose a workspace member before transferring Admin ownership.",
+                    {
+                      title: "Select a member",
+                      confirmText: "Got it",
+                    },
+                  );
                   return;
                 }
                 const selectedMember = visibleWorkspaceMembers.find(
@@ -5615,7 +5557,9 @@ return (
           }`}
           title={
             canManageWorkspace
-              ? "Transfer Admin ownership before leaving this workspace"
+              ? backendMembers.length > 1
+                ? "Transfer Admin ownership before leaving this workspace"
+                : "Leaving will delete this workspace"
               : "Leave workspace"
           }
           style={{
@@ -5693,19 +5637,25 @@ return (
           </div>
 
           <span className="workspace_leave_blocked_eyebrow">
-            Permanent action
+            {isSoleAdminLeaving ? "Last workspace member" : "Permanent action"}
           </span>
-          <h2 id="workspace-delete-confirm-title">Delete this workspace?</h2>
+          <h2 id="workspace-delete-confirm-title">
+            {isSoleAdminLeaving
+              ? "Leaving will delete this workspace"
+              : "Delete this workspace?"}
+          </h2>
           <p id="workspace-delete-confirm-description">
-            This workspace and its content will be removed for every member.
-            This action cannot be undone.
+            {isSoleAdminLeaving
+              ? "If you leave this workspace, it will be deleted because you are its only Admin and member."
+              : "This workspace and its content will be removed for every member. This action cannot be undone."}
           </p>
 
           <div className="workspace_delete_confirm_warning">
             <i className="ti-alert" aria-hidden="true"></i>
             <span>
-              Make sure you no longer need the workspace documents,
-              discussions and study data before continuing.
+              {isSoleAdminLeaving
+                ? "Leaving removes the workspace documents, discussions and study data. This action cannot be undone."
+                : "Make sure you no longer need the workspace documents, discussions and study data before continuing."}
             </span>
           </div>
 
@@ -5735,7 +5685,11 @@ return (
               onClick={handleConfirmDeleteWorkspace}
             >
               <i className={isDeletingWorkspace ? "ti-reload" : "ti-trash"}></i>
-              {isDeletingWorkspace ? "Deleting..." : "Delete workspace"}
+              {isDeletingWorkspace
+                ? "Deleting..."
+                : isSoleAdminLeaving
+                  ? "Leave and delete"
+                  : "Delete workspace"}
             </button>
           </div>
         </section>
