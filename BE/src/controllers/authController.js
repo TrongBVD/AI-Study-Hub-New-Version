@@ -58,7 +58,20 @@ exports.googleLogin = async (req, res) => {
         res.status(200).json({ status: 'success', data: result });
     } catch (error) {
         console.error("🔴 GOOGLE LOGIN BACKEND ERROR:", error);
-        res.status(401).json({ status: 'error', message: 'Invalid Google token.' });
+        const errMsg = String(error?.message || "").toLowerCase();
+        const isTokenError =
+            errMsg.includes("token") ||
+            errMsg.includes("invalid") ||
+            errMsg.includes("jwt") ||
+            errMsg.includes("audience") ||
+            errMsg.includes("signature") ||
+            errMsg.includes("segment") ||
+            errMsg.includes("oauth");
+
+        return res.status(isTokenError ? 401 : 400).json({
+            status: 'error',
+            message: isTokenError ? 'Invalid Google token.' : (error.message || 'Google authentication failed.')
+        });
     }
 };
 

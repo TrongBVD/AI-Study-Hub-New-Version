@@ -204,16 +204,6 @@ function LoginPage() {
       const responseData = res.data?.data || res.data;
 
       if (responseData?.requiresOTP) {
-        if (responseData?.isResume) {
-          alert(
-            "You have an incomplete account setup process. Redirecting to continue!",
-          );
-        } else {
-          alert(
-            "This email is not registered. Redirecting to account registration!",
-          );
-        }
-
         navigate("/verify-otp", {
           state: {
             email: responseData.email,

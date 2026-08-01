@@ -49,10 +49,24 @@ const STARTER_PROMPTS = [
   },
 ];
 
+const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
+
 function loadStoredHistory() {
   try {
-    const parsed = JSON.parse(getUserStoredItem(CHAT_HISTORY_KEY) || "[]");
-    return Array.isArray(parsed) ? parsed : [];
+    const raw = getUserStoredItem(CHAT_HISTORY_KEY);
+    if (!raw) return [];
+
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) return parsed;
+
+    if (parsed && typeof parsed === "object" && Array.isArray(parsed.data)) {
+      if (parsed.timestamp && Date.now() - parsed.timestamp > CACHE_TTL_MS) {
+        removeUserStoredItem(CHAT_HISTORY_KEY);
+        return [];
+      }
+      return parsed.data;
+    }
+    return [];
   } catch {
     return [];
   }
@@ -132,7 +146,13 @@ function ChatBot({ defaultOpen = false, showBubble = true }) {
     messages.length === 1 && messages[0].id === INITIAL_MESSAGE.id;
 
   useEffect(() => {
-    setUserStoredItem(CHAT_HISTORY_KEY, JSON.stringify(history));
+    setUserStoredItem(
+      CHAT_HISTORY_KEY,
+      JSON.stringify({
+        timestamp: Date.now(),
+        data: history,
+      }),
+    );
   }, [history]);
 
   useEffect(() => {

@@ -178,12 +178,25 @@ function CreateLibraryPage() {
         share_on_profile: isPublic // Mặc định khi tạo mới: nếu public thì share lên profile luôn
       });
 
-      // Lấy ID chuẩn do Supabase tạo ra
-      const dbLibraryId = response.data.data.id;
+      // Lấy data chuẩn do Supabase tạo ra
+      const createdLib = response.data.data;
 
-      navigate(`/dashboard/libraries/${dbLibraryId}`, {
+      navigate(`/dashboard/libraries/${createdLib.id}`, {
         state: {
           from: "/dashboard/create-library",
+          library: {
+            id: createdLib.id,
+            user_id: createdLib.user_id,
+            name: createdLib.name,
+            description: createdLib.description || "",
+            visibility: createdLib.is_public ? "public" : "private",
+            is_public: createdLib.is_public,
+            share_on_profile: createdLib.share_on_profile,
+            documents: 0,
+            stars: 0,
+            downloads: 0,
+            isStarred: false,
+          },
         },
       });
     } catch (error) {

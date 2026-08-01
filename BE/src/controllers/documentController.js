@@ -1398,18 +1398,36 @@ exports.listMyLibraries = async (req, res) => {
       });
     }
 
-    const { data, error } = await supabase
+    const { data: libraries, error } = await supabase
       .from("libraries")
-      .select("*, documents(count)")
+      .select("*")
       .eq("user_id", userID)
-      .is("documents.deleted_at", null)
       .order("created_at", { ascending: false });
 
     if (error) throw error;
 
-    const mapped = (data || []).map(lib => ({
+    const libraryIds = (libraries || []).map(lib => lib.id);
+    const docCountsMap = {};
+
+    if (libraryIds.length > 0) {
+      const { data: docs, error: docsError } = await supabase
+        .from("documents")
+        .select("library_id")
+        .in("library_id", libraryIds)
+        .is("deleted_at", null);
+
+      if (!docsError && docs) {
+        docs.forEach(doc => {
+          if (doc.library_id) {
+            docCountsMap[doc.library_id] = (docCountsMap[doc.library_id] || 0) + 1;
+          }
+        });
+      }
+    }
+
+    const mapped = (libraries || []).map(lib => ({
       ...lib,
-      documents: lib.documents?.[0]?.count || 0
+      documents: docCountsMap[lib.id] || 0
     }));
 
     return res.status(200).json({
@@ -1441,10 +1459,9 @@ exports.getLibrary = async (req, res) => {
 
     const { data, error } = await supabase
       .from("libraries")
-      .select("*, documents(count)")
+      .select("*")
       .eq("id", libraryId)
       .eq("user_id", userID)
-      .is("documents.deleted_at", null)
       .maybeSingle();
 
     if (error) throw error;
@@ -1456,20 +1473,22 @@ exports.getLibrary = async (req, res) => {
       });
     }
 
-    const [{ count: starCount, error: starCountError }, { count: downloadCount, error: downloadCountError }, { data: myStar, error: myStarError }] =
+    const [{ count: docCount, error: docCountError }, { count: starCount, error: starCountError }, { count: downloadCount, error: downloadCountError }, { data: myStar, error: myStarError }] =
       await Promise.all([
+        supabase.from("documents").select("id", { count: "exact", head: true }).eq("library_id", libraryId).is("deleted_at", null),
         supabase.from("library_stars").select("library_id", { count: "exact", head: true }).eq("library_id", libraryId),
         supabase.from("library_downloads").select("id", { count: "exact", head: true }).eq("library_id", libraryId),
         supabase.from("library_stars").select("library_id").eq("library_id", libraryId).eq("user_id", userID).maybeSingle(),
       ]);
 
+    if (docCountError) throw docCountError;
     if (starCountError) throw starCountError;
     if (downloadCountError) throw downloadCountError;
     if (myStarError) throw myStarError;
 
     const mapped = {
       ...data,
-      documents: data.documents?.[0]?.count || 0,
+      documents: docCount || 0,
       stars: starCount || 0,
       downloads: downloadCount || 0,
       isStarred: Boolean(myStar),
@@ -1612,11 +1631,13 @@ exports.deleteLibrary = async (req, res) => {
       });
     }
 
-    const { data: targetLib } = await supabase
+    const { data: targetLib, error: findLibErr } = await supabase
       .from("libraries")
       .select("id, user_id")
       .eq("id", id)
       .maybeSingle();
+
+    if (findLibErr) throw findLibErr;
 
     if (!targetLib) {
       return res.status(404).json({
@@ -1632,50 +1653,61 @@ exports.deleteLibrary = async (req, res) => {
       });
     }
 
-    // The database function verifies ownership again while locking the
-    // library row, then cleans up dependent records and deletes the library in
-    // one transaction.
-    const { error: rpcError } = await supabase.rpc("delete_owned_library", {
-      p_library_id: id,
-      p_user_id: userID,
-    });
+    // Attempt RPC call first
+    let rpcSuccess = false;
+    try {
+      const { error: rpcError } = await supabase.rpc("delete_owned_library", {
+        p_library_id: id,
+        p_user_id: userID,
+      });
 
-    if (rpcError) {
-      if (String(rpcError.message).includes("LIBRARY_NOT_FOUND")) {
-        return res.status(404).json({
-          status: "error",
-          message: "Library not found.",
-        });
+      if (rpcError) {
+        if (String(rpcError.message).includes("LIBRARY_NOT_FOUND")) {
+          return res.status(404).json({
+            status: "error",
+            message: "Library not found.",
+          });
+        }
+        if (String(rpcError.message).includes("LIBRARY_OWNER_REQUIRED")) {
+          return res.status(403).json({
+            status: "error",
+            message: "You can only delete your own library.",
+          });
+        }
+        if (
+          !String(rpcError.message).includes("schema cache") &&
+          !String(rpcError.message).includes("Could not find the function")
+        ) {
+          console.warn("RPC delete_owned_library failed, falling back to direct queries:", rpcError.message);
+        }
+      } else {
+        rpcSuccess = true;
       }
-      if (String(rpcError.message).includes("LIBRARY_OWNER_REQUIRED")) {
-        return res.status(403).json({
-          status: "error",
-          message: "You can only delete your own library.",
-        });
+    } catch (rpcErr) {
+      if (
+        !String(rpcErr?.message).includes("schema cache") &&
+        !String(rpcErr?.message).includes("Could not find the function")
+      ) {
+        console.warn("RPC delete_owned_library threw exception, falling back to direct queries:", rpcErr.message);
       }
+    }
 
-      // Keep deletion working in environments where the database RPC
-      // migration has not been applied yet.
-      const cleanupOperations = [
-        supabase.from("library_stars").delete().eq("library_id", id),
-        supabase.from("library_downloads").delete().eq("library_id", id),
-        supabase
-          .from("documents")
-          .update({ library_id: null, is_public: false })
-          .eq("library_id", id),
-      ];
-      const cleanupResults = await Promise.all(cleanupOperations);
-      const cleanupError = cleanupResults.find((result) => result.error)?.error;
+    // Fallback if RPC fails or is missing on backend database
+    if (!rpcSuccess) {
+      await supabase.from("library_stars").delete().eq("library_id", id);
+      await supabase.from("library_downloads").delete().eq("library_id", id);
+      await supabase
+        .from("documents")
+        .update({ library_id: null, is_public: false })
+        .eq("library_id", id);
 
-      if (cleanupError) throw cleanupError;
-
-      const { error: deleteError } = await supabase
+      const { error: deleteLibError } = await supabase
         .from("libraries")
         .delete()
         .eq("id", id)
         .eq("user_id", userID);
 
-      if (deleteError) throw deleteError;
+      if (deleteLibError) throw deleteLibError;
     }
 
     return res.status(200).json({

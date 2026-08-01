@@ -122,7 +122,7 @@
 
 .workspace_member_top p {
   margin: 8px 0 0;
-  color: var(--sidebar-bg);
+  color: var(--text-secondary);
   font-size: 14px;
   line-height: 1.45;
 }
@@ -237,7 +237,7 @@
 .workspace_member_row {
   min-height: 86px;
   border-bottom: 1px solid var(--border-color);
-  color: var(--sidebar-bg);
+  color: var(--text-primary);
 }
 
 .workspace_member_row:last-child {
@@ -389,7 +389,7 @@
 .workspace_member_status.member {
   background: transparent;
   border: 1px solid var(--border-color);
-  color: var(--sidebar-bg);
+  color: var(--text-primary);
 }
 
 .workspace_member_status.editor {
@@ -950,8 +950,8 @@
   width: 44px;
   height: 44px;
   border-radius: 12px;
-  background: var(--sidebar-bg, var(--sidebar-active-bg));
-  color: var(--bg-secondary, var(--accent-soft));
+  background: var(--bg-secondary);
+  color: var(--accent-color);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -960,7 +960,7 @@
 
 .workspace_invite_header h2 {
   margin: 0;
-  color: var(--text-primary, var(--text-primary));
+  color: var(--text-primary);
   font-size: 26px;
   line-height: 1;
 }
@@ -976,7 +976,7 @@
   height: 32px;
   border: none;
   background: transparent;
-  color: var(--sidebar-bg);
+  color: var(--text-secondary);
   font-size: 28px;
   line-height: 1;
   cursor: pointer;
@@ -1006,7 +1006,7 @@
 }
 
 .workspace_invite_search i {
-  color: var(--text-muted, var(--text-muted));
+  color: var(--text-muted);
   font-size: 20px;
 }
 
@@ -1094,7 +1094,7 @@
 .workspace_invite_result {
   max-height: 260px;
   background: var(--bg-secondary);
-  border: 1px solid var(--border-color, var(--border-color));
+  border: 1px solid var(--border-color);
   border-radius: 18px;
   padding: 10px;
   display: grid;
@@ -1111,12 +1111,17 @@
   border-radius: 13px;
   background: var(--bg-card);
   cursor: pointer;
+  transition: all 0.2s ease;
 }
 
-.workspace_invite_candidate:hover,
-.workspace_invite_candidate.is-selected {
+.workspace_invite_candidate:hover {
   border-color: var(--accent-color);
   background: var(--bg-card);
+}
+
+.workspace_invite_candidate.is-selected {
+  border-color: var(--accent-color);
+  background: color-mix(in srgb, var(--accent-color) 12%, var(--bg-card));
 }
 
 .workspace_invite_candidate.is-existing-member {
@@ -1145,14 +1150,14 @@
 
 .workspace_invite_candidate p {
   margin: 0;
-  color: var(--sidebar-bg);
+  color: var(--text-secondary);
   font-size: 14px;
 }
 
 .workspace_invite_existing_badge {
   border-radius: 999px;
-  background: var(--bg-secondary, var(--accent-soft));
-  color: var(--text-secondary, #6f4b2e);
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
   padding: 5px 10px;
   font-size: 11px;
   font-weight: 800;
@@ -1162,7 +1167,7 @@
 
 .workspace_invite_candidate .workspace_invite_existing_note {
   margin-top: 5px;
-  color: #9a6a45;
+  color: var(--accent-color);
   font-size: 13px;
 }
 
@@ -1170,8 +1175,8 @@
   height: 42px;
   border: none;
   border-radius: 10px;
-  background: var(--sidebar-bg);
-  color: var(--bg-card);
+  background: var(--accent-color);
+  color: #ffffff;
   padding: 0 26px;
   cursor: pointer;
   font-weight: 800;
@@ -1224,7 +1229,7 @@
   height: 52px;
   border-radius: 16px;
   margin: 0 auto 12px;
-  background: var(--bg-secondary, var(--accent-soft));
+  background: var(--bg-secondary);
   color: var(--accent-color);
   display: flex;
   align-items: center;
@@ -1251,7 +1256,7 @@
 
 .workspace_invite_no_result_actions button,
 .workspace_invite_footer button {
-  border: 1px solid var(--border-color, var(--border-color));
+  border: 1px solid var(--border-color);
   border-radius: 12px;
   background: var(--bg-card);
   color: var(--text-primary);
@@ -1303,7 +1308,7 @@
 .workspace_invite_footer {
   min-height: 110px;
   border-top: 1px solid var(--border-color);
-  background: var(--border-color);
+  background: var(--bg-secondary);
   padding: 24px 34px;
   display: flex;
   justify-content: space-between;
@@ -1326,7 +1331,7 @@
 
 .workspace_send_invite_btn {
   background: var(--accent-color) !important;
-  color: var(--bg-card) !important;
+  color: #ffffff !important;
   border-color: var(--accent-color) !important;
   min-width: 90px;
 }

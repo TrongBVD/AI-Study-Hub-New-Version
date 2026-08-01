@@ -1,3 +1,5 @@
+import { clearCurrentUserStorage } from "./userStorage.js";
+
 export function getAuthStorage() {
   return localStorage.getItem("rememberMe") === "true" ||
     localStorage.getItem("accessToken")
@@ -28,6 +30,7 @@ export function storeAuthSession({ accessToken, user, rememberMe }) {
 }
 
 export function clearStoredSession() {
+  clearCurrentUserStorage();
   localStorage.removeItem("accessToken");
   localStorage.removeItem("user");
   localStorage.removeItem("rememberMe");

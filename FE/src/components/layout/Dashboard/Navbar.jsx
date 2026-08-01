@@ -31,6 +31,22 @@ function getStoredUserRole() {
   }
 }
 
+function mergeLibraries(publicLibraries = [], myLibraries = []) {
+  const librariesById = new Map();
+
+  publicLibraries.forEach((library) => {
+    if (library?.id) librariesById.set(String(library.id), library);
+  });
+
+  myLibraries.forEach((library) => {
+    if (!library?.id) return;
+    const key = String(library.id);
+    librariesById.set(key, { ...librariesById.get(key), ...library });
+  });
+
+  return [...librariesById.values()];
+}
+
 function getNotificationMessage(message) {
   return String(message || "").replace(/\bViewer\b/gi, "Contributor");
 }
@@ -148,25 +164,82 @@ function Navbar({
     if (isGuest) return undefined;
 
     let isMounted = true;
+    let isRequestInFlight = false;
+    let lastSyncedAt = 0;
+    let nextAllowedSyncAt = 0;
+
+    const POLL_INTERVAL_MS = 60 * 1000;
+    const FOCUS_REFRESH_STALE_MS = 30 * 1000;
+
+    function getRetryDelayMs(error) {
+      const retryAfter = error?.response?.headers?.["retry-after"];
+      const retryAfterSeconds = Number(retryAfter);
+
+      if (Number.isFinite(retryAfterSeconds) && retryAfterSeconds > 0) {
+        return Math.ceil(retryAfterSeconds * 1000);
+      }
+
+      const retryAfterDateMs = Date.parse(retryAfter);
+      if (Number.isFinite(retryAfterDateMs)) {
+        return Math.max(0, retryAfterDateMs - Date.now());
+      }
+
+      return POLL_INTERVAL_MS;
+    }
+
     async function syncServerNotifications() {
+      if (
+        !isMounted ||
+        document.visibilityState !== "visible" ||
+        isRequestInFlight ||
+        Date.now() < nextAllowedSyncAt
+      ) {
+        return;
+      }
+
+      isRequestInFlight = true;
       try {
         const serverNotifications = await getMyWorkspaceNotifications();
         if (isMounted) {
           setNotifications(mergeAppNotifications(serverNotifications || []));
+          lastSyncedAt = Date.now();
         }
       } catch (error) {
+        const status = error?.response?.status;
+
+        if (status === 429) {
+          nextAllowedSyncAt = Date.now() + getRetryDelayMs(error);
+          console.warn("Notification sync is rate-limited; waiting before retrying.");
+          return;
+        }
+
+        if (status === 401) {
+          // The API interceptor refreshes or clears the session. Do not keep
+          // polling while that authentication flow is in progress or failed.
+          nextAllowedSyncAt = Number.POSITIVE_INFINITY;
+          console.warn("Notification sync stopped because the session is no longer valid.");
+          return;
+        }
+
         console.error("Failed to sync workspace notifications:", error);
+      } finally {
+        isRequestInFlight = false;
       }
     }
 
     syncServerNotifications();
-    const intervalId = window.setInterval(syncServerNotifications, 10000);
-    window.addEventListener("focus", syncServerNotifications);
+    const intervalId = window.setInterval(syncServerNotifications, POLL_INTERVAL_MS);
+    const handleWindowFocus = () => {
+      if (Date.now() - lastSyncedAt >= FOCUS_REFRESH_STALE_MS) {
+        syncServerNotifications();
+      }
+    };
+    window.addEventListener("focus", handleWindowFocus);
 
     return () => {
       isMounted = false;
       window.clearInterval(intervalId);
-      window.removeEventListener("focus", syncServerNotifications);
+      window.removeEventListener("focus", handleWindowFocus);
     };
   }, [isGuest, isLoggedIn]);
 
@@ -254,12 +327,13 @@ function Navbar({
           return;
         }
 
-        const [libs, wspaces] = await Promise.all([
+        const [publicLibraries, myLibraries, wspaces] = await Promise.all([
+          getPublicLibraries(),
           getMyLibraries(),
           getWorkspaces()
         ]);
         if (isMounted) {
-          setLibraries(libs || []);
+          setLibraries(mergeLibraries(publicLibraries, myLibraries));
           setWorkspaces(wspaces || []);
         }
       } catch (err) {

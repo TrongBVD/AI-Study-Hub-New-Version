@@ -24,3 +24,31 @@ export function removeUserStoredItem(key) {
   const scopedKey = getUserStorageKey(key);
   if (scopedKey) localStorage.removeItem(scopedKey);
 }
+
+export function clearCurrentUserStorage() {
+  try {
+    const userId = getCurrentUserId();
+    if (!userId) return;
+
+    const userSuffix = `:${userId}`;
+    const keysToRemove = [];
+
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.endsWith(userSuffix)) {
+        keysToRemove.push(key);
+      }
+    }
+
+    for (let i = 0; i < sessionStorage.length; i++) {
+      const key = sessionStorage.key(i);
+      if (key && key.endsWith(userSuffix)) {
+        sessionStorage.removeItem(key);
+      }
+    }
+
+    keysToRemove.forEach((key) => localStorage.removeItem(key));
+  } catch (error) {
+    console.error("Failed to clear user-scoped storage:", error);
+  }
+}
