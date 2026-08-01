@@ -163,7 +163,7 @@ function LibraryPage() {
     if (routeLibrary?.id) {
       return {
         ...routeLibrary,
-        visibility: routeLibrary.visibility || "public",
+        visibility: routeLibrary.visibility || (routeLibrary.is_public !== undefined ? (routeLibrary.is_public ? "public" : "private") : "public"),
         stars: Number(routeLibrary.stars) || 0,
         isStarred: Boolean(routeLibrary.isStarred),
       };

@@ -17,22 +17,37 @@ function Register() {
   const handleGoogleSuccess = async (credentialResponse) => {
     try {
       const googleToken = credentialResponse.credential;
-      const res = await api.post("/auth/google", { token: googleToken });
+      if (!googleToken) return;
 
-      if (res.data.data.requiresOTP) {
-        navigate('/verify-otp', { state: { email: res.data.data.email } });
-      } else {
-        storeAuthSession({
-          accessToken: res.data.data.accessToken,
-          user: res.data.data.user,
-          rememberMe: true,
+      const res = await api.post("/auth/google", { token: googleToken, rememberMe: true });
+      const responseData = res.data?.data || res.data;
+
+      if (responseData?.requiresOTP) {
+        navigate("/verify-otp", {
+          state: { email: responseData.email },
         });
-        alert("Login Successful!");
-        navigate('/dashboard');
+        return;
       }
+
+      const accessToken = responseData?.accessToken || responseData?.token;
+      const user = responseData?.user || responseData?.profile || responseData;
+
+      if (!accessToken) return;
+
+      storeAuthSession({
+        accessToken,
+        user,
+        rememberMe: true,
+      });
+
+      navigate("/dashboard/home", { replace: true });
     } catch (error) {
       console.error("Backend registration error:", error);
-      alert("Registration failed.");
+      const errorMsg =
+        error.response?.data?.message ||
+        error.response?.data?.error ||
+        "Registration failed. Please try again.";
+      alert(errorMsg);
     }
   };
 

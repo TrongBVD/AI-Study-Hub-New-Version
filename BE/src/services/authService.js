@@ -27,8 +27,14 @@ const {
 // 2. KHỞI TẠO GOOGLE OAUTH CLIENT
 // ======================================================
 
-// GOOGLE_CLIENT_ID nằm trong file .env
-const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+const GOOGLE_CLIENT_ID = String(
+    process.env.GOOGLE_CLIENT_ID ||
+        "816282057609-4clrdj4f4mp1jh72m40ffaf04fne6vhe.apps.googleusercontent.com",
+)
+    .trim()
+    .replace(/^["']|["']$/g, "");
+
+const client = new OAuth2Client(GOOGLE_CLIENT_ID);
 
 
 // ======================================================
@@ -83,7 +89,7 @@ exports.verifyAndLoginGoogle = async (googleToken) => {
     // Backend kiểm tra token Google thật hay giả.
     const ticket = await client.verifyIdToken({
         idToken: googleToken,
-        audience: process.env.GOOGLE_CLIENT_ID,
+        audience: GOOGLE_CLIENT_ID,
     });
 
     // Lấy thông tin user từ Google token
@@ -162,16 +168,19 @@ exports.verifyAndLoginGoogle = async (googleToken) => {
         // Xóa OTP cũ và lưu OTP mới
         await replaceOtpForEmail(cleanEmail, otpCode, expiresAt);
 
-        // Tạo mail transporter
-        const transporter = createMailTransporter();
-
-        // Send OTP via email
-        await transporter.sendMail({
-            from: process.env.EMAIL_USER,
-            to: cleanEmail,
-            subject: 'AI StudyHub - Your Verification Code',
-            text: `Your verification code is: ${otpCode}. Code expires in ${OTP_EXPIRY_MINUTES} minutes.`
-        });
+        // Send OTP via email with error handling
+        try {
+            const transporter = createMailTransporter();
+            await transporter.sendMail({
+                from: process.env.EMAIL_USER || "ductrongrokmain@gmail.com",
+                to: cleanEmail,
+                subject: 'AI StudyHub - Your Verification Code',
+                text: `Your verification code is: ${otpCode}. Code expires in ${OTP_EXPIRY_MINUTES} minutes.`
+            });
+        } catch (mailError) {
+            console.error("🔴 OTP Email Send Error:", mailError);
+            throw new Error(`Could not send OTP verification email (${mailError.message}). Check server mailer configuration.`);
+        }
 
         // Return to frontend to prompt for OTP
         return {
