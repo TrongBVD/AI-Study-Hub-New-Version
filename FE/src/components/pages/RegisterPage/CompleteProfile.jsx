@@ -138,7 +138,7 @@ function CompleteProfile() {
 
   return (
     <div className="register_page">
-      <form className="register_card" onSubmit={handleSubmit}>
+      <form className="register_card" onSubmit={handleSubmit} autoComplete="off">
         <p className="register_title">Complete Profile</p>
 
         <FormInput
@@ -148,6 +148,7 @@ function CompleteProfile() {
           onChange={handleChange}
           label="Username *"
           required
+          autoComplete="off"
         />
         <span
           style={{
@@ -174,6 +175,7 @@ function CompleteProfile() {
           onChange={handleChange}
           label="Password *"
           required
+          autoComplete="new-password"
         />
 
         {errorMsg && (
