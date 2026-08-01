@@ -98,6 +98,17 @@ export const deleteWorkspaceDiscussionAttachment = (workspaceId, topicId, attach
   api.delete(`/workspaces/${workspaceId}/discussion/topics/${topicId}/attachments/${attachmentId}`)
     .then((res) => res.data);
 
+export const viewWorkspaceDiscussionAttachment = (
+  workspaceId,
+  topicId,
+  attachmentId,
+) =>
+  api
+    .get(
+      `/workspaces/${workspaceId}/discussion/topics/${topicId}/attachments/${attachmentId}/view`,
+    )
+    .then((res) => res.data.data);
+
 export const addWorkspaceDiscussionSubtask = (workspaceId, topicId, payload) =>
   api.post(`/workspaces/${workspaceId}/discussion/topics/${topicId}/subtasks`, payload)
     .then((res) => res.data.data);

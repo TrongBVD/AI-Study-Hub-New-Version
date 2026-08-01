@@ -62,6 +62,10 @@ router.post(
   discussionUpload.array("files", 10),
   workspaceController.uploadDiscussionAttachments,
 );
+router.get(
+  "/:workspaceId/discussion/topics/:topicId/attachments/:attachmentId/view",
+  workspaceController.viewDiscussionAttachment,
+);
 router.delete("/:workspaceId/discussion/topics/:topicId/attachments/:attachmentId", workspaceController.deleteDiscussionAttachment);
 router.get("/:workspaceId/documents", workspaceController.listDocuments);
 router.patch(

@@ -60,7 +60,7 @@ function Sidebar({ isOpen, onClose }) {
       path: "/dashboard/workspaces",
       hideForGuest: true,
     },
-    { icon: LuCircleHelp, label: "Report an issue", path: "/dashboard/report-issue", hideForGuest: true },
+    { icon: LuCircleHelp, label: "Report issues", path: "/dashboard/report-issue", hideForGuest: true },
     { icon: LuSettings, label: "Settings", path: "/dashboard/settings" },
   ];
 

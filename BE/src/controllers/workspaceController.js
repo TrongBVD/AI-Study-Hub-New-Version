@@ -4,8 +4,6 @@ const path = require("path");
 const { createMailTransporter } = require("../utils/mailerService");
 const { createActivityLog } = require("../services/activityLogService");
 const { MAX_OWNED_WORKSPACES, countActiveOwnedWorkspaces } = require("../services/workspaceLimitService");
-const { extractTextFromFile } = require("../services/textExtractService");
-const { moderateDocument } = require("../services/aiService");
 
 const MEMBER_ROLES = ["Editor", "Viewer"];
 const ASSIGNABLE_MEMBER_ROLES = ["Editor", "Viewer"];
@@ -24,6 +22,35 @@ function normalizeUploadedFileName(fileName) {
   return decoded.includes("\uFFFD")
     ? value.normalize("NFC")
     : decoded.normalize("NFC");
+}
+
+function normalizeDiscussionTopicTitle(value) {
+  return String(value || "")
+    .trim()
+    .replace(/\s+/g, " ")
+    .toLocaleLowerCase();
+}
+
+async function findDuplicateDiscussionTopic(
+  workspaceId,
+  title,
+  excludedTopicId = null,
+) {
+  let query = supabase
+    .from("workspace_discussion_topics")
+    .select("id, title")
+    .eq("workspace_id", workspaceId)
+    .is("deleted_at", null);
+
+  if (excludedTopicId) query = query.neq("id", excludedTopicId);
+
+  const { data, error } = await query;
+  if (error) throw error;
+
+  const normalizedTitle = normalizeDiscussionTopicTitle(title);
+  return (data || []).find(
+    (topic) => normalizeDiscussionTopicTitle(topic.title) === normalizedTitle,
+  );
 }
 
 async function moveWorkspaceDocumentToBucket(document, targetBucket) {
@@ -1634,11 +1661,23 @@ exports.createDiscussionTopic = async (req, res) => {
       });
     }
 
-    const title = String(req.body.title || "").trim();
+    const title = String(req.body.title || "").trim().replace(/\s+/g, " ");
     if (!title) {
       return res.status(400).json({
         status: "error",
         message: "Topic title is required.",
+      });
+    }
+
+    const duplicateTopic = await findDuplicateDiscussionTopic(
+      workspaceId,
+      title,
+    );
+    if (duplicateTopic) {
+      return res.status(409).json({
+        status: "error",
+        code: "DUPLICATE_TOPIC_TITLE",
+        message: "A topic with this title already exists in the workspace.",
       });
     }
 
@@ -1718,11 +1757,24 @@ exports.updateDiscussionTopic = async (req, res) => {
     });
 
     if (typeof updatePayload.title === "string") {
-      updatePayload.title = updatePayload.title.trim();
+      updatePayload.title = updatePayload.title.trim().replace(/\s+/g, " ");
       if (!updatePayload.title) {
         return res.status(400).json({
           status: "error",
           message: "Topic title is required.",
+        });
+      }
+
+      const duplicateTopic = await findDuplicateDiscussionTopic(
+        workspaceId,
+        updatePayload.title,
+        topicId,
+      );
+      if (duplicateTopic) {
+        return res.status(409).json({
+          status: "error",
+          code: "DUPLICATE_TOPIC_TITLE",
+          message: "A topic with this title already exists in the workspace.",
         });
       }
     }
@@ -2286,46 +2338,6 @@ exports.uploadDiscussionAttachments = async (req, res) => {
       file.originalname = normalizeUploadedFileName(file.originalname);
     });
 
-    const rejectedFiles = [];
-    try {
-      for (const file of req.files) {
-        const extractedText = await extractTextFromFile(file);
-
-        if (!extractedText || extractedText.trim().length < 20) {
-          rejectedFiles.push({
-            fileName: file.originalname,
-            reason: "Could not extract enough readable text for AI moderation.",
-          });
-          continue;
-        }
-
-        const moderation = await moderateDocument(extractedText);
-        if (moderation.status === "REJECTED") {
-          rejectedFiles.push({
-            fileName: file.originalname,
-            reason: moderation.reason || "The file did not pass AI content moderation.",
-            suspiciousText: moderation.suspicious_text || [],
-          });
-        }
-      }
-    } catch (moderationError) {
-      console.error("Discussion attachment AI moderation failed:", moderationError);
-      return res.status(503).json({
-        status: "error",
-        code: "AI_MODERATION_UNAVAILABLE",
-        message: "AI moderation is temporarily unavailable. No files were uploaded. Please try again.",
-      });
-    }
-
-    if (rejectedFiles.length > 0) {
-      return res.status(422).json({
-        status: "error",
-        code: "AI_MODERATION_REJECTED",
-        message: `${rejectedFiles.map((file) => `\"${file.fileName}\"`).join(", ")} did not pass AI content moderation. No files were uploaded.`,
-        rejectedFiles,
-      });
-    }
-
     const rows = [];
     for (const file of req.files) {
       const safeName = path.basename(file.originalname).replace(/[^a-zA-Z0-9._-]/g, "_");
@@ -2361,6 +2373,70 @@ exports.uploadDiscussionAttachments = async (req, res) => {
     }
     console.error("uploadDiscussionAttachments error:", error);
     return res.status(500).json({ status: "error", message: "Could not upload discussion attachments.", error: error.message });
+  }
+};
+
+exports.viewDiscussionAttachment = async (req, res) => {
+  try {
+    const { workspaceId, topicId, attachmentId } = req.params;
+    const access = await getWorkspaceDiscussionAccess(workspaceId, req.user.id);
+
+    if (!access.workspace || !access.canReadDiscussion) {
+      return res.status(403).json({
+        status: "error",
+        message: "You cannot view files in this workspace.",
+      });
+    }
+
+    if (!(await getDiscussionTopicInWorkspace(workspaceId, topicId))) {
+      return res.status(404).json({
+        status: "error",
+        message: "Discussion topic not found.",
+      });
+    }
+
+    const { data: attachment, error: attachmentError } = await supabase
+      .from("workspace_discussion_attachments")
+      .select("id, topic_id, file_name, file_url, file_size_bytes, mime_type")
+      .eq("id", attachmentId)
+      .eq("topic_id", topicId)
+      .maybeSingle();
+
+    if (attachmentError) throw attachmentError;
+    if (!attachment) {
+      return res.status(404).json({
+        status: "error",
+        message: "Attachment not found.",
+      });
+    }
+
+    let viewUrl = attachment.file_url;
+    if (!/^https?:\/\//i.test(viewUrl || "")) {
+      const { data: signedUrlData, error: signedUrlError } = await supabase.storage
+        .from(DOCUMENT_BUCKET)
+        .createSignedUrl(attachment.file_url, 60 * 60);
+      if (signedUrlError) throw signedUrlError;
+      viewUrl = signedUrlData?.signedUrl;
+    }
+
+    return res.status(200).json({
+      status: "success",
+      data: {
+        documentId: attachment.id,
+        fileName: normalizeUploadedFileName(attachment.file_name),
+        fileSizeBytes: attachment.file_size_bytes || 0,
+        mimeType: attachment.mime_type,
+        viewUrl,
+        expiresIn: 60 * 60,
+      },
+    });
+  } catch (error) {
+    console.error("viewDiscussionAttachment error:", error);
+    return res.status(500).json({
+      status: "error",
+      message: "Could not open this attachment.",
+      error: error.message,
+    });
   }
 };
 

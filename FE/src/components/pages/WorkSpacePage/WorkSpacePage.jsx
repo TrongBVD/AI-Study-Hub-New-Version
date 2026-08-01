@@ -88,6 +88,13 @@ function normalizeIdentity(value) {
     .toLowerCase();
 }
 
+function normalizeDiscussionTopicTitle(value) {
+  return String(value || "")
+    .trim()
+    .replace(/\s+/g, " ")
+    .toLocaleLowerCase();
+}
+
 function getStoredUserProfile() {
   return getAuthStoredUser();
 }
@@ -483,6 +490,7 @@ function WorkSpacePage() {
   const [isStudyCardFlipped, setIsStudyCardFlipped] = useState(false);
   const [studySessionSeconds, setStudySessionSeconds] = useState(0);
   const [reviewedStudyCardIds, setReviewedStudyCardIds] = useState([]);
+  const [isStudySessionComplete, setIsStudySessionComplete] = useState(false);
 
   const [workspace, setWorkspace] = useState(() => {
     return location.state?.workspace || null;
@@ -853,6 +861,7 @@ function WorkSpacePage() {
       setIsStudyCardFlipped(false);
       setReviewedStudyCardIds([]);
       setStudySessionSeconds(0);
+      setIsStudySessionComplete(false);
       return;
     }
 
@@ -865,18 +874,25 @@ function WorkSpacePage() {
       setIsStudyCardFlipped(false);
       setReviewedStudyCardIds([]);
       setStudySessionSeconds(0);
+      setIsStudySessionComplete(false);
     }
   }, [selectedStudySetId, studySets]);
 
   useEffect(() => {
-    if (activeTab !== "study" || !selectedStudySetId) return undefined;
+    if (
+      activeTab !== "study" ||
+      !selectedStudySetId ||
+      isStudySessionComplete
+    ) {
+      return undefined;
+    }
 
     const timerId = window.setInterval(() => {
       setStudySessionSeconds((currentSeconds) => currentSeconds + 1);
     }, 1000);
 
     return () => window.clearInterval(timerId);
-  }, [activeTab, selectedStudySetId]);
+  }, [activeTab, isStudySessionComplete, selectedStudySetId]);
 
   const selectedStudySet =
     studySets.find((studySet) => studySet.id === selectedStudySetId) || null;
@@ -1069,6 +1085,23 @@ function WorkSpacePage() {
       return;
     }
 
+    const normalizedNewTopicTitle = normalizeDiscussionTopicTitle(topicTitle);
+    const hasDuplicateTitle = discussionTopics.some(
+      (topic) =>
+        normalizeDiscussionTopicTitle(topic.title) === normalizedNewTopicTitle,
+    );
+
+    if (hasDuplicateTitle) {
+      await showAlert(
+        "A topic with this title already exists in the workspace. Choose a different title.",
+        {
+          title: "Duplicate topic title",
+          confirmText: "Got it",
+        },
+      );
+      return;
+    }
+
     const attachmentSize = newTopicAttachments.reduce(
       (total, file) => total + file.size,
       0,
@@ -1146,15 +1179,27 @@ function WorkSpacePage() {
       setIsTopicFormOpen(false);
 
       if (attachmentError) {
-        alert(
+        await showAlert(
           attachmentError.response?.data?.message ||
             "Topic was created, but its attachments could not be uploaded.",
+          {
+            title:
+              attachmentError.response?.data?.code ===
+              "AI_MODERATION_REJECTED"
+                ? "File did not pass moderation"
+                : "Attachment upload failed",
+            confirmText: "Close",
+          },
         );
       }
     } catch (error) {
       console.error("Cannot create discussion topic:", error);
-      alert(
+      await showAlert(
         error.response?.data?.message || "Could not create discussion topic.",
+        {
+          title: "Could not create topic",
+          confirmText: "Close",
+        },
       );
     } finally {
       setIsCreatingTopic(false);
@@ -1450,7 +1495,16 @@ try {
   });
 } catch (error) {
   console.error("Cannot upload discussion attachments:", error);
-  alert(error.response?.data?.message || "Could not upload discussion files.");
+  await showAlert(
+    error.response?.data?.message || "Could not upload discussion files.",
+    {
+      title:
+        error.response?.data?.code === "AI_MODERATION_REJECTED"
+          ? "File did not pass moderation"
+          : "Attachment upload failed",
+      confirmText: "Close",
+    },
+  );
 } finally {
   e.target.value = "";
 }
@@ -1557,7 +1611,16 @@ async function handleSubmitSolution(event) {
     });
   } catch (error) {
     console.error("Cannot submit topic solution:", error);
-    alert(error.response?.data?.message || "Could not submit your solution.");
+    await showAlert(
+      error.response?.data?.message || "Could not submit your solution.",
+      {
+        title:
+          error.response?.data?.code === "AI_MODERATION_REJECTED"
+            ? "File did not pass moderation"
+            : "Solution submission failed",
+        confirmText: "Close",
+      },
+    );
   } finally {
     setIsUploadingSolution(false);
   }
@@ -2265,6 +2328,15 @@ function handleSelectStudySet(studySetId) {
   setIsStudyCardFlipped(false);
   setReviewedStudyCardIds([]);
   setStudySessionSeconds(0);
+  setIsStudySessionComplete(false);
+}
+
+function handleRestartStudySession() {
+  setCurrentStudyCardIndex(0);
+  setIsStudyCardFlipped(false);
+  setReviewedStudyCardIds([]);
+  setStudySessionSeconds(0);
+  setIsStudySessionComplete(false);
 }
 
 async function handleGenerateWorkspaceFlashcards() {
@@ -2470,10 +2542,39 @@ function handlePreviousStudyCard() {
 function handleNextStudyCard() {
   if (!selectedStudySet?.cards?.length) return;
 
-  setCurrentStudyCardIndex((currentIndex) =>
-    currentIndex === selectedStudySet.cards.length - 1 ? 0 : currentIndex + 1,
-  );
+  if (currentStudyCardIndex === selectedStudySet.cards.length - 1) {
+    setIsStudySessionComplete(true);
+    setIsStudyCardFlipped(false);
+    return;
+  }
+
+  setCurrentStudyCardIndex((currentIndex) => currentIndex + 1);
   setIsStudyCardFlipped(false);
+}
+
+function handleViewWorkspaceDocument(document) {
+  if (!canManageTopics || !document?.id) return;
+
+  navigate(`/dashboard/documents/${document.id}`, {
+    state: {
+      from: `/dashboard/workspaces/${workspaceId}`,
+      fileName: document.title || "Workspace document",
+    },
+  });
+}
+
+function handleViewSolutionAttachment(file) {
+  if (!selectedTopic?.id || !file?.id) return;
+
+  navigate(
+    `/dashboard/workspaces/${workspaceId}/topics/${selectedTopic.id}/attachments/${file.id}`,
+    {
+      state: {
+        from: `/dashboard/workspaces/${workspaceId}?topic=${selectedTopic.id}`,
+        fileName: normalizeDisplayFileName(file.fileName || file.name),
+      },
+    },
+  );
 }
 
 function renderMessagesTab() {
@@ -2491,15 +2592,6 @@ function renderMessagesTab() {
           </p>
         </div>
 
-        <div className="workspace_message_header_actions">
-          <button type="button" aria-label="View members">
-            <i className="ti-user"></i>
-          </button>
-
-          <button type="button" aria-label="Conversation information">
-            <i className="ti-info-alt"></i>
-          </button>
-        </div>
       </header>
 
       <div className="workspace_message_day">Today</div>
@@ -2927,17 +3019,26 @@ function renderMembersTab() {
           <h3>About Roles</h3>
 
           <div className="workspace_role_item">
-            <strong>Managers</strong>
+            <strong>Admin</strong>
             <p>
-              Can edit library settings, upload documents, and manage members.
+              Can manage workspace settings and members, review documents, and
+              use all discussion features.
             </p>
           </div>
 
           <div className="workspace_role_item">
-            <strong>Members</strong>
+            <strong>Editor</strong>
             <p>
-              Can view documents, participate in AI chats, and contribute to
-              folders.
+              Can create and edit topics, upload topic files, comment, and
+              submit solutions.
+            </p>
+          </div>
+
+          <div className="workspace_role_item">
+            <strong>Contributor</strong>
+            <p>
+              Can view workspace content, participate in discussions, and
+              submit solutions.
             </p>
           </div>
         </section>
@@ -2990,11 +3091,36 @@ function renderDiscussionTab() {
     (total, topic) => total + (topic.files?.length || 0),
     0,
   );
-  const filteredDiscussionTopics = discussionTopics.filter((topic) => {
-    if (topicFilter === "All") return true;
-    if (topicFilter === "Solved") return topic.status === "Solved";
-    return topic.type === topicFilter;
-  });
+  const filteredDiscussionTopics = discussionTopics
+    .filter((topic) => {
+      if (topicFilter === "All") return true;
+      if (topicFilter === "Solved") return topic.status === "Solved";
+      return topic.type === topicFilter;
+    })
+    .sort((firstTopic, secondTopic) => {
+      const firstEndTime = firstTopic.endDate
+        ? new Date(firstTopic.endDate).getTime()
+        : Number.POSITIVE_INFINITY;
+      const secondEndTime = secondTopic.endDate
+        ? new Date(secondTopic.endDate).getTime()
+        : Number.POSITIVE_INFINITY;
+
+      if (firstEndTime !== secondEndTime) {
+        return firstEndTime - secondEndTime;
+      }
+
+      return String(firstTopic.title || "").localeCompare(
+        String(secondTopic.title || ""),
+      );
+    })
+    .filter(
+      (topic, topicIndex, topics) =>
+        topics.findIndex(
+          (candidate) =>
+            normalizeDiscussionTopicTitle(candidate.title) ===
+            normalizeDiscussionTopicTitle(topic.title),
+        ) === topicIndex,
+    );
   if (selectedTopic) {
     const relatedFiles = (selectedTopic.files || []).filter(
       (file) => file.kind !== "solution",
@@ -3003,15 +3129,16 @@ function renderDiscussionTab() {
       (file) => file.kind === "solution",
     );
     const solutions = selectedTopic.solutions || [];
-    const hasCurrentUserSubmittedSolution = Boolean(
-      currentUserId &&
-        solutions.some(
+    const currentUserSolutions = currentUserId
+      ? solutions.filter(
           (solution) =>
             String(solution.userId || solution.author?.id || "") ===
             currentUserId,
-        ),
+        )
+      : [];
+    const hasCurrentUserSubmittedSolution = Boolean(
+      currentUserSolutions.length,
     );
-    const comments = selectedTopic.comments || [];
     const subtasks = selectedTopic.subtasks || [];
     const selectedCommentsSolution = solutions.find(
       (solution) => solution.id === selectedSolutionCommentsId,
@@ -3086,12 +3213,6 @@ function renderDiscussionTab() {
         </div>
       );
     };
-    const topicDeadlineText =
-      selectedTopic.dateMode === "deadline"
-        ? `${selectedTopic.startDate || "No start date"} → ${
-            selectedTopic.endDate || "No end date"
-          }`
-        : "No deadline";
     return (
       <section className="workspace_clickup_detail">
         <main className="workspace_clickup_main">
@@ -3162,107 +3283,6 @@ function renderDiscussionTab() {
 
           {activeTopicSection === "details" && (
             <>
-              <section className="workspace_topic_info_panel">
-                <button
-                  type="button"
-                  className={`workspace_topic_info_item ${
-                    canManageTopics ? "editable" : "read_only"
-                  }`}
-                  onClick={() =>
-                    canManageTopics && setEditingTopicField("priority")
-                  }
-                  disabled={!canManageTopics}
-                >
-                  <span>
-                    <i className="ti-flag-alt"></i>
-                    Priority
-                  </span>
-
-                  {canManageTopics && editingTopicField === "priority" ? (
-                    <select
-                      value={selectedTopic.priority || "Normal"}
-                      onClick={(e) => e.stopPropagation()}
-                      onChange={(e) => {
-                        handleUpdateTopicField("priority", e.target.value);
-                        setEditingTopicField(null);
-                      }}
-                      onBlur={() => setEditingTopicField(null)}
-                      autoFocus
-                    >
-                      <option value="Low">Low</option>
-                      <option value="Normal">Normal</option>
-                      <option value="High">High</option>
-                      <option value="Urgent">Urgent</option>
-                    </select>
-                  ) : (
-                    <strong>{selectedTopic.priority || "Normal"}</strong>
-                  )}
-                </button>
-
-                <button
-                  type="button"
-                  className={`workspace_topic_info_item deadline ${
-                    canManageTopics ? "editable" : "read_only"
-                  }`}
-                  onClick={() =>
-                    canManageTopics && setEditingTopicField("deadline")
-                  }
-                  disabled={!canManageTopics}
-                >
-                  <span>
-                    <i className="ti-calendar"></i>
-                    Deadline
-                  </span>
-
-                  {canManageTopics && editingTopicField === "deadline" ? (
-                    <div
-                      className="workspace_topic_deadline_editor"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <select
-                        value={selectedTopic.dateMode || "none"}
-                        onChange={(e) =>
-                          handleUpdateTopicDeadlineMode(e.target.value)
-                        }
-                        autoFocus
-                      >
-                        <option value="none">No deadline</option>
-                        <option value="deadline">Has deadline</option>
-                      </select>
-
-                      {selectedTopic.dateMode === "deadline" && (
-                        <div className="workspace_topic_deadline_dates">
-                          <input
-                            type="date"
-                            value={selectedTopic.startDate || ""}
-                            onChange={(e) =>
-                              handleUpdateTopicDate("startDate", e.target.value)
-                            }
-                          />
-
-                          <input
-                            type="date"
-                            value={selectedTopic.endDate || ""}
-                            onChange={(e) =>
-                              handleUpdateTopicDate("endDate", e.target.value)
-                            }
-                          />
-                        </div>
-                      )}
-
-                      <button
-                        type="button"
-                        className="workspace_topic_done_btn"
-                        onClick={() => setEditingTopicField(null)}
-                      >
-                        Done
-                      </button>
-                    </div>
-                  ) : (
-                    <strong>{topicDeadlineText}</strong>
-                  )}
-                </button>
-              </section>
               <form
                 className={`workspace_clickup_description ${
                   isTopicDescriptionEditing ? "is_editing" : "is_read_only"
@@ -3606,35 +3626,6 @@ function renderDiscussionTab() {
                         <h2>Attachments</h2>
                         <span>{relatedFiles.length}</span>
                       </div>
-
-                      <div className="workspace_clickup_attachment_tools">
-                        <button type="button" title="Download">
-                          <i className="ti-download"></i>
-                        </button>
-
-                        <button
-                          type="button"
-                          className="active"
-                          title="Grid view"
-                        >
-                          <i className="ti-layout-grid2"></i>
-                        </button>
-
-                        <button type="button" title="List view">
-                          <i className="ti-menu-alt"></i>
-                        </button>
-
-                        {canManageTopics && (
-                          <label title="Upload file">
-                            <i className="ti-plus"></i>
-                            <input
-                              type="file"
-                              multiple
-                              onChange={handleTopicFileChange}
-                            />
-                          </label>
-                        )}
-                      </div>
                     </div>
 
                     {canManageTopics ? (
@@ -3719,8 +3710,7 @@ function renderDiscussionTab() {
                   <span>Community solutions</span>
                   <h2>Share your solution</h2>
                   <p>
-                    Every workspace member can upload a solution for this topic
-                    and review submissions from other members.
+                    Upload, review, and update your own solution for this topic.
                   </p>
                 </div>
                 <button
@@ -3873,17 +3863,17 @@ function renderDiscussionTab() {
                 </form>
               )}
 
-              {solutions.length === 0 ? (
+              {currentUserSolutions.length === 0 ? (
                 <div className="workspace_topic_solution_empty">
                   <i className="ti-light-bulb"></i>
-                  <h3>No solutions yet</h3>
+                  <h3>You have not submitted a solution yet</h3>
                   <p>
-                    Be the first member to upload a solution for this topic.
+                    Upload your solution when you are ready to share your work.
                   </p>
                 </div>
               ) : (
                 <div className="workspace_topic_solution_grid">
-                  {solutions.map((solution) => {
+                  {currentUserSolutions.map((solution) => {
                     const attachedFiles = solutionFiles.filter(
                       (file) => file.solutionId === solution.id,
                     );
@@ -3905,7 +3895,9 @@ function renderDiscussionTab() {
                               {solution.author?.name || "Workspace member"}
                             </strong>
                             {currentUserId &&
-                              String(solution.author?.id) === currentUserId && (
+                              String(
+                                solution.userId || solution.author?.id || "",
+                              ) === currentUserId && (
                                 <button
                                   type="button"
                                   onClick={() => {
@@ -3937,11 +3929,7 @@ function renderDiscussionTab() {
                             <div className="workspace_topic_solution_files">
                               {attachedFiles.map((file) => (
                                 <span key={file.id}>
-                                  <a
-                                    href={file.fileUrl}
-                                    target="_blank"
-                                    rel="noreferrer"
-                                  >
+                                  <span className="workspace_solution_file_label">
                                     <i className="ti-clip"></i>
                                     {normalizeDisplayFileName(
                                       file.fileName || file.name,
@@ -3951,7 +3939,17 @@ function renderDiscussionTab() {
                                         file.fileSizeBytes,
                                       )}
                                     </small>
-                                  </a>
+                                  </span>
+                                  <button
+                                    type="button"
+                                    className="view"
+                                    onClick={() =>
+                                      handleViewSolutionAttachment(file)
+                                    }
+                                  >
+                                    <i className="ti-eye" aria-hidden="true"></i>
+                                    View file
+                                  </button>
                                 </span>
                               ))}
                             </div>
@@ -4023,11 +4021,7 @@ function renderDiscussionTab() {
                             <div className="workspace_topic_solution_files">
                               {attachedFiles.map((file) => (
                                 <span key={file.id}>
-                                  <a
-                                    href={file.fileUrl}
-                                    target="_blank"
-                                    rel="noreferrer"
-                                  >
+                                  <span className="workspace_solution_file_label">
                                     <i className="ti-clip"></i>
                                     {normalizeDisplayFileName(
                                       file.fileName || file.name,
@@ -4037,7 +4031,17 @@ function renderDiscussionTab() {
                                         file.fileSizeBytes,
                                       )}
                                     </small>
-                                  </a>
+                                  </span>
+                                  <button
+                                    type="button"
+                                    className="view"
+                                    onClick={() =>
+                                      handleViewSolutionAttachment(file)
+                                    }
+                                  >
+                                    <i className="ti-eye" aria-hidden="true"></i>
+                                    View file
+                                  </button>
                                 </span>
                               ))}
                             </div>
@@ -4112,11 +4116,11 @@ function renderDiscussionTab() {
                       <div className="workspace_solution_detail_files">
                         <strong>Attachments</strong>
                         {detailFiles.map((file) => (
-                          <a
+                          <button
+                            type="button"
+                            className="workspace_solution_attachment_view"
                             key={file.id}
-                            href={file.fileUrl}
-                            target="_blank"
-                            rel="noreferrer"
+                            onClick={() => handleViewSolutionAttachment(file)}
                           >
                             <i className="ti-clip"></i>
                             {normalizeDisplayFileName(
@@ -4125,7 +4129,9 @@ function renderDiscussionTab() {
                             <small>
                               {formatWorkspaceFileSize(file.fileSizeBytes)}
                             </small>
-                          </a>
+                            <span>View file</span>
+                            <i className="ti-eye" aria-hidden="true"></i>
+                          </button>
                         ))}
                       </div>
                     )}
@@ -4202,64 +4208,6 @@ function renderDiscussionTab() {
           )}
         </main>
 
-        <aside className="workspace_clickup_activity">
-          <header>
-            <h2>Activity</h2>
-          </header>
-
-          <section className="workspace_clickup_activity_body">
-            {comments.length === 0 ? (
-              <div className="workspace_clickup_activity_empty">
-                <i className="ti-comments"></i>
-                <p>No activity yet.</p>
-              </div>
-            ) : (
-              comments.map((comment) => (
-                <article className="workspace_clickup_comment" key={comment.id}>
-                  <div className="workspace_clickup_comment_head">
-                    <div className="workspace_clickup_comment_avatar">
-                      {(comment.author?.name || comment.author || "M")
-                        .slice(0, 1)
-                        .toUpperCase()}
-                    </div>
-
-                    <strong>{comment.author?.name || comment.author}</strong>
-                    <span>
-                      {comment.createdAt
-                        ? new Date(comment.createdAt).toLocaleString()
-                        : "Just now"}
-                    </span>
-                  </div>
-
-                  <p>{comment.content}</p>
-
-                  <footer>
-                    <button type="button">Reply</button>
-                  </footer>
-                </article>
-              ))
-            )}
-          </section>
-
-          {selectedTopic ? (
-            <form
-              className="workspace_clickup_comment_form"
-              onSubmit={handleAddTopicComment}
-            >
-              <textarea
-                value={topicCommentInput}
-                onChange={(e) => setTopicCommentInput(e.target.value)}
-                placeholder="Write a comment..."
-              />
-
-              <div>
-                <button type="submit">
-                  <i className="ti-control-play"></i>
-                </button>
-              </div>
-            </form>
-          ) : null}
-        </aside>
       </section>
     );
   }
@@ -4310,30 +4258,6 @@ function renderDiscussionTab() {
           onClick={() => setTopicFilter("All")}
         >
           All topics
-        </button>
-
-        <button
-          type="button"
-          className={topicFilter === "Question" ? "active" : ""}
-          onClick={() => setTopicFilter("Question")}
-        >
-          Questions
-        </button>
-
-        <button
-          type="button"
-          className={topicFilter === "Material" ? "active" : ""}
-          onClick={() => setTopicFilter("Material")}
-        >
-          Materials
-        </button>
-
-        <button
-          type="button"
-          className={topicFilter === "Announcement" ? "active" : ""}
-          onClick={() => setTopicFilter("Announcement")}
-        >
-          Announcements
         </button>
 
         <button
@@ -4737,13 +4661,6 @@ function renderStudyTab() {
                 key={studySet.id}
                 onClick={() => handleSelectStudySet(studySet.id)}
               >
-                {studySet.tag && (
-                  <strong>
-                    <i className="ti-medall"></i>
-                    {studySet.tag}
-                  </strong>
-                )}
-
                 <span>{studySet.title}</span>
                 <small>{studySet.meta}</small>
               </button>
@@ -4833,7 +4750,38 @@ function renderStudyTab() {
           </section>
         )}
 
-        {hasStudyCards && <>
+        {hasStudyCards && isStudySessionComplete && (
+          <section className="workspace_study_completion" role="status">
+            <div className="workspace_study_completion_icon">
+              <i className="ti-cup"></i>
+            </div>
+            <span>Session complete</span>
+            <h3>Great work! You finished this flashcard set.</h3>
+            <p>
+              You reviewed {reviewedStudyCardIds.length} of{" "}
+              {selectedStudySet.cards.length} cards in{" "}
+              <strong>{formatStudySessionDuration(studySessionSeconds)}</strong>.
+            </p>
+            <div className="workspace_study_completion_summary">
+              <div>
+                <i className="ti-timer"></i>
+                <strong>{formatStudySessionDuration(studySessionSeconds)}</strong>
+                <span>Total time</span>
+              </div>
+              <div>
+                <i className="ti-layers"></i>
+                <strong>{reviewedStudyCardIds.length}</strong>
+                <span>Cards reviewed</span>
+              </div>
+            </div>
+            <button type="button" onClick={handleRestartStudySession}>
+              <i className="ti-reload"></i>
+              Start again
+            </button>
+          </section>
+        )}
+
+        {hasStudyCards && !isStudySessionComplete && <>
           <section className="workspace_study_stage">
           <button
             type="button"
@@ -5071,6 +5019,17 @@ function renderDocumentsTab() {
                   </span>
 
                   <div className="workspace_document_actions">
+                    {canManageTopics && (
+                      <button
+                        type="button"
+                        className="view"
+                        onClick={() => handleViewWorkspaceDocument(document)}
+                      >
+                        <i className="ti-eye" aria-hidden="true"></i>
+                        View file
+                      </button>
+                    )}
+
                     {needsWorkspaceReview && (
                       <>
                         <button

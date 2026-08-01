@@ -97,6 +97,10 @@ function App() {
           <Route path="import-library" element={<ImportLibraryPage />} />
           <Route path="libraries/:libraryId" element={<LibraryPage />} />
           <Route path="documents/:documentId" element={<DocumentViewerPage />} />
+          <Route
+            path="workspaces/:workspaceId/topics/:topicId/attachments/:attachmentId"
+            element={<DocumentViewerPage />}
+          />
           <Route path="settings" element={<SettingPage />} />
           <Route path="create-workspace" element={<CreateWorkSpacePage />} />
           <Route path="workspaces" element={<MyWorkSpace />} />

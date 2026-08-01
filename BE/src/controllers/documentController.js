@@ -1080,7 +1080,12 @@ exports.viewDocument = async (req, res) => {
       });
     }
 
-    if (!(await canAccessDocument(document, userID))) {
+    if (
+      !(await canAccessDocument(document, userID, {
+        workspaceRoles: ["Admin", "Editor"],
+        allowWorkspaceUploader: false,
+      }))
+    ) {
       return res.status(403).json({
         status: "error",
         message: "You do not have permission to view this document.",
