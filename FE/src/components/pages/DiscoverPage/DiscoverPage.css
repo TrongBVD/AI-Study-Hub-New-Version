@@ -233,6 +233,15 @@ body[data-theme="white"] .discover_user_link:hover {
   font-weight: 800;
 }
 
+.discover_card_body footer span i {
+  margin-right: 0.2rem;
+}
+
+.discover_card_body footer .discover_card_created {
+  color: #806b59;
+  font-weight: 700;
+}
+
 .discover_card_body footer em {
   margin-left: auto;
   color: #8b7767;

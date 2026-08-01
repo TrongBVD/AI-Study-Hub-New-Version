@@ -199,14 +199,18 @@ function LibraryPage() {
   const [libraryData, setLibraryData] = useState(getInitialLibraryData);
   const currentUser = getStoredUser() || {};
   const currentUserId =
-    currentUser.id || currentUser._id || currentUser.user_id || "";
+    currentUser.id ||
+    currentUser._id ||
+    currentUser.user_id ||
+    currentUser.user?.id ||
+    currentUser.profile?.id ||
+    "";
   const libraryOwnerId =
     libraryData.user_id || libraryData.owner?.id || libraryData.owner_id || "";
   const isLibraryOwner =
-    Boolean(libraryData.isOwned) ||
-    (Boolean(currentUserId) &&
-      Boolean(libraryOwnerId) &&
-      String(currentUserId) === String(libraryOwnerId));
+    Boolean(currentUserId) &&
+    Boolean(libraryOwnerId) &&
+    String(currentUserId) === String(libraryOwnerId);
   const canManageLibrary = isLibraryOwner;
   const ownerDisplayName = isLibraryOwner
     ? "You"
@@ -978,6 +982,11 @@ function LibraryPage() {
   }
 
   async function handleUploadFile(e) {
+    if (!canManageLibrary) {
+      e.target.value = "";
+      return;
+    }
+
     const files = Array.from(e.target.files || []);
 
     if (files.length === 0) return;
@@ -1446,6 +1455,8 @@ function LibraryPage() {
   }
 
   async function handleCreateFolder() {
+    if (!canManageLibrary) return;
+
     const folderName = await showPrompt("Enter a name for the new folder.", "", {
       title: "Create folder",
       placeholder: "Folder name",
@@ -1673,6 +1684,7 @@ function LibraryPage() {
 
   async function handleRenameFolder(folder, event) {
     event?.stopPropagation();
+    if (!canManageLibrary) return;
 
     const oldName = folder.name || "";
     const newName = await showPrompt("Enter a new name for this folder.", oldName, {
@@ -1727,6 +1739,7 @@ function LibraryPage() {
 
   async function handleDeleteFolder(folder, event) {
     event.stopPropagation();
+    if (!canManageLibrary) return;
 
     const folderKey = getFolderKey(folder);
     const confirmDelete = await showConfirm(
@@ -1903,16 +1916,18 @@ function LibraryPage() {
                   {stars > 0 && <span className="star_count">{stars}</span>}
                 </button>
 
-                <label className="upload_btn">
-                  <i className="ti-upload"></i>
-                  Upload
-                  <input
-                    type="file"
-                    multiple
-                    accept={ALLOWED_UPLOAD_ACCEPT}
-                    onChange={handleUploadFile}
-                  />
-                </label>
+                {canManageLibrary && (
+                  <label className="upload_btn">
+                    <i className="ti-upload"></i>
+                    Upload
+                    <input
+                      type="file"
+                      multiple
+                      accept={ALLOWED_UPLOAD_ACCEPT}
+                      onChange={handleUploadFile}
+                    />
+                  </label>
+                )}
               </div>
             )}
           </div>
@@ -2041,18 +2056,24 @@ function LibraryPage() {
                     <div className="empty_state_icon">
                       <i className="ti-folder"></i>
                     </div>
-                    <h3>{currentFolder ? "This folder is empty" : "Your library is empty"}</h3>
-                    <p>Add your first document to start building this study library.</p>
-                    <label className="empty_state_action">
-                      <i className="ti-upload"></i>
-                      Upload file
-                      <input
-                        type="file"
-                        multiple
-                        accept={ALLOWED_UPLOAD_ACCEPT}
-                        onChange={handleUploadFile}
-                      />
-                    </label>
+                    <h3>{currentFolder ? "This folder is empty" : "This library is empty"}</h3>
+                    <p>
+                      {canManageLibrary
+                        ? "Add your first document to start building this study library."
+                        : "The owner has not added any documents yet."}
+                    </p>
+                    {canManageLibrary && (
+                      <label className="empty_state_action">
+                        <i className="ti-upload"></i>
+                        Upload file
+                        <input
+                          type="file"
+                          multiple
+                          accept={ALLOWED_UPLOAD_ACCEPT}
+                          onChange={handleUploadFile}
+                        />
+                      </label>
+                    )}
                   </div>
                 ) : documentSearch && filteredStorageItemsCount === 0 ? (
                   <div className="empty_state_card">
@@ -2060,17 +2081,23 @@ function LibraryPage() {
                       <i className="ti-search"></i>
                     </div>
                     <h3>No documents found</h3>
-                    <p>Try another keyword or upload a new document.</p>
-                    <label className="empty_state_action">
-                      <i className="ti-upload"></i>
-                      Upload file
-                      <input
-                        type="file"
-                        multiple
-                        accept={ALLOWED_UPLOAD_ACCEPT}
-                        onChange={handleUploadFile}
-                      />
-                    </label>
+                    <p>
+                      {canManageLibrary
+                        ? "Try another keyword or upload a new document."
+                        : "Try another keyword."}
+                    </p>
+                    {canManageLibrary && (
+                      <label className="empty_state_action">
+                        <i className="ti-upload"></i>
+                        Upload file
+                        <input
+                          type="file"
+                          multiple
+                          accept={ALLOWED_UPLOAD_ACCEPT}
+                          onChange={handleUploadFile}
+                        />
+                      </label>
+                    )}
                   </div>
                 ) : filteredStorageItemsCount > 0 ? (
                   <section className="documents_table_card storage_table_card">
@@ -2144,22 +2171,26 @@ function LibraryPage() {
                               <i className="ti-folder"></i>
                             </button>
 
-                            <button
-                              type="button"
-                              title="Rename folder"
-                              onClick={(event) => handleRenameFolder(folder, event)}
-                            >
-                              <i className="ti-pencil-alt"></i>
-                            </button>
+                            {canManageLibrary && (
+                              <>
+                                <button
+                                  type="button"
+                                  title="Rename folder"
+                                  onClick={(event) => handleRenameFolder(folder, event)}
+                                >
+                                  <i className="ti-pencil-alt"></i>
+                                </button>
 
-                            <button
-                              type="button"
-                              className="delete_document_btn"
-                              title="Delete folder"
-                              onClick={(event) => handleDeleteFolder(folder, event)}
-                            >
-                              <i className="ti-trash"></i>
-                            </button>
+                                <button
+                                  type="button"
+                                  className="delete_document_btn"
+                                  title="Delete folder"
+                                  onClick={(event) => handleDeleteFolder(folder, event)}
+                                >
+                                  <i className="ti-trash"></i>
+                                </button>
+                              </>
+                            )}
                           </div>
                         </div>
                       ))}
