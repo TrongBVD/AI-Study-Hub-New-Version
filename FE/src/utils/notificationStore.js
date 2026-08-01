@@ -10,7 +10,6 @@ export const defaultNotificationSettings = {
 
   discussion: {
     newTopic: true,
-    newReply: true,
     solved: true,
   },
 
@@ -23,7 +22,6 @@ export const defaultNotificationSettings = {
   file: {
     uploaded: true,
     deleted: true,
-    storageWarning: true,
     moderationApproved: true,
     moderationRejected: true,
   },

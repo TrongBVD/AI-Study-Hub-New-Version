@@ -832,6 +832,72 @@ body[data-theme="black"] .user_dashboard_layout .settings_table {
   box-shadow: var(--shadow-soft);
 }
 
+.settings_password_input_wrap {
+  position: relative;
+  width: 100%;
+}
+
+.settings_password_input_wrap input {
+  padding-right: 2.8rem;
+}
+
+.settings_password_visibility {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: 0.35rem;
+  margin-block: auto;
+  width: 2rem;
+  height: 2rem;
+  border: 0;
+  border-radius: 0.5rem;
+  background: transparent;
+  color: var(--settings-subtle);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  transform: none !important;
+  font-size: 0.95rem;
+}
+
+.settings_password_visibility:active {
+  transform: none !important;
+}
+
+.settings_password_visibility:hover,
+.settings_password_visibility:focus-visible {
+  background: var(--accent-soft);
+  color: var(--settings-accent);
+  outline: none;
+}
+
+.settings_password_visibility.is_hidden::after {
+  content: "";
+  position: absolute;
+  width: 1.2rem;
+  height: 1.5px;
+  border-radius: 999px;
+  background: currentColor;
+  transform: rotate(42deg);
+}
+
+.notification_category_card.is_compact {
+  padding: 0.85rem 1.05rem;
+}
+
+.notification_category_card.is_compact .notification_category_header {
+  min-height: 3.55rem;
+  padding-bottom: 0.65rem;
+}
+
+.notification_category_card.is_compact .notification_category_options {
+  padding-top: 0.2rem;
+}
+
+.notification_category_card.is_compact .notification_category_options label {
+  min-height: 2.15rem;
+}
+
 .notification_category_header {
   min-height: 4.3rem;
   border-bottom: 1px solid var(--settings-line-soft);
