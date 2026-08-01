@@ -109,6 +109,18 @@ export const viewWorkspaceDiscussionAttachment = (
     )
     .then((res) => res.data.data);
 
+export const downloadWorkspaceDiscussionAttachment = (
+  workspaceId,
+  topicId,
+  attachmentId,
+) =>
+  api
+    .get(
+      `/workspaces/${workspaceId}/discussion/topics/${topicId}/attachments/${attachmentId}/view`,
+      { params: { download: true } },
+    )
+    .then((res) => res.data.data);
+
 export const addWorkspaceDiscussionSubtask = (workspaceId, topicId, payload) =>
   api.post(`/workspaces/${workspaceId}/discussion/topics/${topicId}/subtasks`, payload)
     .then((res) => res.data.data);

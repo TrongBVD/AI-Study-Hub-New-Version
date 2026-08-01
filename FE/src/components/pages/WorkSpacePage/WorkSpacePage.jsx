@@ -37,6 +37,7 @@ import {
   updateWorkspaceDiscussionSubtask,
   leaveWorkspace,
   transferAdminOwnership,
+  downloadWorkspaceDiscussionAttachment,
 } from "../../../utils/workspaceApi";
 import { uploadDocuments } from "../../../utils/documentApi";
 import { getStoredUser as getAuthStoredUser } from "../../../utils/authToken.js";
@@ -315,7 +316,9 @@ function WorkSpacePage() {
     showAlert,
     resolvePopup: resolveActionPopup,
   } = useActionPopup();
-  const [activeTab, setActiveTab] = useState("discussion");
+  const [activeTab, setActiveTab] = useState(
+    location.state?.workspaceTab || "discussion",
+  );
   const [isLeaveBlockedModalOpen, setIsLeaveBlockedModalOpen] =
     useState(false);
   const [isDeleteWorkspaceModalOpen, setIsDeleteWorkspaceModalOpen] =
@@ -2559,6 +2562,7 @@ function handleViewWorkspaceDocument(document) {
     state: {
       from: `/dashboard/workspaces/${workspaceId}`,
       fileName: document.title || "Workspace document",
+      returnContext: "files",
     },
   });
 }
@@ -2572,9 +2576,41 @@ function handleViewSolutionAttachment(file) {
       state: {
         from: `/dashboard/workspaces/${workspaceId}?topic=${selectedTopic.id}`,
         fileName: normalizeDisplayFileName(file.fileName || file.name),
+        returnContext: "solution",
       },
     },
   );
+}
+
+async function handleDownloadSolutionAttachment(file) {
+  if (!selectedTopic?.id || !file?.id) return;
+
+  try {
+    const downloadData = await downloadWorkspaceDiscussionAttachment(
+      workspaceId,
+      selectedTopic.id,
+      file.id,
+    );
+    if (!downloadData?.viewUrl) {
+      throw new Error("The download link could not be created.");
+    }
+
+    const downloadLink = document.createElement("a");
+    downloadLink.href = downloadData.viewUrl;
+    downloadLink.download =
+      downloadData.fileName || file.fileName || file.name || "attachment";
+    document.body.appendChild(downloadLink);
+    downloadLink.click();
+    downloadLink.remove();
+  } catch (error) {
+    console.error("Cannot download solution attachment:", error);
+    await showAlert(
+      error.response?.data?.message ||
+        error.message ||
+        "Could not download this attachment.",
+      { title: "Download failed", confirmText: "Close" },
+    );
+  }
 }
 
 function renderMessagesTab() {
@@ -3950,6 +3986,16 @@ function renderDiscussionTab() {
                                     <i className="ti-eye" aria-hidden="true"></i>
                                     View file
                                   </button>
+                                  <button
+                                    type="button"
+                                    className="download"
+                                    onClick={() =>
+                                      handleDownloadSolutionAttachment(file)
+                                    }
+                                  >
+                                    <i className="ti-download" aria-hidden="true"></i>
+                                    Download
+                                  </button>
                                 </span>
                               ))}
                             </div>
@@ -4042,6 +4088,16 @@ function renderDiscussionTab() {
                                     <i className="ti-eye" aria-hidden="true"></i>
                                     View file
                                   </button>
+                                  <button
+                                    type="button"
+                                    className="download"
+                                    onClick={() =>
+                                      handleDownloadSolutionAttachment(file)
+                                    }
+                                  >
+                                    <i className="ti-download" aria-hidden="true"></i>
+                                    Download
+                                  </button>
                                 </span>
                               ))}
                             </div>
@@ -4116,22 +4172,36 @@ function renderDiscussionTab() {
                       <div className="workspace_solution_detail_files">
                         <strong>Attachments</strong>
                         {detailFiles.map((file) => (
-                          <button
-                            type="button"
-                            className="workspace_solution_attachment_view"
+                          <div
+                            className="workspace_solution_detail_file_actions"
                             key={file.id}
-                            onClick={() => handleViewSolutionAttachment(file)}
                           >
-                            <i className="ti-clip"></i>
-                            {normalizeDisplayFileName(
-                              file.fileName || file.name,
-                            )}
-                            <small>
-                              {formatWorkspaceFileSize(file.fileSizeBytes)}
-                            </small>
-                            <span>View file</span>
-                            <i className="ti-eye" aria-hidden="true"></i>
-                          </button>
+                            <button
+                              type="button"
+                              className="workspace_solution_attachment_view"
+                              onClick={() => handleViewSolutionAttachment(file)}
+                            >
+                              <i className="ti-clip"></i>
+                              {normalizeDisplayFileName(
+                                file.fileName || file.name,
+                              )}
+                              <small>
+                                {formatWorkspaceFileSize(file.fileSizeBytes)}
+                              </small>
+                              <span>View file</span>
+                              <i className="ti-eye" aria-hidden="true"></i>
+                            </button>
+                            <button
+                              type="button"
+                              className="workspace_solution_attachment_download"
+                              onClick={() =>
+                                handleDownloadSolutionAttachment(file)
+                              }
+                            >
+                              <i className="ti-download" aria-hidden="true"></i>
+                              Download
+                            </button>
+                          </div>
                         ))}
                       </div>
                     )}

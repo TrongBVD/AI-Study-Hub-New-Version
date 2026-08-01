@@ -2410,11 +2410,17 @@ exports.viewDiscussionAttachment = async (req, res) => {
       });
     }
 
+    const shouldDownload = req.query.download === "true";
+    const normalizedFileName = normalizeUploadedFileName(attachment.file_name);
     let viewUrl = attachment.file_url;
     if (!/^https?:\/\//i.test(viewUrl || "")) {
       const { data: signedUrlData, error: signedUrlError } = await supabase.storage
         .from(DOCUMENT_BUCKET)
-        .createSignedUrl(attachment.file_url, 60 * 60);
+        .createSignedUrl(
+          attachment.file_url,
+          60 * 60,
+          shouldDownload ? { download: normalizedFileName } : undefined,
+        );
       if (signedUrlError) throw signedUrlError;
       viewUrl = signedUrlData?.signedUrl;
     }
@@ -2423,7 +2429,7 @@ exports.viewDiscussionAttachment = async (req, res) => {
       status: "success",
       data: {
         documentId: attachment.id,
-        fileName: normalizeUploadedFileName(attachment.file_name),
+        fileName: normalizedFileName,
         fileSizeBytes: attachment.file_size_bytes || 0,
         mimeType: attachment.mime_type,
         viewUrl,

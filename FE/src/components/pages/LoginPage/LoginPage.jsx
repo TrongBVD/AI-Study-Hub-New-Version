@@ -23,7 +23,6 @@ function LoginPage() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [loginNotice, setLoginNotice] = useState(null);
-  const [rememberMe, setRememberMe] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -80,7 +79,7 @@ function LoginPage() {
     );
   }
 
-  function saveLoginData(responseData, shouldRemember = rememberMe) {
+  function saveLoginData(responseData, shouldRemember = false) {
     const accessToken = extractAccessToken(responseData);
 
     if (!accessToken) {
@@ -150,7 +149,7 @@ function LoginPage() {
         email: trimmedUsername,
         login: trimmedUsername,
         password,
-        rememberMe,
+        rememberMe: false,
       });
 
       const user = saveLoginData(res.data);
@@ -198,7 +197,7 @@ function LoginPage() {
 
       const res = await api.post("/auth/google", {
         token: googleToken,
-        rememberMe,
+        rememberMe: false,
       });
 
       const responseData = res.data?.data || res.data;
@@ -268,15 +267,6 @@ function LoginPage() {
             onChange={(e) => setPassword(e.target.value)}
           />
         </div>
-
-        <label className="login_remember">
-          <input
-            type="checkbox"
-            checked={rememberMe}
-            onChange={(event) => setRememberMe(event.target.checked)}
-          />
-          <span>Remember me on this device</span>
-        </label>
 
         <button className="login_submit" type="submit">
           Submit
