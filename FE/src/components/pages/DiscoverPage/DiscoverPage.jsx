@@ -245,35 +245,25 @@ function DiscoverPage() {
     };
   }, []);
 
-  const topLibraries = useMemo(
-    () =>
-      [...libraries]
-        .sort(
-          (a, b) =>
-            b.stars - a.stars ||
-            b.documents - a.documents ||
-            getCreatedTimestamp(b) - getCreatedTimestamp(a),
-        )
-        .slice(0, 6),
-    [libraries],
-  );
   const trendingLibraries = useMemo(
     () =>
       [...libraries]
         .sort(
           (a, b) =>
             b.trendingScore - a.trendingScore ||
+            b.downloads - a.downloads ||
             getCreatedTimestamp(b) - getCreatedTimestamp(a) ||
             b.documents - a.documents,
         )
         .slice(0, 5),
     [libraries],
   );
-  const downloadedLibraries = useMemo(
+  const favoriteLibraries = useMemo(
     () =>
       [...libraries]
         .sort(
           (a, b) =>
+            b.stars - a.stars ||
             b.downloads - a.downloads ||
             b.documents - a.documents ||
             getCreatedTimestamp(b) - getCreatedTimestamp(a),
@@ -292,8 +282,8 @@ function DiscoverPage() {
             <span>StudyHub Discover</span>
             <h1>Find the collections everyone is studying from.</h1>
             <p>
-              Explore active creators, starred libraries, fast-rising materials
-              and the most downloaded public study packs.
+              Explore active creators, favorite collections and fast-rising
+              public study materials.
             </p>
           </div>
 
@@ -335,29 +325,6 @@ function DiscoverPage() {
           </section>
         ) : (
           <>
-            <section className="discover_section">
-              <div className="discover_section_title">
-                <h2>Most starred libraries</h2>
-                <p>Public collections from every creator, ranked by community stars.</p>
-              </div>
-              <div className="discover_card_grid">
-                {topLibraries.length > 0 ? (
-                  topLibraries.map((library, index) => (
-                    <DiscoverLibraryCard
-                      key={library.id}
-                      library={library}
-                      rank={index + 1}
-                      metricLabel="Stars"
-                    />
-                  ))
-                ) : (
-                  <DiscoverCategoryEmpty>
-                    No library has received a real star yet.
-                  </DiscoverCategoryEmpty>
-                )}
-              </div>
-            </section>
-
             <section className="discover_split">
               <section className="discover_section">
                 <div className="discover_section_title">
@@ -384,22 +351,22 @@ function DiscoverPage() {
 
               <section className="discover_section">
                 <div className="discover_section_title">
-                  <h2>Most downloaded</h2>
-                  <p>All public libraries ranked by recorded download activity.</p>
+                  <h2>Most favorite</h2>
+                  <p>Public libraries ranked by stars, downloads, documents and recency.</p>
                 </div>
                 <div className="discover_list">
-                  {downloadedLibraries.length > 0 ? (
-                    downloadedLibraries.map((library, index) => (
+                  {favoriteLibraries.length > 0 ? (
+                    favoriteLibraries.map((library, index) => (
                       <DiscoverLibraryCard
                         key={library.id}
                         library={library}
                         rank={index + 1}
-                        metricLabel="Downloads"
+                        metricLabel="Favorite"
                       />
                     ))
                   ) : (
                     <DiscoverCategoryEmpty>
-                      No library has a recorded download yet.
+                      No favorite library is available yet.
                     </DiscoverCategoryEmpty>
                   )}
                 </div>
