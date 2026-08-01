@@ -79,17 +79,6 @@ const NOTIFICATION_CATEGORIES = [
     ],
   },
   {
-    key: "task",
-    icon: "ti-check-box",
-    title: "Task",
-    description: "Assignments, completions, and deadlines.",
-    options: [
-      ["assigned", "Assigned to me"],
-      ["completed", "Task completed"],
-      ["deadlineReminder", "Deadline reminder"],
-    ],
-  },
-  {
     key: "file",
     icon: "ti-folder",
     title: "File",

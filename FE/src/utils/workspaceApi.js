@@ -76,6 +76,24 @@ export const addWorkspaceDiscussionAttachment = (workspaceId, topicId, payload) 
   api.post(`/workspaces/${workspaceId}/discussion/topics/${topicId}/attachments`, payload)
     .then((res) => res.data.data);
 
+export const uploadWorkspaceDiscussionAttachments = (
+  workspaceId,
+  topicId,
+  files,
+  { kind = "attachment", solutionId = "" } = {},
+) => {
+  const formData = new FormData();
+  files.forEach((file) => formData.append("files", file));
+  formData.append("kind", kind);
+  if (solutionId) formData.append("solutionId", solutionId);
+  return api
+    .post(
+      `/workspaces/${workspaceId}/discussion/topics/${topicId}/attachments/upload`,
+      formData,
+    )
+    .then((res) => res.data.data);
+};
+
 export const deleteWorkspaceDiscussionAttachment = (workspaceId, topicId, attachmentId) =>
   api.delete(`/workspaces/${workspaceId}/discussion/topics/${topicId}/attachments/${attachmentId}`)
     .then((res) => res.data);

@@ -30,6 +30,17 @@ function useActionPopup() {
       });
     }), []);
 
+  const showAlert = useCallback((message, options = {}) =>
+    new Promise((resolve) => {
+      resolverRef.current = resolve;
+      setPopup({
+        type: "alert",
+        title: options.title || "Notice",
+        message,
+        confirmText: options.confirmText || "Got it",
+      });
+    }), []);
+
   const updatePromptValue = useCallback((value) => {
     setPopup((current) => current ? { ...current, value } : current);
   }, []);
@@ -45,6 +56,7 @@ function useActionPopup() {
     popup: popup ? { ...popup, onValueChange: updatePromptValue } : null,
     showConfirm,
     showPrompt,
+    showAlert,
     resolvePopup,
   };
 }

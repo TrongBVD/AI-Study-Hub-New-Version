@@ -1,4 +1,6 @@
 const supabase = require("../config/supabase");
+const crypto = require("crypto");
+const path = require("path");
 const { createMailTransporter } = require("../utils/mailerService");
 const { createActivityLog } = require("../services/activityLogService");
 const { MAX_OWNED_WORKSPACES, countActiveOwnedWorkspaces } = require("../services/workspaceLimitService");
@@ -118,6 +120,7 @@ const WORKSPACE_DOCUMENT_SELECT = `
   workspace_id,
   library_id,
   title,
+  file_url,
   file_size_bytes,
   is_public,
   status,
@@ -1437,9 +1440,30 @@ exports.listDocuments = async (req, res) => {
 
     if (error) throw error;
 
+    const { data: topicRows, error: topicRowsError } = await supabase
+      .from("workspace_discussion_topics")
+      .select("id")
+      .eq("workspace_id", workspaceId);
+    if (topicRowsError) throw topicRowsError;
+
+    const topicIds = (topicRows || []).map((topic) => topic.id);
+    let attachmentPaths = new Set();
+    if (topicIds.length > 0) {
+      const { data: attachmentRows, error: attachmentRowsError } = await supabase
+        .from("workspace_discussion_attachments")
+        .select("file_url")
+        .in("topic_id", topicIds);
+      if (attachmentRowsError) throw attachmentRowsError;
+      attachmentPaths = new Set(
+        (attachmentRows || []).map((attachment) => attachment.file_url),
+      );
+    }
+
     return res.status(200).json({
       status: "success",
-      data: (data || []).map(mapWorkspaceDocument),
+      data: (data || [])
+        .filter((document) => !attachmentPaths.has(document.file_url))
+        .map(mapWorkspaceDocument),
     });
   } catch (error) {
     console.error("listWorkspaceDocuments error:", error);
@@ -1839,6 +1863,28 @@ exports.addDiscussionComment = async (req, res) => {
       });
     }
 
+    if (isSolution) {
+      const { data: existingSolution, error: existingSolutionError } =
+        await supabase
+          .from("workspace_discussion_comments")
+          .select("id")
+          .eq("topic_id", topicId)
+          .eq("user_id", req.user.id)
+          .like("content", "[[SOLUTION]]%")
+          .limit(1)
+          .maybeSingle();
+
+      if (existingSolutionError) throw existingSolutionError;
+      if (existingSolution) {
+        return res.status(409).json({
+          status: "error",
+          code: "SOLUTION_LIMIT_REACHED",
+          message:
+            "You have already submitted a solution for this topic. Edit your existing solution instead.",
+        });
+      }
+    }
+
     const { data, error } = await supabase
       .from("workspace_discussion_comments")
       .insert({
@@ -2199,6 +2245,64 @@ exports.addDiscussionAttachment = async (req, res) => {
       message: "Could not add discussion attachment.",
       error: error.message,
     });
+  }
+};
+
+exports.uploadDiscussionAttachments = async (req, res) => {
+  const uploadedPaths = [];
+  try {
+    const { workspaceId, topicId } = req.params;
+    const access = await getWorkspaceDiscussionAccess(workspaceId, req.user.id);
+    const attachmentKind = req.body.kind === "solution" ? "solution" : "attachment";
+    const canUpload = attachmentKind === "solution"
+      ? access.canSubmitSolutions
+      : access.canWriteDiscussion;
+
+    if (!access.workspace || !canUpload) {
+      return res.status(403).json({ status: "error", message: "You cannot upload files to this topic." });
+    }
+    if (!(await getDiscussionTopicInWorkspace(workspaceId, topicId))) {
+      return res.status(404).json({ status: "error", message: "Discussion topic not found." });
+    }
+    if (!req.files?.length) {
+      return res.status(400).json({ status: "error", message: "Please select at least one file." });
+    }
+
+    const rows = [];
+    for (const file of req.files) {
+      const safeName = path.basename(file.originalname).replace(/[^a-zA-Z0-9._-]/g, "_");
+      const storagePath = `${req.user.id}/workspace-discussions/${workspaceId}/${topicId}/${Date.now()}-${crypto.randomUUID()}-${safeName}`;
+      const { error: uploadError } = await supabase.storage
+        .from(DOCUMENT_BUCKET)
+        .upload(storagePath, file.buffer, { contentType: file.mimetype || "application/octet-stream" });
+      if (uploadError) throw uploadError;
+      uploadedPaths.push(storagePath);
+      rows.push({
+        topic_id: topicId,
+        uploaded_by: req.user.id,
+        file_name: file.originalname,
+        file_url: storagePath,
+        file_size_bytes: file.size,
+        mime_type: attachmentKind === "solution"
+          ? `solution:${String(req.body.solutionId || "").trim()}|${file.mimetype || ""}`
+          : file.mimetype || null,
+      });
+    }
+
+    const { data, error } = await supabase
+      .from("workspace_discussion_attachments")
+      .insert(rows)
+      .select(`id, topic_id, uploaded_by, file_name, file_url, file_size_bytes, mime_type, created_at,
+        uploader:profiles!workspace_discussion_attachments_uploaded_by_fkey (id, email, username, full_name, avatar_url)`);
+    if (error) throw error;
+
+    return res.status(201).json({ status: "success", data: (data || []).map(mapDiscussionAttachment) });
+  } catch (error) {
+    if (uploadedPaths.length > 0) {
+      await supabase.storage.from(DOCUMENT_BUCKET).remove(uploadedPaths);
+    }
+    console.error("uploadDiscussionAttachments error:", error);
+    return res.status(500).json({ status: "error", message: "Could not upload discussion attachments.", error: error.message });
   }
 };
 

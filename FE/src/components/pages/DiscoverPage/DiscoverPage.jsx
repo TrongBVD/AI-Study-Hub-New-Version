@@ -245,19 +245,6 @@ function DiscoverPage() {
     };
   }, []);
 
-  const trendingLibraries = useMemo(
-    () =>
-      [...libraries]
-        .sort(
-          (a, b) =>
-            b.trendingScore - a.trendingScore ||
-            b.downloads - a.downloads ||
-            getCreatedTimestamp(b) - getCreatedTimestamp(a) ||
-            b.documents - a.documents,
-        )
-        .slice(0, 5),
-    [libraries],
-  );
   const favoriteLibraries = useMemo(
     () =>
       [...libraries]
@@ -282,8 +269,7 @@ function DiscoverPage() {
             <span>StudyHub Discover</span>
             <h1>Find the collections everyone is studying from.</h1>
             <p>
-              Explore active creators, favorite collections and fast-rising
-              public study materials.
+              Explore active creators and favorite public study collections.
             </p>
           </div>
 
@@ -326,29 +312,6 @@ function DiscoverPage() {
         ) : (
           <>
             <section className="discover_split">
-              <section className="discover_section">
-                <div className="discover_section_title">
-                  <h2>Rising libraries</h2>
-                  <p>Recently published libraries from across the StudyHub community.</p>
-                </div>
-                <div className="discover_list">
-                  {trendingLibraries.length > 0 ? (
-                    trendingLibraries.map((library, index) => (
-                      <DiscoverLibraryCard
-                        key={library.id}
-                        library={library}
-                        rank={index + 1}
-                        metricLabel="Heat"
-                      />
-                    ))
-                  ) : (
-                    <DiscoverCategoryEmpty>
-                      No library has real rising activity yet.
-                    </DiscoverCategoryEmpty>
-                  )}
-                </div>
-              </section>
-
               <section className="discover_section">
                 <div className="discover_section_title">
                   <h2>Most favorite</h2>
