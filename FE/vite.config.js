@@ -21,8 +21,7 @@ export default defineConfig({
             if (id.includes('react') || id.includes('react-dom') || id.includes('react-router')) {
               return 'vendor-react';
             }
-            if (id.includes('axios')) return 'vendor-http';
-            if (id.includes('jszip')) return 'vendor-archive';
+            if (id.includes('axios') || id.includes('jszip')) return 'vendor-utils';
             if (id.includes('@react-oauth')) return 'vendor-auth';
             return 'vendor-misc';
           }
