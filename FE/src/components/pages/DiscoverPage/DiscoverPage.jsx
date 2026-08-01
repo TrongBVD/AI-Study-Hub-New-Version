@@ -153,6 +153,18 @@ function formatNumber(value) {
   }).format(Number(value) || 0);
 }
 
+function formatCreatedDate(value) {
+  const date = new Date(value || "");
+
+  if (Number.isNaN(date.getTime())) return "Date unavailable";
+
+  return `Created ${date.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  })}`;
+}
+
 function getCreatedTimestamp(library) {
   const timestamp = Date.parse(library?.createdAt || "");
   return Number.isFinite(timestamp) ? timestamp : 0;
@@ -196,6 +208,12 @@ function DiscoverLibraryCard({ library, rank, metricLabel, wide }) {
           </span>
           <span>
             <i className="ti-download" /> {formatNumber(library.downloads)}
+          </span>
+          <span title="Documents">
+            <i className="ti-files" /> {formatNumber(library.documents)} {library.documents === 1 ? "document" : "documents"}
+          </span>
+          <span className="discover_card_created">
+            <i className="ti-calendar" /> {formatCreatedDate(library.createdAt)}
           </span>
           {metricLabel && <em>{metricLabel}</em>}
         </footer>
