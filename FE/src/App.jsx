@@ -1,5 +1,6 @@
-import { lazy, Suspense } from "react";
+import { useEffect, lazy, Suspense } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { purgeUnapprovedLocalStorage } from "./utils/userStorage.js";
 import SettingPage from "./components/pages/SettingPage/SettingPage.jsx";
 // ================= AUTH IMPORTS =================
 import LandingPage from "./components/pages/LandingPage/LandingPage.jsx";
@@ -55,6 +56,10 @@ const IssueReportsPage = lazy(() => import("./components/pages/Admin/IssueReport
  * Includes NotebookLM UI redesign routes for AI Study Hub
  */
 function App() {
+  useEffect(() => {
+    purgeUnapprovedLocalStorage();
+  }, []);
+
   return (
     <BrowserRouter>
       <Suspense fallback={null}>

@@ -52,3 +52,34 @@ export function clearCurrentUserStorage() {
     console.error("Failed to clear user-scoped storage:", error);
   }
 }
+
+export function purgeUnapprovedLocalStorage() {
+  try {
+    const ALLOWED_PREFIXES = [
+      "accessToken",
+      "user",
+      "rememberMe",
+      "aiStudyHub.theme",
+      "aiStudyHubAdminSettings",
+      "aiStudyHubNotificationSettings",
+      "aiStudyHubNotifications",
+    ];
+
+    const keysToRemove = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key) {
+        const isAllowed = ALLOWED_PREFIXES.some(
+          (prefix) => key === prefix || key.startsWith(`${prefix}:`),
+        );
+        if (!isAllowed) {
+          keysToRemove.push(key);
+        }
+      }
+    }
+
+    keysToRemove.forEach((key) => localStorage.removeItem(key));
+  } catch (error) {
+    console.error("Failed to purge unapproved localStorage keys:", error);
+  }
+}

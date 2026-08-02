@@ -177,27 +177,15 @@ exports.importLibrary = async (req, res) => {
 
     const sourceDocumentIds = sourceDocuments.map((document) => document.id);
     let sourceChunks = [];
-    let sourceTags = [];
 
     if (sourceDocumentIds.length > 0) {
-      const [
-        { data: chunks, error: chunksError },
-        { data: tags, error: tagsError },
-      ] = await Promise.all([
-        supabase
-          .from("document_chunks")
-          .select("document_id, chunk_index, content, embedding")
-          .in("document_id", sourceDocumentIds),
-        supabase
-          .from("document_tags")
-          .select("document_id, tag_id")
-          .in("document_id", sourceDocumentIds),
-      ]);
+      const { data: chunks, error: chunksError } = await supabase
+        .from("document_chunks")
+        .select("document_id, chunk_index, content, embedding")
+        .in("document_id", sourceDocumentIds);
 
       if (chunksError) throw chunksError;
-      if (tagsError) throw tagsError;
       sourceChunks = chunks || [];
-      sourceTags = tags || [];
     }
 
     for (const sourceDocument of sourceDocuments) {
@@ -242,27 +230,11 @@ exports.importLibrary = async (req, res) => {
           content: chunk.content,
           embedding: chunk.embedding,
         }));
-      const tagsToInsert = sourceTags
-        .filter(
-          (tag) => String(tag.document_id) === String(sourceDocument.id),
-        )
-        .map((tag) => ({
-          document_id: importedDocument.id,
-          tag_id: tag.tag_id,
-          assigned_by: userId,
-        }));
 
       if (chunksToInsert.length > 0) {
         const { error } = await supabase
           .from("document_chunks")
           .insert(chunksToInsert);
-        if (error) throw error;
-      }
-
-      if (tagsToInsert.length > 0) {
-        const { error } = await supabase
-          .from("document_tags")
-          .insert(tagsToInsert);
         if (error) throw error;
       }
     }
@@ -290,10 +262,6 @@ exports.importLibrary = async (req, res) => {
     console.error("Import library error:", error);
 
     if (insertedDocumentIds.length > 0) {
-      await supabase
-        .from("document_tags")
-        .delete()
-        .in("document_id", insertedDocumentIds);
       await supabase
         .from("document_chunks")
         .delete()

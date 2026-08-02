@@ -1,29 +1,25 @@
 import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
-  HiOutlinePlus,
-  HiOutlineGlobeAlt,
-  HiOutlineDocumentDuplicate,
-  HiOutlineChevronDown,
   HiOutlineChevronRight,
-  HiOutlineChevronLeft,
-  HiOutlineDocumentText,
   HiOutlinePaperAirplane,
   HiOutlineHandThumbUp,
   HiOutlineHandThumbDown,
   HiOutlineBookmark,
   HiOutlineSparkles,
-  HiOutlineEye,
-  HiOutlineArrowDownTray,
   HiOutlineLightBulb,
   HiOutlineAcademicCap,
   HiOutlineQuestionMarkCircle,
   HiOutlineBookOpen,
 } from "react-icons/hi2";
-import { getLibrary, getMyDocuments, uploadDocuments, downloadDocument } from "../../../utils/documentApi.js";
+import { getLibrary, getMyDocuments, uploadDocuments, downloadDocument, deleteDocument } from "../../../utils/documentApi.js";
 import { chatWithDocument, getChatHistory } from "../../../utils/aiApi.js";
 import { getStoredUser } from "../../../utils/authToken.js";
+import { createAppNotification } from "../../../utils/notificationStore.js";
 import Toast from "../../common/Toast/Toast.jsx";
+import SourcesSidebar from "./SourcesSidebar.jsx";
+import DeleteConfirmModal from "./DeleteConfirmModal.jsx";
+import DuplicateConfirmModal from "./DuplicateConfirmModal.jsx";
 import "./NotebookWorkspacePage.css";
 
 /**
@@ -155,28 +151,70 @@ export default function NotebookWorkspacePage() {
     }
   };
 
-  /**
-   * File upload handler supporting full NotebookLM file types
-   */
-  const handleFileUpload = async (e) => {
-    const files = Array.from(e.target.files || []);
-    if (files.length === 0) return;
+  // Duplicate confirm popup state
+  const [duplicateConfirm, setDuplicateConfirm] = useState(null);
 
+  /**
+   * Perform document upload with optional replacement IDs
+   */
+  const performUpload = async (files, replacementIds = []) => {
     setUploading(true);
     try {
-      const res = await uploadDocuments(files, null, libraryId);
+      const res = await uploadDocuments(files, null, libraryId, [], null, replacementIds);
       if (res) {
         const updatedDocs = await getMyDocuments(libraryId);
         const docs = Array.isArray(updatedDocs) ? updatedDocs : (updatedDocs?.data || []);
         setDocuments(docs);
         setSelectedDocIds(new Set(docs.map((d) => d.id)));
-        showToast("Documents uploaded successfully!", "Upload Complete", "success");
+        showToast("File uploaded successfully.", "Upload Complete", "success");
+
+        // Trigger immediate in-app notification update on Bell icon
+        const libNameText = library?.name ? `library "${library.name}"` : "library";
+        createAppNotification({
+          category: "file",
+          action: "uploaded",
+          title: "Document uploaded",
+          message: `File "${files[0]?.name || "Document"}" has been uploaded to ${libNameText} successfully.`,
+          icon: "ti-file",
+          link: `/dashboard/libraries/${libraryId}`,
+        });
       }
     } catch (err) {
-      showToast("Failed to upload document: " + (err.message || "Unknown error"), "Upload Error", "error");
+      const duplicateData = err.response?.data;
+      if (duplicateData?.code === "DUPLICATE_DOCUMENT") {
+        const duplicates = Array.isArray(duplicateData.duplicates) ? duplicateData.duplicates : [];
+        const conflictDoc = duplicates.find((d) => d.documentId);
+        const filename = conflictDoc?.filename || files[0]?.name || "File";
+        const replacementId = conflictDoc?.documentId || null;
+
+        setDuplicateConfirm({
+          files,
+          filename,
+          replacementIds: replacementId ? [replacementId] : [],
+        });
+      } else {
+        showToast("Failed to upload document: " + (err.response?.data?.message || err.message || "Unknown error"), "Upload Error", "error");
+      }
     } finally {
       setUploading(false);
     }
+  };
+
+  /**
+   * File upload handler supporting full NotebookLM file types
+   */
+  const handleFileUpload = (e) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+    performUpload(files);
+    e.target.value = "";
+  };
+
+  const handleConfirmReplace = async () => {
+    if (!duplicateConfirm) return;
+    const { files, replacementIds } = duplicateConfirm;
+    setDuplicateConfirm(null);
+    await performUpload(files, replacementIds);
   };
 
   /**
@@ -201,6 +239,52 @@ export default function NotebookWorkspacePage() {
       }
     } catch (err) {
       showToast("Failed to download document: " + (err.message || "Unknown error"), "Download Error", "error");
+    }
+  };
+
+  // Delete confirm popup state
+  const [deleteConfirmDoc, setDeleteConfirmDoc] = useState(null);
+
+  /**
+   * Handle document deletion from DB and Supabase storage bucket
+   */
+  const handleConfirmDelete = async () => {
+    if (!deleteConfirmDoc) return;
+    const { id: docId, title } = deleteConfirmDoc;
+    setDeleteConfirmDoc(null);
+
+    // Optimistically remove document from UI instantly (0ms latency)
+    setDocuments((prevDocs) => prevDocs.filter((d) => String(d.id) !== String(docId)));
+    setSelectedDocIds((prev) => {
+      const next = new Set(prev);
+      next.delete(docId);
+      return next;
+    });
+
+    try {
+      await deleteDocument(docId);
+      showToast(`"${title}" has been deleted.`, "File Deleted", "success");
+
+      // Trigger immediate in-app notification update on Bell icon
+      const libNameText = library?.name ? `library "${library.name}"` : "library";
+      createAppNotification({
+        category: "file",
+        action: "deleted",
+        title: "Document deleted",
+        message: `File "${title}" has been deleted from ${libNameText}.`,
+        icon: "ti-trash",
+        link: `/dashboard/libraries/${libraryId}`,
+      });
+
+      // Sync latest DB state
+      const updatedDocs = await getMyDocuments(libraryId);
+      const docs = Array.isArray(updatedDocs) ? updatedDocs : (updatedDocs?.data || []);
+      setDocuments(docs);
+    } catch (err) {
+      showToast("Failed to delete document: " + (err.response?.data?.message || err.message || "Unknown error"), "Delete Error", "error");
+      const updatedDocs = await getMyDocuments(libraryId);
+      const docs = Array.isArray(updatedDocs) ? updatedDocs : (updatedDocs?.data || []);
+      setDocuments(docs);
     }
   };
 
@@ -289,116 +373,22 @@ export default function NotebookWorkspacePage() {
       />
 
       {/* 1. LEFT PANEL: SOURCES */}
-      <aside className={`workspace_panel sources_panel ${showLeftPanel ? "" : "collapsed"}`}>
-        <div className="panel_header">
-          <div className="panel_title">
-            <h3>Sources</h3>
-            <span className="source_count_badge">{documents.length}</span>
-          </div>
-          <button
-            type="button"
-            className="icon_btn"
-            onClick={() => setShowLeftPanel(!showLeftPanel)}
-            title="Toggle Sources Panel"
-          >
-            <HiOutlineChevronLeft />
-          </button>
-        </div>
-
-        {showLeftPanel && (
-          <div className="panel_content">
-            {/* Upload Button */}
-            {!isGuest && (
-              <button
-                type="button"
-                className="add_source_btn"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={uploading}
-              >
-                <HiOutlinePlus />
-                <span>{uploading ? "Uploading..." : "Add sources"}</span>
-              </button>
-            )}
-            <input
-              type="file"
-              ref={fileInputRef}
-              style={{ display: "none" }}
-              multiple
-              accept=".pdf,.docx,.doc,.txt,.md,.csv,.json,.mp3,.wav,.m4a,.py,.js,.html,.css"
-              onChange={handleFileUpload}
-            />
-
-            {/* Quick Web Search Bar */}
-            <div className="quick_research_bar">
-              <HiOutlineGlobeAlt className="globe_icon" />
-              <span>Search web sources / Fast research</span>
-            </div>
-
-            {/* Select All Checkbox */}
-            <div className="select_all_bar">
-              <label className="checkbox_label">
-                <input
-                  type="checkbox"
-                  checked={selectAll}
-                  onChange={handleToggleSelectAll}
-                />
-                <span>Select all</span>
-              </label>
-            </div>
-
-            {/* Document Sources List */}
-            <div className="sources_list">
-              {documents.length === 0 ? (
-                <div className="empty_sources">
-                  <HiOutlineDocumentText className="empty_icon" />
-                  <p>No source documents added yet.</p>
-                  <span>Upload PDF, DOCX, TXT, MD, CSV, Audio, or Code files to synthesize with AI.</span>
-                </div>
-              ) : (
-                documents.map((doc) => (
-                  <div
-                    key={doc.id}
-                    className={`source_item ${selectedDocIds.has(doc.id) ? "selected" : ""}`}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={selectedDocIds.has(doc.id)}
-                      onChange={() => handleToggleDocSelect(doc.id)}
-                    />
-                    <HiOutlineDocumentText className="doc_icon" />
-                    <div className="doc_info">
-                      <span className="doc_title">{doc.title || "Untitled Document"}</span>
-                      <span className="doc_size">
-                        {((doc.file_size_bytes || 0) / (1024 * 1024)).toFixed(2)} MB
-                      </span>
-                    </div>
-
-                    {/* View & Download Action Buttons */}
-                    <div className="doc_item_actions">
-                      <button
-                        type="button"
-                        className="doc_action_btn"
-                        title="View Document"
-                        onClick={(e) => handleViewDocument(doc.id, e)}
-                      >
-                        <HiOutlineEye />
-                      </button>
-                      <button
-                        type="button"
-                        className="doc_action_btn"
-                        title="Download Document"
-                        onClick={(e) => handleDownloadDocument(doc.id, doc.title, e)}
-                      >
-                        <HiOutlineArrowDownTray />
-                      </button>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-        )}
-      </aside>
+      <SourcesSidebar
+        documents={documents}
+        selectedDocIds={selectedDocIds}
+        selectAll={selectAll}
+        showLeftPanel={showLeftPanel}
+        uploading={uploading}
+        isGuest={isGuest}
+        fileInputRef={fileInputRef}
+        onTogglePanel={() => setShowLeftPanel(!showLeftPanel)}
+        onToggleSelectAll={handleToggleSelectAll}
+        onToggleDocSelect={handleToggleDocSelect}
+        onFileUpload={handleFileUpload}
+        onViewDoc={handleViewDocument}
+        onDownloadDoc={handleDownloadDocument}
+        onDeleteDoc={(docId, title) => setDeleteConfirmDoc({ id: docId, title: title || "Untitled Document" })}
+      />
 
       {/* 2. MAIN PANEL: CHAT STREAM & WORKSPACE */}
       <main className="workspace_panel chat_panel full_width">
@@ -416,8 +406,7 @@ export default function NotebookWorkspacePage() {
                 <span>Sources ({documents.length})</span>
               </button>
             )}
-            <h2>{library?.name || library?.libraryName || "Smart IoT Water Pouring Project"}</h2>
-            <span className="shared_badge">Shared</span>
+            <h2>{library?.name || library?.libraryName}</h2>
           </div>
         </header>
 
@@ -575,6 +564,22 @@ export default function NotebookWorkspacePage() {
           </div>
         </form>
       </main>
+
+      {/* Duplicate File Replacement Confirmation Modal */}
+      <DuplicateConfirmModal
+        isOpen={Boolean(duplicateConfirm)}
+        filename={duplicateConfirm?.filename || ""}
+        onConfirm={handleConfirmReplace}
+        onClose={() => setDuplicateConfirm(null)}
+      />
+
+      {/* Delete File Confirmation Modal */}
+      <DeleteConfirmModal
+        isOpen={Boolean(deleteConfirmDoc)}
+        filename={deleteConfirmDoc?.title || ""}
+        onConfirm={handleConfirmDelete}
+        onClose={() => setDeleteConfirmDoc(null)}
+      />
     </div>
   );
 }

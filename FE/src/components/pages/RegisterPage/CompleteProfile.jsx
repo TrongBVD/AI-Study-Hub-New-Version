@@ -88,16 +88,20 @@ function CompleteProfile() {
     }
   };
 
+  const handleSkipBio = () => {
+    storeAuthSession({
+      accessToken: getAccessToken(),
+      user: createdUser || {},
+      rememberMe: true,
+    });
+    navigate("/dashboard/profile", { replace: true });
+  };
+
   const handleSaveBio = async (e) => {
     e.preventDefault();
 
     const trimmedBio = profileBio.trim();
     setBioErrorMsg("");
-
-    if (!trimmedBio) {
-      setBioErrorMsg("Please enter a bio before continuing.");
-      return;
-    }
 
     if (bioWordCount > 350) {
       setBioErrorMsg("Bio must not exceed 350 words.");
@@ -216,13 +220,23 @@ function CompleteProfile() {
                 {bioWordCount} / 350 words
               </span>
 
-              <button
-                className="register_submit"
-                type="submit"
-                disabled={isSavingBio}
-              >
-                {isSavingBio ? "Saving..." : "Save Bio"}
-              </button>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button
+                  className="register_skip"
+                  type="button"
+                  onClick={handleSkipBio}
+                  disabled={isSavingBio}
+                >
+                  Skip
+                </button>
+                <button
+                  className="register_submit"
+                  type="submit"
+                  disabled={isSavingBio}
+                >
+                  {isSavingBio ? "Saving..." : "Save Bio"}
+                </button>
+              </div>
             </div>
 
             {bioErrorMsg && <p className="register_bio_error">{bioErrorMsg}</p>}

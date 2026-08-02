@@ -70,7 +70,7 @@ exports.listMyWorkspaceNotifications = async (req, res) => {
 
     const { data, error } = await supabase
       .from("activity_logs")
-      .select("id, entity_id, old_data, new_data, details, created_at")
+      .select("id, entity_id, action_type, old_data, new_data, details, created_at")
       .eq("user_id", req.user.id)
       .in("action_type", [
         "WORKSPACE_ROLE_CHANGED",
@@ -78,6 +78,8 @@ exports.listMyWorkspaceNotifications = async (req, res) => {
         "WORKSPACE_DELETED",
         "DOCUMENT_APPROVED",
         "DOCUMENT_REJECTED",
+        "DOCUMENT_UPLOADED",
+        "DOCUMENT_DELETED",
         "WORKSPACE_INVITATION_PENDING",
         "WORKSPACE_MEMBER_LEFT",
       ])
@@ -128,6 +130,46 @@ exports.listMyWorkspaceNotifications = async (req, res) => {
             isRead,
             icon: "ti-user",
             link: `/dashboard/workspaces/${item.entity_id}`,
+            createdAt: formatRelativeTime(item.created_at),
+            createdAtMs,
+          };
+        }
+
+        if (actionType === "documentUploaded" || item.action_type === "DOCUMENT_UPLOADED") {
+          const documentTitle = item.new_data?.documentTitle || "Your document";
+          const containerName = item.new_data?.containerName ? `library "${item.new_data.containerName}"` : "library";
+          const libraryLink = item.new_data?.libraryId
+            ? `/dashboard/libraries/${item.new_data.libraryId}`
+            : "/dashboard/libraries";
+          return {
+            id: `doc-uploaded-${item.id}`,
+            category: "file",
+            action: "uploaded",
+            title: "Document uploaded",
+            message: item.details || `File "${documentTitle}" has been uploaded to ${containerName} successfully.`,
+            isRead,
+            icon: "ti-file",
+            link: libraryLink,
+            createdAt: formatRelativeTime(item.created_at),
+            createdAtMs,
+          };
+        }
+
+        if (actionType === "documentDeleted" || item.action_type === "DOCUMENT_DELETED") {
+          const documentTitle = item.new_data?.documentTitle || "Your document";
+          const containerName = item.new_data?.containerName ? `library "${item.new_data.containerName}"` : "library";
+          const libraryLink = item.new_data?.libraryId
+            ? `/dashboard/libraries/${item.new_data.libraryId}`
+            : "/dashboard/libraries";
+          return {
+            id: `doc-deleted-${item.id}`,
+            category: "file",
+            action: "deleted",
+            title: "Document deleted",
+            message: item.details || `File "${documentTitle}" has been deleted from ${containerName}.`,
+            isRead,
+            icon: "ti-trash",
+            link: libraryLink,
             createdAt: formatRelativeTime(item.created_at),
             createdAtMs,
           };

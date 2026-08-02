@@ -167,7 +167,6 @@ exports.reviewDocument = async (req, res) => {
       }
 
       await supabase.from("document_chunks").delete().eq("document_id", documentId);
-      await supabase.from("document_tags").delete().eq("document_id", documentId);
 
       const { data, error: updateError } = await supabase
         .from("documents")

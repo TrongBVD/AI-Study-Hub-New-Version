@@ -104,19 +104,6 @@ async function processDocumentWithAI(
     let status = overrideStatus || "APPROVED";
     let aiRejectReason = overrideRejectReason || null;
 
-    if (!overrideStatus) {
-      const moderation = await moderateDocument(extractedText);
-
-      if (moderation.status === "REJECTED") {
-        await supabase
-          .from("documents")
-          .update({ status: "REJECTED", ai_reject_reason: moderation })
-          .eq("id", documentId);
-
-        return { status: "REJECTED", reason: moderation.reason, chunkCount: 0 };
-      }
-    }
-
     const chunks = splitTextIntoChunks(extractedText);
 
     if (chunks.length === 0) {
@@ -160,14 +147,14 @@ async function processDocumentWithAI(
       chunkCount: chunks.length,
     };
   } catch (error) {
-    console.error("AI processing failed:", error);
+    console.error("AI vector embedding failed:", error);
 
     await supabase
       .from("documents")
       .update({
         status: "PENDING_RETRY",
         ai_reject_reason: {
-          reason: "AI processing failed. Manual review may be needed.",
+          reason: "Vector embedding failed.",
           error: error.message,
         },
       })
@@ -175,7 +162,7 @@ async function processDocumentWithAI(
 
     return {
       status: "PENDING_RETRY",
-      reason: "AI processing failed. Manual review may be needed.",
+      reason: "Vector embedding failed.",
       error: error.message,
       chunkCount: 0,
     };
@@ -190,56 +177,21 @@ async function processWorkspaceDocumentInBackground(
 ) {
   try {
     const extractedText = await extractTextFromFile(file);
-    const [moderation, tagValidation] = await Promise.all([
-      moderateDocument(extractedText),
-      validateTagsAndContent(extractedText, file.originalname, userTags),
-    ]);
-
-    if (!tagValidation.isValid) {
-      await supabase
-        .from("documents")
-        .update({
-          status: "REJECTED",
-          ai_reject_reason: {
-            reason: "Document tags do not match the uploaded content.",
-            tagValidations: tagValidation.tagValidations || [],
-          },
-        })
-        .eq("id", documentId);
-      return;
-    }
-
-    const isFlagged = moderation.status === "REJECTED";
-    if (isFlagged) {
-      const { error: waitingUploadError } = await supabase.storage
-        .from(WAITING_BUCKET)
-        .upload(storagePath, file.buffer, {
-          contentType: file.mimetype || "application/octet-stream",
-          upsert: true,
-        });
-      if (waitingUploadError) throw waitingUploadError;
-
-      const { error: sourceRemoveError } = await supabase.storage
-        .from(BUCKET)
-        .remove([storagePath]);
-      if (sourceRemoveError) throw sourceRemoveError;
-    }
-
     await processDocumentWithAI(
       file,
       documentId,
       extractedText,
-      isFlagged ? "FLAGGED" : "PENDING",
-      isFlagged ? moderation : null,
+      "APPROVED",
+      null,
     );
   } catch (error) {
-    console.error("Background workspace document validation failed:", error);
+    console.error("Background workspace document processing failed:", error);
     await supabase
       .from("documents")
       .update({
         status: "PENDING_RETRY",
         ai_reject_reason: {
-          reason: "AI processing failed. Manual review may be needed.",
+          reason: "Processing failed.",
           error: error.message,
         },
       })

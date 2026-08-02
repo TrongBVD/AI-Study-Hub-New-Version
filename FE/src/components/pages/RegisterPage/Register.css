@@ -97,6 +97,30 @@
   cursor: wait;
 }
 
+.register_skip {
+  padding: 14px 20px;
+  border-radius: 12px;
+  background-color: transparent;
+  color: var(--text-secondary);
+  border: 1.5px solid var(--border-color);
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: 0.2s;
+  white-space: nowrap;
+}
+
+.register_skip:hover {
+  background-color: var(--bg-card);
+  color: var(--text-primary);
+  border-color: var(--text-secondary);
+}
+
+.register_skip:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .register_bio_overlay {
   position: fixed;
   inset: 0;

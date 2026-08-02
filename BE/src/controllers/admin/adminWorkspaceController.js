@@ -76,9 +76,9 @@ exports.getWorkspacePurgePreview = async (req, res) => {
     const topicIds = (topicIdsResult.data || []).map((topic) => topic.id);
     const topicFilter = (query) => topicIds.length ? query.in("topic_id", topicIds) : query.eq("topic_id", "00000000-0000-0000-0000-000000000000");
 
-    const [members, messages, folders, workspaceFlashcards, aiSummaries, documentChunks, documentTags, documentFlashcards, reviews, discussionComments, discussionSubtasks, discussionAttachments] = await Promise.all([
-      countRows("workspace_members", workspaceFilter), countRows("workspace_messages", workspaceFilter), countRows("folders", workspaceFilter), countRows("flashcards", workspaceFilter),
-      countRows("ai_summaries", documentFilter), countRows("document_chunks", documentFilter), countRows("document_tags", documentFilter), countRows("flashcards", documentFilter), countRows("reviews", documentFilter),
+    const [members, messages, aiSummaries, documentChunks, discussionComments, discussionSubtasks, discussionAttachments] = await Promise.all([
+      countRows("workspace_members", workspaceFilter), countRows("workspace_messages", workspaceFilter),
+      countRows("ai_summaries", documentFilter), countRows("document_chunks", documentFilter),
       countRows("workspace_discussion_comments", topicFilter), countRows("workspace_discussion_subtasks", topicFilter), countRows("workspace_discussion_attachments", topicFilter),
     ]);
 
@@ -86,7 +86,7 @@ exports.getWorkspacePurgePreview = async (req, res) => {
       status: "success",
       data: {
         workspace,
-        deletion: { members, messages, folders, documents: deletedDocuments.length, aiSummaries, documentChunks, documentTags, flashcards: workspaceFlashcards + documentFlashcards, reviews, discussionTopics: topicIds.length, discussionComments, discussionSubtasks, discussionAttachments, reclaimableBytes: deletedDocuments.reduce((total, document) => total + Number(document.file_size_bytes || 0), 0) },
+        deletion: { members, messages, documents: deletedDocuments.length, aiSummaries, documentChunks, discussionTopics: topicIds.length, discussionComments, discussionSubtasks, discussionAttachments, reclaimableBytes: deletedDocuments.reduce((total, document) => total + Number(document.file_size_bytes || 0), 0) },
         preservation: { documents: preservedDocuments.length, documentList: preservedDocuments.map(({ id, title, library_id: libraryId, file_size_bytes: fileSizeBytes }) => ({ id, title, libraryId, fileSizeBytes })) },
       },
     });

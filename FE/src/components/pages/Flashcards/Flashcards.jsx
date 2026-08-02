@@ -5,15 +5,8 @@ import { FaCheck, FaClock, FaHistory, FaPlus, FaTrash } from "react-icons/fa";
 import api from "../../../utils/api.js";
 import "./Flashcards.css";
 
-const FLASHCARD_HISTORY_KEY = "aiStudyHubFlashcardHistory";
-
 function loadFlashcardHistory() {
-  try {
-    const history = JSON.parse(localStorage.getItem(FLASHCARD_HISTORY_KEY) || "[]");
-    return Array.isArray(history) ? history : [];
-  } catch {
-    return [];
-  }
+  return [];
 }
 
 function Flashcards() {
@@ -41,10 +34,6 @@ function Flashcards() {
     : 0;
   const setTitle = selectedDocument?.title?.replace(/\.[^/.]+$/, "") ||
     "AI Flashcards";
-
-  useEffect(() => {
-    localStorage.setItem(FLASHCARD_HISTORY_KEY, JSON.stringify(history));
-  }, [history]);
 
   useEffect(() => {
     if (!currentCard || !sessionStarted || sessionComplete) return undefined;

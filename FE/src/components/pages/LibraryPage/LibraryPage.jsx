@@ -38,6 +38,7 @@ import {
   getPublicLibrary,
   recordPublicLibraryDownload,
 } from "../../../utils/publicApi";
+import { createAppNotification } from "../../../utils/notificationStore";
 
 import "./LibraryPage.css";
 import "../../../assets/icons/themify-icons-font/themify-icons/themify-icons.css";
@@ -1392,9 +1393,17 @@ function LibraryPage() {
         syncLibraryDocumentCount(nextItems);
         return nextItems;
       });
-      await refreshMyLibraryStorageUsage();
-
       handleCancelTaggedUpload();
+
+      const targetLibName = libraryData?.name ? `library "${libraryData.name}"` : "library";
+      createAppNotification({
+        category: "file",
+        action: "uploaded",
+        title: "Document uploaded",
+        message: `File "${pendingFiles[0]?.name || "Document"}" has been uploaded to ${targetLibName} successfully.`,
+        icon: "ti-file",
+        link: `/dashboard/libraries/${libraryId}`,
+      });
 
       if (reviewDocumentEntries.length > 0) {
         setUploadNotice({
@@ -1539,24 +1548,34 @@ function LibraryPage() {
       return;
     }
     const fileItem = documentPendingDelete;
+    setDocumentPendingDelete(null);
+
+    setLibraryItems((currentItems) => {
+      const nextItems = currentItems.filter((item) =>
+        fileItem.id
+          ? String(item.id) !== String(fileItem.id)
+          : item.name !== fileItem.name
+      );
+      syncLibraryDocumentCount(nextItems);
+      return nextItems;
+    });
+
     try {
       setIsDeletingDocument(true);
       if (fileItem.id && fileItem.isBackendFile) {
         await deleteDocument(fileItem.id);
       }
-
-      setLibraryItems((currentItems) => {
-        const nextItems = currentItems.filter((item) =>
-          fileItem.id
-            ? item.id !== fileItem.id
-            : item.name !== fileItem.name
-        );
-        syncLibraryDocumentCount(nextItems);
-        return nextItems;
-      });
       await refreshMyLibraryStorageUsage();
 
-      setDocumentPendingDelete(null);
+      const targetLibName = libraryData?.name ? `library "${libraryData.name}"` : "library";
+      createAppNotification({
+        category: "file",
+        action: "deleted",
+        title: "Document deleted",
+        message: `File "${formatDisplayFileName(fileItem.name)}" has been deleted from ${targetLibName}.`,
+        icon: "ti-trash",
+        link: `/dashboard/libraries/${libraryId}`,
+      });
       setUploadNotice({
         type: "success",
         title: "Document deleted",
@@ -1564,7 +1583,6 @@ function LibraryPage() {
       });
     } catch (error) {
       console.error("Delete failed:", error);
-      setDocumentPendingDelete(null);
       setUploadNotice({
         type: "error",
         title: "Could not delete document",

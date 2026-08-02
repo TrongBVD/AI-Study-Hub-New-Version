@@ -356,7 +356,7 @@ Rules:
 - Generate UP TO 20 flashcards depending on text length and content depth:
   * For shorter documents: Generate 3 to 8 essential flashcards.
   * For longer, richer documents: Generate 10 to 20 diverse, non-repetitive, high-yield study flashcards covering key topics across the entire text.
-- LANGUAGE: Write ALL questions and answers in VIETNAMESE (Tiếng Việt) if the document is in Vietnamese or bilingual. Default to VIETNAMESE for student study materials.
+- LANGUAGE: Write questions and answers in the SAME primary language as the document content (e.g., Vietnamese for Vietnamese documents, English for English documents).
 - Ensure questions and answers cover distinct, diverse concepts without duplicate content.
 - Keep answers clear and concise.
 - Use only the document content.

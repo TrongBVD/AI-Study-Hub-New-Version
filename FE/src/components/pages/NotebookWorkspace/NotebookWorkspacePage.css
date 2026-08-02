@@ -273,6 +273,11 @@
   background: #283040;
 }
 
+.doc_action_btn.delete_btn:hover {
+  color: #f87171;
+  background: rgba(239, 68, 68, 0.15);
+}
+
 /* 2. MAIN CHAT PANEL (Full Expansion) */
 .chat_panel.full_width {
   flex: 1;

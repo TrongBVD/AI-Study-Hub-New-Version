@@ -75,20 +75,14 @@ function PersonalProfile() {
         if (!isMounted) return;
 
         const profile = isOwnProfile ? profileData : profileData?.profile;
-        const sharedLibraries = isOwnProfile
-          ? JSON.parse(localStorage.getItem("aiStudyHubLibraries") || "[]").filter(
-              (library) => library.shareOnProfile === true,
-            )
-          : profileData?.libraries || [];
+        const sharedLibraries = profileData?.libraries || [];
         const nextAvatar = profile?.avatar_url || "";
         const nextName =
           profile?.username || profile?.full_name || profile?.email || "User";
 
         setUserName(nextName);
         setUserEmail(profile?.email || "");
-        const nextBio =
-          profile?.bio ||
-          (isOwnProfile ? getUserStoredItem(PROFILE_BIO_KEY) || "" : "");
+        const nextBio = profile?.bio || "";
         setProfileBio(nextBio);
         setDraftBio(nextBio);
         setAvatar(nextAvatar);

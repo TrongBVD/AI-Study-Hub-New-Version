@@ -14,6 +14,7 @@ const {
 } = require("../../utils/documentDuplicateUtils");
 const { createActivityLog } = require("../../services/activityLogService");
 const { canAccessDocument } = require("../../services/documentAccessService");
+const { notifyDocumentUploaded, notifyDocumentDeleted } = require("../../services/documentNotificationService");
 
 const {
   BUCKET,
@@ -61,14 +62,7 @@ exports.listMyDocuments = async (req, res) => {
         is_public,
         status,
         ai_reject_reason,
-        created_at,
-        document_tags (
-          assigned_by,
-          tags (
-            id,
-            name
-          )
-        )
+        created_at
       `
       )
       .eq("uploader_id", userID)
@@ -319,15 +313,7 @@ exports.uploadDocuments = async (req, res) => {
       requestedReplacementIds,
     );
 
-    // Auto-resolve duplicate conflicts when uploading into a library by replacing existing versions
-    if (libraryId && duplicateDecision.conflicts.length > 0) {
-      duplicateDecision.conflicts.forEach((conflict) => {
-        if (conflict.documentId) {
-          duplicateDecision.replacementTargetIds[conflict.fileIndex] = [conflict.documentId];
-        }
-      });
-      duplicateDecision.conflicts = duplicateDecision.conflicts.filter(c => !c.documentId);
-    }
+
 
     if (duplicateDecision.conflicts.length > 0) {
       const duplicateConflicts = duplicateDecision.conflicts.map((conflict) => {
@@ -461,9 +447,39 @@ exports.uploadDocuments = async (req, res) => {
 
         if (replacedDocumentIds.length > 0) {
           const replacementTimestamp = new Date().toISOString();
+
+          // Fetch file_urls of replaced documents to clean up Supabase Storage Bucket
+          const { data: replacedDocs } = await supabase
+            .from("documents")
+            .select("id, file_url")
+            .in("id", replacedDocumentIds);
+
+          if (replacedDocs && replacedDocs.length > 0) {
+            for (const rDoc of replacedDocs) {
+              if (rDoc.file_url) {
+                let cleanPath = rDoc.file_url;
+                if (cleanPath.startsWith("http")) {
+                  const parts = cleanPath.split("/object/public/");
+                  if (parts[1]) {
+                    cleanPath = parts[1].replace(`${BUCKET}/`, "").replace(`${WAITING_BUCKET}/`, "");
+                  }
+                }
+                cleanPath = cleanPath.replace(/^documents\//, "").replace(/^document_waiting_admin\//, "");
+                await supabase.storage.from(BUCKET).remove([cleanPath]);
+                await supabase.storage.from(WAITING_BUCKET).remove([cleanPath]);
+              }
+            }
+          }
+
+          // Delete vector chunks of replaced documents
+          await supabase
+            .from("document_chunks")
+            .delete()
+            .in("document_id", replacedDocumentIds);
+
           let replacementDeleteQuery = supabase
             .from("documents")
-            .update({ deleted_at: replacementTimestamp })
+            .delete()
             .in("id", replacedDocumentIds);
 
           replacementDeleteQuery = workspaceId
@@ -486,7 +502,7 @@ exports.uploadDocuments = async (req, res) => {
           if (replacementDeleteError) {
             await supabase
               .from("documents")
-              .update({ deleted_at: replacementTimestamp })
+              .delete()
               .eq("id", document.id);
             throw replacementDeleteError;
           }
@@ -499,6 +515,19 @@ exports.uploadDocuments = async (req, res) => {
         };
       },
     );
+
+    // Record notification for successful document upload
+    for (const doc of uploadedDocuments) {
+      if (doc?.id) {
+        notifyDocumentUploaded({
+          userId: userID,
+          documentId: doc.id,
+          documentTitle: doc.title,
+          libraryId,
+          workspaceId,
+        }).catch((err) => console.warn("Failed to send upload notification:", err));
+      }
+    }
 
     return res.status(201).json({ status: "success", data: uploadedDocuments });
   } catch (error) {
@@ -758,8 +787,18 @@ exports.deleteDocument = async (req, res) => {
 
     if (document.file_url) {
       try {
-        await supabase.storage.from(BUCKET).remove([document.file_url]);
-        await supabase.storage.from(WAITING_BUCKET).remove([document.file_url]);
+        let cleanPath = document.file_url;
+        if (cleanPath.startsWith("http")) {
+          const parts = cleanPath.split("/object/public/");
+          if (parts[1]) {
+            cleanPath = parts[1].replace(`${BUCKET}/`, "").replace(`${WAITING_BUCKET}/`, "");
+          }
+        }
+        cleanPath = cleanPath.replace(/^documents\//, "").replace(/^document_waiting_admin\//, "");
+
+        const { data: remBucket, error: errBucket } = await supabase.storage.from(BUCKET).remove([cleanPath]);
+        const { data: remWait, error: errWait } = await supabase.storage.from(WAITING_BUCKET).remove([cleanPath]);
+        console.log(`[deleteDocument] Storage removal result for "${cleanPath}":`, { remBucket, errBucket, remWait, errWait });
       } catch (storageErr) {
         console.warn("[deleteDocument] Warning removing file from storage:", storageErr);
       }
@@ -770,25 +809,23 @@ exports.deleteDocument = async (req, res) => {
       .delete()
       .eq("document_id", documentId);
 
-    const { error: updateError } = await supabase
+    const { error: deleteError } = await supabase
       .from("documents")
-      .update({
-        deleted_at: new Date().toISOString(),
-      })
+      .delete()
       .eq("id", documentId);
 
-    if (updateError) {
-      throw updateError;
+    if (deleteError) {
+      throw deleteError;
     }
 
-    const { error: deleteTagsError } = await supabase
-      .from("document_tags")
-      .delete()
-      .eq("document_id", documentId);
-
-    if (deleteTagsError) {
-      throw deleteTagsError;
-    }
+    // Record notification for document deletion
+    notifyDocumentDeleted({
+      userId: userID,
+      documentId: document.id,
+      documentTitle: document.title,
+      libraryId: document.library_id,
+      workspaceId: document.workspace_id,
+    }).catch((err) => console.warn("Failed to send delete notification:", err));
 
     return res.status(200).json({
       status: "success",
