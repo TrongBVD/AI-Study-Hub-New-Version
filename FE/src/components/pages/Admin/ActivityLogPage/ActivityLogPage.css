@@ -292,8 +292,8 @@ body[data-theme="black"] .activity-log-page__date-range input { color-scheme: da
 }
 
 .activity-log-page__risk-pill.is-medium {
-  background: #f5dfc0;
-  color: #8b4a15;
+  background: #bfdbfe;
+  color: #1d4ed8;
 }
 
 .activity-log-page__risk-pill.is-high {
@@ -306,7 +306,7 @@ body[data-theme="black"] .activity-log-page__date-range input { color-scheme: da
 }
 
 .risk-text-medium {
-  color: #8b4a15 !important;
+  color: #1d4ed8 !important;
 }
 
 .risk-text-info,

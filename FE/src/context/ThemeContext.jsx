@@ -8,31 +8,32 @@ import {
 } from "react";
 
 export const THEME_STORAGE_KEY = "aiStudyHub.theme";
-export const DEFAULT_THEME = "current";
+export const DEFAULT_THEME = "black";
 
 export const THEME_OPTIONS = [
   {
-    value: "current",
-    label: "Current",
-    description: "Warm cream and brown palette currently used across StudyHub.",
+    value: "black",
+    label: "Dark",
+    description: "Black and deep-blue surfaces with sky-blue accents and white text.",
   },
   {
     value: "white",
-    label: "White",
-    description: "Clean bright surfaces, light grays, and high contrast text.",
+    label: "Light",
+    description: "White and pale-blue surfaces with blue accents and black text.",
   },
 ];
 
 const SUPPORTED_THEMES = new Set(THEME_OPTIONS.map((theme) => theme.value));
 
 const LEGACY_THEME_MAP = {
-  warm: "current",
+  current: "black",
+  warm: "black",
   light: "white",
-  dark: "current",
+  dark: "black",
 };
 
 const STUDY_THEME_MAP = {
-  current: "warm",
+  black: "dark",
   white: "light",
 };
 
@@ -56,7 +57,7 @@ function persistTheme(theme) {
 
 function applyTheme(nextTheme) {
   const theme = normalizeTheme(nextTheme);
-  const legacyStudyTheme = STUDY_THEME_MAP[theme] || STUDY_THEME_MAP.current;
+  const legacyStudyTheme = STUDY_THEME_MAP[theme] || STUDY_THEME_MAP.black;
 
   if (typeof document !== "undefined") {
     document.documentElement.dataset.theme = theme;

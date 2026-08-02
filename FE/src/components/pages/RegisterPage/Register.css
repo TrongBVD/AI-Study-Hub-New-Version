@@ -197,3 +197,116 @@
   0% { transform: scale(0.9); opacity: 1; }
   100% { transform: scale(2); opacity: 0; }
 }
+
+/* Fixed public identity: independent from the signed-in dashboard theme. */
+.register_page {
+  --bg-primary: #f8faff;
+  --bg-secondary: #f3f0ff;
+  --bg-card: #ffffff;
+  --text-primary: #0f172a;
+  --text-secondary: #334155;
+  --text-muted: #64748b;
+  --border-color: #ddd6fe;
+  --input-bg: #ffffff;
+  --input-border: #bfdbfe;
+  --accent-color: #2563eb;
+  --accent-hover: #1d4ed8;
+  --button-bg: #2563eb;
+  --button-text: #ffffff;
+  --danger-color: #dc2626;
+  --focus-ring: rgba(124, 58, 237, 0.2);
+  --shadow-soft: 0 28px 70px rgba(30, 41, 90, 0.16);
+  min-height: 100vh;
+  height: auto;
+  padding: 28px;
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 12% 18%, rgba(56, 189, 248, 0.28), transparent 28rem),
+    radial-gradient(circle at 88% 82%, rgba(196, 181, 253, 0.48), transparent 30rem),
+    linear-gradient(145deg, #f8fbff 0%, #f3f0ff 56%, #eef6ff 100%);
+  color: var(--text-primary);
+  color-scheme: light;
+}
+
+.register_page::before,
+.register_page::after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  border-radius: 999px;
+}
+
+.register_page::before {
+  width: 220px;
+  height: 220px;
+  top: -80px;
+  right: 8%;
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.18), rgba(124, 58, 237, 0.2));
+}
+
+.register_page::after {
+  width: 150px;
+  height: 150px;
+  bottom: -52px;
+  left: 10%;
+  background: rgba(56, 189, 248, 0.18);
+}
+
+.register_card,
+.register_form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: min(400px, 100%);
+  padding: 40px;
+  border: 1px solid rgba(196, 181, 253, 0.72);
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: var(--shadow-soft);
+  box-sizing: border-box;
+  position: relative;
+  z-index: 1;
+  backdrop-filter: blur(18px);
+}
+
+.register_title {
+  color: #071426;
+}
+
+.register_title::before,
+.register_title::after {
+  background: linear-gradient(135deg, #38bdf8, #2563eb 55%, #8b5cf6);
+}
+
+.register_submit {
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 55%, #7c3aed 100%);
+  color: #ffffff;
+  box-shadow: 0 12px 26px rgba(37, 99, 235, 0.24);
+}
+
+.register_submit:hover {
+  background: linear-gradient(135deg, #1d4ed8, #6d28d9);
+  transform: translateY(-1px);
+}
+
+.register_page .form_input_group .form_input:focus {
+  border-color: #7c3aed;
+  box-shadow: 0 0 0 4px rgba(196, 181, 253, 0.34);
+}
+
+.register_bio_overlay {
+  background: rgba(7, 20, 38, 0.64);
+}
+
+@media (max-width: 520px) {
+  .register_page {
+    padding: 18px;
+  }
+
+  .register_card,
+  .register_form {
+    padding: 30px 24px;
+  }
+}

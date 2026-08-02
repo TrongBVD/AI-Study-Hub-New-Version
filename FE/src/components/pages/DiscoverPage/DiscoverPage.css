@@ -2,8 +2,8 @@
   min-height: calc(100vh - 92px);
   background:
     linear-gradient(180deg, rgba(15, 23, 42, 0.18), transparent 18rem),
-    #f7f1df;
-  color: #3b2a1a;
+    #f8fafc;
+  color: #0f172a;
 }
 
 .discover_shell {
@@ -17,7 +17,7 @@
   border: 1px solid var(--border-color);
   border-radius: 1.3rem;
   background:
-    linear-gradient(135deg, rgba(47, 32, 21, 0.88), rgba(180, 83, 26, 0.54)),
+    linear-gradient(135deg, rgba(15, 23, 42, 0.88), rgba(37, 99, 235, 0.54)),
     var(--hero-bg);
   box-shadow: var(--shadow-soft);
   padding: clamp(2rem, 4vw, 3.5rem) clamp(1.5rem, 4.5vw, 4rem);
@@ -59,7 +59,7 @@
 .discover_hero_copy h1 {
   max-width: 48rem;
   margin: 0.75rem 0 0;
-  color: #fff8ec;
+  color: #eff6ff;
   font-size: clamp(2.4rem, 5.2vw, 5.25rem);
   line-height: 0.98;
 }
@@ -91,7 +91,7 @@
 }
 
 .discover_user_link:hover {
-  border-color: rgba(180, 83, 26, 0.36);
+  border-color: rgba(37, 99, 235, 0.36);
   box-shadow: 0 20px 42px rgba(74, 45, 24, 0.14);
   transform: translateY(-3px);
 }
@@ -125,7 +125,7 @@ body[data-theme="white"] .discover_user_link:hover {
 
 .discover_featured_user h2 {
   margin: 0.9rem 0 0.35rem;
-  color: #fff8ec;
+  color: #eff6ff;
   font-size: 1.65rem;
 }
 
@@ -138,8 +138,8 @@ body[data-theme="white"] .discover_user_link:hover {
   min-height: 0;
   border: 1px solid rgba(118, 80, 48, 0.16);
   border-radius: 18px;
-  background: #fffaf2;
-  color: #3b2a1a;
+  background: #f8fafc;
+  color: #0f172a;
   box-shadow: 0 14px 30px rgba(74, 45, 24, 0.08);
   display: grid;
   grid-template-rows: 145px minmax(0, 1fr);
@@ -152,7 +152,7 @@ body[data-theme="white"] .discover_user_link:hover {
 }
 
 .discover_library_card:hover {
-  border-color: rgba(180, 83, 26, 0.34);
+  border-color: rgba(37, 99, 235, 0.34);
   box-shadow: 0 20px 42px rgba(74, 45, 24, 0.14);
   transform: translateY(-4px);
 }
@@ -168,7 +168,7 @@ body[data-theme="white"] .discover_user_link:hover {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  color: #fff8ec;
+  color: #eff6ff;
   font-size: 1.3rem;
 }
 
@@ -209,7 +209,7 @@ body[data-theme="white"] .discover_user_link:hover {
 
 .discover_card_body p {
   margin: 0.35rem 0 0;
-  color: #6f5a49;
+  color: #64748b;
   font-size: 0.85rem;
   line-height: 1.45;
   display: -webkit-box;
@@ -244,7 +244,7 @@ body[data-theme="white"] .discover_user_link:hover {
 
 .discover_card_body footer em {
   margin-left: auto;
-  color: #8b7767;
+  color: #64748b;
   font-size: 0.68rem;
   font-style: normal;
   font-weight: 800;
