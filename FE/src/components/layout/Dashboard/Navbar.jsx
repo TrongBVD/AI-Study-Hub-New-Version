@@ -4,8 +4,9 @@ import {
   HiOutlineBell,
   HiOutlinePlus,
   HiOutlineSquaresPlus,
+  HiOutlineBookOpen,
+  HiOutlineBars3,
 } from "react-icons/hi2";
-import { LuBookPlus, LuMenu } from "react-icons/lu";
 import {
   getNotificationSettings,
   getNotifications,
@@ -22,6 +23,9 @@ import { getStoredUser } from "../../../utils/authToken.js";
 import { getUserStoredItem, setUserStoredItem } from "../../../utils/userStorage.js";
 import { WorkspaceInviteModal } from "./WorkspaceInviteModal.jsx";
 
+/**
+ * Gets the current stored user's system role
+ */
 function getStoredUserRole() {
   try {
     const user = getStoredUser();
@@ -31,6 +35,9 @@ function getStoredUserRole() {
   }
 }
 
+/**
+ * Helper to combine public and personal libraries
+ */
 function mergeLibraries(publicLibraries = [], myLibraries = []) {
   const librariesById = new Map();
 
@@ -47,10 +54,16 @@ function mergeLibraries(publicLibraries = [], myLibraries = []) {
   return [...librariesById.values()];
 }
 
+/**
+ * Normalizes notification strings
+ */
 function getNotificationMessage(message) {
   return String(message || "").replace(/\bViewer\b/gi, "Contributor");
 }
 
+/**
+ * Saves library visit history
+ */
 function saveRecentLibrary(library) {
   const currentRecentLibraries = JSON.parse(
     getUserStoredItem("aiStudyHubRecentLibraries") || "[]"
@@ -76,6 +89,9 @@ function saveRecentLibrary(library) {
   );
 }
 
+/**
+ * Saves workspace visit history
+ */
 function saveRecentWorkspace(workspace) {
   const currentRecentWorkspaces = JSON.parse(
     getUserStoredItem("aiStudyHubRecentWorkspaces") || "[]"
@@ -100,6 +116,11 @@ function saveRecentWorkspace(workspace) {
   );
 }
 
+/**
+ * Navbar Component: Sleek Top Navigation Bar for AI Study Hub
+ * Fully localized in 100% English
+ * Uses react-icons/hi2 for 100% stable icon compatibility
+ */
 function Navbar({
   onOpenSidebar,
   profilePath = "/dashboard/profile",
@@ -113,14 +134,15 @@ function Navbar({
   const [matchedUsers, setMatchedUsers] = useState([]);
   const [profileAvatar, setProfileAvatar] = useState("");
 
-
   const [notifications, setNotifications] = useState(() => getNotifications());
   const [selectedInviteNotification, setSelectedInviteNotification] = useState(null);
-
   const [notificationSettings, setNotificationSettings] = useState(() =>
     getNotificationSettings()
   );
 
+  /**
+   * Responds to workspace invitation (Accept/Reject)
+   */
   const handleRespondInvite = async (invitationId, action) => {
     try {
       const res = await respondToInvitation(invitationId, action);
@@ -214,8 +236,6 @@ function Navbar({
         }
 
         if (status === 401) {
-          // The API interceptor refreshes or clears the session. Do not keep
-          // polling while that authentication flow is in progress or failed.
           nextAllowedSyncAt = Number.POSITIVE_INFINITY;
           console.warn("Notification sync stopped because the session is no longer valid.");
           return;
@@ -315,7 +335,7 @@ function Navbar({
   useEffect(() => {
     if (!isLoggedIn) return;
     let isMounted = true;
-    
+
     async function loadSearchData() {
       try {
         if (isGuest) {
@@ -447,11 +467,7 @@ function Navbar({
     const keyword = searchValue.trim();
     if (!keyword) return;
 
-    if (isGuest) {
-      navigate(`/dashboard/search?q=${encodeURIComponent(keyword)}`);
-    } else {
-      navigate(`/dashboard/search?q=${encodeURIComponent(keyword)}`);
-    }
+    navigate(`/dashboard/search?q=${encodeURIComponent(keyword)}`);
     setIsSearchFocused(false);
   }
 
@@ -467,10 +483,11 @@ function Navbar({
           aria-label="Open sidebar"
           onClick={onOpenSidebar}
         >
-          <LuMenu aria-hidden="true" />
+          <HiOutlineBars3 aria-hidden="true" />
         </button>
       </div>
 
+      {/* Global Search Bar */}
       <form className="search_box" onSubmit={handleSearchSubmit}>
         <input
           type="text"
@@ -486,7 +503,7 @@ function Navbar({
             {searchResults.length === 0 ? (
               <div className="global_search_empty">
                 <i className="ti-search"></i>
-                <p>No user, library or workspace found.</p>
+                <p>No users, libraries, or workspaces found.</p>
               </div>
             ) : (
               searchResults.map((result) => (
@@ -522,6 +539,7 @@ function Navbar({
         )}
       </form>
 
+      {/* Navbar Actions & Profile */}
       <div className="nav_actions">
         {isGuest ? (
           <div className="guest_auth_actions">
@@ -534,15 +552,16 @@ function Navbar({
           </div>
         ) : (
           <>
+            {/* Create Dropdown */}
             <div className="create_dropdown">
-              <button type="button" className="create_dropdown_btn">
+              <button type="button" className="create_dropdown_btn" aria-label="Create new item">
                 <HiOutlinePlus aria-hidden="true" />
               </button>
 
               <div className="create_dropdown_menu">
                 <Link to="/dashboard/create-library">
-                  <LuBookPlus aria-hidden="true" />
-                  Create library
+                  <HiOutlineBookOpen aria-hidden="true" />
+                  Create Library
                 </Link>
 
                 <Link
@@ -550,32 +569,30 @@ function Navbar({
                   state={{ from: "/dashboard/home" }}
                 >
                   <i className="ti-import"></i>
-                  Import library
+                  Import Library
                 </Link>
 
                 <Link to="/dashboard/create-workspace">
                   <HiOutlineSquaresPlus aria-hidden="true" />
-                  Create workspace
+                  Create Workspace
                 </Link>
               </div>
             </div>
 
+            {/* Notification Panel */}
             <div className="notification_dropdown">
-              <button type="button" className="notification_btn">
+              <button type="button" className="notification_btn" aria-label="Notifications">
                 <HiOutlineBell aria-hidden="true" />
-                {notificationSettings.showBadge &&
-                  unreadNotificationCount > 0 && (
-                    <span className="notification_badge">
-                      {unreadNotificationCount}
-                    </span>
-                  )}
+                {notificationSettings.showBadge && unreadNotificationCount > 0 && (
+                  <span className="notification_badge">{unreadNotificationCount}</span>
+                )}
               </button>
 
               <div className="notification_panel">
                 <div className="notification_header">
                   <div>
                     <strong>Notifications</strong>
-                    <p>Recent workspace activity</p>
+                    <p>Recent activity updates</p>
                   </div>
 
                   <button
@@ -584,7 +601,7 @@ function Navbar({
                       try {
                         await markWorkspaceNotificationsAsReadApi();
                       } catch (err) {
-                        console.error("Failed to mark notifications read in DB:", err);
+                        console.error("Failed to mark notifications read:", err);
                       }
                       markAllNotificationsAsRead();
                       try {
@@ -611,107 +628,28 @@ function Navbar({
                       <p>No notifications yet.</p>
                     </div>
                   ) : (
-                    notifications.map((notification) => {
-                      if (notification.isInvitation) {
-                        return (
-                          <div
-                            key={notification.id}
-                            className={`notification_item invitation ${
-                              notification.isRead ? "" : "unread"
-                            }`}
-                            style={{ cursor: "pointer", display: "flex", alignItems: "center", gap: "10px" }}
-                            onClick={() => setSelectedInviteNotification(notification)}
-                          >
-                            <div className="notification_icon">
-                              <i className="ti-email"></i>
-                            </div>
+                    notifications.map((notification) => (
+                      <button
+                        type="button"
+                        key={notification.id}
+                        className={`notification_item ${notification.isRead ? "" : "unread"}`}
+                        onClick={() => {
+                          if (notification.link) {
+                            navigate(notification.link);
+                          }
+                        }}
+                      >
+                        <div className="notification_icon">
+                          <i className={notification.icon || "ti-bell"}></i>
+                        </div>
 
-                            <div style={{ flex: 1, textAlign: "left" }}>
-                              <strong>{notification.title}</strong>
-                              <p>{notification.message}</p>
-                              <span>{notification.createdAt}</span>
-                            </div>
-
-                            {notification.status === "PENDING" && (
-                              <div
-                                style={{ display: "flex", gap: "6px" }}
-                                onClick={(e) => e.stopPropagation()}
-                              >
-                                <button
-                                  type="button"
-                                  style={{
-                                    border: "none",
-                                    background: "#16a34a",
-                                    color: "#fff",
-                                    width: "28px",
-                                    height: "28px",
-                                    borderRadius: "50%",
-                                    cursor: "pointer",
-                                    fontWeight: "bold",
-                                    display: "flex",
-                                    alignItems: "center",
-                                    justifyContent: "center",
-                                  }}
-                                  title="Đồng ý"
-                                  onClick={() =>
-                                    handleRespondInvite(notification.logId, "accept")
-                                  }
-                                >
-                                  ✓
-                                </button>
-                                <button
-                                  type="button"
-                                  style={{
-                                    border: "none",
-                                    background: "#ef4444",
-                                    color: "#fff",
-                                    width: "28px",
-                                    height: "28px",
-                                    borderRadius: "50%",
-                                    cursor: "pointer",
-                                    fontWeight: "bold",
-                                    display: "flex",
-                                    alignItems: "center",
-                                    justifyContent: "center",
-                                  }}
-                                  title="Từ chối"
-                                  onClick={() =>
-                                    handleRespondInvite(notification.logId, "reject")
-                                  }
-                                >
-                                  ✕
-                                </button>
-                              </div>
-                            )}
-                          </div>
-                        );
-                      }
-
-                      return (
-                        <button
-                          type="button"
-                          key={notification.id}
-                          className={`notification_item ${
-                            notification.isRead ? "" : "unread"
-                          }`}
-                          onClick={() => {
-                            if (notification.link) {
-                              navigate(notification.link);
-                            }
-                          }}
-                        >
-                          <div className="notification_icon">
-                            <i className={notification.icon}></i>
-                          </div>
-
-                          <div>
-                            <strong>{notification.title}</strong>
-                            <p>{getNotificationMessage(notification.message)}</p>
-                            <span>{notification.createdAt}</span>
-                          </div>
-                        </button>
-                      );
-                    })
+                        <div>
+                          <strong>{notification.title}</strong>
+                          <p>{getNotificationMessage(notification.message)}</p>
+                          <span>{notification.createdAt}</span>
+                        </div>
+                      </button>
+                    ))
                   )}
                 </div>
 
@@ -732,7 +670,6 @@ function Navbar({
                 onRespond={handleRespondInvite}
               />
             )}
-
           </>
         )}
 

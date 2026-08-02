@@ -1,6 +1,6 @@
 const express = require("express");
 const authMiddleware = require("../middleware/authMiddleware");
-const controller = require("../controllers/issueReportController");
+const controller = require("../controllers/issueReport/issueReportController");
 const router = express.Router();
 router.use(authMiddleware);
 router.post("/", controller.submitIssue);

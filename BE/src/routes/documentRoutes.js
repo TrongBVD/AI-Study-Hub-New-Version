@@ -17,6 +17,9 @@ const {
     downloadDocument,
     viewDocument,
     deleteDocument,
+} = require("../controllers/document/documentManagementController");
+
+const {
     createLibrary,
     listMyLibraries,
     updateLibrary,
@@ -24,7 +27,7 @@ const {
     deleteLibrary,
     toggleLibraryStar,
     getLibraryEngagement,
-} = require("../controllers/documentController");
+} = require("../controllers/document/libraryController");
 
 const router = express.Router();
 

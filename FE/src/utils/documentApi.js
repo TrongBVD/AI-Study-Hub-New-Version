@@ -22,29 +22,35 @@ export async function uploadDocuments(
   onProgress = null,
   replacementDocumentIds = [],
 ) {
-  const formData = new FormData();
+  let formData;
+  if (files instanceof FormData) {
+    formData = files;
+  } else {
+    formData = new FormData();
+    const fileList = Array.isArray(files) ? files : [files];
+    fileList.forEach((file) => {
+      formData.append("files", file);
+    });
 
-  files.forEach((file) => {
-    formData.append("files", file);
-  });
+    if (workspaceId) {
+      formData.append("workspaceId", workspaceId);
+    }
+    
+    if (libraryId) {
+      formData.append("libraryId", libraryId);
+      formData.append("library_id", libraryId);
+    }
 
-  if (workspaceId) {
-    formData.append("workspaceId", workspaceId);
-  }
-  
-  if (libraryId) {
-    formData.append("libraryId", libraryId);
-  }
+    if (tags && tags.length > 0) {
+      formData.append("tags", JSON.stringify(tags));
+    }
 
-  if (tags && tags.length > 0) {
-    formData.append("tags", JSON.stringify(tags));
-  }
-
-  if (replacementDocumentIds.some(Boolean)) {
-    formData.append(
-      "replacementDocumentIds",
-      JSON.stringify(replacementDocumentIds),
-    );
+    if (replacementDocumentIds && replacementDocumentIds.some(Boolean)) {
+      formData.append(
+        "replacementDocumentIds",
+        JSON.stringify(replacementDocumentIds),
+      );
+    }
   }
 
   const response = await api.post("/documents/upload", formData, {

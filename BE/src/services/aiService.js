@@ -301,36 +301,31 @@ function removeChunkReferences(answer) {
       /\s*\(?\[?\*{0,2}(?:source:\s*)?chunks?\s*\d+(?:\s*(?:,|and)\s*\d+)*\*{0,2}\]?\)?\s*\.?/gi,
       "",
     )
-    .replace(/\*+/g, "")
+    .replace(/\*{2,}/g, "")
     .replace(/\n{3,}/g, "\n\n")
     .trim();
 }
 
 async function answerWithContext(question, chunks) {
-  const context = chunks
+  const context = (chunks || [])
     .map((chunk, index) => {
-      return `[Chunk ${index + 1}, database chunk_index: ${chunk.chunk_index}, similarity: ${chunk.similarity}]
-${chunk.content}`;
+      return `[Source Document ${index + 1}]:\n${chunk.content}`;
     })
     .join("\n\n");
 
   const prompt = `
-You are StudyHub Assistant.
+You are AI Study Hub Assistant.
 
-Answer the student's question using ONLY the document context below.
-
-Rules:
-- If the answer is not in the context, say: "I cannot find this in the uploaded document."
-- Give a clear student-friendly answer.
-- Do not mention chunks, chunk numbers, retrieval metadata, or source labels.
-- Return plain text without Markdown asterisks or bold formatting.
-- Do not invent facts outside the document.
-
-Question:
+User Question:
 ${question}
 
-Document context:
+Source Documents Context:
 ${context}
+
+Instructions:
+1. LANGUAGE MATCHING: Always respond in the EXACT same language used by the user in their question (e.g. Vietnamese for Vietnamese questions, English for English questions).
+2. HELPFUL & DIRECT: Answer the question clearly and thoroughly. Use the provided source documents as context, but also use general knowledge whenever necessary to give a complete answer. Never output refusal messages like "I cannot find this in the uploaded document".
+3. NO ASTERISKS: Do NOT output Markdown asterisks (** or ***) anywhere in the text. Output clean plain text formatting.
 `;
 
   const answer = await generateText(prompt);

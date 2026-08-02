@@ -16,8 +16,6 @@ import OTPVerification from "./components/pages/RegisterPage/OTPVerification.jsx
 import Dashboard from "./components/layout/Dashboard/Dashboard.jsx";
 
 // ================= USER PAGE IMPORTS =================
-import HomePage from "./components/pages/HomePage/HomePage.jsx";
-import MyLibraryPage from "./components/pages/MyLibraryPage/MyLibraryPage.jsx";
 import CreateLibraryPage from "./components/pages/CreateLibraryPage/CreateLibraryPage.jsx";
 import MyWorkSpace from "./components/pages/MyWorkSpace/MyWorkSpace.jsx";
 import PersonalProfilePage from "./components/pages/PersonalProfilePage/PersonalProfilePage.jsx";
@@ -26,6 +24,11 @@ import SearchUserPage from "./components/pages/SearchUserPage/SearchUserPage";
 import SearchResultPage from "./components/pages/SearchResultPage/SearchResultPage.jsx";
 import NotificationsPage from "./components/pages/NotificationsPage/NotificationsPage.jsx";
 import DiscoverPage from "./components/pages/DiscoverPage/DiscoverPage.jsx";
+
+// ================= NOTEBOOK LM REDESIGN IMPORTS =================
+import NotebookDashboardPage from "./components/pages/NotebookDashboard/NotebookDashboardPage.jsx";
+import NotebookWorkspacePage from "./components/pages/NotebookWorkspace/NotebookWorkspacePage.jsx";
+
 // ================= PROTECTED ROUTE =================
 import ProtectedRoute from "./components/common/ProtectedRoute/ProtectedRoute.jsx";
 
@@ -34,7 +37,6 @@ import AdminLayout from "./components/pages/Admin/AdminLayout/AdminLayout.jsx";
 import ReportIssuePage from "./components/pages/ReportIssuePage/ReportIssuePage.jsx";
 
 const ImportLibraryPage = lazy(() => import("./components/pages/ImportLibraryPage/ImportLibraryPage.jsx"));
-const LibraryPage = lazy(() => import("./components/pages/LibraryPage/LibraryPage.jsx"));
 const DocumentViewerPage = lazy(() => import("./components/pages/DocumentViewerPage/DocumentViewerPage.jsx"));
 const WorkSpacePage = lazy(() => import("./components/pages/WorkSpacePage/WorkSpacePage.jsx"));
 const Flashcards = lazy(() => import("./components/pages/Flashcards/Flashcards.jsx"));
@@ -48,101 +50,98 @@ const AdminProfilePage = lazy(() => import("./components/pages/Admin/AdminProfil
 const DeletedWorkspacesPage = lazy(() => import("./components/pages/Admin/DeletedWorkspacesPage/DeletedWorkspacesPage.jsx"));
 const IssueReportsPage = lazy(() => import("./components/pages/Admin/IssueReportsPage/IssueReportsPage.jsx"));
 
+/**
+ * Main Application Component with React Router Configuration
+ * Includes NotebookLM UI redesign routes for AI Study Hub
+ */
 function App() {
   return (
     <BrowserRouter>
       <Suspense fallback={null}>
-      <Routes>
-        {/* DEFAULT: vào web sẽ về login */}
-        <Route path="/" element={<LandingPage />} />
+        <Routes>
+          {/* Public Landing Page */}
+          <Route path="/" element={<LandingPage />} />
 
-        {/* AUTH ROUTES */}
+          {/* Authentication Routes */}
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
+          <Route path="/reset-password-otp" element={<ResetPassword />} />
 
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/forgot-password" element={<ForgotPassword />} />
-        <Route path="/reset-password" element={<ResetPassword />} />
-        <Route path="/reset-password-otp" element={<ResetPassword />} />
+          <Route path="/register" element={<RegisterGoogle />} />
+          <Route path="/complete-profile" element={<CompleteProfile />} />
+          <Route path="/enter-username-password" element={<EnterUserNamePass />} />
+          <Route path="/verify-otp" element={<OTPVerification />} />
+          <Route path="/otp-verification" element={<OTPVerification />} />
 
-        <Route path="/register" element={<RegisterGoogle />} />
-        <Route path="/complete-profile" element={<CompleteProfile />} />
-
-        <Route
-          path="/enter-username-password"
-          element={<EnterUserNamePass />}
-        />
-
-        <Route path="/verify-otp" element={<OTPVerification />} />
-        <Route path="/otp-verification" element={<OTPVerification />} />
-
-        {/* USER ROUTES - CẦN ĐĂNG NHẬP */}
-        <Route
-          path="/dashboard"
-          element={
-            <ProtectedRoute>
-              <Dashboard />
-            </ProtectedRoute>
-          }
-        >
-          <Route index element={<Navigate to="/dashboard/home" replace />} />
-
-          <Route path="home" element={<HomePage />} />
-          <Route path="discover" element={<DiscoverPage />} />
+          {/* Dashboard Protected Routes */}
           <Route
-            path="ai-chat"
-            element={<ChatBot defaultOpen={true} showBubble={false} />}
-          />
+            path="/dashboard"
+            element={
+              <ProtectedRoute>
+                <Dashboard />
+              </ProtectedRoute>
+            }
+          >
+            <Route index element={<Navigate to="/dashboard/home" replace />} />
 
-          <Route path="libraries" element={<MyLibraryPage />} />
-          <Route path="create-library" element={<CreateLibraryPage />} />
-          <Route path="import-library" element={<ImportLibraryPage />} />
-          <Route path="libraries/:libraryId" element={<LibraryPage />} />
-          <Route path="documents/:documentId" element={<DocumentViewerPage />} />
+            {/* NotebookLM Dashboard & Workspace Pages */}
+            <Route path="home" element={<NotebookDashboardPage />} />
+            <Route path="libraries" element={<NotebookDashboardPage />} />
+            <Route path="libraries/:libraryId" element={<NotebookWorkspacePage />} />
+
+            <Route path="discover" element={<DiscoverPage />} />
+            <Route
+              path="ai-chat"
+              element={<ChatBot defaultOpen={true} showBubble={false} />}
+            />
+
+            <Route path="create-library" element={<CreateLibraryPage />} />
+            <Route path="import-library" element={<ImportLibraryPage />} />
+            <Route path="documents/:documentId" element={<DocumentViewerPage />} />
+            <Route
+              path="workspaces/:workspaceId/topics/:topicId/attachments/:attachmentId"
+              element={<DocumentViewerPage />}
+            />
+            <Route path="settings" element={<SettingPage />} />
+            <Route path="create-workspace" element={<CreateWorkSpacePage />} />
+            <Route path="workspaces" element={<MyWorkSpace />} />
+            <Route path="workspaces/:workspaceId" element={<WorkSpacePage />} />
+
+            <Route path="profile" element={<PersonalProfilePage />} />
+            <Route path="profile/:id" element={<PersonalProfilePage />} />
+
+            <Route path="flashcards" element={<Flashcards />} />
+            <Route path="search-user" element={<SearchUserPage />} />
+            <Route path="search" element={<SearchResultPage />} />
+            <Route path="notifications" element={<NotificationsPage />} />
+            <Route path="report-issue" element={<ReportIssuePage />} />
+          </Route>
+
+          {/* Admin Protected Routes */}
           <Route
-            path="workspaces/:workspaceId/topics/:topicId/attachments/:attachmentId"
-            element={<DocumentViewerPage />}
-          />
-          <Route path="settings" element={<SettingPage />} />
-          <Route path="create-workspace" element={<CreateWorkSpacePage />} />
-          <Route path="workspaces" element={<MyWorkSpace />} />
-          <Route path="workspaces/:workspaceId" element={<WorkSpacePage />} />
+            path="/admin"
+            element={
+              <ProtectedRoute allowedRoles={["SYSTEM_ADMIN"]}>
+                <AdminLayout />
+              </ProtectedRoute>
+            }
+          >
+            <Route index element={<Navigate to="/admin/dashboard" replace />} />
+            <Route path="dashboard" element={<AdminDashboardPage />} />
+            <Route path="moderation" element={<AdminModerationPage />} />
+            <Route path="users" element={<AdminUsersPage />} />
+            <Route path="logs" element={<AdminLogsPage />} />
+            <Route path="usage" element={<AdminUsagePage />} />
+            <Route path="workspaces/deleted" element={<DeletedWorkspacesPage />} />
+            <Route path="issues" element={<IssueReportsPage />} />
+            <Route path="settings" element={<SettingPage />} />
+            <Route path="profile" element={<AdminProfilePage />} />
+          </Route>
 
-          <Route path="profile" element={<PersonalProfilePage />} />
-
-          <Route path="profile/:id" element={<PersonalProfilePage />} />
-
-
-
-          <Route path="flashcards" element={<Flashcards />} />
-          <Route path="search-user" element={<SearchUserPage />} />
-          <Route path="search" element={<SearchResultPage />} />
-          <Route path="notifications" element={<NotificationsPage />} />
-          <Route path="report-issue" element={<ReportIssuePage />} />
-        </Route>
-
-        {/* ADMIN ROUTES - CHỈ SYSTEM_ADMIN TRUY CẬP ĐƯỢC */}
-        <Route
-          path="/admin"
-          element={
-            <ProtectedRoute allowedRoles={["SYSTEM_ADMIN"]}>
-              <AdminLayout />
-            </ProtectedRoute>
-          }
-        >
-          <Route index element={<Navigate to="/admin/dashboard" replace />} />
-          <Route path="dashboard" element={<AdminDashboardPage />} />
-          <Route path="moderation" element={<AdminModerationPage />} />
-          <Route path="users" element={<AdminUsersPage />} />
-          <Route path="logs" element={<AdminLogsPage />} />
-          <Route path="usage" element={<AdminUsagePage />} />
-          <Route path="workspaces/deleted" element={<DeletedWorkspacesPage />} />
-          <Route path="issues" element={<IssueReportsPage />} />
-          <Route path="settings" element={<SettingPage />} />
-          <Route path="profile" element={<AdminProfilePage />} />
-        </Route>
-
-        {/* NOT FOUND */}
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
+          {/* Catch-all Fallback */}
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
       </Suspense>
     </BrowserRouter>
   );

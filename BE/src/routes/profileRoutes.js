@@ -6,7 +6,7 @@ const {
   getMyProfile,
   updateMyProfile,
   updateMyAvatar,
-} = require("../controllers/profileController");
+} = require("../controllers/profile/profileController");
 
 const router = express.Router();
 

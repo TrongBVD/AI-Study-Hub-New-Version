@@ -1,21 +1,24 @@
 import { NavLink, useNavigate } from "react-router-dom";
 import {
-  LuLibraryBig,
-  LuLayoutDashboard,
-  LuLogOut,
-  LuMessageCircle,
-  LuSearch,
-  LuSettings,
-  LuLayers,
-  LuX,
-  LuCircleHelp,
-} from "react-icons/lu";
-import { HiOutlineHome, HiOutlineSquares2X2 } from "react-icons/hi2";
+  HiOutlineHome,
+  HiOutlineMagnifyingGlass,
+  HiOutlineBookOpen,
+  HiOutlineChatBubbleLeftRight,
+  HiOutlineSquares2X2,
+  HiOutlineQuestionMarkCircle,
+  HiOutlineCog6Tooth,
+  HiOutlineSquaresPlus,
+  HiOutlineArrowRightOnRectangle,
+  HiOutlineXMark,
+} from "react-icons/hi2";
 import Logo from "../../../assets/logo/Logo.jsx";
 import api from "../../../utils/api.js";
 import { clearStoredSession, getStoredUser } from "../../../utils/authToken.js";
 import "../../../assets/icons/themify-icons-font/themify-icons/themify-icons.css";
 
+/**
+ * Helper function to retrieve the stored user's system role
+ */
 function getStoredUserRole() {
   try {
     const storedUser = getStoredUser();
@@ -25,53 +28,53 @@ function getStoredUserRole() {
   }
 }
 
+/**
+ * Sidebar Component: Provides navigation menu for AI Study Hub
+ * Designed in 100% English UI matching NotebookLM aesthetics
+ * Uses react-icons/hi2 for 100% stable icon compatibility
+ */
 function Sidebar({ isOpen, onClose }) {
   const navigate = useNavigate();
   const userRole = getStoredUserRole();
   const isSystemAdmin = userRole === "SYSTEM_ADMIN";
-  const isGuest = userRole === "GUEST"; // Nhận diện Guest
+  const isGuest = userRole === "GUEST";
 
-  // Thêm thuộc tính hideForGuest để ẩn menu với Guest
+  // Sidebar navigation menu items (AI Flashcards item removed as requested)
   const menuItems = [
-
     { icon: HiOutlineHome, label: "Home", path: "/dashboard/home" },
-    { icon: LuSearch, label: "Discover", path: "/dashboard/discover" },
+    { icon: HiOutlineMagnifyingGlass, label: "Discover", path: "/dashboard/discover" },
     {
-      icon: LuLibraryBig,
-      label: "My libraries",
+      icon: HiOutlineBookOpen,
+      label: "My Libraries",
       path: "/dashboard/libraries",
       hideForGuest: true,
     },
     {
-      icon: LuMessageCircle,
+      icon: HiOutlineChatBubbleLeftRight,
       label: "AI Chat",
       path: "/dashboard/ai-chat",
       hideForGuest: true,
     },
     {
-      icon: LuLayers,
-      label: "Generate Flashcards",
-      path: "/dashboard/flashcards",
-      hideForGuest: true,
-    },
-    {
       icon: HiOutlineSquares2X2,
-      label: "My workspaces",
+      label: "My Workspaces",
       path: "/dashboard/workspaces",
       hideForGuest: true,
     },
-    { icon: LuCircleHelp, label: "Report issues", path: "/dashboard/report-issue", hideForGuest: true },
-    { icon: LuSettings, label: "Settings", path: "/dashboard/settings" },
+    { icon: HiOutlineQuestionMarkCircle, label: "Report Issues", path: "/dashboard/report-issue", hideForGuest: true },
+    { icon: HiOutlineCog6Tooth, label: "Settings", path: "/dashboard/settings" },
   ];
 
-  // Guest chỉ được xem Discover và Settings.
+  // Filter visible items for guest users
   const visibleMenuItems = isGuest
     ? menuItems.filter((item) => ["Discover", "Settings"].includes(item.label))
     : menuItems;
 
+  /**
+   * Handles user sign-out and clears local authentication session
+   */
   async function handleLogout() {
     try {
-      // Nếu không phải là Guest thì mới gọi API logout
       if (!isGuest) {
         await api.post("/auth/logout");
       }
@@ -94,11 +97,10 @@ function Sidebar({ isOpen, onClose }) {
           onClick={onClose}
         />
       )}
-      <aside
-        className={`sidebar ${isOpen ? "sidebar_open" : ""}`}
-      >
+      <aside className={`sidebar ${isOpen ? "sidebar_open" : ""}`}>
         <div className="sidebar_top">
           <div className="sidebar_header">
+            {/* App Brand Logo */}
             <Logo />
 
             <button
@@ -107,7 +109,7 @@ function Sidebar({ isOpen, onClose }) {
               aria-label="Close sidebar"
               onClick={onClose}
             >
-              <LuX aria-hidden="true" />
+              <HiOutlineXMark aria-hidden="true" />
             </button>
           </div>
 
@@ -139,13 +141,13 @@ function Sidebar({ isOpen, onClose }) {
               className="admin_dashboard_btn"
               onClick={onClose}
             >
-              <LuLayoutDashboard aria-hidden="true" />
-              <span>Admin dashboard</span>
+              <HiOutlineSquaresPlus aria-hidden="true" />
+              <span>Admin Dashboard</span>
             </NavLink>
           )}
 
           <button type="button" className="logout_btn" onClick={handleLogout}>
-            <LuLogOut aria-hidden="true" />
+            <HiOutlineArrowRightOnRectangle aria-hidden="true" />
             <span>Sign Out</span>
           </button>
         </div>

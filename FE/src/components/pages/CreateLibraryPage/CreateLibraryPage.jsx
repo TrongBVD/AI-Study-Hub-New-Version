@@ -63,6 +63,12 @@ function CreateLibraryPage() {
   const ownerInitials = getInitials(ownerName);
 
   useEffect(() => {
+    const user = getStoredUser();
+    if (String(user?.role || "").toUpperCase() === "GUEST") {
+      navigate("/login", { replace: true });
+      return;
+    }
+
     let isMounted = true;
     async function loadPageData() {
       try {

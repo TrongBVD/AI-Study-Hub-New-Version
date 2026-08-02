@@ -113,7 +113,7 @@ describe("Document & Library Main Flow Tests", () => {
 
       expect(res.status).toHaveBeenCalledWith(400);
       expect(res.json).toHaveBeenCalledWith(
-        expect.objectContaining({ message: expect.stringMatching(/tệp|files/i) })
+        expect.objectContaining({ message: expect.stringMatching(/tệp|file|files/i) })
       );
     });
   });

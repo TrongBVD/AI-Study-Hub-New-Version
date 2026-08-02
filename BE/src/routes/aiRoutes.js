@@ -6,10 +6,12 @@ const {
   getChatHistory,
   deleteChatHistoryItem,
   clearChatHistory,
+} = require("../controllers/ai/aiChatController");
+const { getAiSummary } = require("../controllers/ai/aiSummaryController");
+const {
   generateFlashcards,
   getDocumentFlashcards,
-  getAiSummary,
-} = require("../controllers/aiController");
+} = require("../controllers/ai/aiFlashcardController");
 
 const router = express.Router();
 
