@@ -31,6 +31,14 @@
   --action-soft: var(--accent-soft);
 }
 
+/* The light theme uses blue as its interaction color. Keep every step in a
+   popup flow (confirm, prompt, and notice) on that palette instead of falling
+   back to the warm warning color from the default theme. */
+body[data-theme="white"] .action_popup {
+  --action-tone: var(--accent-color);
+  --action-soft: var(--accent-soft);
+}
+
 .action_popup_close {
   position: absolute;
   top: 16px;

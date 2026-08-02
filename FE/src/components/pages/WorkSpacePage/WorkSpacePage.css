@@ -3046,6 +3046,11 @@ body[data-theme] .workspace_delete_btn.workspace_transfer_admin_btn:hover {
   font-size: 15px;
 }
 
+.workspace_document_info .workspace_document_uploader {
+  color: var(--text-secondary);
+  font-weight: 700;
+}
+
 .workspace_document_status {
   border-radius: 999px;
   background: var(--bg-card);
@@ -6813,6 +6818,7 @@ body[data-theme] .workspace_delete_btn.workspace_transfer_admin_btn:hover {
 }
 
 .workspace_clickup_attachment_preview {
+  position: relative;
   height: 88px;
   border-bottom: 1px solid var(--border-color);
   background: var(--bg-card);
@@ -6823,6 +6829,58 @@ body[data-theme] .workspace_delete_btn.workspace_transfer_admin_btn:hover {
   justify-content: center;
 
   font-size: 38px;
+}
+
+.workspace_clickup_attachment_file_actions {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 10px;
+  background: color-mix(in srgb, var(--bg-card) 92%, transparent);
+  opacity: 0;
+  transition: opacity 0.18s ease;
+}
+
+.workspace_clickup_attachment_card:hover .workspace_clickup_attachment_file_actions,
+.workspace_clickup_attachment_card:focus-within .workspace_clickup_attachment_file_actions {
+  opacity: 1;
+}
+
+.workspace_clickup_attachment_file_actions button {
+  min-height: 34px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 0 9px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  background: var(--bg-card);
+  color: var(--accent-color);
+  font: inherit;
+  font-size: 10px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.workspace_clickup_attachment_file_actions button:hover,
+.workspace_clickup_attachment_file_actions button:focus-visible {
+  border-color: var(--accent-color);
+  background: var(--accent-soft);
+  outline: none;
+}
+
+.workspace_clickup_attachment_file_actions button i {
+  font-size: 13px;
+}
+
+@media (hover: none) {
+  .workspace_clickup_attachment_file_actions {
+    opacity: 1;
+  }
 }
 
 .workspace_clickup_attachment_info {
@@ -6854,6 +6912,16 @@ body[data-theme] .workspace_delete_btn.workspace_transfer_admin_btn:hover {
   margin-top: 4px;
   color: var(--text-secondary);
   font-size: 12px;
+}
+
+.workspace_clickup_attachment_info .workspace_clickup_attachment_uploader {
+  max-width: 150px;
+  color: var(--text-muted);
+  font-size: 10px;
+  line-height: 1.35;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .workspace_clickup_attachment_owner {
@@ -8313,11 +8381,11 @@ body[data-theme] .workspace_delete_btn.workspace_transfer_admin_btn:hover {
 
 .workspace_clickup_description.is_read_only textarea,
 .workspace_clickup_description.is_read_only textarea:read-only {
-  background: #fffaf0 !important;
+  background: var(--bg-card) !important;
 }
 
 .workspace_clickup_description.is_editing textarea {
-  background: #fffdf8 !important;
+  background: var(--input-bg) !important;
 }
 
 body[data-theme="white"] .workspace_page {
@@ -9186,6 +9254,12 @@ body[data-theme="white"] .workspace_invite_candidate.is-selected {
   text-decoration: none;
   font-size: 11px;
   font-weight: 800;
+}
+
+body[data-theme="white"] .workspace_document_status.pending,
+body[data-theme="white"] .workspace_document_status.pending_retry {
+  background: var(--accent-soft);
+  color: var(--accent-color);
 }
 
 .workspace_solution_attachment_view {

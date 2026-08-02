@@ -164,6 +164,8 @@ function DocumentViewerPage() {
         backLabel={
           returnContext === "solution"
             ? "Back to Solution"
+            : returnContext === "topic"
+              ? "Back to Topic"
             : returnContext === "files"
               ? "Back to Files"
               : ""
