@@ -2567,7 +2567,7 @@ function handleViewWorkspaceDocument(document) {
   });
 }
 
-function handleViewSolutionAttachment(file) {
+function handleViewTopicAttachment(file, returnContext = "topic") {
   if (!selectedTopic?.id || !file?.id) return;
 
   navigate(
@@ -2576,13 +2576,13 @@ function handleViewSolutionAttachment(file) {
       state: {
         from: `/dashboard/workspaces/${workspaceId}?topic=${selectedTopic.id}`,
         fileName: normalizeDisplayFileName(file.fileName || file.name),
-        returnContext: "solution",
+        returnContext,
       },
     },
   );
 }
 
-async function handleDownloadSolutionAttachment(file) {
+async function handleDownloadTopicAttachment(file) {
   if (!selectedTopic?.id || !file?.id) return;
 
   try {
@@ -2603,7 +2603,7 @@ async function handleDownloadSolutionAttachment(file) {
     downloadLink.click();
     downloadLink.remove();
   } catch (error) {
-    console.error("Cannot download solution attachment:", error);
+    console.error("Cannot download topic attachment:", error);
     await showAlert(
       error.response?.data?.message ||
         error.message ||
@@ -3698,6 +3698,26 @@ function renderDiscussionTab() {
                           >
                             <div className="workspace_clickup_attachment_preview">
                               <i className="ti-clip"></i>
+                              <div className="workspace_clickup_attachment_file_actions">
+                                <button
+                                  type="button"
+                                  onClick={() => handleViewTopicAttachment(file)}
+                                  title="View file"
+                                  aria-label={`View ${file.fileName || file.name}`}
+                                >
+                                  <i className="ti-eye" aria-hidden="true"></i>
+                                  <span>View</span>
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleDownloadTopicAttachment(file)}
+                                  title="Download file"
+                                  aria-label={`Download ${file.fileName || file.name}`}
+                                >
+                                  <i className="ti-download" aria-hidden="true"></i>
+                                  <span>Download</span>
+                                </button>
+                              </div>
                             </div>
 
                             <div className="workspace_clickup_attachment_info">
@@ -3710,11 +3730,19 @@ function renderDiscussionTab() {
                                       ).toLocaleDateString()
                                     : "Just now"}
                                 </span>
+                                <span className="workspace_clickup_attachment_uploader">
+                                  Uploaded by {file.uploader?.name || "Workspace member"}
+                                </span>
                               </div>
 
                               <div className="workspace_clickup_attachment_actions">
-                                <span className="workspace_clickup_attachment_owner">
-                                  {profileName.slice(0, 1).toUpperCase()}
+                                <span
+                                  className="workspace_clickup_attachment_owner"
+                                  title={file.uploader?.name || "Workspace member"}
+                                >
+                                  {(file.uploader?.name || "W")
+                                    .slice(0, 1)
+                                    .toUpperCase()}
                                 </span>
 
                                 {canManageTopics && (
@@ -3980,7 +4008,7 @@ function renderDiscussionTab() {
                                     type="button"
                                     className="view"
                                     onClick={() =>
-                                      handleViewSolutionAttachment(file)
+                                      handleViewTopicAttachment(file, "solution")
                                     }
                                   >
                                     <i className="ti-eye" aria-hidden="true"></i>
@@ -3990,7 +4018,7 @@ function renderDiscussionTab() {
                                     type="button"
                                     className="download"
                                     onClick={() =>
-                                      handleDownloadSolutionAttachment(file)
+                                      handleDownloadTopicAttachment(file)
                                     }
                                   >
                                     <i className="ti-download" aria-hidden="true"></i>
@@ -4082,7 +4110,7 @@ function renderDiscussionTab() {
                                     type="button"
                                     className="view"
                                     onClick={() =>
-                                      handleViewSolutionAttachment(file)
+                                      handleViewTopicAttachment(file, "solution")
                                     }
                                   >
                                     <i className="ti-eye" aria-hidden="true"></i>
@@ -4092,7 +4120,7 @@ function renderDiscussionTab() {
                                     type="button"
                                     className="download"
                                     onClick={() =>
-                                      handleDownloadSolutionAttachment(file)
+                                      handleDownloadTopicAttachment(file)
                                     }
                                   >
                                     <i className="ti-download" aria-hidden="true"></i>
@@ -4179,7 +4207,9 @@ function renderDiscussionTab() {
                             <button
                               type="button"
                               className="workspace_solution_attachment_view"
-                              onClick={() => handleViewSolutionAttachment(file)}
+                              onClick={() =>
+                                handleViewTopicAttachment(file, "solution")
+                              }
                             >
                               <i className="ti-clip"></i>
                               {normalizeDisplayFileName(
@@ -4195,7 +4225,7 @@ function renderDiscussionTab() {
                               type="button"
                               className="workspace_solution_attachment_download"
                               onClick={() =>
-                                handleDownloadSolutionAttachment(file)
+                                handleDownloadTopicAttachment(file)
                               }
                             >
                               <i className="ti-download" aria-hidden="true"></i>
