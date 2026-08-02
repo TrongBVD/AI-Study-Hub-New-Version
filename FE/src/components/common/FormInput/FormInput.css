@@ -55,9 +55,11 @@
 /* Định dạng nút con mắt (Loại bỏ viền và nền) */
 .toggle_password_icon_btn {
   position: absolute;
-  right: 12px;
+  right: 4px;
   top: 50%;
   transform: translateY(-50%);
+  width: 40px;
+  height: 40px;
   background: transparent;
   /* Xóa nền */
   border: none;
@@ -71,11 +73,17 @@
   justify-content: center;
   outline: none;
   z-index: 2;
+  touch-action: manipulation;
 }
 
 /* Hiệu ứng khi di chuột vào con mắt */
 .toggle_password_icon_btn:hover {
   opacity: 0.6;
+}
+
+.toggle_password_icon_btn:focus-visible {
+  border-radius: 8px;
+  box-shadow: 0 0 0 3px var(--focus-ring);
 }
 
 /* GHI ĐÈ MÀU NỀN TỰ ĐỘNG ĐIỀN CỦA TRÌNH DUYỆT */

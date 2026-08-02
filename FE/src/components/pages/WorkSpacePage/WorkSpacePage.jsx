@@ -5108,7 +5108,10 @@ function renderDocumentsTab() {
                         ? new Date(
                             document.createdAt || document.created_at,
                           ).toLocaleDateString()
-                        : "Recently uploaded"}
+                        : "Recently uploaded"} ·{" "}
+                      <span className="workspace_document_uploader">
+                        Uploaded by {document.uploaderName || "Unknown user"}
+                      </span>
                     </p>
                   </div>
 

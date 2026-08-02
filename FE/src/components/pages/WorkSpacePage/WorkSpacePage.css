@@ -3046,6 +3046,11 @@ body[data-theme] .workspace_delete_btn.workspace_transfer_admin_btn:hover {
   font-size: 15px;
 }
 
+.workspace_document_info .workspace_document_uploader {
+  color: var(--text-secondary);
+  font-weight: 700;
+}
+
 .workspace_document_status {
   border-radius: 999px;
   background: var(--bg-card);

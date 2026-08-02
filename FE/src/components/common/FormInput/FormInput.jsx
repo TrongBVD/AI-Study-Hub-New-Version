@@ -18,7 +18,7 @@ function FormInput({
   const inputType = isPasswordType ? (showPassword ? "text" : "password") : type;
 
   return (
-    <label className="form_input_group">
+    <div className="form_input_group">
       <input
         className={`form_input ${className} ${isPasswordType ? "form_input_password" : ""}`}
         type={inputType}
@@ -28,6 +28,7 @@ function FormInput({
         onChange={onChange}
         required={required}
         autoComplete={autoComplete}
+        aria-label={label || placeholder || name}
       />
 
       {label && <span className="form_input_label">{label}</span>}
@@ -36,13 +37,14 @@ function FormInput({
         <button
           type="button"
           className="toggle_password_icon_btn"
-          onClick={() => setShowPassword(!showPassword)}
+          onClick={() => setShowPassword((isVisible) => !isVisible)}
           aria-label={showPassword ? "Hide password" : "Show password"}
+          aria-pressed={showPassword}
         >
           {showPassword ? <FaEyeSlash /> : <FaEye />}
         </button>
       )}
-    </label>
+    </div>
   );
 }
 
