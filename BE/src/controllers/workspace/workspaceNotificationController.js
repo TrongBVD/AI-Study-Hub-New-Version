@@ -137,10 +137,15 @@ exports.listMyWorkspaceNotifications = async (req, res) => {
 
         if (actionType === "documentUploaded" || item.action_type === "DOCUMENT_UPLOADED") {
           const documentTitle = item.new_data?.documentTitle || "Your document";
-          const containerName = item.new_data?.containerName ? `library "${item.new_data.containerName}"` : "library";
-          const libraryLink = item.new_data?.libraryId
-            ? `/dashboard/libraries/${item.new_data.libraryId}`
-            : "/dashboard/libraries";
+          const isWorkspaceUpload = Boolean(item.new_data?.workspaceId);
+          const containerName = item.new_data?.containerName
+            ? `${isWorkspaceUpload ? "workspace" : "library"} "${item.new_data.containerName}"`
+            : isWorkspaceUpload ? "workspace" : "library";
+          const libraryLink = isWorkspaceUpload
+            ? `/dashboard/workspaces/${item.new_data.workspaceId}`
+            : item.new_data?.libraryId
+              ? `/dashboard/libraries/${item.new_data.libraryId}`
+              : "/dashboard/libraries";
           return {
             id: `doc-uploaded-${item.id}`,
             category: "file",

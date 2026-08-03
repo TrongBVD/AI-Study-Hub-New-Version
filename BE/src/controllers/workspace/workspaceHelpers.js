@@ -2,8 +2,8 @@ const supabase = require("../../config/supabase");
 const { createMailTransporter } = require("../../utils/mailerService");
 const { createActivityLog } = require("../../services/activityLogService");
 
-const MEMBER_ROLES = ["Editor", "Viewer"];
-const ASSIGNABLE_MEMBER_ROLES = ["Editor", "Viewer"];
+const MEMBER_ROLES = ["Viewer"];
+const ASSIGNABLE_MEMBER_ROLES = ["Viewer"];
 const DOCUMENT_BUCKET = process.env.SUPABASE_DOCUMENT_BUCKET || "documents";
 const WAITING_BUCKET =
   process.env.SUPABASE_DOCUMENT_WAITING_ADMIN_APPROVED ||
@@ -104,7 +104,9 @@ async function moveWorkspaceDocumentToBucket(document, targetBucket) {
 }
 
 function getWorkspaceRoleLabel(role) {
-  return String(role || "").toLowerCase() === "viewer" ? "Contributor" : role;
+  return ["viewer", "editor"].includes(String(role || "").toLowerCase())
+    ? "Contributor"
+    : role;
 }
 
 function formatRelativeTime(dateInput) {
@@ -390,6 +392,8 @@ async function getWorkspaceDiscussionAccess(workspaceId, userId) {
     };
   }
 
+  // Editor remains here only for backward compatibility with existing rows.
+  // New invitations and role updates can only create Contributors.
   const canWriteDiscussion =
     access.isAdmin || ["Admin", "Editor"].includes(access.member?.role);
 
@@ -445,7 +449,9 @@ function mapWorkspaceFlashcard(row) {
 }
 
 function mapWorkspaceDocument(row) {
-  const uploader = row.uploader || {};
+  const uploader = Array.isArray(row.uploader)
+    ? row.uploader[0] || {}
+    : row.uploader || {};
 
   return {
     id: row.id,

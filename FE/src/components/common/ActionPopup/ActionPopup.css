@@ -12,23 +12,28 @@
 }
 
 .action_popup {
-  --action-tone: var(--warning-color);
-  --action-soft: color-mix(in srgb, var(--warning-color) 14%, var(--bg-card));
+  --action-tone: #38bdf8;
+  --action-soft: rgba(56, 189, 248, 0.12);
   position: relative;
   width: min(460px, 100%);
-  border: 1px solid var(--border-color);
+  border: 1px solid #2b3545;
   border-radius: 24px;
   padding: 34px;
-  background: var(--bg-card);
-  color: var(--text-primary);
-  box-shadow: 0 28px 80px rgba(15, 23, 42, 0.3);
+  background: #171b24;
+  color: #f8fafc;
+  box-shadow: 0 28px 80px rgba(0, 0, 0, 0.55);
   text-align: center;
   animation: action-popup-rise 180ms ease-out;
 }
 
+.action_popup--danger {
+  --action-tone: #f87171;
+  --action-soft: rgba(248, 113, 113, 0.13);
+}
+
 .action_popup--prompt {
-  --action-tone: var(--accent-color);
-  --action-soft: var(--accent-soft);
+  --action-tone: #38bdf8;
+  --action-soft: rgba(56, 189, 248, 0.12);
 }
 
 /* The light theme uses blue as its interaction color. Keep every step in a
@@ -45,12 +50,12 @@ body[data-theme="white"] .action_popup {
   right: 16px;
   width: 36px;
   height: 36px;
-  border: 1px solid var(--border-color);
+  border: 1px solid #334155;
   border-radius: 50%;
   display: grid;
   place-items: center;
-  background: var(--bg-secondary);
-  color: var(--text-secondary);
+  background: #11151d;
+  color: #cbd5e1;
   cursor: pointer;
 }
 
@@ -83,8 +88,12 @@ body[data-theme="white"] .action_popup {
 }
 
 .action_popup > p {
+  width: 100%;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  word-break: break-word;
   margin: 14px auto 0;
-  color: var(--text-secondary);
+  color: #cbd5e1;
   font-size: 14px;
   line-height: 1.65;
   white-space: pre-line;
@@ -94,18 +103,18 @@ body[data-theme="white"] .action_popup {
   width: 100%;
   min-height: 50px;
   margin-top: 22px;
-  border: 1px solid var(--input-border);
+  border: 1px solid #334155;
   border-radius: 12px;
   padding: 0 14px;
   outline: none;
-  background: var(--input-bg);
-  color: var(--text-primary);
+  background: #0d0f12;
+  color: #f8fafc;
   font: inherit;
 }
 
 .action_popup_input:focus {
-  border-color: var(--accent-color);
-  box-shadow: 0 0 0 4px var(--focus-ring);
+  border-color: #38bdf8;
+  box-shadow: 0 0 0 4px rgba(56, 189, 248, 0.14);
 }
 
 .action_popup_actions {
@@ -131,9 +140,9 @@ body[data-theme="white"] .action_popup {
 }
 
 .action_popup_cancel {
-  border: 1px solid var(--border-color);
-  background: var(--bg-secondary);
-  color: var(--text-primary);
+  border: 1px solid #334155;
+  background: #11151d;
+  color: #f8fafc;
 }
 
 .action_popup_confirm {

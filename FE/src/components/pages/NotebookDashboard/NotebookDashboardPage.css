@@ -335,6 +335,7 @@
   flex-direction: column;
   justify-content: space-between;
   min-height: 160px;
+  color: #f8fafc;
   cursor: pointer;
   transition: all 0.2s ease;
 }
@@ -356,6 +357,10 @@
 .library_card.create_card:hover {
   border-color: #38bdf8;
   background: rgba(24, 27, 32, 0.8);
+}
+
+.library_card.create_card > span {
+  color: #f8fafc;
 }
 
 .create_icon_circle {
@@ -452,13 +457,13 @@
 .card_body h3 {
   font-size: 16px;
   font-weight: 600;
-  color: var(--text-primary, #0f172a);
+  color: #f8fafc;
   margin-bottom: 6px;
 }
 
 .card_description {
   font-size: 13px;
-  color: var(--text-secondary, #475569);
+  color: #f8fafc;
   line-height: 1.4;
   margin-bottom: 12px;
   display: -webkit-box;
@@ -472,7 +477,7 @@
   align-items: center;
   gap: 8px;
   font-size: 12px;
-  color: var(--text-muted, #64748b);
+  color: #f8fafc;
 }
 
 /* Light Mode Overrides for Library Cards */

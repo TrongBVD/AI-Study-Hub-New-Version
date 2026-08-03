@@ -255,7 +255,7 @@ exports.updateMemberRole = async (req, res) => {
     if (!ASSIGNABLE_MEMBER_ROLES.includes(role)) {
       return res.status(400).json({
         status: "error",
-        message: "Role must be Editor or Contributor.",
+        message: "Role must be Contributor.",
       });
     }
 
@@ -693,8 +693,8 @@ exports.transferAdminOwnership = async (req, res) => {
   try {
     const { workspaceId } = req.params;
     const { targetUserId } = req.body;
-    const currentUserRole = req.body.currentUserRole === "Editor" ? "Editor" : "Viewer";
-    const currentUserRolePhrase = currentUserRole === "Editor" ? "an Editor" : "a Contributor";
+    const currentUserRole = "Viewer";
+    const currentUserRolePhrase = "a Contributor";
     const currentUserId = req.user.id;
 
     if (!targetUserId) {

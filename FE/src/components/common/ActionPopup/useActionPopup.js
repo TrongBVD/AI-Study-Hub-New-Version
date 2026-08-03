@@ -13,6 +13,7 @@ function useActionPopup() {
         message,
         confirmText: options.confirmText || "Confirm",
         cancelText: options.cancelText || "Cancel",
+        tone: options.tone || "danger",
       });
     }), []);
 
@@ -27,6 +28,7 @@ function useActionPopup() {
         placeholder: options.placeholder || "Type here...",
         confirmText: options.confirmText || "Save",
         cancelText: options.cancelText || "Cancel",
+        tone: options.tone || "info",
       });
     }), []);
 
@@ -38,6 +40,7 @@ function useActionPopup() {
         title: options.title || "Notice",
         message,
         confirmText: options.confirmText || "Got it",
+        tone: options.tone || "info",
       });
     }), []);
 

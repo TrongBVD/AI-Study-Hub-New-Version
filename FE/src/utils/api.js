@@ -1,4 +1,5 @@
 import axios from "axios";
+import { showPopupAlert } from "../components/common/ActionPopup/actionPopupService.js";
 import {
   clearStoredSession,
   getAccessToken,
@@ -139,9 +140,9 @@ api.interceptors.response.use(
 
         if (storedToken && !isGuest && isProtectedRoute) {
           if (error.response.data?.code === "SESSION_EXPIRED") {
-            alert("Your session has expired because your account was logged in elsewhere.");
+            showPopupAlert("Your session has expired because your account was logged in elsewhere.");
           } else {
-            alert("Your session has expired or is invalid. Please log in again.");
+            showPopupAlert("Your session has expired or is invalid. Please log in again.");
           }
         }
 

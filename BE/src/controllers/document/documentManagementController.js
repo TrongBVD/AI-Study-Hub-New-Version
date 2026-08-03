@@ -250,7 +250,7 @@ exports.uploadDocuments = async (req, res) => {
     if (workspaceAccess && !workspaceAccess.canUpload) {
       return res.status(403).json({
         status: "error",
-        message: "Only workspace editors and admins can upload documents.",
+        message: "Workspace contributors and admins can upload documents.",
       });
     }
 
@@ -685,7 +685,7 @@ exports.viewDocument = async (req, res) => {
 
     if (
       !(await canAccessDocument(document, userID, {
-        workspaceRoles: ["Admin", "Editor"],
+        workspaceRoles: ["Admin", "Viewer", "Editor"],
         allowWorkspaceUploader: false,
       }))
     ) {

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { showPopupAlert } from "../../common/ActionPopup/actionPopupService.js";
 import { useNavigate } from "react-router-dom";
 import { HiOutlineSquares2X2, HiOutlineSquaresPlus } from "react-icons/hi2";
 import { createWorkspace, getWorkspaces } from "../../../utils/workspaceApi";
@@ -103,17 +104,17 @@ function CreateWorkSpacePage() {
     }
 
     if (trimmedWorkspaceName === "") {
-      alert("Please enter workspace name");
+      showPopupAlert("Please enter workspace name");
       return;
     }
 
     if (trimmedWorkspaceName.length > TITLE_LIMIT) {
-      alert(`Workspace name cannot exceed ${TITLE_LIMIT} characters.`);
+      showPopupAlert(`Workspace name cannot exceed ${TITLE_LIMIT} characters.`);
       return;
     }
 
     if (trimmedDescription.length > DESCRIPTION_LIMIT) {
-      alert(`Workspace description cannot exceed ${DESCRIPTION_LIMIT} characters.`);
+      showPopupAlert(`Workspace description cannot exceed ${DESCRIPTION_LIMIT} characters.`);
       return;
     }
 
@@ -143,7 +144,7 @@ function CreateWorkSpacePage() {
         });
         return;
       }
-      alert(error?.response?.data?.message || "Cannot create workspace. Please login again and try later.");
+      showPopupAlert(error?.response?.data?.message || "Cannot create workspace. Please login again and try later.");
     }
   }
 
@@ -165,7 +166,7 @@ function CreateWorkSpacePage() {
             <h1>Build a focused space for study and teamwork.</h1>
             <p>
               Create a private workspace for topics, files, discussion threads,
-              tasks, and study materials before inviting your members.
+              and study materials before inviting your members.
             </p>
             <p>{ownedWorkspaceCount} / {MAX_OWNED_WORKSPACES} workspaces created</p>
           </div>
@@ -293,8 +294,8 @@ function CreateWorkSpacePage() {
               <h3>Workspace is private by default</h3>
               <p>
                 Only you and invited members can access this workspace. Public
-                visibility is not available for workspaces, so your discussion,
-                files, and tasks stay protected.
+                visibility is not available for workspaces, so your discussions
+                and files stay protected.
               </p>
             </div>
           </div>

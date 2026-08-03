@@ -1,0 +1,181 @@
+.workspace_ai_chat {
+  height: calc(100dvh - 92px);
+  margin: -28px -28px -28px -12px;
+  display: grid;
+  grid-template-columns: 310px minmax(0, 1fr);
+  overflow: hidden;
+  border-left: 1px solid #2b3545;
+  border-radius: 16px 0 0 16px;
+  background: #0d0f12;
+  color: #f8fafc;
+}
+
+.workspace_ai_sources {
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid #2b3545;
+  background: #11151d;
+}
+
+.workspace_ai_sources header {
+  min-height: 78px;
+  padding: 0 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid #2a2e37;
+}
+
+.workspace_ai_sources h2 { margin: 0; font-size: 15px; }
+.workspace_ai_sources header span {
+  padding: 4px 9px;
+  border: 1px solid rgba(56, 189, 248, .32);
+  border-radius: 999px;
+  color: #38bdf8;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.workspace_ai_select_all,
+.workspace_ai_source {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+}
+
+.workspace_ai_select_all {
+  gap: 9px;
+  padding: 18px 18px 12px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.workspace_ai_chat input[type="checkbox"] { accent-color: #38bdf8; }
+
+.workspace_ai_source_list {
+  min-height: 0;
+  padding: 0 12px 18px;
+  display: grid;
+  align-content: start;
+  gap: 9px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #38bdf8 #141820;
+}
+
+.workspace_ai_source_list::-webkit-scrollbar { width: 8px; }
+.workspace_ai_source_list::-webkit-scrollbar-track { background: #141820; }
+.workspace_ai_source_list::-webkit-scrollbar-thumb {
+  border: 2px solid #141820;
+  border-radius: 999px;
+  background: #38bdf8;
+}
+
+.workspace_ai_source {
+  min-width: 0;
+  gap: 10px;
+  padding: 13px 12px;
+  border: 1px solid #2b3545;
+  border-radius: 12px;
+  background: #141820;
+}
+
+.workspace_ai_source:has(input:checked) { border-color: #38bdf8; background: #172232; }
+.workspace_ai_source i { color: #38bdf8; }
+.workspace_ai_source span {
+  min-width: 0;
+  overflow: hidden;
+  color: #f8fafc;
+  font-size: 11px;
+  font-weight: 750;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.workspace_ai_no_sources { padding: 16px; color: #94a3b8; font-size: 12px; }
+
+.workspace_ai_main {
+  min-width: 0;
+  min-height: 0;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  background: #0d0f12;
+}
+
+.workspace_ai_view_header {
+  min-height: 78px;
+  padding: 0 28px;
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid #2a2e37;
+}
+
+.workspace_ai_thread { min-height: 0; flex: 1; overflow-y: auto; }
+.workspace_ai_welcome {
+  width: min(680px, calc(100% - 48px));
+  min-height: 100%;
+  margin: auto;
+  padding: 56px 0 120px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+.workspace_ai_mark {
+  width: 54px;
+  height: 54px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(56, 189, 248, .45);
+  border-radius: 50%;
+  background: #122436;
+  color: #38bdf8;
+  font-size: 20px;
+}
+.workspace_ai_welcome h1 { margin: 30px 0 14px; font-size: 27px; }
+.workspace_ai_welcome > p { max-width: 530px; color: #9bbce0; font-size: 13px; line-height: 1.6; }
+.workspace_ai_starters { width: 100%; margin-top: 28px; display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.workspace_ai_starters button {
+  min-height: 88px;
+  padding: 16px;
+  display: flex;
+  gap: 13px;
+  border: 1px solid #2b3545;
+  border-radius: 14px;
+  background: #141820;
+  color: #f8fafc;
+  text-align: left;
+  cursor: pointer;
+}
+.workspace_ai_starters button:hover { border-color: #38bdf8; background: #172232; }
+.workspace_ai_starters button > i { width: 36px; height: 36px; display: grid; place-items: center; border-radius: 10px; background: #1c293c; color: #38bdf8; }
+.workspace_ai_starters button span { min-width: 0; display: grid; gap: 5px; }
+.workspace_ai_starters strong { font-size: 12px; }
+.workspace_ai_starters small { color: #9bbce0; font-size: 10px; line-height: 1.45; }
+
+.workspace_ai_messages { width: min(760px, calc(100% - 48px)); margin: 0 auto; padding: 44px 0 130px; display: grid; gap: 18px; }
+.workspace_ai_message { max-width: 82%; display: grid; gap: 7px; }
+.workspace_ai_message.user { justify-self: end; }
+.workspace_ai_message > span { color: #38bdf8; font-size: 10px; font-weight: 900; text-transform: uppercase; }
+.workspace_ai_message.user > span { text-align: right; }
+.workspace_ai_message p { margin: 0; padding: 14px 16px; border: 1px solid #2b3545; border-radius: 14px; background: #141820; color: #e5edf7; font-size: 13px; line-height: 1.65; white-space: pre-wrap; }
+.workspace_ai_message.user p { border-color: #206b92; background: #12324a; }
+.workspace_ai_typing { color: #94a3b8; font-size: 12px; }
+
+.workspace_ai_composer { position: absolute; right: 0; bottom: 0; left: 0; padding: 18px 28px 22px; background: linear-gradient(transparent, #0d0f12 34%); }
+.workspace_ai_composer > div { width: min(760px, 100%); min-height: 58px; margin: auto; padding: 8px 9px 8px 20px; display: flex; align-items: center; gap: 12px; border: 1px solid #2c3a50; border-radius: 999px; background: #141820; }
+.workspace_ai_composer textarea { min-width: 0; flex: 1; resize: none; border: 0; outline: 0; background: transparent; color: #fff; font: inherit; font-size: 12px; }
+.workspace_ai_composer textarea::placeholder { color: #cbd5e1 !important; }
+.workspace_ai_composer span { padding: 5px 10px; border: 1px solid #245275; border-radius: 999px; color: #38bdf8; font-size: 10px; white-space: nowrap; }
+.workspace_ai_composer button { width: 40px; height: 40px; flex: 0 0 auto; border: 0; border-radius: 50%; background: #159bd7; color: #fff; cursor: pointer; }
+.workspace_ai_composer button:disabled { background: #1d293a; color: #64748b; cursor: not-allowed; }
+.workspace_ai_error { width: min(760px, 100%); margin: 0 auto 7px; color: #fb7185; font-size: 11px; text-align: center; }
+
+@media (max-width: 700px) {
+  .workspace_ai_chat { height: auto; min-height: 100dvh; margin: 0; grid-template-columns: 1fr; overflow: visible; }
+  .workspace_ai_sources { max-height: 300px; border-right: 0; border-bottom: 1px solid #2b3545; }
+  .workspace_ai_main { min-height: 620px; }
+  .workspace_ai_starters { grid-template-columns: 1fr; }
+}

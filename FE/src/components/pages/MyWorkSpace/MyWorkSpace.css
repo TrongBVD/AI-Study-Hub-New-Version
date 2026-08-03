@@ -3,6 +3,26 @@
 }
 
 .my_workspace_page {
+  --text-primary: #f8fafc;
+  --text-secondary: #cbd5e1;
+  --text-muted: #94a3b8;
+  --bg-primary: #0d0f12;
+  --bg-card: #181b20;
+  --bg-secondary: #202532;
+  --bg-elevated: #1e2229;
+  --hero-card-bg: #171b24;
+  --border-color: #2a2e37;
+  --accent-color: #38bdf8;
+  --accent-soft: rgba(56, 189, 248, 0.13);
+  --button-bg: #0284c7;
+  --button-hover-bg: #0369a1;
+  --button-text: #ffffff;
+  --collection-card-bg: #181b20;
+  --collection-card-hover-bg: #1e2229;
+  --collection-action-bg: #202938;
+  --collection-action-text: #38bdf8;
+  --focus-ring: rgba(56, 189, 248, 0.28);
+  --shadow-soft: 0 16px 38px rgba(0, 0, 0, 0.28);
   min-height: 100dvh;
   color: var(--text-primary);
   font-family: "Outfit", "Segoe UI", Arial, sans-serif;
@@ -26,11 +46,11 @@
   gap: 22px;
   align-items: stretch;
   background:
-    linear-gradient(135deg, rgba(59, 42, 26, 0.97), rgba(84, 55, 34, 0.93)),
+    linear-gradient(135deg, rgba(11, 13, 17, 0.97), rgba(25, 36, 52, 0.94)),
     url("https://picsum.photos/seed/workspace-command/1500/900");
   background-size: cover;
   background-position: center;
-  color: var(--bg-card);
+  color: #f8fafc;
   box-shadow: var(--shadow-soft);
   overflow: hidden;
   position: relative;
@@ -70,14 +90,14 @@
 }
 
 .workspace_command_hero .workspace_eyebrow {
-  color: var(--bg-secondary, var(--accent-soft));
+  color: #38bdf8;
   margin-bottom: 14px;
 }
 
 .workspace_hero_copy h1 {
   max-width: 640px;
   margin: 0;
-  color: var(--bg-card);
+  color: #f8fafc;
   font-size: 52px;
   line-height: 0.94;
   letter-spacing: 0;
@@ -87,7 +107,7 @@
 .workspace_hero_copy p {
   max-width: 520px;
   margin: 18px 0 0;
-  color: var(--hero-card-bg);
+  color: #cbd5e1;
   font-size: 14px;
   line-height: 1.65;
 }
@@ -157,8 +177,8 @@
   min-height: 220px;
   border-radius: 22px;
   padding: 20px;
-  background: var(--hero-preview-bg, var(--hero-card-bg));
-  border: 1px solid var(--hero-preview-border, var(--border-color));
+  background: rgba(24, 27, 32, 0.88);
+  border: 1px solid #334155;
   box-shadow: var(--shadow-soft);
   backdrop-filter: blur(14px);
   align-self: end;
@@ -173,8 +193,9 @@
   border-radius: 16px;
   display: grid;
   place-items: center;
-  color: var(--hero-preview-icon-text, var(--accent-color));
-  background: var(--hero-preview-icon-bg, var(--accent-soft));
+  color: #38bdf8;
+  background: #202938;
+  border: 1px solid rgba(56, 189, 248, 0.24);
   font-size: 19px;
   margin-bottom: 18px;
 }
@@ -196,7 +217,7 @@
 
 .workspace_focus_card h2 {
   margin: 12px 0 10px;
-  color: var(--bg-card);
+  color: #f8fafc;
   font-size: 22px;
   line-height: 1.12;
   letter-spacing: 0;
@@ -205,7 +226,7 @@
 
 .workspace_focus_card p {
   margin: 0;
-  color: var(--hero-card-bg);
+  color: #cbd5e1;
   line-height: 1.55;
   font-size: 13px;
 }

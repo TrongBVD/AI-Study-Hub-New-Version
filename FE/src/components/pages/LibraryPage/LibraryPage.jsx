@@ -460,7 +460,7 @@ function LibraryPage() {
       }
     } catch (error) {
       console.error("Cannot export library:", error);
-      alert("Cannot create the library ZIP. Please try again.");
+      showAlert("Cannot create the library ZIP. Please try again.");
     } finally {
       setIsExportingLibrary(false);
     }
@@ -842,7 +842,7 @@ function LibraryPage() {
         return;
       }
 
-      alert(
+      showAlert(
         isGuest
           ? "Cannot load this public library."
           : "Cannot load documents. Please login again.",
@@ -1091,7 +1091,7 @@ function LibraryPage() {
       }
 
       if (!existingDocument.id || !existingDocument.isBackendFile) {
-        alert(`"${file.name}" cannot be replaced because its saved document record is incomplete.`);
+        showAlert(`"${file.name}" cannot be replaced because its saved document record is incomplete.`);
         continue;
       }
 
@@ -1277,7 +1277,7 @@ function LibraryPage() {
     }
 
     if (pendingFiles.length === 0) {
-      alert("Please choose at least one file.");
+      showAlert("Please choose at least one file.");
       return;
     }
 
@@ -1318,7 +1318,7 @@ function LibraryPage() {
         );
 
         if (duplicateInBatch) {
-          alert(
+          showAlert(
             `"${duplicateInBatch.fileName}" was selected more than once. Remove the duplicate selection and try again.`,
           );
           return;
@@ -1455,7 +1455,7 @@ function LibraryPage() {
           "",
         ]);
       } else {
-        alert(error.response?.data?.message || error.response?.data?.error || "Upload failed. Please check backend and Supabase.");
+        showAlert(error.response?.data?.message || error.response?.data?.error || "Upload failed. Please check backend and Supabase.");
       }
     } finally {
       setIsUploadingDocuments(false);
@@ -1478,7 +1478,7 @@ function LibraryPage() {
     const parentFolderId = currentFolder ? getFolderKey(currentFolder) : null;
 
     if (hasFolderWithSameName(trimmedFolderName, parentFolderId)) {
-      alert("A folder with this name already exists in the same location.");
+      showAlert("A folder with this name already exists in the same location.");
       return;
     }
 
@@ -1596,7 +1596,7 @@ function LibraryPage() {
   async function handleDownloadDocument(fileItem) {
     try {
       if (!fileItem.id || !fileItem.isBackendFile) {
-        alert(
+        showAlert(
           "This file is local sample data, so it cannot be downloaded from backend yet.",
         );
         return;
@@ -1607,20 +1607,20 @@ function LibraryPage() {
         : await downloadDocument(fileItem.id);
 
       if (!data.downloadUrl) {
-        alert("Download URL not found.");
+        showAlert("Download URL not found.");
         return;
       }
 
       window.open(data.downloadUrl, "_blank");
     } catch (error) {
       console.error("Download failed:", error);
-      alert("Download failed.");
+      showAlert("Download failed.");
     }
   }
 
   function handleViewDocument(fileItem) {
     if (!fileItem.id || !fileItem.isBackendFile) {
-      alert("This file is local sample data, so it cannot be opened in the viewer yet.");
+      showAlert("This file is local sample data, so it cannot be opened in the viewer yet.");
       return;
     }
 
@@ -1693,7 +1693,7 @@ function LibraryPage() {
       navigate("/dashboard/libraries", { replace: true });
     } catch (error) {
       console.error("Failed to delete library:", error);
-      alert(
+      showAlert(
         error.response?.data?.message ||
           "Failed to delete this library. Please try again.",
       );
@@ -1716,7 +1716,7 @@ function LibraryPage() {
     const trimmedName = newName.trim();
 
     if (trimmedName === "") {
-      alert("Folder name cannot be empty.");
+      showAlert("Folder name cannot be empty.");
       return;
     }
 
@@ -1728,7 +1728,7 @@ function LibraryPage() {
     const parentFolderId = folder.folderId ?? null;
 
     if (hasFolderWithSameName(trimmedName, parentFolderId, folderKey)) {
-      alert("A folder with this name already exists in the same location.");
+      showAlert("A folder with this name already exists in the same location.");
       return;
     }
 

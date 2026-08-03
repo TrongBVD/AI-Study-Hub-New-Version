@@ -39,8 +39,9 @@ import {
   transferAdminOwnership,
   downloadWorkspaceDiscussionAttachment,
 } from "../../../utils/workspaceApi";
-import { uploadDocuments } from "../../../utils/documentApi";
+import { downloadDocument, uploadDocuments } from "../../../utils/documentApi";
 import { getStoredUser as getAuthStoredUser } from "../../../utils/authToken.js";
+import WorkspaceAiChat from "./WorkspaceAiChat.jsx";
 import "./WorkSpacePage.css";
 import "../../../assets/icons/themify-icons-font/themify-icons/themify-icons.css";
 
@@ -87,6 +88,16 @@ function normalizeIdentity(value) {
   return String(value || "")
     .trim()
     .toLowerCase();
+}
+
+function shortenPopupFileName(fileName, maxLength = 48) {
+  const value = String(fileName || "Document");
+  if (value.length <= maxLength) return value;
+
+  const extensionIndex = value.lastIndexOf(".");
+  const extension = extensionIndex > 0 ? value.slice(extensionIndex) : "";
+  const availableNameLength = Math.max(12, maxLength - extension.length - 3);
+  return `${value.slice(0, availableNameLength)}...${extension}`;
 }
 
 function normalizeDiscussionTopicTitle(value) {
@@ -172,7 +183,9 @@ function formatWorkspaceFileSize(bytes) {
 }
 
 function getWorkspaceRoleLabel(role) {
-  return String(role || "").toLowerCase() === "viewer" ? "Contributor" : role;
+  return ["viewer", "editor"].includes(String(role || "").toLowerCase())
+    ? "Contributor"
+    : role;
 }
 
 function normalizeDisplayFileName(fileName) {
@@ -316,8 +329,13 @@ function WorkSpacePage() {
     showAlert,
     resolvePopup: resolveActionPopup,
   } = useActionPopup();
+  const requestedWorkspaceTab = location.state?.workspaceTab;
   const [activeTab, setActiveTab] = useState(
-    location.state?.workspaceTab || "discussion",
+    ["messages", "documents", "study", "members", "settings"].includes(
+      requestedWorkspaceTab,
+    )
+      ? requestedWorkspaceTab
+      : "messages",
   );
   const [isLeaveBlockedModalOpen, setIsLeaveBlockedModalOpen] =
     useState(false);
@@ -476,6 +494,7 @@ function WorkSpacePage() {
   const [isSendingMessage, setIsSendingMessage] = useState(false);
   const [workspaceFlashcards, setWorkspaceFlashcards] = useState([]);
   const [workspaceDocuments, setWorkspaceDocuments] = useState([]);
+  const [workspaceFileView, setWorkspaceFileView] = useState("documents");
   const [workspaceUploadFiles, setWorkspaceUploadFiles] = useState([]);
   const [workspaceReplacementDocumentIds, setWorkspaceReplacementDocumentIds] =
     useState([]);
@@ -618,8 +637,7 @@ function WorkSpacePage() {
       (isWorkspaceOwner || backendMembers.length === 0 ? "Admin" : "Viewer"),
   );
 
-  const canManageTopics =
-    currentWorkspaceRole === "editor" || currentWorkspaceRole === "admin" || isWorkspaceOwner;
+  const canManageTopics = currentWorkspaceRole === "admin" || isWorkspaceOwner;
   const canManageWorkspace = currentWorkspaceRole === "admin" || isWorkspaceOwner;
   const normalizedMemberSearch = normalizeIdentity(memberSearchQuery);
 
@@ -1056,14 +1074,14 @@ function WorkSpacePage() {
   function requireTopicPermission(actionLabel) {
     if (canManageTopics) return true;
 
-    alert(`Only workspace editors and admins can ${actionLabel}.`);
+    showAlert(`Only workspace admins can ${actionLabel}.`);
     return false;
   }
 
   function requireWorkspaceAdminPermission(actionLabel) {
     if (canManageWorkspace) return true;
 
-    alert(`Only workspace admins can ${actionLabel}.`);
+    showAlert(`Only workspace admins can ${actionLabel}.`);
     return false;
   }
 
@@ -1212,7 +1230,7 @@ function WorkSpacePage() {
   function handleNewTopicAttachmentsChange(event) {
     const files = Array.from(event.target.files || []);
     if (files.length > 10) {
-      alert("You can attach up to 10 files to a topic.");
+      showAlert("You can attach up to 10 files to a topic.");
     }
     setNewTopicAttachments(files.slice(0, 10));
     event.target.value = "";
@@ -1257,7 +1275,7 @@ function WorkSpacePage() {
       );
     } catch (error) {
       console.error("Cannot delete discussion attachment:", error);
-      alert(error.response?.data?.message || "Could not delete attachment.");
+      showAlert(error.response?.data?.message || "Could not delete attachment.");
     }
   }
 
@@ -1280,7 +1298,7 @@ function WorkSpacePage() {
       setTopicContent("");
     } catch (error) {
       console.error("Cannot delete discussion topic:", error);
-      alert(error.response?.data?.message || "Could not delete topic.");
+      showAlert(error.response?.data?.message || "Could not delete topic.");
     }
   }
 
@@ -1289,7 +1307,7 @@ function WorkSpacePage() {
       buildWorkspaceUploadCandidates(files, workspaceDocuments);
 
     if (duplicateBatchFileNames.length > 0) {
-      alert(
+      showAlert(
         `These files were selected more than once and will only be uploaded once:\n- ${duplicateBatchFileNames.join(
           "\n- ",
         )}`,
@@ -1315,8 +1333,8 @@ function WorkSpacePage() {
       (currentUserId && existingUploaderId === currentUserId);
 
     if (!canReplaceExistingDocument) {
-      alert(
-        `"${file.name}" has already been uploaded to this workspace by ${
+      showAlert(
+        `"${shortenPopupFileName(file.name)}" has already been uploaded to this workspace by ${
           existingDocument.uploaderName || "another member"
         }. Only the original uploader or a workspace admin can replace it.`,
       );
@@ -1325,7 +1343,7 @@ function WorkSpacePage() {
     }
 
     const shouldReplace = await showConfirm(
-      `"${file.name}" has already been uploaded to this workspace.\n\nSelect OK to replace the existing document, or Cancel to keep the current version.`,
+      `"${shortenPopupFileName(file.name)}" has already been uploaded to this workspace.\n\nSelect OK to replace the existing document, or Cancel to keep the current version.`,
       {
         title: "Replace existing document?",
         confirmText: "Replace document",
@@ -1376,7 +1394,7 @@ async function uploadWorkspaceFilesWithDuplicateConfirmation(
     );
 
     if (duplicateInBatch) {
-      alert(
+      showAlert(
         `"${duplicateInBatch.fileName}" was selected more than once. Remove the duplicate selection and try again.`,
       );
       return {
@@ -1392,8 +1410,8 @@ async function uploadWorkspaceFilesWithDuplicateConfirmation(
     );
 
     if (forbiddenReplacement) {
-      alert(
-        `"${forbiddenReplacement.fileName}" has already been uploaded by another workspace member. Only the original uploader or a workspace admin can replace it.`,
+      showAlert(
+        `"${shortenPopupFileName(forbiddenReplacement.fileName)}" has already been uploaded by another workspace member. Only the original uploader or a workspace admin can replace it.`,
       );
       return {
         uploadedDocuments: [],
@@ -1404,7 +1422,7 @@ async function uploadWorkspaceFilesWithDuplicateConfirmation(
     }
 
     const duplicateNames = duplicateDocuments
-      .map((duplicate) => duplicate.fileName)
+      .map((duplicate) => shortenPopupFileName(duplicate.fileName))
       .filter(Boolean);
     const shouldReplace = await showConfirm(
       `${duplicateNames.join(", ")} ${
@@ -1532,11 +1550,11 @@ async function handleSubmitSolution(event) {
       ),
   );
   if (alreadySubmittedSolution && !editingSolutionId) {
-    alert("You have already submitted a solution for this topic.");
+    showAlert("You have already submitted a solution for this topic.");
     return;
   }
   if (!solutionContent.trim()) {
-    alert("Please describe your solution before submitting it.");
+    showAlert("Please describe your solution before submitting it.");
     return;
   }
 
@@ -1650,7 +1668,7 @@ async function handleDeleteSolutionFile(fileId) {
     );
   } catch (error) {
     console.error("Cannot delete solution attachment:", error);
-    alert(
+    showAlert(
       error.response?.data?.message || "Could not delete solution attachment.",
     );
   }
@@ -1690,7 +1708,7 @@ async function handleSubmitSolutionComment(event, solutionId) {
     setOpenSolutionCommentId(null);
   } catch (error) {
     console.error("Cannot comment on solution:", error);
-    alert(error.response?.data?.message || "Could not post your comment.");
+    showAlert(error.response?.data?.message || "Could not post your comment.");
   } finally {
     setSubmittingSolutionCommentId(null);
   }
@@ -1719,7 +1737,7 @@ async function handleSaveTopicNote(e) {
     setIsTopicDescriptionEditing(false);
   } catch (error) {
     console.error("Cannot update discussion topic:", error);
-    alert(
+    showAlert(
       error.response?.data?.message || "Could not update discussion topic.",
     );
   }
@@ -1766,7 +1784,7 @@ async function handleUpdateTopicField(field, value) {
     }
   } catch (error) {
     console.error("Cannot update discussion topic field:", error);
-    alert(
+    showAlert(
       error.response?.data?.message || "Could not update discussion topic.",
     );
   }
@@ -1798,7 +1816,7 @@ async function handleUpdateTopicDeadlineMode(value) {
     );
   } catch (error) {
     console.error("Cannot update discussion deadline mode:", error);
-    alert(
+    showAlert(
       error.response?.data?.message || "Could not update discussion topic.",
     );
   }
@@ -1824,7 +1842,7 @@ async function handleUpdateTopicDate(field, value) {
     );
   } catch (error) {
     console.error("Cannot update discussion deadline date:", error);
-    alert(
+    showAlert(
       error.response?.data?.message || "Could not update discussion topic.",
     );
   }
@@ -1852,7 +1870,7 @@ async function handleAddTopicComment(e) {
     setTopicCommentInput("");
   } catch (error) {
     console.error("Cannot add discussion comment:", error);
-    alert(error.response?.data?.message || "Could not add comment.");
+    showAlert(error.response?.data?.message || "Could not add comment.");
   }
 }
 
@@ -1891,7 +1909,7 @@ async function handleAddTopicSubtask(e) {
     setIsSubtaskDateOpen(false);
   } catch (error) {
     console.error("Cannot add discussion subtask:", error);
-    alert(error.response?.data?.message || "Could not add subtask.");
+    showAlert(error.response?.data?.message || "Could not add subtask.");
   }
 }
 
@@ -1936,7 +1954,7 @@ async function handleToggleSubtask(subtaskId) {
     );
   } catch (error) {
     console.error("Cannot update discussion subtask:", error);
-    alert(error.response?.data?.message || "Could not update subtask.");
+    showAlert(error.response?.data?.message || "Could not update subtask.");
   }
 }
 
@@ -1964,7 +1982,7 @@ async function handleDeleteSubtask(subtaskId) {
     );
   } catch (error) {
     console.error("Cannot delete discussion subtask:", error);
-    alert(error.response?.data?.message || "Could not delete subtask.");
+    showAlert(error.response?.data?.message || "Could not delete subtask.");
   }
 }
 
@@ -2147,7 +2165,7 @@ async function handleTransferAdminOwnership(
     setWorkspace(await getWorkspace(workspaceId));
   } catch (error) {
     console.error("Cannot transfer admin ownership:", error);
-    alert(error.response?.data?.message || "Could not transfer admin ownership.");
+    showAlert(error.response?.data?.message || "Could not transfer admin ownership.");
   } finally {
     setMemberActionId("");
   }
@@ -2317,11 +2335,11 @@ async function handleLeaveWorkspace() {
 
   try {
     const res = await leaveWorkspace(workspaceId);
-    alert(res?.message || "Successfully left the workspace.");
+    showAlert(res?.message || "Successfully left the workspace.");
     navigate("/dashboard/workspaces");
   } catch (err) {
     console.error("Failed to leave workspace:", err);
-    alert(err.response?.data?.message || "Could not leave the workspace.");
+    showAlert(err.response?.data?.message || "Could not leave the workspace.");
   }
 }
 
@@ -2423,6 +2441,11 @@ async function handleUploadWorkspaceDocuments() {
       ? uploadResult.uploadedDocuments.map((document) => ({
           ...document,
           status: document.status || "PENDING",
+          uploaderName: document.uploaderName || profileName,
+          createdAt:
+            document.createdAt ||
+            document.created_at ||
+            new Date().toISOString(),
         }))
       : [];
     const replacedDocumentIds = new Set([
@@ -2565,6 +2588,35 @@ function handleViewWorkspaceDocument(document) {
       returnContext: "files",
     },
   });
+}
+
+async function handleDownloadWorkspaceDocument(workspaceDocument) {
+  if (!workspaceDocument?.id) return;
+
+  try {
+    const downloadData = await downloadDocument(workspaceDocument.id);
+    const downloadUrl = downloadData?.downloadUrl || downloadData?.viewUrl;
+
+    if (!downloadUrl) {
+      throw new Error("The download link could not be created.");
+    }
+
+    const downloadLink = window.document.createElement("a");
+    downloadLink.href = downloadUrl;
+    downloadLink.download = workspaceDocument.title || "workspace-document";
+    downloadLink.rel = "noopener";
+    window.document.body.appendChild(downloadLink);
+    downloadLink.click();
+    downloadLink.remove();
+  } catch (error) {
+    console.error("Cannot download workspace document:", error);
+    await showAlert(
+      error.response?.data?.message ||
+        error.message ||
+        "Could not download this document.",
+      { title: "Download failed", confirmText: "Close" },
+    );
+  }
 }
 
 function handleViewTopicAttachment(file, returnContext = "topic") {
@@ -2938,7 +2990,7 @@ function renderMembersTab() {
 
                           {openRoleMenuId === member.id && (
                             <div className="workspace_role_menu" role="listbox">
-                              {["Admin", "Editor", "Viewer"].map((role) => (
+                              {["Admin", "Viewer"].map((role) => (
                                 <button
                                   type="button"
                                   role="option"
@@ -3063,60 +3115,14 @@ function renderMembersTab() {
           </div>
 
           <div className="workspace_role_item">
-            <strong>Editor</strong>
-            <p>
-              Can create and edit topics, upload topic files, comment, and
-              submit solutions.
-            </p>
-          </div>
-
-          <div className="workspace_role_item">
             <strong>Contributor</strong>
             <p>
-              Can view workspace content, participate in discussions, and
-              submit solutions.
+              Can view workspace content, upload files, participate in
+              discussions.
             </p>
           </div>
         </section>
 
-        <section className="workspace_side_card">
-          <div className="workspace_side_title">
-            <h3>Activity</h3>
-            <i className="ti-stats-up"></i>
-          </div>
-
-          <div className="workspace_activity_stats">
-            <div>
-              <strong>{discussionTopics.length}</strong>
-              <span>Topics</span>
-            </div>
-
-            <div>
-              <strong>{visibleWorkspaceMembers.length}</strong>
-              <span>Members</span>
-            </div>
-          </div>
-        </section>
-
-        <section className="workspace_side_card">
-          <h3>Latest Activity</h3>
-
-          <div className="workspace_latest_activity highlight">
-            <strong>{discussionTopics[0]?.creator || "Workspace"}</strong>
-            <p>
-              {discussionTopics[0]
-                ? `created "${discussionTopics[0].title}"`
-                : "No discussion activity yet."}
-            </p>
-            <span>{discussionTopics[0]?.createdAt || "No activity"}</span>
-          </div>
-
-          <div className="workspace_latest_activity">
-            <strong>{profileName}</strong>
-            <p>joined the workspace.</p>
-            <span>Current session</span>
-          </div>
-        </section>
       </aside>
     </section>
   );
@@ -3583,7 +3589,7 @@ function renderDiscussionTab() {
                       </form>
                     ) : (
                       <p className="workspace_permission_hint">
-                        Only editors and admins can add or update subtasks.
+                        Only workspace admins can add or update subtasks.
                       </p>
                     )}
 
@@ -3675,7 +3681,7 @@ function renderDiscussionTab() {
                       </label>
                     ) : (
                       <p className="workspace_permission_hint">
-                        Only editors and admins can upload attachments to
+                        Only workspace admins can upload attachments to
                         topics.
                       </p>
                     )}
@@ -4497,7 +4503,7 @@ function renderDiscussionTab() {
                 </button>
               ) : (
                 <span className="workspace_permission_pill">
-                  Editors and admins can create topics
+                  Workspace admins can create topics
                 </span>
               )}
             </section>
@@ -4986,12 +4992,40 @@ function renderStudyTab() {
 }
 
 function renderDocumentsTab() {
+  if (workspaceFileView === "ai-chat") {
+    return (
+      <WorkspaceAiChat
+        documents={workspaceDocuments}
+        activeView={workspaceFileView}
+        onViewChange={setWorkspaceFileView}
+      />
+    );
+  }
+
   return (
     <section className="workspace_documents_tab">
       <header className="workspace_documents_header">
         <div>
           <span>Workspace Files</span>
-          <h2>Documents</h2>
+          <div className="workspace_file_view_tabs" role="tablist">
+            <button
+              type="button"
+              className="active"
+              role="tab"
+              aria-selected="true"
+              onClick={() => setWorkspaceFileView("documents")}
+            >
+              Documents
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected="false"
+              onClick={() => setWorkspaceFileView("ai-chat")}
+            >
+              AI Chat
+            </button>
+          </div>
           <p>
             Upload learning materials to this workspace and use approved files
             for AI study cards.
@@ -5050,8 +5084,9 @@ function renderDocumentsTab() {
         {workspaceUploadFiles.length > 0 && (
           <div className="workspace_documents_selected_files">
             {workspaceUploadFiles.map((file) => (
-              <span key={`${file.name}-${file.size}`}>
-                {file.name} · {formatWorkspaceFileSize(file.size)}
+              <span className="workspace_documents_selected_file" key={`${file.name}-${file.size}`}>
+                <strong title={file.name}>{file.name}</strong>
+                <small>{formatWorkspaceFileSize(file.size)}</small>
               </span>
             ))}
           </div>
@@ -5066,11 +5101,15 @@ function renderDocumentsTab() {
 
       <section className="workspace_documents_list_card">
         <div className="workspace_documents_list_header">
-          <h3>Workspace document list</h3>
+          <h3>Sources</h3>
           <span>
-            {approvedWorkspaceDocuments.length} approved ·{" "}
-            {waitingWorkspaceDocuments.length} waiting approval
+            {workspaceDocuments.length} file{workspaceDocuments.length === 1 ? "" : "s"}
           </span>
+        </div>
+
+        <div className="workspace_documents_source_summary">
+          <span><i className="ti-check-box" /> Select all</span>
+          <small>{approvedWorkspaceDocuments.length} approved · {waitingWorkspaceDocuments.length} waiting</small>
         </div>
 
         {workspaceDocuments.length === 0 ? (
@@ -5099,18 +5138,19 @@ function renderDocumentsTab() {
                   </div>
 
                   <div className="workspace_document_info">
-                    <h3>{document.title}</h3>
+                    <h3 title={document.title}>{document.title}</h3>
                     <p>
                       {formatWorkspaceFileSize(
                         document.fileSizeBytes ?? document.file_size_bytes,
-                      )} ·{" "}
-                      {document.createdAt || document.created_at
-                        ? new Date(
-                            document.createdAt || document.created_at,
-                          ).toLocaleDateString()
-                        : "Recently uploaded"} ·{" "}
+                      )}
                       <span className="workspace_document_uploader">
                         Uploaded by {document.uploaderName || "Unknown user"}
+                        <br />
+                        {document.createdAt || document.created_at
+                          ? new Date(
+                              document.createdAt || document.created_at,
+                            ).toLocaleString()
+                          : "Just now"}
                       </span>
                     </p>
                   </div>
@@ -5132,6 +5172,15 @@ function renderDocumentsTab() {
                         View file
                       </button>
                     )}
+
+                    <button
+                      type="button"
+                      className="download"
+                      onClick={() => handleDownloadWorkspaceDocument(document)}
+                    >
+                      <i className="ti-download" aria-hidden="true"></i>
+                      Download
+                    </button>
 
                     {needsWorkspaceReview && (
                       <>
@@ -5251,7 +5300,7 @@ function renderSettingsTab() {
 
             <div>
               <h3>Leave workspace</h3>
-              <p>Remove yourself from this workspace. Admins and Editors will be notified.</p>
+              <p>Remove yourself from this workspace. Workspace admins will be notified.</p>
             </div>
           </div>
 
@@ -5286,8 +5335,7 @@ function renderSettingsTab() {
             <span>Your role after transfer</span>
             <div role="radiogroup" aria-label="Your role after Admin transfer">
               {[
-                { value: "Editor", label: "Editor", description: "Can manage content" },
-                { value: "Viewer", label: "Contributor", description: "Can view and contribute" },
+                { value: "Viewer", label: "Contributor", description: "Can upload files and contribute" },
               ].map((roleOption) => (
                 <button
                   type="button"
@@ -5300,9 +5348,7 @@ function renderSettingsTab() {
                   onClick={() => setRoleAfterAdminTransfer(roleOption.value)}
                 >
                   <i
-                    className={
-                      roleOption.value === "Editor" ? "ti-pencil-alt" : "ti-user"
-                    }
+                    className="ti-user"
                     aria-hidden="true"
                   ></i>
                   <span>
@@ -5614,14 +5660,6 @@ function renderInviteMemberModal() {
               Contributor
             </button>
 
-            <button
-              type="button"
-              className={inviteRole === "Editor" ? "active" : ""}
-              onClick={() => setInviteRole("Editor")}
-            >
-              <i className="ti-pencil-alt"></i>
-              Editor
-            </button>
           </div>
         </section>
 
@@ -5667,19 +5705,15 @@ function renderInviteMemberModal() {
 }
 
 return (
-  <main className="workspace_page">
+  <main
+    className={`workspace_page${
+      activeTab === "documents" ? " workspace_page--documents" : ""
+    }`}
+  >
     <nav className="workspace_top_tabs">
       <span className="workspace_nav_title">
         {workspace?.name || workspaceNameInput || "Workspace"}
       </span>
-      <button
-        className={activeTab === "discussion" ? "active" : ""}
-        onClick={() => setActiveTab("discussion")}
-      >
-        <i className="ti-comments"></i>
-        Discussion
-      </button>
-
       <button
         className={activeTab === "messages" ? "active" : ""}
         onClick={() => setActiveTab("messages")}
@@ -5754,8 +5788,6 @@ return (
 
     {activeTab === "messages" && renderMessagesTab()}
 
-    {activeTab === "discussion" && renderDiscussionTab()}
-
     {activeTab === "documents" && renderDocumentsTab()}
 
     {activeTab === "study" && renderStudyTab()}
@@ -5803,8 +5835,7 @@ return (
           <div className="workspace_transfer_role_choice workspace_transfer_role_choice_modal">
             <div role="radiogroup" aria-label="Your role after Admin transfer">
               {[
-                { value: "Editor", label: "Editor", description: "Can manage content" },
-                { value: "Viewer", label: "Contributor", description: "Can view and contribute" },
+                { value: "Viewer", label: "Contributor", description: "Can upload files and contribute" },
               ].map((roleOption) => (
                 <button
                   type="button"
@@ -5815,7 +5846,7 @@ return (
                   onClick={() => setRoleAfterAdminTransfer(roleOption.value)}
                 >
                   <i
-                    className={roleOption.value === "Editor" ? "ti-pencil-alt" : "ti-user"}
+                    className="ti-user"
                     aria-hidden="true"
                   ></i>
                   <span>

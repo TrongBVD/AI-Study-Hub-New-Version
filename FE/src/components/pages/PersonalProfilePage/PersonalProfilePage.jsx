@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef } from "react";
+import { showPopupAlert } from "../../common/ActionPopup/actionPopupService.js";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   getMyProfile,
@@ -212,7 +213,7 @@ function PersonalProfile() {
         );
       } catch (error) {
         console.error("Cannot update avatar:", error);
-        alert(error.response?.data?.message || "Cannot update avatar. Please try again.");
+        showPopupAlert(error.response?.data?.message || "Cannot update avatar. Please try again.");
       } finally {
         setIsUploadingAvatar(false);
       }

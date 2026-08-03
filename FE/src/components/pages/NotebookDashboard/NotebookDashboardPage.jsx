@@ -20,6 +20,7 @@ import { getMyLibraries, createLibrary, deleteLibrary } from "../../../utils/doc
 import { getPublicLibraries } from "../../../utils/publicApi.js";
 import { getStoredUser } from "../../../utils/authToken.js";
 import Toast from "../../common/Toast/Toast.jsx";
+import { showPopupConfirm } from "../../common/ActionPopup/actionPopupService.js";
 import "./NotebookDashboardPage.css";
 
 /**
@@ -149,7 +150,11 @@ export default function NotebookDashboardPage() {
    */
   const handleDeleteLibrary = async (libId, e) => {
     e.stopPropagation();
-    if (!window.confirm("Are you sure you want to delete this library?")) return;
+    const confirmed = await showPopupConfirm(
+      "Are you sure you want to delete this library? This action cannot be undone.",
+      { title: "Delete library?", confirmText: "Delete", tone: "danger" },
+    );
+    if (!confirmed) return;
 
     try {
       await deleteLibrary(libId);

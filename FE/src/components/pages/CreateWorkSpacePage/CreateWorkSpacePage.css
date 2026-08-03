@@ -3,11 +3,35 @@
 }
 
 .create_workspace_page {
+  --text-primary: #f8fafc;
+  --text-secondary: #cbd5e1;
+  --text-muted: #94a3b8;
+  --bg-primary: #0d0f12;
+  --bg-card: #181b20;
+  --bg-secondary: #202532;
+  --bg-elevated: #1e2229;
+  --hero-bg: #0d0f12;
+  --hero-card-bg: #171b24;
+  --border-color: #2a2e37;
+  --input-bg: #0d1016;
+  --input-border: #334155;
+  --accent-color: #38bdf8;
+  --accent-soft: rgba(56, 189, 248, 0.13);
+  --button-bg: #0284c7;
+  --button-hover-bg: #0369a1;
+  --button-text: #ffffff;
+  --collection-action-bg: #202938;
+  --collection-action-text: #38bdf8;
+  --badge-bg: #202938;
+  --badge-text: #38bdf8;
+  --focus-ring: rgba(56, 189, 248, 0.28);
+  --shadow-soft: 0 16px 38px rgba(0, 0, 0, 0.28);
+  --study-theme-input: #0d1016;
+  --study-theme-input-border: #334155;
+  --study-theme-text: #f8fafc;
+  --study-theme-muted: #94a3b8;
   min-height: calc(100dvh - 74px);
-  background:
-    radial-gradient(circle at 15% 8%, var(--focus-ring), transparent 28%),
-    radial-gradient(circle at 92% 12%, var(--focus-ring), transparent 26%),
-    var(--hero-bg);
+  background: #0d0f12 !important;
   color: var(--text-primary);
   padding: 38px 24px 72px;
   font-family: "Outfit", "Segoe UI", Arial, sans-serif;
@@ -60,9 +84,9 @@
   min-height: 330px;
   border-radius: 32px;
   background:
-    linear-gradient(135deg, rgba(59, 42, 26, 0.97), rgba(78, 52, 34, 0.94)),
-    linear-gradient(120deg, var(--sidebar-bg), #6a4025);
-  color: var(--bg-card);
+    linear-gradient(135deg, rgba(11, 13, 17, 0.98), rgba(25, 36, 52, 0.95)),
+    linear-gradient(120deg, #111827, #1e293b);
+  color: #f8fafc;
   padding: 88px 42px 42px;
   box-shadow: var(--shadow-soft);
   overflow: hidden;
@@ -82,15 +106,7 @@
 }
 
 .create_workspace_header::after {
-  content: "";
-  position: absolute;
-  right: -90px;
-  bottom: -120px;
-  width: 320px;
-  height: 320px;
-  border-radius: 50%;
-  border: 1px solid var(--sidebar-active-bg);
-  box-shadow: inset 0 0 0 38px rgba(255, 250, 240, 0.035);
+  content: none;
 }
 
 .workspace_eyebrow,
@@ -106,7 +122,7 @@
 }
 
 .create_workspace_header .workspace_eyebrow {
-  color: var(--bg-secondary, var(--accent-soft));
+  color: #38bdf8;
   margin-bottom: 16px;
   position: relative;
   z-index: 1;
@@ -115,7 +131,7 @@
 .create_workspace_header h1 {
   max-width: 660px;
   margin: 0;
-  color: var(--bg-card);
+  color: #f8fafc;
   font-size: clamp(38px, 5vw, 64px);
   line-height: 0.96;
   letter-spacing: -0.06em;
@@ -127,7 +143,7 @@
 .create_workspace_header p {
   max-width: 560px;
   margin: 20px 0 0;
-  color: var(--hero-card-bg);
+  color: #cbd5e1;
   font-size: 16px;
   line-height: 1.75;
   position: relative;
@@ -159,8 +175,9 @@
   width: 56px;
   height: 56px;
   border-radius: 18px;
-  background: var(--sidebar-bg);
-  color: var(--bg-secondary, var(--accent-soft));
+  background: #202938;
+  color: #38bdf8;
+  border: 1px solid rgba(56, 189, 248, 0.24);
   display: inline-flex;
   align-items: center;
   justify-content: center;

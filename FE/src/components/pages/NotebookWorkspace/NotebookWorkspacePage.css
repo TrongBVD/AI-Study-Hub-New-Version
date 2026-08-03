@@ -862,7 +862,8 @@
 }
 
 .input_box_wrapper input::placeholder {
-  color: #94a3b8;
+  color: #ffffff !important;
+  opacity: 1;
 }
 
 .input_actions_right {

@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { showPopupAlert } from "../../common/ActionPopup/actionPopupService.js";
 import axios from "axios";
 import FormInput from "../../common/FormInput/FormInput.jsx";
 import { GoogleLogin, GoogleOAuthProvider } from "@react-oauth/google";
@@ -84,7 +85,7 @@ function LoginPage() {
 
     if (!accessToken) {
       console.log("Login response:", responseData);
-      alert("Login succeeded but no token was returned.");
+      showPopupAlert("Login succeeded but no token was returned.");
       return false;
     }
 
@@ -191,7 +192,7 @@ function LoginPage() {
       const googleToken = credentialResponse.credential;
 
       if (!googleToken) {
-        alert("Google login failed: missing Google token.");
+        showPopupAlert("Google login failed: missing Google token.");
         return;
       }
 
@@ -229,13 +230,13 @@ function LoginPage() {
         error.response?.data?.error ||
         "Google login failed. Please try again.";
 
-      alert(errorMsg);
+      showPopupAlert(errorMsg);
     }
   };
 
   const handleGoogleError = () => {
     console.log("User closed popup or Google error occurred");
-    alert("Google login was cancelled or failed.");
+    showPopupAlert("Google login was cancelled or failed.");
   };
 
   return (

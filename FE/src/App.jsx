@@ -32,6 +32,7 @@ import NotebookWorkspacePage from "./components/pages/NotebookWorkspace/Notebook
 
 // ================= PROTECTED ROUTE =================
 import ProtectedRoute from "./components/common/ProtectedRoute/ProtectedRoute.jsx";
+import GlobalActionPopup from "./components/common/ActionPopup/GlobalActionPopup.jsx";
 
 // ================= ADMIN IMPORTS =================
 import AdminLayout from "./components/pages/Admin/AdminLayout/AdminLayout.jsx";
@@ -62,6 +63,7 @@ function App() {
 
   return (
     <BrowserRouter>
+      <GlobalActionPopup />
       <Suspense fallback={null}>
         <Routes>
           {/* Public Landing Page */}

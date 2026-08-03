@@ -76,7 +76,7 @@ function MyWorkSpace() {
             <span className="workspace_eyebrow">Workspace command center</span>
             <h1>Build focused rooms for every project.</h1>
             <p>
-              Organize discussions, files, members, tasks and study material in
+              Organize discussions, files, members and study material in
               dedicated collaboration spaces.
             </p>
 

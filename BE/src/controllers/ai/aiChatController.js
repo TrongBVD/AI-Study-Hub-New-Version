@@ -101,68 +101,95 @@ exports.chatWithDocument = async (req, res) => {
   try {
     const userId = req.user.id;
     const { documentId, question } = req.body;
+    const requestedDocumentIds = [
+      ...new Set(
+        (Array.isArray(req.body.selectedDocIds) && req.body.selectedDocIds.length > 0
+          ? req.body.selectedDocIds
+          : [documentId]
+        )
+          .map((id) => String(id || "").trim())
+          .filter(Boolean),
+      ),
+    ].slice(0, 10);
 
-    if (!documentId || !question || !question.trim()) {
+    if (requestedDocumentIds.length === 0 || !question || !question.trim()) {
       return res.status(400).json({
         status: "error",
-        message: "documentId and question are required.",
+        message: "At least one document and a question are required.",
       });
     }
 
-    const document = await getAllowedDocument(documentId, userId);
+    const documents = await Promise.all(
+      requestedDocumentIds.map((id) => getAllowedDocument(id, userId)),
+    );
 
-    if (!document) {
+    if (documents.some((document) => !document)) {
       return res.status(404).json({
         status: "error",
-        message: "Document not found.",
+        message: "One or more selected documents could not be found.",
       });
     }
 
-    if (document === "FORBIDDEN") {
+    if (documents.some((document) => document === "FORBIDDEN")) {
       return res.status(403).json({
         status: "error",
-        message: "You do not have permission to access this document.",
+        message: "You do not have permission to access one or more selected documents.",
       });
     }
 
-    if (document.status !== "APPROVED") {
+    if (documents.some((document) => document.status !== "APPROVED")) {
       return res.status(409).json({
         status: "error",
         code: "DOCUMENT_NOT_AI_READY",
-        message: "This document is not approved or not ready for AI chat yet.",
+        message: "One or more selected documents are not ready for AI chat yet.",
       });
     }
 
     const questionEmbedding = await createEmbedding(question, "query");
 
-    let matchedChunks = [];
-    try {
-      const { data: rpcChunks } = await supabase.rpc("match_document_chunks", {
-        match_document_id: documentId,
-        query_embedding: toVectorLiteral(questionEmbedding),
-        match_count: 5,
-      });
-      if (Array.isArray(rpcChunks) && rpcChunks.length > 0) {
-        matchedChunks = rpcChunks;
-      }
-    } catch (e) {
-      console.warn("RPC match_document_chunks error or fallback:", e);
-    }
+    const chunksPerDocument = Math.max(2, Math.floor(12 / documents.length));
+    const matchedChunkGroups = await Promise.all(
+      documents.map(async (document) => {
+        let documentChunks = [];
+        try {
+          const { data: rpcChunks } = await supabase.rpc("match_document_chunks", {
+            match_document_id: document.id,
+            query_embedding: toVectorLiteral(questionEmbedding),
+            match_count: chunksPerDocument,
+          });
+          if (Array.isArray(rpcChunks) && rpcChunks.length > 0) {
+            documentChunks = rpcChunks;
+          }
+        } catch (error) {
+          console.warn("RPC match_document_chunks error or fallback:", error);
+        }
 
-    if (matchedChunks.length === 0) {
-      const availableChunks = await ensureDocumentChunks(document);
-      matchedChunks = availableChunks.slice(0, 5);
-    }
+        if (documentChunks.length === 0) {
+          const availableChunks = await ensureDocumentChunks(document);
+          documentChunks = availableChunks.slice(0, chunksPerDocument);
+        }
 
-    if (!matchedChunks) {
-      matchedChunks = [];
-    }
+        return documentChunks.map((chunk) => ({
+          ...chunk,
+          content: `[${document.title}]\n${chunk.content}`,
+          documentId: document.id,
+          documentTitle: document.title,
+        }));
+      }),
+    );
+    const matchedChunks = matchedChunkGroups.flat().slice(0, 12);
+    const primaryDocument = documents[0];
 
     const answer = await answerWithContext(question, matchedChunks);
     await increaseChatUsage(userId);
     let chatHistory = null;
     try {
-      chatHistory = await saveChatHistory({ userId, documentId, question, answer });
+      chatHistory = await saveChatHistory({
+        userId,
+        documentId: primaryDocument.id,
+        question,
+        answer,
+      });
     } catch (historyError) {
       console.error("Could not save chat history:", historyError);
     }
@@ -170,11 +197,14 @@ exports.chatWithDocument = async (req, res) => {
     return res.status(200).json({
       status: "success",
       data: {
-        documentId,
+        documentId: primaryDocument.id,
+        selectedDocIds: documents.map((document) => document.id),
         question,
         answer,
         sources: matchedChunks.map((chunk) => ({
           chunk_index: chunk.chunk_index,
+          documentId: chunk.documentId,
+          documentTitle: chunk.documentTitle,
           similarity: chunk.similarity || 1,
         })),
         chatHistory,

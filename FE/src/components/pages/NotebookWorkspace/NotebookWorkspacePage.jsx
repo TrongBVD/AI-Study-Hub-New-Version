@@ -29,6 +29,7 @@ import { chatWithDocument, getChatHistory } from "../../../utils/aiApi.js";
 import { getStoredUser } from "../../../utils/authToken.js";
 import { createAppNotification } from "../../../utils/notificationStore.js";
 import Toast from "../../common/Toast/Toast.jsx";
+import { showPopupConfirm } from "../../common/ActionPopup/actionPopupService.js";
 import SourcesSidebar from "./SourcesSidebar.jsx";
 import DeleteConfirmModal from "./DeleteConfirmModal.jsx";
 import DuplicateConfirmModal from "./DuplicateConfirmModal.jsx";
@@ -348,8 +349,9 @@ export default function NotebookWorkspacePage() {
   };
 
   const handleDeleteLibrary = async () => {
-    const confirmed = window.confirm(
+    const confirmed = await showPopupConfirm(
       `Delete “${library?.name || "this library"}”? This action cannot be undone.`,
+      { title: "Delete library?", confirmText: "Delete", tone: "danger" },
     );
     if (!confirmed) return;
 

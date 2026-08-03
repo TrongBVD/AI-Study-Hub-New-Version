@@ -27,7 +27,7 @@ function ActionPopup({ popup, onResolve }) {
       }}
     >
       <section
-        className={`action_popup action_popup--${popup.type}`}
+        className={`action_popup action_popup--${popup.type} action_popup--${popup.tone || "info"}`}
         role="dialog"
         aria-modal="true"
         aria-labelledby="action-popup-title"
@@ -43,7 +43,7 @@ function ActionPopup({ popup, onResolve }) {
         </button>
 
         <div className="action_popup_icon" aria-hidden="true">
-          <i className={popup.type === "prompt" ? "ti-pencil-alt" : "ti-alert"}></i>
+          <i className={popup.type === "prompt" ? "ti-pencil-alt" : popup.tone === "danger" ? "ti-alert" : "ti-info-alt"}></i>
         </div>
 
         <span className="action_popup_eyebrow">

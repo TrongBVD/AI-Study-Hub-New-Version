@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { showPopupAlert } from "../../common/ActionPopup/actionPopupService.js";
 import FormInput from "../../common/FormInput/FormInput.jsx";
 import api from "../../../utils/api.js";
 import { useNavigate, useLocation, Navigate } from "react-router-dom";
@@ -82,7 +83,7 @@ function ResetPassword() {
         resetToken,
         newPassword: formData.newPassword,
       });
-      alert("Password reset successful. Please sign in again.");
+      showPopupAlert("Password reset successful. Please sign in again.");
       navigate("/login", { replace: true });
     } catch (error) {
       setErrorMsg(error.response?.data?.message || "Unable to reset password.");

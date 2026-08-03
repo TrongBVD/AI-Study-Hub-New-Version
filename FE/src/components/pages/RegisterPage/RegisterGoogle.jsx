@@ -1,4 +1,5 @@
 import { GoogleLogin, GoogleOAuthProvider } from "@react-oauth/google"; // Thêm import GoogleOAuthProvider
+import { showPopupAlert } from "../../common/ActionPopup/actionPopupService.js";
 import api from "../../../utils/api.js";
 import { storeAuthSession } from "../../../utils/authToken.js";
 import { useNavigate } from "react-router-dom";
@@ -46,7 +47,7 @@ function Register() {
         error.response?.data?.message ||
         error.response?.data?.error ||
         "Registration failed. Please try again.";
-      alert(errorMsg);
+      showPopupAlert(errorMsg);
     }
   };
 

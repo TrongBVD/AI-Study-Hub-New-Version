@@ -35,6 +35,59 @@ async function notifyDocumentUploaded({ userId, documentId, documentTitle, libra
     const container = await resolveContainerName({ libraryId, workspaceId, libraryName, workspaceName });
     const targetText = container.type === "workspace" ? `workspace "${container.name}"` : `library "${container.name}"`;
 
+    if (workspaceId) {
+      const [{ data: members, error: membersError }, { data: workspace, error: workspaceError }] =
+        await Promise.all([
+          supabase
+            .from("workspace_members")
+            .select("user_id")
+            .eq("workspace_id", workspaceId),
+          supabase
+            .from("workspaces")
+            .select("created_by")
+            .eq("id", workspaceId)
+            .maybeSingle(),
+        ]);
+
+      if (membersError) throw membersError;
+      if (workspaceError) throw workspaceError;
+
+      const recipientIds = new Set([
+        userId,
+        workspace?.created_by,
+        ...(members || []).map((member) => member.user_id),
+      ].filter(Boolean).map(String));
+
+      const rows = [...recipientIds].map((recipientId) => {
+        const isUploader = String(recipientId) === String(userId);
+        return {
+          user_id: recipientId,
+          action_type: "DOCUMENT_UPLOADED",
+          entity_type: "DOCUMENT",
+          entity_id: documentId,
+          new_data: {
+            notificationType: "documentUploaded",
+            documentTitle: documentTitle || "Document",
+            workspaceId,
+            containerName: container.name,
+            isUploader,
+          },
+          details: isUploader
+            ? `Your file "${documentTitle || "Document"}" was uploaded successfully to workspace "${container.name}".`
+            : `File "${documentTitle || "Document"}" was uploaded successfully to workspace "${container.name}".`,
+          risk_level: "INFO",
+        };
+      });
+
+      const { error } = await supabase.from("activity_logs").insert(rows);
+      if (error) throw error;
+
+      console.log(
+        `[Notification] Recorded workspace upload for ${rows.length} recipient(s): ${documentTitle}`,
+      );
+      return;
+    }
+
     const payload = {
       user_id: userId,
       action_type: "DOCUMENT_UPLOADED",
