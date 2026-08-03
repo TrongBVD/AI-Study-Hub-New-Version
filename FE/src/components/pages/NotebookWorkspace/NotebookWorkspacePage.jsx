@@ -9,7 +9,6 @@ import {
   HiOutlineLightBulb,
   HiOutlineAcademicCap,
   HiOutlineQuestionMarkCircle,
-  HiOutlineBookOpen,
   HiOutlineArrowLeft,
   HiOutlineArrowPath,
   HiOutlineArrowRight,
