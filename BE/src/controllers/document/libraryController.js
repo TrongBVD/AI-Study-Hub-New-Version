@@ -110,6 +110,14 @@ exports.updateLibrary = async (req, res) => {
       });
     }
 
+    if (targetLib.is_public && is_public === false) {
+      return res.status(400).json({
+        status: "error",
+        code: "LIBRARY_PUBLISH_IRREVERSIBLE",
+        message: "A published library cannot be made private again.",
+      });
+    }
+
     if (name && name.trim() !== "") {
       const { data: existingLib, error: searchError } = await supabase
         .from("libraries")
@@ -129,12 +137,14 @@ exports.updateLibrary = async (req, res) => {
       }
     }
 
+    const nextIsPublic = targetLib.is_public || is_public === true;
+
     const { data, error } = await supabase
       .from("libraries")
       .update({
         name: name ? name.trim() : undefined,
         description,
-        is_public,
+        is_public: nextIsPublic,
         share_on_profile
       })
       .eq("id", id)
@@ -142,6 +152,16 @@ exports.updateLibrary = async (req, res) => {
       .select().single();
 
     if (error) throw error;
+
+    if (nextIsPublic) {
+      const { error: documentPublishError } = await supabase
+        .from("documents")
+        .update({ is_public: true })
+        .eq("library_id", id)
+        .is("deleted_at", null);
+
+      if (documentPublishError) throw documentPublishError;
+    }
 
     return res.status(200).json({ status: "success", data });
   } catch (error) {

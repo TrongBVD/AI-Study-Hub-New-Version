@@ -16,24 +16,19 @@ export const THEME_OPTIONS = [
     label: "Current",
     description: "Warm cream and brown palette currently used across StudyHub.",
   },
-  {
-    value: "white",
-    label: "White",
-    description: "Clean bright surfaces, light grays, and high contrast text.",
-  },
 ];
 
 const SUPPORTED_THEMES = new Set(THEME_OPTIONS.map((theme) => theme.value));
 
 const LEGACY_THEME_MAP = {
   warm: "current",
-  light: "white",
+  light: "current",
+  white: "current",
   dark: "current",
 };
 
 const STUDY_THEME_MAP = {
   current: "warm",
-  white: "light",
 };
 
 const ThemeContext = createContext(null);

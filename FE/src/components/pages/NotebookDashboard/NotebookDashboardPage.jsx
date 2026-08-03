@@ -14,6 +14,7 @@ import {
   HiEllipsisVertical,
   HiOutlineFolderPlus,
   HiOutlineXMark,
+  HiOutlineChevronDown,
 } from "react-icons/hi2";
 import { getMyLibraries, createLibrary, deleteLibrary } from "../../../utils/documentApi.js";
 import { getPublicLibraries } from "../../../utils/publicApi.js";
@@ -279,14 +280,18 @@ export default function NotebookDashboardPage() {
           </div>
 
           {/* Sort Dropdown */}
-          <select
-            className="sort_dropdown"
-            value={sortBy}
-            onChange={(e) => setSortBy(e.target.value)}
-          >
-            <option value="recent">Most recent</option>
-            <option value="name">Name (A-Z)</option>
-          </select>
+          <div className="sort_dropdown_wrapper">
+            <select
+              className="sort_dropdown"
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              aria-label="Sort libraries"
+            >
+              <option value="recent">Most recent</option>
+              <option value="name">Name (A-Z)</option>
+            </select>
+            <HiOutlineChevronDown aria-hidden="true" />
+          </div>
 
           {/* Create New Library Button */}
           {!isGuest && (
