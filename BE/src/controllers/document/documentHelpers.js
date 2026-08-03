@@ -67,7 +67,9 @@ async function getWorkspaceDocumentUploadAccess(workspaceId, userId) {
 
   return {
     exists: true,
-    canUpload: isAdmin || normalizedRole === "editor",
+    // Contributors are workspace participants and may add learning sources.
+    // Keep Editor accepted for older rows while that legacy role is phased out.
+    canUpload: isAdmin || ["viewer", "editor"].includes(normalizedRole),
     canReplaceAny: isAdmin,
   };
 }

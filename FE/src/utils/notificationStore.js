@@ -36,8 +36,6 @@ export const defaultNotificationSettings = {
     deleted: true,
   },
 
-  deadlineReminder: "1_day_before",
-
   doNotDisturb: {
     enabled: false,
     from: "22:00",

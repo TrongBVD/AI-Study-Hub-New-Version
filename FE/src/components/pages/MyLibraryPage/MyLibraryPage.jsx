@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { showPopupAlert } from "../../common/ActionPopup/actionPopupService.js";
 import { Link } from "react-router-dom";
 import {
   LuChevronLeft,
@@ -26,7 +27,7 @@ function getStoredUserRole() {
 }
 
 function notifyGuestRegistrationRequired() {
-  alert(
+  showPopupAlert(
     "Please register or log in with an account to create libraries and workspaces.",
   );
 }

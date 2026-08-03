@@ -9,6 +9,22 @@ import {
   HiOutlineLightBulb,
   HiOutlineAcademicCap,
   HiOutlineQuestionMarkCircle,
+  HiOutlineBookOpen,
+  HiOutlineArrowLeft,
+  HiOutlineCog6Tooth,
+  HiOutlineTrash,
+  HiOutlineXMark,
+} from "react-icons/hi2";
+import {
+  getLibrary,
+  getMyDocuments,
+  uploadDocuments,
+  downloadDocument,
+  deleteDocument,
+  updateLibrary,
+  deleteLibrary,
+} from "../../../utils/documentApi.js";
+import { chatWithDocument, getChatHistory } from "../../../utils/aiApi.js";
   HiOutlineArrowPath,
   HiOutlinePlayCircle,
 } from "react-icons/hi2";
@@ -27,6 +43,7 @@ import { getStoredUser } from "../../../utils/authToken.js";
 import { getMyProfile } from "../../../utils/profileApi.js";
 import { createAppNotification } from "../../../utils/notificationStore.js";
 import Toast from "../../common/Toast/Toast.jsx";
+import { showPopupConfirm } from "../../common/ActionPopup/actionPopupService.js";
 import SourcesSidebar from "./SourcesSidebar.jsx";
 import DeleteConfirmModal from "./DeleteConfirmModal.jsx";
 import DuplicateConfirmModal from "./DuplicateConfirmModal.jsx";
@@ -95,6 +112,13 @@ export default function NotebookWorkspacePage() {
   // File upload state
   const [uploading, setUploading] = useState(false);
 
+  // Library settings state
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [libraryName, setLibraryName] = useState("");
+  const [allowPublish, setAllowPublish] = useState(false);
+  const [isSavingSettings, setIsSavingSettings] = useState(false);
+  const [isDeletingLibrary, setIsDeletingLibrary] = useState(false);
+
   // Toast Notification state
   const [toast, setToast] = useState({ message: "", title: "", type: "info" });
 
@@ -132,6 +156,11 @@ export default function NotebookWorkspacePage() {
           : docsData?.data || [];
 
         if (isMounted) {
+          const loadedLibrary = libData?.data || libData || { name: "Untitled Library" };
+          setLibrary(loadedLibrary);
+          setLibraryName(loadedLibrary.name || loadedLibrary.libraryName || "");
+          setAllowPublish(Boolean(loadedLibrary.is_public ?? loadedLibrary.isPublic));
+          const docs = Array.isArray(docsData) ? docsData : (docsData?.data || []);
           setLibrary(libData?.data || libData || { name: "Untitled Library" });
           setDocuments(docs);
 
@@ -352,6 +381,64 @@ export default function NotebookWorkspacePage() {
       const updatedDocs = await getMyDocuments(libraryId);
       const docs = Array.isArray(updatedDocs) ? updatedDocs : (updatedDocs?.data || []);
       setDocuments(docs);
+    }
+  };
+
+  const handleOpenSettings = () => {
+    setLibraryName(library?.name || library?.libraryName || "");
+    setAllowPublish(Boolean(library?.is_public ?? library?.isPublic));
+    setIsSettingsOpen(true);
+  };
+
+  const handleSaveLibrarySettings = async (event) => {
+    event.preventDefault();
+    const trimmedName = libraryName.trim();
+
+    if (!trimmedName) {
+      showToast("Please enter a library name.", "Validation Error", "error");
+      return;
+    }
+
+    setIsSavingSettings(true);
+    try {
+      const updatedLibrary = await updateLibrary(libraryId, {
+        name: trimmedName,
+        is_public: Boolean(library?.is_public) || allowPublish,
+      });
+      setLibrary(updatedLibrary);
+      setLibraryName(updatedLibrary.name || trimmedName);
+      setAllowPublish(Boolean(updatedLibrary.is_public));
+      setIsSettingsOpen(false);
+      showToast("Library settings saved successfully.", "Settings Updated", "success");
+    } catch (error) {
+      showToast(
+        error.response?.data?.message || "Could not update library settings.",
+        "Update Failed",
+        "error",
+      );
+    } finally {
+      setIsSavingSettings(false);
+    }
+  };
+
+  const handleDeleteLibrary = async () => {
+    const confirmed = await showPopupConfirm(
+      `Delete “${library?.name || "this library"}”? This action cannot be undone.`,
+      { title: "Delete library?", confirmText: "Delete", tone: "danger" },
+    );
+    if (!confirmed) return;
+
+    setIsDeletingLibrary(true);
+    try {
+      await deleteLibrary(libraryId);
+      navigate("/dashboard/libraries", { replace: true });
+    } catch (error) {
+      showToast(
+        error.response?.data?.message || "Could not delete this library.",
+        "Delete Failed",
+        "error",
+      );
+      setIsDeletingLibrary(false);
     }
   };
 
@@ -654,6 +741,16 @@ export default function NotebookWorkspacePage() {
         {/* Top Header Bar */}
         <header className="chat_header">
           <div className="header_left">
+            <button
+              type="button"
+              className="back_to_libraries_btn"
+              onClick={() => navigate("/dashboard/libraries")}
+              title="Back to Libraries"
+              aria-label="Back to Libraries"
+            >
+              <HiOutlineArrowLeft />
+              <span>Libraries</span>
+            </button>
             {!showLeftPanel && (
               <button
                 type="button"
@@ -667,6 +764,17 @@ export default function NotebookWorkspacePage() {
             )}
             <h2>{library?.name || library?.libraryName}</h2>
           </div>
+          {!isGuest && (
+            <button
+              type="button"
+              className="library_settings_btn"
+              onClick={handleOpenSettings}
+              title="Library settings"
+              aria-label="Open library settings"
+            >
+              <HiOutlineCog6Tooth />
+            </button>
+          )}
           <div className="workspace_context_badges" aria-label="Chat context">
             <button
               type="button"
@@ -977,6 +1085,93 @@ export default function NotebookWorkspacePage() {
         onConfirm={handleConfirmDelete}
         onClose={() => setDeleteConfirmDoc(null)}
       />
+
+      {isSettingsOpen && (
+        <div
+          className="library_settings_overlay"
+          role="presentation"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget && !isSavingSettings) {
+              setIsSettingsOpen(false);
+            }
+          }}
+        >
+          <section
+            className="library_settings_modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="library-settings-title"
+          >
+            <header className="library_settings_modal_header">
+              <div>
+                <span>Library</span>
+                <h2 id="library-settings-title">Settings</h2>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsSettingsOpen(false)}
+                disabled={isSavingSettings}
+                aria-label="Close library settings"
+              >
+                <HiOutlineXMark />
+              </button>
+            </header>
+
+            <form className="library_settings_form" onSubmit={handleSaveLibrarySettings}>
+              <label>
+                <span>Library name</span>
+                <input
+                  type="text"
+                  value={libraryName}
+                  onChange={(event) => setLibraryName(event.target.value)}
+                  maxLength={100}
+                  required
+                />
+              </label>
+
+              <div className="library_publish_setting">
+                <div>
+                  <strong>Allow publish</strong>
+                  <p>
+                    {library?.is_public
+                      ? "This library is public. Publishing cannot be turned off."
+                      : "Make this library available publicly. This action cannot be reversed."}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  className={`library_publish_switch ${allowPublish ? "is_on" : ""}`}
+                  onClick={() => setAllowPublish(true)}
+                  disabled={Boolean(library?.is_public)}
+                  role="switch"
+                  aria-checked={allowPublish}
+                >
+                  <span />
+                </button>
+              </div>
+
+              <div className="library_settings_actions">
+                <button
+                  type="button"
+                  className="library_delete_btn"
+                  onClick={handleDeleteLibrary}
+                  disabled={isDeletingLibrary || isSavingSettings}
+                >
+                  <HiOutlineTrash />
+                  {isDeletingLibrary ? "Deleting..." : "Delete library"}
+                </button>
+                <button
+                  type="submit"
+                  className="library_settings_save_btn"
+                  disabled={isSavingSettings || isDeletingLibrary}
+                >
+                  {isSavingSettings ? "Saving..." : "Save changes"}
+                </button>
+              </div>
+            </form>
+          </section>
+        </div>
+      )}
     </div>
   );
 }

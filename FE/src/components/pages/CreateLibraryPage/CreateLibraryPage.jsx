@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { showPopupAlert } from "../../common/ActionPopup/actionPopupService.js";
 import { useLocation, useNavigate } from "react-router-dom";
 import { LuBookPlus, LuLibraryBig } from "react-icons/lu";
 import "./CreateLibraryPage.css";
@@ -136,17 +137,17 @@ function CreateLibraryPage() {
     }
 
     if (trimmedLibraryName.length > TITLE_LIMIT) {
-      alert(`Library name cannot exceed ${TITLE_LIMIT} characters.`);
+      showPopupAlert(`Library name cannot exceed ${TITLE_LIMIT} characters.`);
       return;
     }
 
     if (isDuplicateName) {
-      alert("A library with this name already exists. Please choose another name.");
+      showPopupAlert("A library with this name already exists. Please choose another name.");
       return;
     }
 
     if (trimmedDescription.length > DESCRIPTION_LIMIT) {
-      alert(`Library description cannot exceed ${DESCRIPTION_LIMIT} characters.`);
+      showPopupAlert(`Library description cannot exceed ${DESCRIPTION_LIMIT} characters.`);
       return;
     }
 
@@ -169,7 +170,7 @@ function CreateLibraryPage() {
       }
 
       if (hasDuplicateLibraryName(safeLatestLibraries, trimmedLibraryName)) {
-        alert("A library with this name already exists. Please choose another name.");
+        showPopupAlert("A library with this name already exists. Please choose another name.");
         return;
       }
 
@@ -208,11 +209,11 @@ function CreateLibraryPage() {
     } catch (error) {
       console.error("Lỗi tạo thư viện:", error);
       if (error?.response?.status === 409) {
-        alert("A library with this name already exists. Please choose another name.");
+        showPopupAlert("A library with this name already exists. Please choose another name.");
         return;
       }
 
-      alert("Lỗi kết nối với máy chủ. Thư viện chưa được lưu vào Database.");
+      showPopupAlert("Lỗi kết nối với máy chủ. Thư viện chưa được lưu vào Database.");
     }
   }
 

@@ -950,3 +950,99 @@ body[data-theme="black"] .settings_theme_option.active {
   border-color: var(--accent-color);
   color: var(--text-primary);
 }
+
+/* Shared dark treatment for legacy custom dialogs. The recently redesigned
+   workspace leave/transfer dialog intentionally keeps its own dedicated rules. */
+:is(
+  .inform_popup,
+  .invite-modal-container,
+  .crop_modal_content,
+  .register_bio_modal,
+  .deleted-workspaces__modal,
+  .user-management-page__confirm-modal,
+  .ai-moderation-preview-modal,
+  .library_share_modal,
+  .hashtag_modal,
+  .library_confirm_modal,
+  .storage_limit_modal,
+  .duplicate_confirm_modal,
+  .discussion_topic_modal_card,
+  .workspace_solution_detail_modal,
+  .workspace_solution_comments_modal,
+  .workspace_invite_modal,
+  .library_settings_modal,
+  .modal_card.sleek_modal
+) {
+  background: #171b24 !important;
+  border-color: #2b3545 !important;
+  color: #f8fafc !important;
+  box-shadow: 0 28px 80px rgba(0, 0, 0, 0.52) !important;
+}
+
+:is(
+  .inform_popup,
+  .invite-modal-container,
+  .crop_modal_content,
+  .register_bio_modal,
+  .deleted-workspaces__modal,
+  .user-management-page__confirm-modal,
+  .library_share_modal,
+  .hashtag_modal,
+  .library_confirm_modal,
+  .storage_limit_modal,
+  .duplicate_confirm_modal,
+  .discussion_topic_modal_card,
+  .workspace_solution_detail_modal,
+  .workspace_solution_comments_modal,
+  .workspace_invite_modal,
+  .library_settings_modal,
+  .modal_card.sleek_modal
+) :is(h1, h2, h3, h4, strong, label) {
+  color: #f8fafc !important;
+}
+
+:is(
+  .inform_popup,
+  .invite-modal-container,
+  .crop_modal_content,
+  .register_bio_modal,
+  .deleted-workspaces__modal,
+  .user-management-page__confirm-modal,
+  .library_share_modal,
+  .hashtag_modal,
+  .library_confirm_modal,
+  .storage_limit_modal,
+  .duplicate_confirm_modal,
+  .discussion_topic_modal_card,
+  .workspace_solution_detail_modal,
+  .workspace_solution_comments_modal,
+  .workspace_invite_modal,
+  .library_settings_modal,
+  .modal_card.sleek_modal
+) :is(p, span, small) {
+  color: #cbd5e1;
+}
+
+:is(
+  .inform_popup,
+  .invite-modal-container,
+  .crop_modal_content,
+  .register_bio_modal,
+  .deleted-workspaces__modal,
+  .user-management-page__confirm-modal,
+  .library_share_modal,
+  .hashtag_modal,
+  .library_confirm_modal,
+  .storage_limit_modal,
+  .duplicate_confirm_modal,
+  .discussion_topic_modal_card,
+  .workspace_solution_detail_modal,
+  .workspace_solution_comments_modal,
+  .workspace_invite_modal,
+  .library_settings_modal,
+  .modal_card.sleek_modal
+) :is(input, textarea, select) {
+  background: #0d0f12 !important;
+  border-color: #334155 !important;
+  color: #f8fafc !important;
+}

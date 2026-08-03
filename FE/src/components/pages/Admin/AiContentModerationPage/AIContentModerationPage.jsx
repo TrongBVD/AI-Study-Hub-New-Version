@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { showPopupAlert } from "../../../common/ActionPopup/actionPopupService.js";
 import { getModerationDocuments, reviewDocument, getModerationDocumentViewUrl } from "../../../../utils/adminApi";
 import "./AIContentModerationPage.css";
 
@@ -144,10 +145,10 @@ function AIContentModerationPage() {
       if (data?.viewUrl) {
         setPreviewModalUrl(data.viewUrl);
       } else {
-        alert("Could not load preview URL for this document.");
+        showPopupAlert("Could not load preview URL for this document.");
       }
     } catch (err) {
-      alert(err.response?.data?.message || "Failed to load document preview.");
+      showPopupAlert(err.response?.data?.message || "Failed to load document preview.");
     } finally {
       setIsPreviewLoading(false);
     }

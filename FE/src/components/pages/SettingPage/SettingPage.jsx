@@ -403,7 +403,6 @@ function SettingPage() {
           {activeSetting === "Notification settings" && (
             <NotificationSettings
               notificationSettings={notificationSettings}
-              setNotificationSettings={setNotificationSettings}
               toggleNotificationSetting={toggleNotificationSetting}
               toggleNotificationCategory={toggleNotificationCategory}
             />
@@ -679,7 +678,6 @@ function ProfileAppearanceSettings({
 
 function NotificationSettings({
   notificationSettings,
-  setNotificationSettings,
   toggleNotificationSetting,
   toggleNotificationCategory,
 }) {
@@ -764,37 +762,6 @@ function NotificationSettings({
         </div>
       </SettingsPanel>
 
-      <SettingsPanel
-        title="Reminder schedule"
-        description="Set the default time for task and subtask deadline reminders."
-      >
-        <div className="settings_table">
-          <SettingRow
-            title="Deadline reminder"
-            description="Applied when a task does not define its own reminder."
-          >
-            <label className="settings_field">
-              <span>Reminder time</span>
-              <select
-                className="settings_select"
-                value={notificationSettings.deadlineReminder}
-                onChange={(event) =>
-                  setNotificationSettings((previousSettings) => ({
-                    ...previousSettings,
-                    deadlineReminder: event.target.value,
-                  }))
-                }
-              >
-                <option value="none">No reminder</option>
-                <option value="at_due_time">At due time</option>
-                <option value="10_minutes_before">10 minutes before</option>
-                <option value="1_hour_before">1 hour before</option>
-                <option value="1_day_before">1 day before</option>
-              </select>
-            </label>
-          </SettingRow>
-        </div>
-      </SettingsPanel>
     </>
   );
 }
@@ -996,6 +963,7 @@ function PasswordSettings() {
 
 function DataAccountSettings() {
   const [password, setPassword] = useState("");
+  const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const [confirmation, setConfirmation] = useState("");
   const [status, setStatus] = useState("");
   const [isDeleting, setIsDeleting] = useState(false);
@@ -1049,16 +1017,30 @@ function DataAccountSettings() {
 
           <label className="settings_field">
             <span>Current password</span>
-            <input
-              type="password"
-              value={password}
-              onChange={(event) => {
-                setPassword(event.target.value);
-                setStatus("");
-              }}
-              autoComplete="current-password"
-              placeholder="Enter your current password"
-            />
+            <div className="settings_password_input_wrap">
+              <input
+                type={isPasswordVisible ? "text" : "password"}
+                value={password}
+                onChange={(event) => {
+                  setPassword(event.target.value);
+                  setStatus("");
+                }}
+                autoComplete="current-password"
+                placeholder="Enter your current password"
+              />
+              <button
+                type="button"
+                className={`settings_password_visibility ${
+                  isPasswordVisible ? "is_visible" : "is_hidden"
+                }`}
+                onClick={() => setIsPasswordVisible((isVisible) => !isVisible)}
+                aria-label={isPasswordVisible ? "Hide current password" : "Show current password"}
+                aria-pressed={isPasswordVisible}
+                title={isPasswordVisible ? "Hide password" : "Show password"}
+              >
+                <i className="ti-eye" aria-hidden="true"></i>
+              </button>
+            </div>
           </label>
 
           <label className="settings_field">

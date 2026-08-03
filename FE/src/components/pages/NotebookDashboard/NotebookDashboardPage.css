@@ -72,18 +72,23 @@
 
 .search_input_wrapper input {
   background: #181b20;
-  border: 1px solid #2a2e37;
+  border: none;
   border-radius: 20px;
   padding: 8px 14px 8px 36px;
   color: #f8fafc;
+  caret-color: transparent;
   font-size: 14px;
   outline: none;
+  box-shadow: none;
+  appearance: none;
   width: 220px;
   transition: all 0.2s ease;
 }
 
 .search_input_wrapper input:focus {
-  border-color: #3b82f6;
+  border: none;
+  outline: none;
+  box-shadow: none;
   width: 260px;
 }
 
@@ -114,15 +119,57 @@
   color: #38bdf8;
 }
 
+.sort_dropdown_wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.sort_dropdown_wrapper > svg {
+  position: absolute;
+  right: 11px;
+  width: 16px;
+  height: 16px;
+  color: #94a3b8;
+  pointer-events: none;
+  transition: color 0.2s ease, transform 0.2s ease;
+}
+
 .sort_dropdown {
-  background: #181b20;
-  border: 1px solid #2a2e37;
-  color: #cbd5e1;
-  border-radius: 8px;
-  padding: 8px 12px;
+  min-width: 150px;
+  appearance: none;
+  color-scheme: dark;
+  background: #181b20 !important;
+  border: 1px solid #2d3546 !important;
+  color: #e2e8f0 !important;
+  border-radius: 10px;
+  padding: 9px 36px 9px 14px;
   font-size: 14px;
+  font-weight: 500;
   outline: none;
   cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
+  transition: border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
+}
+
+.sort_dropdown:hover {
+  background: #1e232c !important;
+  border-color: #465269 !important;
+}
+
+.sort_dropdown:focus {
+  border-color: #38bdf8 !important;
+  box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.14);
+}
+
+.sort_dropdown_wrapper:focus-within > svg {
+  color: #38bdf8;
+  transform: rotate(180deg);
+}
+
+.sort_dropdown option {
+  background: #181b20;
+  color: #e2e8f0;
 }
 
 .create_new_btn {
@@ -288,6 +335,7 @@
   flex-direction: column;
   justify-content: space-between;
   min-height: 160px;
+  color: #f8fafc;
   cursor: pointer;
   transition: all 0.2s ease;
 }
@@ -309,6 +357,10 @@
 .library_card.create_card:hover {
   border-color: #38bdf8;
   background: rgba(24, 27, 32, 0.8);
+}
+
+.library_card.create_card > span {
+  color: #f8fafc;
 }
 
 .create_icon_circle {
@@ -405,13 +457,13 @@
 .card_body h3 {
   font-size: 16px;
   font-weight: 600;
-  color: var(--text-primary, #0f172a);
+  color: #f8fafc;
   margin-bottom: 6px;
 }
 
 .card_description {
   font-size: 13px;
-  color: var(--text-secondary, #475569);
+  color: #f8fafc;
   line-height: 1.4;
   margin-bottom: 12px;
   display: -webkit-box;
@@ -425,7 +477,7 @@
   align-items: center;
   gap: 8px;
   font-size: 12px;
-  color: var(--text-muted, #64748b);
+  color: #f8fafc;
 }
 
 /* Keep library card copy readable on the dark blue/black dashboard even when

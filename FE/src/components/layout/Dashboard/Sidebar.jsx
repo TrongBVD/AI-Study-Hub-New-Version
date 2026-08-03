@@ -44,7 +44,7 @@ function Sidebar({ isOpen, onClose }) {
     { icon: HiOutlineMagnifyingGlass, label: "Discover", path: "/dashboard/discover" },
     {
       icon: HiOutlineBookOpen,
-      label: "My Libraries",
+      label: "Libraries",
       path: "/dashboard/libraries",
       hideForGuest: true,
     },

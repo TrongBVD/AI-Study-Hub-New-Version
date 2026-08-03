@@ -80,30 +80,46 @@ exports.listDocuments = async (req, res) => {
 
     if (error) throw error;
 
-    const { data: topicRows, error: topicRowsError } = await supabase
-      .from("workspace_discussion_topics")
-      .select("id")
-      .eq("workspace_id", workspaceId);
-    if (topicRowsError) throw topicRowsError;
+    const documents = data || [];
+    const uploaderIds = [...new Set(
+      documents
+        .filter((document) => {
+          const uploader = Array.isArray(document.uploader)
+            ? document.uploader[0]
+            : document.uploader;
+          return !uploader;
+        })
+        .map((document) => document.uploader_id)
+        .filter(Boolean),
+    )];
+    const uploaderById = new Map();
 
-    const topicIds = (topicRows || []).map((topic) => topic.id);
-    let attachmentPaths = new Set();
-    if (topicIds.length > 0) {
-      const { data: attachmentRows, error: attachmentRowsError } = await supabase
-        .from("workspace_discussion_attachments")
-        .select("file_url")
-        .in("topic_id", topicIds);
-      if (attachmentRowsError) throw attachmentRowsError;
-      attachmentPaths = new Set(
-        (attachmentRows || []).map((attachment) => attachment.file_url),
-      );
+    if (uploaderIds.length > 0) {
+      const { data: uploaderProfiles, error: uploaderProfilesError } =
+        await supabase
+          .from("profiles")
+          .select("id, email, username, full_name")
+          .in("id", uploaderIds);
+
+      if (uploaderProfilesError) {
+        console.warn("Could not load workspace document uploader profiles:", uploaderProfilesError);
+      } else {
+        (uploaderProfiles || []).forEach((profile) =>
+          uploaderById.set(String(profile.id), profile),
+        );
+      }
     }
 
     return res.status(200).json({
       status: "success",
-      data: (data || [])
-        .filter((document) => !attachmentPaths.has(document.file_url))
-        .map(mapWorkspaceDocument),
+      data: documents
+        .map((document) =>
+          mapWorkspaceDocument({
+            ...document,
+            uploader:
+              uploaderById.get(String(document.uploader_id)) || document.uploader,
+          }),
+        ),
     });
   } catch (error) {
     console.error("listWorkspaceDocuments error:", error);
