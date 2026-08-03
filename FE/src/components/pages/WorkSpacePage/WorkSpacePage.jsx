@@ -359,7 +359,6 @@ function WorkSpacePage() {
   const [editingSolutionId, setEditingSolutionId] = useState(null);
   const [selectedSolutionDetail, setSelectedSolutionDetail] = useState(null);
   const [topicTitle, setTopicTitle] = useState("");
-  const [editingTopicField, setEditingTopicField] = useState(null);
   const [topicContent, setTopicContent] = useState("");
   const [isTopicDescriptionEditing, setIsTopicDescriptionEditing] =
     useState(false);
@@ -1795,6 +1794,8 @@ async function handleMarkSelectedTopicResolved() {
   await handleUpdateTopicField("status", "Solved");
 }
 
+// Retained for the discussion feature while its navigation tab is disabled.
+// eslint-disable-next-line no-unused-vars
 async function handleUpdateTopicDeadlineMode(value) {
   if (!requireTopicPermission("edit topic deadline")) return;
 
@@ -1822,6 +1823,8 @@ async function handleUpdateTopicDeadlineMode(value) {
   }
 }
 
+// Retained for the discussion feature while its navigation tab is disabled.
+// eslint-disable-next-line no-unused-vars
 async function handleUpdateTopicDate(field, value) {
   if (!requireTopicPermission("edit topic deadline")) return;
 
@@ -1848,6 +1851,8 @@ async function handleUpdateTopicDate(field, value) {
   }
 }
 
+// Retained for the discussion feature while its navigation tab is disabled.
+// eslint-disable-next-line no-unused-vars
 async function handleAddTopicComment(e) {
   e.preventDefault();
 
@@ -3128,6 +3133,8 @@ function renderMembersTab() {
   );
 }
 
+// Retained so the discussion UI can be restored without rebuilding its state.
+// eslint-disable-next-line no-unused-vars
 function renderDiscussionTab() {
   const totalTopicFiles = discussionTopics.reduce(
     (total, topic) => total + (topic.files?.length || 0),
