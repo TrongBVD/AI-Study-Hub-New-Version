@@ -3,6 +3,7 @@ import { showPopupAlert } from "../../common/ActionPopup/actionPopupService.js";
 import api from "../../../utils/api.js";
 import { storeAuthSession } from "../../../utils/authToken.js";
 import { useNavigate } from "react-router-dom";
+import { HiOutlineUserPlus } from "react-icons/hi2";
 import "./Register.css";
 
 const GOOGLE_CLIENT_ID = String(
@@ -54,7 +55,10 @@ function Register() {
   return (
     <div className="register_page">
       <div className="register_card">
-        <p className="register_title">Register</p>
+        <p className="register_title register_title_with_icon">
+          <HiOutlineUserPlus aria-hidden="true" />
+          Register
+        </p>
         <p className="register_message">
           Sign up instantly using your Google account to secure and access your profile.
         </p>

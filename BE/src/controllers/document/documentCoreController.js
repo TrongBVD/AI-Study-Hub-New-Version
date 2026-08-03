@@ -299,14 +299,7 @@ exports.listMyDocuments = async (req, res) => {
         is_public,
         status,
         ai_reject_reason,
-        created_at,
-        document_tags (
-          assigned_by,
-          tags (
-            id,
-            name
-          )
-        )
+        created_at
       `
       )
       .eq("uploader_id", userID)

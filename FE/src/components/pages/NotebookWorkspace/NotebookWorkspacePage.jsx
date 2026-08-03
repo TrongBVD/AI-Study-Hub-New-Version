@@ -11,6 +11,8 @@ import {
   HiOutlineQuestionMarkCircle,
   HiOutlineBookOpen,
   HiOutlineArrowLeft,
+  HiOutlineArrowPath,
+  HiOutlineArrowRight,
   HiOutlineCog6Tooth,
   HiOutlineTrash,
   HiOutlineXMark,
@@ -24,16 +26,12 @@ import {
   updateLibrary,
   deleteLibrary,
 } from "../../../utils/documentApi.js";
-import { chatWithDocument, getChatHistory } from "../../../utils/aiApi.js";
-  HiOutlineArrowPath,
-  HiOutlinePlayCircle,
-} from "react-icons/hi2";
 import {
   LuPanelLeftOpen,
   LuPanelRightClose,
   LuPanelRightOpen,
 } from "react-icons/lu";
-import { getLibrary, getMyDocuments, uploadDocuments, downloadDocument, deleteDocument } from "../../../utils/documentApi.js";
+import { MdQuiz } from "react-icons/md";
 import {
   chatWithDocument,
   deleteChatHistory,
@@ -466,6 +464,17 @@ export default function NotebookWorkspacePage() {
         question: query,
       });
 
+      if (res?.action === "OPEN_FLASHCARDS") {
+        const flashcardParams = new URLSearchParams();
+        (res.documentIds || []).forEach((documentId) => {
+          flashcardParams.append("documentId", documentId);
+        });
+        if (res.autoGenerate) flashcardParams.set("generate", "1");
+        const flashcardQuery = flashcardParams.toString();
+        navigate(`/dashboard/flashcards${flashcardQuery ? `?${flashcardQuery}` : ""}`);
+        return;
+      }
+
       const aiAnswer = res?.data?.answer || res?.answer || "I parsed your selected sources and summarized the answer.";
       const sourceCitations = [
         ...new Map(
@@ -664,18 +673,30 @@ export default function NotebookWorkspacePage() {
   };
 
   const handleOpenFlashcards = () => {
-    if (!primarySelectedDocumentId) {
+    if (selectedDocIds.size === 0 || selectedDocIds.size > 5) {
       showToast(
-        "Select a source document before opening flashcards.",
-        "Select a Source",
+        "Select between one and five source documents before generating flashcards.",
+        "Select Up To Five Sources",
         "info",
       );
       return;
     }
 
-    navigate(
-      `/dashboard/flashcards?documentId=${encodeURIComponent(primarySelectedDocumentId)}&generate=1`,
-    );
+    const flashcardParams = new URLSearchParams();
+    selectedDocIds.forEach((documentId) => {
+      flashcardParams.append("documentId", documentId);
+    });
+    flashcardParams.set("generate", "1");
+    navigate(`/dashboard/flashcards?${flashcardParams.toString()}`);
+  };
+
+  const handleOpenFlashcardsList = () => {
+    const flashcardParams = new URLSearchParams();
+    [...selectedDocIds].slice(0, 5).forEach((documentId) => {
+      flashcardParams.append("documentId", documentId);
+    });
+    const flashcardQuery = flashcardParams.toString();
+    navigate(`/dashboard/flashcards${flashcardQuery ? `?${flashcardQuery}` : ""}`);
   };
 
   // Starter prompt starter cards
@@ -764,18 +785,16 @@ export default function NotebookWorkspacePage() {
             )}
             <h2>{library?.name || library?.libraryName}</h2>
           </div>
-          {!isGuest && (
+          <div className="workspace_context_badges" aria-label="Chat context">
             <button
               type="button"
-              className="library_settings_btn"
-              onClick={handleOpenSettings}
-              title="Library settings"
-              aria-label="Open library settings"
+              className="flashcards_list_btn"
+              onClick={handleOpenFlashcardsList}
+              title="Open your flashcard sets"
             >
-              <HiOutlineCog6Tooth />
+              <MdQuiz aria-hidden="true" />
+              <span>Flashcards List</span>
             </button>
-          )}
-          <div className="workspace_context_badges" aria-label="Chat context">
             <button
               type="button"
               className="reset_chat_btn"
@@ -784,15 +803,8 @@ export default function NotebookWorkspacePage() {
               title="Start a new chat without deleting history"
             >
               <HiOutlineArrowPath aria-hidden="true" />
-              <span>Reset chat</span>
+              <span>Reset Chat</span>
             </button>
-            <span className="workspace_source_badge">
-              {selectedDocIds.size}/{documents.length} sources selected
-            </span>
-            <span className="workspace_ai_badge">
-              <span aria-hidden="true" />
-              StudyHub AI ready
-            </span>
             {!showRightPanel && (
               <button
                 type="button"
@@ -802,6 +814,17 @@ export default function NotebookWorkspacePage() {
                 aria-label="Expand study tools sidebar"
               >
                 <LuPanelRightOpen />
+              </button>
+            )}
+            {!isGuest && (
+              <button
+                type="button"
+                className="library_settings_btn"
+                onClick={handleOpenSettings}
+                title="Library settings"
+                aria-label="Open library settings"
+              >
+                <HiOutlineCog6Tooth />
               </button>
             )}
           </div>
@@ -1030,7 +1053,7 @@ export default function NotebookWorkspacePage() {
                     <strong>{tool.title}</strong>
                     <small>Use {selectedDocIds.size} selected sources</small>
                   </span>
-                  <HiOutlinePlayCircle className="studio_tool_arrow" />
+                  <HiOutlineArrowRight className="studio_tool_arrow" />
                 </button>
               );
             })}
@@ -1048,7 +1071,7 @@ export default function NotebookWorkspacePage() {
                 <strong>Generate Flashcards</strong>
                 <small>Open the flashcard study page</small>
               </span>
-              <HiOutlinePlayCircle className="studio_tool_arrow" />
+              <HiOutlineArrowRight className="studio_tool_arrow" />
             </button>
           </div>
 

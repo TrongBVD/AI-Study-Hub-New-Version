@@ -30,6 +30,29 @@
   overflow-x: hidden;
 }
 
+body[data-theme="white"] .my_workspace_page {
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-muted: #64748b;
+  --bg-primary: #f8fafc;
+  --bg-card: #ffffff;
+  --bg-secondary: #f1f5f9;
+  --bg-elevated: #ffffff;
+  --hero-card-bg: #ffffff;
+  --border-color: #dbeafe;
+  --accent-color: #0284c7;
+  --accent-soft: #e0f2fe;
+  --button-bg: #0284c7;
+  --button-hover-bg: #0369a1;
+  --button-text: #ffffff;
+  --collection-card-bg: #ffffff;
+  --collection-card-hover-bg: #eff6ff;
+  --collection-action-bg: #0f172a;
+  --collection-action-text: #ffffff;
+  --focus-ring: rgba(2, 132, 199, 0.22);
+  --shadow-soft: 0 16px 38px rgba(15, 23, 42, 0.1);
+}
+
 .workspace_content {
   width: 100%;
   max-width: 1120px;

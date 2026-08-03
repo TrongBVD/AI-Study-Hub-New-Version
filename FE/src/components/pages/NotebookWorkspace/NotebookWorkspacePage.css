@@ -395,6 +395,7 @@ body[data-theme] .notebook_workspace_container .workspace_context_badges {
   color: inherit;
 }
 
+.flashcards_list_btn,
 .reset_chat_btn {
   display: inline-flex;
   min-height: 30px;
@@ -416,11 +417,13 @@ body[data-theme] .notebook_workspace_container .workspace_context_badges {
     color 150ms ease;
 }
 
+.flashcards_list_btn svg,
 .reset_chat_btn svg {
   width: 16px;
   height: 16px;
 }
 
+.flashcards_list_btn:hover,
 .reset_chat_btn:hover:not(:disabled) {
   border-color: var(--notebook-accent, #38bdf8);
   background: var(--notebook-hover, rgba(56, 189, 248, 0.1));
@@ -432,33 +435,10 @@ body[data-theme] .notebook_workspace_container .workspace_context_badges {
   opacity: 0.45;
 }
 
-.workspace_source_badge,
-.workspace_ai_badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  min-height: 30px;
-  padding: 0 12px;
-  border: 1px solid #26344a;
-  border-radius: 999px;
-  background: #111827;
-  color: #cbd5e1;
-  font-size: 12px;
-  font-weight: 600;
-  white-space: nowrap;
-}
-
-.workspace_source_badge {
-  border-color: rgba(56, 189, 248, 0.34);
-  color: #7dd3fc;
-}
-
-.workspace_ai_badge > span {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: #38bdf8;
-  box-shadow: 0 0 10px rgba(56, 189, 248, 0.8);
+.flashcards_list_btn {
+  border-color: rgba(56, 189, 248, 0.42);
+  background: rgba(56, 189, 248, 0.1);
+  color: var(--notebook-accent, #7dd3fc);
 }
 
 .shared_badge {
@@ -472,23 +452,23 @@ body[data-theme] .notebook_workspace_container .workspace_context_badges {
 }
 
 .library_settings_btn {
-  width: 36px;
-  height: 36px;
+  width: 40px;
+  height: 40px;
   display: grid;
   place-items: center;
-  border: 1px solid #2d3546;
+  border: 1px solid transparent;
   border-radius: 10px;
-  background: #1b202c;
+  background: transparent;
   color: #94a3b8;
-  font-size: 18px;
+  font-size: 21px;
   cursor: pointer;
   transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
 }
 
 .library_settings_btn:hover,
 .library_settings_btn:focus-visible {
-  border-color: #38bdf8;
-  background: #283040;
+  border-color: transparent;
+  background: transparent;
   color: #38bdf8;
   outline: none;
 }
@@ -1297,7 +1277,7 @@ body[data-theme] .notebook_workspace_container .workspace_context_badges {
 .chat_history_section {
   display: flex;
   min-height: 0;
-  max-height: min(320px, 40vh);
+  max-height: min(270px, 36vh);
   margin-top: auto;
   flex: 0 0 auto;
   overflow: hidden;
@@ -1317,24 +1297,26 @@ body[data-theme] .notebook_workspace_container .workspace_context_badges {
   padding: 0 2px 10px;
 }
 
-.chat_history_heading > div:first-child {
+.chat_history_title {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   min-width: 0;
 }
 
-.chat_history_heading > div:first-child span {
-  display: block;
+.chat_history_title svg {
+  width: 15px;
+  height: 15px;
+  flex: 0 0 auto;
+  color: #38bdf8;
+}
+
+.chat_history_title span {
   color: #7dd3fc;
   font-size: 9px;
   font-weight: 800;
   letter-spacing: 0.09em;
   text-transform: uppercase;
-}
-
-.chat_history_heading strong {
-  display: block;
-  margin-top: 3px;
-  color: #fff;
-  font-size: 13px;
 }
 
 .chat_history_heading_actions {
@@ -1377,13 +1359,32 @@ body[data-theme] .notebook_workspace_container .workspace_context_badges {
 .chat_history_list {
   display: flex;
   min-height: 0;
-  max-height: min(244px, 31vh);
+  max-height: min(190px, 26vh);
   overflow-y: auto;
   overscroll-behavior-y: contain;
   scrollbar-gutter: stable;
+  scrollbar-color: #38bdf8 transparent;
+  scrollbar-width: thin;
   flex-direction: column;
   gap: 4px;
-  padding-right: 0;
+  padding-right: 4px;
+}
+
+.chat_history_list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.chat_history_list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.chat_history_list::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgba(56, 189, 248, 0.7);
+}
+
+.chat_history_list::-webkit-scrollbar-thumb:hover {
+  background: #38bdf8;
 }
 
 .sources_panel .panel_content {
@@ -1816,24 +1817,16 @@ body[data-theme] .notebook_workspace_container .workspace_context_badges {
 }
 
 @media (max-width: 760px) {
-  .workspace_ai_badge {
-    display: none;
-  }
-
+  .flashcards_list_btn span,
   .reset_chat_btn span {
     display: none;
   }
 
+  .flashcards_list_btn,
   .reset_chat_btn {
     width: 30px;
     padding: 0;
     justify-content: center;
-  }
-
-  .workspace_source_badge {
-    min-height: 28px;
-    padding: 0 9px;
-    font-size: 11px;
   }
 
   .chat_message_row,

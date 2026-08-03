@@ -1,6 +1,7 @@
 import { useState } from "react";
 import "./Register.css";
 import FormInput from "../../common/FormInput/FormInput.jsx";
+import { HiOutlineUserPlus } from "react-icons/hi2";
 
 function EnterUserNamePass() {
   // 2. Tạo State để lưu trữ dữ liệu trong bộ nhớ
@@ -16,7 +17,10 @@ function EnterUserNamePass() {
   return (
     <div className="register_page">
       <form className="register_form" onSubmit={handleSubmit}>
-        <p className="register_title">Register</p>
+        <p className="register_title register_title_with_icon">
+          <HiOutlineUserPlus aria-hidden="true" />
+          Register
+        </p>
         <div className="register_flex">
           <FormInput
             type="text"
