@@ -43,7 +43,7 @@
   right: -170px;
   top: -170px;
   border-radius: 50%;
-  background: rgba(180, 83, 26, 0.04);
+  background: rgba(37, 99, 235, 0.04);
   pointer-events: none;
 }
 
@@ -430,7 +430,7 @@
 .visibility_card:hover {
   transform: translateY(-3px);
   background: var(--bg-secondary);
-  border-color: rgba(180, 83, 26, 0.38);
+  border-color: rgba(37, 99, 235, 0.38);
 }
 
 .visibility_card.selected {
@@ -512,7 +512,7 @@
 }
 
 .create_form_import_btn {
-  border: 1px solid #c99e70;
+  border: 1px solid #93c5fd;
   background: var(--bg-secondary, var(--accent-soft));
   color: #6b3718;
 }

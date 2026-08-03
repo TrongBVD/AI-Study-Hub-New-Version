@@ -406,7 +406,7 @@ body[data-theme="white"] .user-management-page__detail-panel {
 .user-management-page__table td {
   height: 86px;
   padding: 12px 16px;
-  border-bottom: 1px solid #ebdfd0;
+  border-bottom: 1px solid #dbeafe;
   color: var(--text-primary, #3c2a1e);
   font-size: 11px;
   vertical-align: middle;
@@ -508,8 +508,8 @@ body[data-theme="white"] .user-management-page__detail-panel {
 }
 
 .user-management-page__status--pending {
-  color: #9a511e;
-  background: #f2dfc6;
+  color: #2563eb;
+  background: #dbeafe;
 }
 
 .user-management-page__quota {
@@ -955,7 +955,7 @@ body[data-theme="white"] .user-management-page__save-role {
   border-radius: 18px;
   background: var(--bg-card);
   padding: 24px;
-  box-shadow: 0 28px 80px rgba(47, 32, 21, 0.3);
+  box-shadow: 0 28px 80px rgba(15, 23, 42, 0.3);
 }
 
 .user-management-page__modal-title {

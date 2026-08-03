@@ -651,8 +651,8 @@ body[data-theme="white"] .ai-moderation-page__meta-grid div {
 }
 
 .ai-moderation-page__severity.medium {
-  background: #f5dfc0;
-  color: #8b4a15;
+  background: #bfdbfe;
+  color: #1d4ed8;
 }
 
 .ai-moderation-page__status-pill {
@@ -859,7 +859,7 @@ body[data-theme="white"] .ai-moderation-page__meta-grid div {
   min-height: 52px;
   border: 1px solid var(--moderation-line);
   border-radius: 8px;
-  background: #faf7f1;
+  background: #f8fafc;
   padding: 9px;
 }
 
@@ -943,7 +943,7 @@ body[data-theme="white"] .ai-moderation-page__meta-grid div {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: var(--bg-secondary, #faf7f1);
+  background: var(--bg-secondary, #f8fafc);
 }
 
 .ai-moderation-preview-header h3 {

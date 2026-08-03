@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import axios from "axios";
 import FormInput from "../../common/FormInput/FormInput.jsx";
 import { GoogleLogin, GoogleOAuthProvider } from "@react-oauth/google";
+import { HiOutlineFingerPrint } from "react-icons/hi2";
 import api, { refreshAccessToken } from "../../../utils/api.js";
 import { useNavigate } from "react-router-dom";
 import {
@@ -30,7 +31,7 @@ function LoginPage() {
     const token = getAccessToken();
     const shouldRestoreRememberedSession =
       localStorage.getItem("rememberMe") === "true";
-    
+
     if (isTokenValid(token)) {
       navigate("/dashboard/home", { replace: true });
     } else if (shouldRestoreRememberedSession) {
@@ -39,7 +40,7 @@ function LoginPage() {
           if (isMounted) navigate("/dashboard/home", { replace: true });
         })
         .catch(() => {
-        // Nếu token đã hết hạn, dọn dẹp vùng nhớ tránh bị loop hoặc tự động log in lỗi
+          // Nếu token đã hết hạn, dọn dẹp vùng nhớ tránh bị loop hoặc tự động log in lỗi
           if (!isTokenValid(getAccessToken())) {
             clearStoredSession();
           }
@@ -47,9 +48,15 @@ function LoginPage() {
     } else {
       // Visiting the login page must not silently restore an old cookie.
       // This lets the user deliberately choose a different account.
-      axios.post(`${api.defaults.baseURL || "http://localhost:5000/api"}/auth/logout`, {}, { withCredentials: true }).catch(() => {
-        // The local login screen should remain usable if the backend is offline.
-      });
+      axios
+        .post(
+          `${api.defaults.baseURL || "http://localhost:5000/api"}/auth/logout`,
+          {},
+          { withCredentials: true },
+        )
+        .catch(() => {
+          // The local login screen should remain usable if the backend is offline.
+        });
       clearStoredSession();
     }
 
@@ -99,7 +106,11 @@ function LoginPage() {
   const handleGuestLogin = async () => {
     // 1. Dọn dẹp session cookie của tài khoản cũ trên Backend
     try {
-      await axios.post(`${api.defaults.baseURL || "http://localhost:5000/api"}/auth/logout`, {}, { withCredentials: true });
+      await axios.post(
+        `${api.defaults.baseURL || "http://localhost:5000/api"}/auth/logout`,
+        {},
+        { withCredentials: true },
+      );
     } catch (err) {
       console.warn("Failed to clear backend session cookie for guest:", err);
     }
@@ -241,7 +252,17 @@ function LoginPage() {
   return (
     <div className="login_page">
       <form className="login_form login_form--main" onSubmit={handleSubmit}>
-        <p className="login_title">Log in</p>
+        <div className="login_heading">
+          <p className="login_title login_title--with-icon">
+            <span className="login_title_icon" aria-hidden="true">
+              <HiOutlineFingerPrint />
+            </span>
+            Login
+          </p>
+          <p className="login_title_subtitle">
+            Sign in to continue to AI Study Hub
+          </p>
+        </div>
 
         {loginNotice && (
           <div className={`login_notice ${loginNotice.type}`} role="alert">
@@ -273,9 +294,9 @@ function LoginPage() {
         </button>
 
         {/* --- NÚT GUEST LOGIN --- */}
-        <button 
-          className="guest_login_btn" 
-          type="button" 
+        <button
+          className="guest_login_btn"
+          type="button"
           onClick={handleGuestLogin}
           style={{
             marginTop: "10px",
@@ -287,7 +308,7 @@ function LoginPage() {
             borderRadius: "6px",
             cursor: "pointer",
             fontWeight: "600",
-            transition: "0.2s"
+            transition: "0.2s",
           }}
         >
           Log in as Guest

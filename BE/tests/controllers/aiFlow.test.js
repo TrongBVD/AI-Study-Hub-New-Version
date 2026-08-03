@@ -29,10 +29,19 @@ jest.mock("../../src/services/aiService", () => ({
   createEmbedding: jest.fn().mockResolvedValue([0.1, 0.2, 0.3]),
   createBatchEmbeddings: jest.fn().mockResolvedValue([[0.1, 0.2, 0.3]]),
   toVectorLiteral: jest.fn().mockReturnValue("[0.1, 0.2, 0.3]"),
-  answerWithContext: jest.fn().mockResolvedValue({
-    answer: "Detailed study answer derived from document context.",
-    sources: ["Chunk 1"],
+  answerWithContext: jest
+    .fn()
+    .mockResolvedValue("Detailed study answer derived from document context."),
+  answerGeneralQuestion: jest
+    .fn()
+    .mockResolvedValue("A short general-knowledge answer."),
+  classifyChatQuestion: jest.fn().mockResolvedValue({
+    intent: "CONTENT",
+    metadataScope: "SELECTED",
   }),
+  answerMetadataWithContext: jest
+    .fn()
+    .mockResolvedValue("An answer based on StudyHub metadata."),
   generateFlashcardsFromChunks: jest.fn().mockResolvedValue([
     { question: "What is Newton's First Law?", answer: "An object stays at rest unless acted upon by a net force." },
   ]),
@@ -103,7 +112,12 @@ describe("AI Pipeline Main Flow Tests", () => {
     });
 
     test("successfully answers question when vector search or chunk fallback is active", async () => {
-      req.body = { documentId: "doc-approved-1", question: "What is momentum?" };
+      req.body = {
+        scope: "SELECTED",
+        documentIds: ["doc-approved-1"],
+        metadataScope: "AUTO",
+        question: "What is momentum?",
+      };
 
       const mockChain = supabase.from();
       mockChain.maybeSingle.mockResolvedValueOnce({
@@ -126,6 +140,7 @@ describe("AI Pipeline Main Flow Tests", () => {
           status: "success",
           data: expect.objectContaining({
             documentId: "doc-approved-1",
+            documentIds: ["doc-approved-1"],
             question: "What is momentum?",
           }),
         })

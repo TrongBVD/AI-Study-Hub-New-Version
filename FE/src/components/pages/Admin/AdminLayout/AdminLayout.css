@@ -1,8 +1,8 @@
 .admin-layout {
   width: 100%;
   min-height: 100dvh;
-  --admin-navbar-bg: #3b2a1a;
-  --admin-navbar-border: #2f2015;
+  --admin-navbar-bg: #0f172a;
+  --admin-navbar-border: #0f172a;
   --admin-navbar-shadow: 0 8px 24px rgba(59, 42, 26, .24);
 }
 
@@ -70,42 +70,42 @@ body[data-theme="black"] .admin-layout {
 
 /* Default theme: a dedicated warm palette for the solid brown navbar. */
 body[data-theme="current"] .admin_command_bar__menu {
-  border-color: #ead7bd;
-  background: #fffaf0;
-  color: #3b2a1a;
+  border-color: #dbeafe;
+  background: #ffffff;
+  color: #0f172a;
 }
 body[data-theme="current"] .admin_command_bar__menu:hover {
-  border-color: #cfbda1;
-  background: #f2e9d6;
+  border-color: #bfdbfe;
+  background: #eff6ff;
 }
-body[data-theme="current"] .admin_command_bar__context > strong { color: #efcbb0; }
-body[data-theme="current"] .admin_command_bar__context > span { color: #ead7bd; }
-body[data-theme="current"] .admin_command_bar__context a { color: #fffaf0; }
-body[data-theme="current"] .admin_command_bar__context i { color: #cfbda1; }
+body[data-theme="current"] .admin_command_bar__context > strong { color: #bfdbfe; }
+body[data-theme="current"] .admin_command_bar__context > span { color: #dbeafe; }
+body[data-theme="current"] .admin_command_bar__context a { color: #ffffff; }
+body[data-theme="current"] .admin_command_bar__context i { color: #bfdbfe; }
 body[data-theme="current"] .admin_command_bar__search {
-  border-color: #e2d3bc;
-  background: #fffaf0;
-  color: #735f4c;
-  box-shadow: 0 4px 14px rgba(47, 32, 21, .2);
+  border-color: #dbeafe;
+  background: #ffffff;
+  color: #475569;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, .2);
 }
 body[data-theme="current"] .admin_command_bar__search:focus-within {
-  border-color: #b4531a;
-  box-shadow: 0 0 0 3px rgba(180, 83, 26, .24), 0 4px 14px rgba(47, 32, 21, .2);
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, .24), 0 4px 14px rgba(15, 23, 42, .2);
 }
-body[data-theme="current"] .admin_command_bar__search > svg { color: #b4531a; }
-body[data-theme="current"] .admin_command_bar__search input { color: #2f2015; }
-body[data-theme="current"] .admin_command_bar__search input::placeholder { color: #735f4c; }
+body[data-theme="current"] .admin_command_bar__search > svg { color: #2563eb; }
+body[data-theme="current"] .admin_command_bar__search input { color: #0f172a; }
+body[data-theme="current"] .admin_command_bar__search input::placeholder { color: #475569; }
 body[data-theme="current"] .admin_command_bar__search kbd {
-  border-color: #e2d3bc;
-  background: #f2e9d6;
-  color: #735f4c;
+  border-color: #dbeafe;
+  background: #eff6ff;
+  color: #475569;
 }
 body[data-theme="current"] .admin_command_bar__health {
-  border-right-color: rgba(255, 250, 240, .3);
-  color: #fffaf0;
+  border-right-color: rgba(255, 255, 255, .3);
+  color: #ffffff;
 }
-body[data-theme="current"] .admin_command_bar__profile { border-color: #fffaf0; }
-body[data-theme="current"] .admin_command_bar__profile span { background: #b4531a; }
+body[data-theme="current"] .admin_command_bar__profile { border-color: #ffffff; }
+body[data-theme="current"] .admin_command_bar__profile span { background: #2563eb; }
 
 /* White theme: an independent cool-blue treatment. */
 body[data-theme="white"] .admin_command_bar__menu {

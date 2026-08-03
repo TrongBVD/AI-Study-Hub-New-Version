@@ -3,7 +3,6 @@ import {
   HiOutlineHome,
   HiOutlineMagnifyingGlass,
   HiOutlineBookOpen,
-  HiOutlineChatBubbleLeftRight,
   HiOutlineSquares2X2,
   HiOutlineQuestionMarkCircle,
   HiOutlineCog6Tooth,
@@ -47,12 +46,6 @@ function Sidebar({ isOpen, onClose }) {
       icon: HiOutlineBookOpen,
       label: "My Libraries",
       path: "/dashboard/libraries",
-      hideForGuest: true,
-    },
-    {
-      icon: HiOutlineChatBubbleLeftRight,
-      label: "AI Chat",
-      path: "/dashboard/ai-chat",
       hideForGuest: true,
     },
     {

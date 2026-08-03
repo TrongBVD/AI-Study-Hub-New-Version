@@ -292,7 +292,7 @@ function PersonalProfile() {
         <div className="profile_name_area">
           <div className="profile_name_row">
             <h2>{userName}</h2>
-            <h2>{userEmail || "Email unavailable"}</h2>
+            <h2 className="profile_email">{userEmail || "Email unavailable"}</h2>
           </div>
         </div>
 

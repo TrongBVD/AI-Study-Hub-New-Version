@@ -1,18 +1,42 @@
 @import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap");
 
 .landing_page {
-  --landing-cream: var(--bg-secondary);
-  --landing-paper: var(--hero-card-bg);
-  --landing-brown: var(--sidebar-bg);
-  --landing-brown-light: var(--accent-hover);
-  --landing-orange: var(--accent-color);
-  --landing-muted: #5a4830;
+  --landing-cream: #f8faff;
+  --landing-paper: #ffffff;
+  --landing-brown: #071426;
+  --landing-brown-light: #0f172a;
+  --landing-orange: #2563eb;
+  --landing-muted: #64748b;
+  --landing-lavender: #8b5cf6;
+
+  --bg-primary: #f8faff;
+  --bg-secondary: #f3f0ff;
+  --bg-card: #ffffff;
+  --bg-elevated: #eef2ff;
+  --text-primary: #0f172a;
+  --text-secondary: #64748b;
+  --text-muted: #94a3b8;
+  --border-color: #dbeafe;
+  --accent-color: #2563eb;
+  --accent-hover: #7c3aed;
+  --accent-soft: #ede9fe;
+  --sidebar-bg: #071426;
+  --sidebar-active-bg: #13233f;
+  --button-bg: #2563eb;
+  --button-hover-bg: #1d4ed8;
+  --button-text: #ffffff;
+  --focus-ring: rgba(124, 58, 237, 0.2);
+  --shadow-soft: 0 18px 46px rgba(30, 41, 90, 0.12);
+  --hero-card-bg: rgba(255, 255, 255, 0.94);
 
   width: 100%;
   min-height: 100vh;
   margin: 0;
   overflow-x: hidden;
-  background: var(--landing-cream);
+  background:
+    radial-gradient(circle at 10% 8%, rgba(56, 189, 248, 0.14), transparent 30rem),
+    radial-gradient(circle at 90% 14%, rgba(196, 181, 253, 0.28), transparent 30rem),
+    var(--landing-cream);
   color: var(--landing-brown);
   font-family: "Plus Jakarta Sans", Arial, sans-serif;
 }
@@ -124,7 +148,7 @@
   display: inline-block;
   border-radius: 999px;
   background: rgba(78, 64, 46, 0.91);
-  color: #f5f2ec;
+  color: #f8fafc;
   margin-bottom: 22px;
   padding: 9px 15px;
   font-size: 13px;
@@ -236,14 +260,14 @@
 }
 
 body[data-theme="current"] .landing_ai_preview {
-  background-color: #3b2a1a !important;
+  background-color: #0f172a !important;
   background-image: none !important;
   background-blend-mode: initial !important;
-  color: #fffaf0;
+  color: #ffffff;
 }
 
 body[data-theme="current"] .landing_preview_header {
-  color: #fffaf0;
+  color: #ffffff;
 }
 
 body[data-theme="current"] .landing_preview_message.is-user {
@@ -252,14 +276,14 @@ body[data-theme="current"] .landing_preview_message.is-user {
 }
 
 body[data-theme="current"] .landing_preview_message.is-ai {
-  background: #4a3425;
-  color: #fffaf0;
+  background: #172033;
+  color: #ffffff;
 }
 
 body[data-theme="current"] .landing_preview_input {
-  border: 1px solid #735f4c;
-  background: #4a3425;
-  color: #efcbb0;
+  border: 1px solid #475569;
+  background: #172033;
+  color: #bfdbfe;
 }
 
 .landing_reveal {
@@ -555,7 +579,7 @@ body[data-theme="current"] .landing_preview_input {
 }
 
 .landing_price_card li i {
-  color: #d9a87a;
+  color: #93c5fd;
   font-style: normal;
 }
 
@@ -631,7 +655,7 @@ body[data-theme="current"] .landing_preview_input {
 }
 
 .landing_flow_card li i {
-  color: #d9a87a;
+  color: #93c5fd;
   font-style: normal;
 }
 
@@ -1173,4 +1197,205 @@ body[data-theme="black"] .landing_price_card.is-highlighted {
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
+}
+
+/* Public pages keep one brand palette even when a signed-in theme was saved. */
+body[data-theme] .landing_page {
+  --landing-cream: #f8faff;
+  --landing-paper: #ffffff;
+  --landing-brown: #071426;
+  --landing-brown-light: #0f172a;
+  --landing-orange: #2563eb;
+  --landing-muted: #64748b;
+  --bg-primary: #f8faff;
+  --bg-secondary: #f3f0ff;
+  --bg-card: #ffffff;
+  --bg-elevated: #eef2ff;
+  --text-primary: #0f172a;
+  --text-secondary: #64748b;
+  --text-muted: #94a3b8;
+  --border-color: #dbeafe;
+  --accent-color: #2563eb;
+  --accent-hover: #7c3aed;
+  --accent-soft: #ede9fe;
+  --sidebar-bg: #071426;
+  --sidebar-active-bg: #13233f;
+  --button-bg: #2563eb;
+  --button-hover-bg: #1d4ed8;
+  --button-text: #ffffff;
+  --focus-ring: rgba(124, 58, 237, 0.2);
+  --shadow-soft: 0 18px 46px rgba(30, 41, 90, 0.12);
+  --hero-card-bg: rgba(255, 255, 255, 0.94);
+  background:
+    radial-gradient(circle at 10% 8%, rgba(56, 189, 248, 0.14), transparent 30rem),
+    radial-gradient(circle at 90% 14%, rgba(196, 181, 253, 0.28), transparent 30rem),
+    #f8faff;
+  color: #071426;
+  color-scheme: light;
+}
+
+body[data-theme] .landing_navbar {
+  color: #071426;
+}
+
+body[data-theme] .landing_navbar.is-scrolled {
+  border-bottom-color: rgba(196, 181, 253, 0.66);
+  background: rgba(255, 255, 255, 0.9);
+}
+
+body[data-theme] .landing_brand,
+body[data-theme] .landing_login_link {
+  color: #071426;
+}
+
+body[data-theme] .landing_nav_button,
+body[data-theme] .landing_button_primary {
+  border-color: transparent;
+  background: linear-gradient(135deg, #2563eb, #1d4ed8 58%, #7c3aed);
+  color: #ffffff !important;
+  box-shadow: 0 14px 30px rgba(37, 99, 235, 0.24);
+}
+
+body[data-theme] .landing_button_secondary {
+  border: 1px solid #c4b5fd;
+  background: #ffffff;
+  color: #071426 !important;
+}
+
+body[data-theme] .landing_hero_label,
+body[data-theme] .landing_popular_badge {
+  background: #ede9fe;
+  color: #6d28d9;
+}
+
+body[data-theme] .landing_hero h1,
+body[data-theme] .landing_section_heading h2,
+body[data-theme] .landing_showcase_copy h2 {
+  color: #0f172a;
+}
+
+body[data-theme] .landing_hero_text > p,
+body[data-theme] .landing_section_heading p,
+body[data-theme] .landing_showcase_copy > p,
+body[data-theme] .landing_feature_card p {
+  color: #64748b;
+}
+
+body[data-theme] .landing_ai_preview {
+  border-color: rgba(196, 181, 253, 0.36);
+  background:
+    radial-gradient(circle at 88% 5%, rgba(124, 58, 237, 0.34), transparent 13rem),
+    linear-gradient(145deg, #071426, #111f3a) !important;
+  color: #ffffff;
+  box-shadow: 0 36px 90px rgba(7, 20, 38, 0.25);
+}
+
+body[data-theme] .landing_preview_header {
+  color: #ffffff;
+}
+
+body[data-theme] .landing_preview_message.is-user {
+  background: linear-gradient(135deg, #2563eb, #7c3aed);
+  color: #ffffff;
+}
+
+body[data-theme] .landing_preview_message.is-ai,
+body[data-theme] .landing_preview_input {
+  border: 1px solid rgba(196, 181, 253, 0.22);
+  background: #13233f;
+  color: #dbeafe;
+}
+
+body[data-theme] .landing_feature_card {
+  border-color: #ddd6fe;
+  background: #ffffff;
+  color: #0f172a;
+  box-shadow: 0 16px 42px rgba(30, 41, 90, 0.09);
+}
+
+body[data-theme] .landing_feature_icon,
+body[data-theme] .landing_showcase_copy li i {
+  background: linear-gradient(135deg, #e0f2fe, #ede9fe);
+  color: #2563eb;
+}
+
+body[data-theme] .landing_how,
+body[data-theme] .landing_study_flow {
+  background: #071426;
+  color: #ffffff;
+}
+
+body[data-theme] .landing_section_heading.is-light h2,
+body[data-theme] .landing_cta h2 {
+  color: #ffffff;
+}
+
+body[data-theme] .landing_section_heading.is-light p,
+body[data-theme] .landing_cta p,
+body[data-theme] .landing_step_card p,
+body[data-theme] .landing_flow_card > p,
+body[data-theme] .landing_flow_card li,
+body[data-theme] .landing_price_card > p,
+body[data-theme] .landing_price_card li {
+  color: #bfdbfe;
+}
+
+body[data-theme] .landing_step_card,
+body[data-theme] .landing_flow_card,
+body[data-theme] .landing_price_card {
+  border-color: rgba(196, 181, 253, 0.18);
+  background: #13233f;
+  color: #ffffff;
+  box-shadow: none;
+}
+
+body[data-theme] .landing_flow_card.is-highlighted,
+body[data-theme] .landing_price_card.is-highlighted {
+  border-color: #c4b5fd;
+  background: linear-gradient(145deg, #1d4ed8, #6d28d9);
+  box-shadow: 0 18px 46px rgba(124, 58, 237, 0.2);
+}
+
+body[data-theme] .landing_flow_card.is-highlighted > strong {
+  color: #ffffff;
+}
+
+body[data-theme] .landing_flow_card.is-highlighted li i {
+  color: #ddd6fe;
+}
+
+body[data-theme] .landing_cta {
+  border: 1px solid rgba(196, 181, 253, 0.25);
+  background:
+    radial-gradient(circle at 88% 8%, rgba(124, 58, 237, 0.38), transparent 18rem),
+    linear-gradient(145deg, #071426, #172554);
+  color: #ffffff;
+  box-shadow: 0 28px 70px rgba(7, 20, 38, 0.2);
+}
+
+body[data-theme] .landing_cta a:first-child,
+body[data-theme] .landing_price_card.is-highlighted > a {
+  border-color: #ffffff;
+  background: #ffffff;
+  color: #1d4ed8 !important;
+}
+
+body[data-theme] .landing_cta a:not(:first-child) {
+  border-color: rgba(255, 255, 255, 0.72);
+  color: #ffffff;
+}
+
+body[data-theme] .landing_footer {
+  border-top-color: rgba(196, 181, 253, 0.12);
+  background: #020617;
+  color: #94a3b8;
+}
+
+body[data-theme] .landing_footer_brand > div,
+body[data-theme] .landing_footer_column h4 {
+  color: #ffffff;
+}
+
+body[data-theme] .landing_footer_bottom {
+  border-top-color: rgba(196, 181, 253, 0.14);
 }

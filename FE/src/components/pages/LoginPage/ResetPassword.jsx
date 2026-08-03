@@ -2,6 +2,7 @@ import { useState } from "react";
 import FormInput from "../../common/FormInput/FormInput.jsx";
 import api from "../../../utils/api.js";
 import { useNavigate, useLocation, Navigate } from "react-router-dom";
+import { HiOutlineKey } from "react-icons/hi2";
 import "./LoginPage.css";
 
 
@@ -97,7 +98,12 @@ function ResetPassword() {
         className="login_form"
         onSubmit={isOtpVerified ? handleResetPassword : handleVerifyOTP}
       >
-        <p className="login_title">Reset Password</p>
+        <p className="login_title login_title--with-icon">
+          <span className="login_title_icon" aria-hidden="true">
+            <HiOutlineKey />
+          </span>
+          Reset Password
+        </p>
 
         <p
           className="login_message"

@@ -41,7 +41,6 @@ const ImportLibraryPage = lazy(() => import("./components/pages/ImportLibraryPag
 const DocumentViewerPage = lazy(() => import("./components/pages/DocumentViewerPage/DocumentViewerPage.jsx"));
 const WorkSpacePage = lazy(() => import("./components/pages/WorkSpacePage/WorkSpacePage.jsx"));
 const Flashcards = lazy(() => import("./components/pages/Flashcards/Flashcards.jsx"));
-const ChatBot = lazy(() => import("./components/pages/AIchatbot/ChatBot.jsx"));
 const AdminDashboardPage = lazy(() => import("./components/pages/Admin/AdminDashboardPage/AdminDashboardPage.jsx"));
 const AdminModerationPage = lazy(() => import("./components/pages/Admin/AiContentModerationPage/AIContentModerationPage.jsx"));
 const AdminUsersPage = lazy(() => import("./components/pages/Admin/UserManagementPage/UserManagementPage.jsx"));
@@ -98,7 +97,7 @@ function App() {
             <Route path="discover" element={<DiscoverPage />} />
             <Route
               path="ai-chat"
-              element={<ChatBot defaultOpen={true} showBubble={false} />}
+              element={<Navigate to="/dashboard/libraries" replace />}
             />
 
             <Route path="create-library" element={<CreateLibraryPage />} />

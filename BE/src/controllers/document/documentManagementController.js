@@ -1,6 +1,4 @@
-const crypto = require("crypto");
 const supabase = require("../../config/supabase");
-
 const { extractTextFromFile } = require("../../services/textExtractService");
 const { validateTagsAndContent } = require("../../services/aiService");
 const {
@@ -645,6 +643,7 @@ exports.downloadDocument = async (req, res) => {
       status: "success",
       data: {
         documentId: document.id,
+        libraryId: document.library_id,
         fileName: document.title,
         downloadUrl: signedUrlData.signedUrl,
       },
