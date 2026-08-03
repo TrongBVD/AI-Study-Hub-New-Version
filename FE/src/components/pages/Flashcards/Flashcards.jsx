@@ -1,21 +1,65 @@
 import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { FaArrowLeft, FaArrowRight, FaRotate } from "react-icons/fa6";
-import { FaCheck, FaClock, FaHistory, FaPlus, FaTrash } from "react-icons/fa";
+import {
+  FaCheck,
+  FaClock,
+  FaHistory,
+  FaLayerGroup,
+  FaPlus,
+  FaTrash,
+} from "react-icons/fa";
 import api from "../../../utils/api.js";
+import {
+  getUserStoredItem,
+  setUserStoredItem,
+} from "../../../utils/userStorage.js";
 import "./Flashcards.css";
 
+const FLASHCARD_HISTORY_STORAGE_KEY = "aiStudyHubFlashcardHistory";
+const MAX_FLASHCARD_HISTORY_SETS = 30;
+const MAX_FLASHCARD_DOCUMENTS = 5;
+
 function loadFlashcardHistory() {
-  return [];
+  try {
+    const storedHistory = JSON.parse(
+      getUserStoredItem(FLASHCARD_HISTORY_STORAGE_KEY) || "[]",
+    );
+
+    if (!Array.isArray(storedHistory)) return [];
+
+    return storedHistory
+      .filter(
+        (savedSet) =>
+          savedSet &&
+          savedSet.id &&
+          savedSet.documentId &&
+          Array.isArray(savedSet.cards),
+      )
+      .slice(0, MAX_FLASHCARD_HISTORY_SETS);
+  } catch (error) {
+    console.warn("Could not load flashcard history:", error);
+    return [];
+  }
+}
+
+function getFlashcardSetId(documentId, cards) {
+  const firstCard = cards?.[0];
+  const stableCardValue = firstCard?.created_at || firstCard?.id;
+
+  return stableCardValue
+    ? `flashcard-set:${documentId}:${stableCardValue}`
+    : `flashcard-set:${documentId}:${Date.now()}`;
 }
 
 function Flashcards() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const requestedDocumentId = searchParams.get("documentId");
+  const requestedDocumentIds = searchParams.getAll("documentId").slice(0, MAX_FLASHCARD_DOCUMENTS);
+  const requestedDocumentIdsKey = requestedDocumentIds.join(",");
   const shouldAutoGenerate = searchParams.get("generate") === "1";
   const autoGenerateHandledRef = useRef(false);
   const [documents, setDocuments] = useState([]);
-  const [selectedDocumentId, setSelectedDocumentId] = useState("");
+  const [selectedDocumentIds, setSelectedDocumentIds] = useState([]);
   const [flashcards, setFlashcards] = useState([]);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
@@ -23,19 +67,29 @@ function Flashcards() {
   const [isFlipped, setIsFlipped] = useState(false);
   const [history, setHistory] = useState(loadFlashcardHistory);
   const [activeSetId, setActiveSetId] = useState("");
+  const [displayedSetTitle, setDisplayedSetTitle] = useState("");
   const [sessionComplete, setSessionComplete] = useState(false);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [sessionStarted, setSessionStarted] = useState(false);
 
-  const selectedDocument = documents.find(
-    (doc) => String(doc.id) === String(selectedDocumentId),
+  const selectedDocuments = documents.filter((doc) =>
+    selectedDocumentIds.some((documentId) => String(doc.id) === String(documentId)),
   );
+  const selectedDocument = selectedDocuments[0];
   const currentCard = flashcards[currentCardIndex];
   const progress = flashcards.length
     ? ((currentCardIndex + 1) / flashcards.length) * 100
     : 0;
-  const setTitle = selectedDocument?.title?.replace(/\.[^/.]+$/, "") ||
-    "AI Flashcards";
+  const selectedSetTitle = selectedDocuments.length > 1
+    ? `Combined flashcards (${selectedDocuments.length} sources)`
+    : selectedDocument?.title?.replace(/\.[^/.]+$/, "") || "AI Flashcards";
+
+  useEffect(() => {
+    setUserStoredItem(
+      FLASHCARD_HISTORY_STORAGE_KEY,
+      JSON.stringify(history.slice(0, MAX_FLASHCARD_HISTORY_SETS)),
+    );
+  }, [history]);
 
   useEffect(() => {
     if (!currentCard || !sessionStarted || sessionComplete) return undefined;
@@ -60,12 +114,31 @@ function Flashcards() {
         setDocuments(approvedDocs);
 
         if (approvedDocs.length > 0) {
-          const requestedDocument = approvedDocs.find(
-            (doc) => String(doc.id) === String(requestedDocumentId),
-          );
-          setSelectedDocumentId(
-            requestedDocument ? requestedDocument.id : approvedDocs[0].id,
-          );
+          const requestedDocuments = requestedDocumentIds
+            .map((documentId) =>
+              approvedDocs.find((doc) => String(doc.id) === String(documentId)),
+            )
+            .filter(Boolean);
+
+          if (
+            shouldAutoGenerate &&
+            (requestedDocumentIds.length === 0 ||
+              requestedDocuments.length !== requestedDocumentIds.length)
+          ) {
+            setSelectedDocumentIds([]);
+            setMessage(
+              requestedDocumentIds.length > 0
+                ? "The requested document is unavailable or not approved. Select a valid document."
+                : "Select a document before generating flashcards.",
+            );
+            return;
+          }
+
+          setSelectedDocumentIds([
+            ...(requestedDocuments.length > 0
+              ? requestedDocuments.map((document) => document.id)
+              : [approvedDocs[0].id]),
+          ]);
         }
       } catch (error) {
         setMessage(error.response?.data?.message || error.message);
@@ -73,26 +146,10 @@ function Flashcards() {
     }
 
     loadDocuments();
-  }, [requestedDocumentId]);
-
-  useEffect(() => {
-    if (!selectedDocumentId) return;
-    async function loadDatabaseFlashcards() {
-      try {
-        const response = await api.get(`/ai/documents/${selectedDocumentId}/flashcards`);
-        const cards = response.data?.data || [];
-        if (cards.length > 0) {
-          setFlashcards(cards);
-        }
-      } catch (err) {
-        console.warn("Could not load flashcards from Database:", err);
-      }
-    }
-    loadDatabaseFlashcards();
-  }, [selectedDocumentId]);
+  }, [requestedDocumentIdsKey, shouldAutoGenerate]);
 
   async function generateFlashcards() {
-    if (!selectedDocumentId || loading) return;
+    if (selectedDocumentIds.length === 0 || loading) return;
 
     setLoading(true);
     setMessage("");
@@ -104,24 +161,30 @@ function Flashcards() {
     setSessionStarted(false);
 
     try {
-      const response = await api.post(
-        `/ai/documents/${selectedDocumentId}/flashcards`
-      );
+      const response = await api.post("/ai/flashcards", {
+        documentIds: selectedDocumentIds,
+      });
       const result = response.data;
 
       setFlashcards(result.data || []);
       const cards = result.data || [];
+      const generatedSetTitle = result.flashcardSet?.title || selectedSetTitle;
+      setDisplayedSetTitle(generatedSetTitle);
 
       if (selectedDocument && cards.length > 0) {
         const savedSet = {
-          id: globalThis.crypto?.randomUUID?.() || `${selectedDocument.id}-${Date.now()}`,
+          id: result.flashcardSet?.id || getFlashcardSetId(selectedDocument.id, cards),
           documentId: selectedDocument.id,
-          title: selectedDocument.title,
+          documentIds: [...selectedDocumentIds],
+          title: generatedSetTitle,
           createdAt: new Date().toISOString(),
           cards,
         };
 
-        setHistory((current) => [savedSet, ...current].slice(0, 30));
+        setHistory((current) => [
+          savedSet,
+          ...current.filter((item) => item.id !== savedSet.id),
+        ].slice(0, MAX_FLASHCARD_HISTORY_SETS));
         setActiveSetId(savedSet.id);
       }
 
@@ -130,7 +193,8 @@ function Flashcards() {
           "aiStudyHubLastStudyCard",
           JSON.stringify({
             documentId: selectedDocument.id,
-            title: selectedDocument.title,
+            documentIds: [...selectedDocumentIds],
+            title: generatedSetTitle,
             libraryId: selectedDocument.library_id,
             workspaceId: selectedDocument.workspace_id,
             studiedCards: cards.length,
@@ -150,7 +214,7 @@ function Flashcards() {
   useEffect(() => {
     if (
       !shouldAutoGenerate ||
-      !selectedDocumentId ||
+      selectedDocumentIds.length === 0 ||
       autoGenerateHandledRef.current
     ) {
       return;
@@ -163,17 +227,20 @@ function Flashcards() {
     generateFlashcards();
     // Generate exactly once after the requested document has been selected.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedDocumentId, shouldAutoGenerate]);
+  }, [selectedDocumentIds, shouldAutoGenerate]);
 
   function selectDocument(documentId) {
-    setSelectedDocumentId(documentId);
-    setFlashcards([]);
-    setCurrentCardIndex(0);
-    setIsFlipped(false);
-    setSessionComplete(false);
-    setActiveSetId("");
-    setElapsedSeconds(0);
-    setSessionStarted(false);
+    setSelectedDocumentIds((current) => {
+      const exists = current.some((id) => String(id) === String(documentId));
+      if (exists) {
+        return current.filter((id) => String(id) !== String(documentId));
+      }
+      if (current.length >= MAX_FLASHCARD_DOCUMENTS) {
+        setMessage(`Select up to ${MAX_FLASHCARD_DOCUMENTS} documents per flashcard set.`);
+        return current;
+      }
+      return [...current, documentId];
+    });
     setMessage("");
   }
 
@@ -184,8 +251,8 @@ function Flashcards() {
   }
 
   function openHistorySet(savedSet) {
-    setSelectedDocumentId(savedSet.documentId);
     setFlashcards(savedSet.cards || []);
+    setDisplayedSetTitle(savedSet.title || "AI Flashcards");
     setCurrentCardIndex(0);
     setIsFlipped(false);
     setSessionComplete(false);
@@ -202,6 +269,7 @@ function Flashcards() {
     if (activeSetId === setId) {
       setFlashcards([]);
       setActiveSetId("");
+      setDisplayedSetTitle("");
       setSessionComplete(false);
       setElapsedSeconds(0);
       setSessionStarted(false);
@@ -210,6 +278,7 @@ function Flashcards() {
 
   function startNewSet() {
     setFlashcards([]);
+    setDisplayedSetTitle("");
     setCurrentCardIndex(0);
     setIsFlipped(false);
     setSessionComplete(false);
@@ -291,28 +360,35 @@ function Flashcards() {
         <main className="flashcards-card">
         <div className="flashcards-toolbar" aria-label="Flashcard setup">
           <div className="flashcards-field">
-            <label>Approved document</label>
-            <select
-              value={selectedDocumentId}
-              onChange={(e) => selectDocument(e.target.value)}
-              disabled={loading}
-            >
-              {documents.length === 0 && (
-                <option value="">No approved documents available</option>
+            <label>
+              Approved documents
+              <span>{selectedDocumentIds.length}/{MAX_FLASHCARD_DOCUMENTS} selected</span>
+            </label>
+            <div className="flashcards-document-picker">
+              {documents.length === 0 ? (
+                <p>No approved documents available</p>
+              ) : (
+                documents.map((doc) => (
+                  <label key={doc.id} className="flashcards-document-option">
+                    <input
+                      type="checkbox"
+                      checked={selectedDocumentIds.some(
+                        (documentId) => String(documentId) === String(doc.id),
+                      )}
+                      onChange={() => selectDocument(doc.id)}
+                      disabled={loading}
+                    />
+                    <span>{doc.title}</span>
+                  </label>
+                ))
               )}
-
-              {documents.map((doc) => (
-                <option key={doc.id} value={doc.id}>
-                  {doc.title}
-                </option>
-              ))}
-            </select>
+            </div>
           </div>
 
           <button
             className="flashcards-primary-btn"
             onClick={generateFlashcards}
-            disabled={loading || !selectedDocumentId}
+            disabled={loading || selectedDocumentIds.length === 0}
           >
             {loading ? "Generating..." : "Generate Flashcards"}
           </button>
@@ -322,9 +398,11 @@ function Flashcards() {
 
         {currentCard && !sessionStarted && !sessionComplete && (
           <section className="flashcard-set-preview" aria-labelledby="flashcard-set-title">
-            <div className="flashcard-set-preview-mark"><FaHistory /></div>
+            <div className="flashcard-set-preview-mark">
+              <FaLayerGroup aria-hidden="true" />
+            </div>
             <span>Flashcard Set</span>
-            <h1 id="flashcard-set-title">{setTitle}</h1>
+            <h1 id="flashcard-set-title">{displayedSetTitle || "AI Flashcards"}</h1>
             <p>{flashcards.length} cards ready to review</p>
             <button type="button" className="flashcards-primary-btn" onClick={startSession}>
               Start Studying <FaArrowRight />
@@ -336,7 +414,7 @@ function Flashcards() {
           <section className="flashcard-study" aria-live="polite">
             <header className="flashcard-study-header">
               <div>
-                <h1>{setTitle}</h1>
+                <h1>{displayedSetTitle || "AI Flashcards"}</h1>
                 <p>Review the generated questions one card at a time</p>
               </div>
 

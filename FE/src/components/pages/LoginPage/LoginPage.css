@@ -121,8 +121,8 @@
 }
 
 .login_title_icon {
-  width: 36px;
-  height: 36px;
+  width: 40px;
+  height: 40px;
   border: 1px solid rgba(196, 181, 253, 0.72);
   border-radius: 11px;
   background: linear-gradient(135deg, #2563eb, #7c3aed);
@@ -130,13 +130,13 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  flex: 0 0 36px;
+  flex: 0 0 40px;
   box-shadow: 0 8px 20px rgba(37, 99, 235, 0.2);
 }
 
 .login_title_icon svg {
-  width: 21px;
-  height: 21px;
+  width: 24px;
+  height: 24px;
   stroke-width: 2;
 }
 

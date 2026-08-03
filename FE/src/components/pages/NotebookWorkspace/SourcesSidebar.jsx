@@ -6,6 +6,7 @@ import {
   HiOutlineTrash,
 } from "react-icons/hi2";
 import { LuPanelLeftClose } from "react-icons/lu";
+import { MdHistory } from "react-icons/md";
 
 /**
  * SourcesSidebar Component
@@ -148,9 +149,9 @@ export default function SourcesSidebar({
 
           <section className="chat_history_section" aria-label="Chat history">
             <div className="chat_history_heading">
-              <div>
+              <div className="chat_history_title">
+                <MdHistory aria-hidden="true" />
                 <span>Conversations</span>
-                <strong>Chat History</strong>
               </div>
               <div className="chat_history_heading_actions">
                 {chatHistory.length > 0 && (

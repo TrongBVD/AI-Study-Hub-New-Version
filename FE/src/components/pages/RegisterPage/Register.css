@@ -51,6 +51,27 @@
   animation: pulse 1.2s ease-out infinite;
 }
 
+.register_title_with_icon {
+  gap: 12px;
+  padding-left: 0;
+}
+
+.register_title_with_icon::before,
+.register_title_with_icon::after {
+  display: none;
+}
+
+.register_title_with_icon > svg {
+  width: 40px;
+  height: 40px;
+  flex: 0 0 auto;
+  padding: 8px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #38bdf8, #2563eb 55%, #8b5cf6);
+  color: #ffffff;
+  box-sizing: border-box;
+}
+
 .register_message {
   font-size: 14.5px;
   color: var(--text-primary);

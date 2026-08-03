@@ -11,6 +11,9 @@ const { getAiSummary } = require("../controllers/ai/aiSummaryController");
 const {
   generateFlashcards,
   getDocumentFlashcards,
+  listFlashcardSets,
+  getFlashcardSet,
+  deleteFlashcardSet,
 } = require("../controllers/ai/aiFlashcardController");
 
 const router = express.Router();
@@ -20,6 +23,10 @@ router.get("/chat-history", authMiddleware, getChatHistory);
 router.delete("/chat-history", authMiddleware, clearChatHistory);
 router.delete("/chat-history/:conversationId", authMiddleware, deleteChatHistoryItem);
 router.get("/summary", authMiddleware, getAiSummary);
+router.get("/flashcard-sets", authMiddleware, listFlashcardSets);
+router.get("/flashcard-sets/:setId", authMiddleware, getFlashcardSet);
+router.delete("/flashcard-sets/:setId", authMiddleware, deleteFlashcardSet);
+router.post("/flashcards", authMiddleware, generateFlashcards);
 router.get("/documents/:documentId/flashcards", authMiddleware, getDocumentFlashcards);
 router.post("/documents/:documentId/flashcards", authMiddleware, generateFlashcards);
 

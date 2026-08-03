@@ -1,3 +1,4 @@
+const crypto = require("crypto");
 const supabase = require("../../config/supabase");
 const { createActivityLog } = require("../../services/activityLogService");
 const { canAccessDocument } = require("../../services/documentAccessService");
@@ -14,8 +15,9 @@ const MAX_SELECTED_CHAT_DOCUMENTS = 25;
 const MAX_LIBRARY_RAG_DOCUMENTS = 100;
 const RAG_RETRIEVAL_CONCURRENCY = 4;
 const MAX_RAG_CONTEXT_CHUNKS = 120;
-const MAX_FLASHCARD_SOURCE_CHUNKS = 30;
+const MAX_FLASHCARD_SOURCE_CHUNKS = 120;
 const MAX_GENERATED_FLASHCARDS = 20;
+const MAX_FLASHCARD_DOCUMENTS = 5;
 const USER_LIBRARY_STORAGE_LIMIT_BYTES = 50 * 1024 * 1024;
 const MAX_METADATA_DOCUMENT_DETAILS = 500;
 
@@ -801,6 +803,33 @@ exports.chatWithDocument = async (req, res) => {
     }
 
     const { scope, documents, libraryId } = resolvedScope;
+    if (intentRoute.intent === "FLASHCARD") {
+      const approvedDocuments = documents.filter(
+        (document) => document.status === "APPROVED",
+      );
+      const canAutoGenerate =
+        documents.length > 0 &&
+        documents.length <= MAX_FLASHCARD_DOCUMENTS &&
+        approvedDocuments.length === documents.length;
+
+      return res.status(200).json({
+        status: "success",
+        data: {
+          action: "OPEN_FLASHCARDS",
+          intent: "FLASHCARD",
+          question,
+          documentId: canAutoGenerate ? documents[0].id : null,
+          documentIds: documents.map((document) => document.id),
+          libraryId,
+          scope,
+          autoGenerate: canAutoGenerate,
+          usedAi: true,
+          sources: [],
+          chatHistory: null,
+        },
+      });
+    }
+
     const isGeneralQuestion = intentRoute.intent === "GENERAL";
     const shouldUseDetectedMetadataScope =
       requestedMetadataScope === "AUTO" ||
@@ -953,29 +982,47 @@ exports.chatWithDocument = async (req, res) => {
 exports.generateFlashcards = async (req, res) => {
   try {
     const userId = req.user.id;
-    const { documentId } = req.params;
+    const legacyDocumentId = req.params.documentId;
+    const requestedDocumentIds = uniqueDocumentIds([
+      ...(Array.isArray(req.body?.documentIds) ? req.body.documentIds : []),
+      ...(legacyDocumentId ? [legacyDocumentId] : []),
+    ]);
 
-    const document = await getAllowedDocument(documentId, userId);
-
-    if (!document) {
-      return res.status(404).json({
-        status: "error",
-        message: "Document not found.",
-      });
-    }
-
-    if (document === "FORBIDDEN") {
-      return res.status(403).json({
-        status: "error",
-        message: "You do not have permission to access this document.",
-      });
-    }
-
-    if (document.status !== "APPROVED") {
+    if (requestedDocumentIds.length === 0) {
       return res.status(400).json({
         status: "error",
-        message: "This document is not approved or not ready for flashcard generation yet.",
+        message: "Select at least one document for flashcard generation.",
       });
+    }
+    if (requestedDocumentIds.length > MAX_FLASHCARD_DOCUMENTS) {
+      return res.status(400).json({
+        status: "error",
+        message: `Select up to ${MAX_FLASHCARD_DOCUMENTS} documents per flashcard set.`,
+      });
+    }
+
+    const documents = [];
+    for (const documentId of requestedDocumentIds) {
+      const document = await getAllowedDocument(documentId, userId);
+      if (!document) {
+        return res.status(404).json({
+          status: "error",
+          message: "One of the selected documents was not found.",
+        });
+      }
+      if (document === "FORBIDDEN") {
+        return res.status(403).json({
+          status: "error",
+          message: "You do not have permission to access one of the selected documents.",
+        });
+      }
+      if (document.status !== "APPROVED") {
+        return res.status(400).json({
+          status: "error",
+          message: `"${document.title || "A selected document"}" is not approved or ready for flashcard generation.`,
+        });
+      }
+      documents.push(document);
     }
 
     if (backendUsesPublishableSupabaseKey()) {
@@ -989,29 +1036,102 @@ exports.generateFlashcards = async (req, res) => {
 
     await ensureChatQuotaAvailable(userId);
 
-    let chunks = (await ensureDocumentChunks(document)) || [];
-    if (!Array.isArray(chunks)) chunks = [];
-    chunks = chunks.slice(0, MAX_FLASHCARD_SOURCE_CHUNKS);
-
-    if (!chunks || chunks.length === 0) {
-      return res.status(400).json({
-        status: "error",
-        message: "No chunks found for this document. Re-upload or re-process it.",
+    const chunksPerDocument = Math.max(
+      1,
+      Math.floor(MAX_FLASHCARD_SOURCE_CHUNKS / documents.length),
+    );
+    const chunkGroups = [];
+    for (const document of documents) {
+      let documentChunks = (await ensureDocumentChunks(document)) || [];
+      if (!Array.isArray(documentChunks)) documentChunks = [];
+      documentChunks = documentChunks.slice(0, chunksPerDocument);
+      if (documentChunks.length === 0) {
+        return res.status(400).json({
+          status: "error",
+          message: `No readable content was found for "${document.title || "a selected document"}". Re-upload or re-process it.`,
+        });
+      }
+      chunkGroups.push({
+        document,
+        chunks: documentChunks.map((chunk) => ({
+          ...chunk,
+          content: `[Source: ${document.title || "Untitled document"}]\n${chunk.content}`,
+        })),
       });
     }
 
-    const generatedCards = await generateFlashcardsFromChunks(chunks);
+    // Interleave sources so the global context character cap cannot be consumed
+    // by the first document before later selected documents are included.
+    const chunks = [];
+    const longestGroup = Math.max(...chunkGroups.map((group) => group.chunks.length));
+    for (let index = 0; index < longestGroup; index += 1) {
+      for (const group of chunkGroups) {
+        if (group.chunks[index]) chunks.push(group.chunks[index]);
+      }
+    }
+
+    const generatedCards = await generateFlashcardsFromChunks(chunks, {
+      sources: chunkGroups.map(({ document, chunks: sourceChunks }) => ({
+        title: document.title || "Untitled document",
+        chunkCount: sourceChunks.length,
+      })),
+      targetCardCount: MAX_GENERATED_FLASHCARDS,
+    });
     const cards = generatedCards.slice(0, MAX_GENERATED_FLASHCARDS);
 
-    const { data: oldCards, error: oldCardsError } = await supabase
-      .from("flashcards")
-      .select("id")
-      .eq("document_id", documentId);
-    if (oldCardsError) throw oldCardsError;
+    if (cards.length === 0) {
+      return res.status(422).json({
+        status: "error",
+        message: "AI could not create flashcards from the selected documents.",
+      });
+    }
+
+    const primaryDocument = documents[0];
+    const primaryDocumentId = primaryDocument.id;
+    const workspaceIds = new Set(
+      documents.map((document) => document.workspace_id).filter(Boolean),
+    );
+    const sharedWorkspaceId = workspaceIds.size === 1
+      ? [...workspaceIds][0]
+      : null;
+    const setTitle = documents.length === 1
+      ? primaryDocument.title || "AI Flashcards"
+      : `Combined flashcards (${documents.length} sources)`;
+
+    const flashcardSet = {
+      id: crypto.randomUUID(),
+      document_id: primaryDocumentId,
+      workspace_id: sharedWorkspaceId,
+      creator_id: userId,
+      title: setTitle,
+      created_at: new Date().toISOString(),
+    };
+
+    const { error: setInsertError } = await supabase
+      .from("flashcard_sets")
+      .insert(flashcardSet);
+    if (setInsertError) throw setInsertError;
+
+    const setDocumentRows = documents.map((document) => ({
+      set_id: flashcardSet.id,
+      document_id: document.id,
+    }));
+    const { error: setDocumentsError } = await supabase
+      .from("flashcard_set_documents")
+      .insert(setDocumentRows);
+    if (setDocumentsError) {
+      await supabase
+        .from("flashcard_sets")
+        .delete()
+        .eq("id", flashcardSet.id)
+        .eq("creator_id", userId);
+      throw setDocumentsError;
+    }
 
     const rows = cards.map((card) => ({
-      document_id: documentId,
-      workspace_id: document.workspace_id || null,
+      set_id: flashcardSet.id,
+      document_id: primaryDocumentId,
+      workspace_id: sharedWorkspaceId,
       creator_id: userId,
       question: card.question,
       answer: card.answer,
@@ -1022,17 +1142,15 @@ exports.generateFlashcards = async (req, res) => {
       .insert(rows)
       .select("*");
 
-    if (result.error) throw result.error;
-    const cardsList = Array.isArray(result.data) ? result.data : rows;
-
-    const oldCardIds = (oldCards || []).map((card) => card.id).filter(Boolean);
-    if (oldCardIds.length > 0) {
-      const { error: deleteOldCardsError } = await supabase
-        .from("flashcards")
+    if (result.error) {
+      await supabase
+        .from("flashcard_sets")
         .delete()
-        .in("id", oldCardIds);
-      if (deleteOldCardsError) throw deleteOldCardsError;
+        .eq("id", flashcardSet.id)
+        .eq("creator_id", userId);
+      throw result.error;
     }
+    const cardsList = Array.isArray(result.data) ? result.data : rows;
 
     await increaseChatUsage(userId);
 
@@ -1040,20 +1158,24 @@ exports.generateFlashcards = async (req, res) => {
       await createActivityLog({
         actorUserId: userId,
         actionType: "FLASHCARDS_GENERATED",
-        entityType: "document",
-        entityId: documentId,
+        entityType: "flashcard_set",
+        entityId: flashcardSet.id,
         newData: {
           cardCount: cardsList.length,
+          flashcardSetId: flashcardSet.id,
+          documentIds: requestedDocumentIds,
           dailyLimit: DAILY_AI_REQUEST_LIMIT,
         },
         request: req,
-        details: `Generated ${cardsList.length} flashcard(s).`,
+        details: `Generated ${cardsList.length} flashcard(s) from ${documents.length} document(s).`,
       });
     }
 
     return res.status(201).json({
       status: "success",
       data: cardsList,
+      flashcardSet,
+      documentIds: requestedDocumentIds,
       quota: {
         dailyLimit: DAILY_AI_REQUEST_LIMIT,
       },
@@ -1063,7 +1185,9 @@ exports.generateFlashcards = async (req, res) => {
 
     const storageMissing =
       error.code === "PGRST205" ||
-      String(error.message || "").includes("public.flashcards");
+      String(error.message || "").includes("public.flashcards") ||
+      String(error.message || "").includes("public.flashcard_sets") ||
+      String(error.message || "").includes("public.flashcard_set_documents");
 
     return res.status(storageMissing ? 503 : error.statusCode || 500).json({
       status: "error",
@@ -1094,10 +1218,25 @@ exports.getDocumentFlashcards = async (req, res) => {
       });
     }
 
+    const { data: latestSet, error: setError } = await supabase
+      .from("flashcard_sets")
+      .select("id")
+      .eq("document_id", documentId)
+      .eq("creator_id", userId)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (setError) throw setError;
+    if (!latestSet) {
+      return res.status(200).json({ status: "success", data: [] });
+    }
+
     const { data: flashcards, error } = await supabase
       .from("flashcards")
-      .select("id, document_id, workspace_id, creator_id, question, answer, created_at")
-      .eq("document_id", documentId)
+      .select("id, set_id, document_id, workspace_id, creator_id, question, answer, created_at")
+      .eq("set_id", latestSet.id)
+      .eq("creator_id", userId)
       .order("created_at", { ascending: true });
 
     if (error) throw error;
@@ -1107,12 +1246,139 @@ exports.getDocumentFlashcards = async (req, res) => {
     console.error("getDocumentFlashcards error:", error);
     const storageMissing =
       error.code === "PGRST205" ||
-      String(error.message || "").includes("public.flashcards");
+      String(error.message || "").includes("public.flashcards") ||
+      String(error.message || "").includes("public.flashcard_sets");
     return res.status(storageMissing ? 503 : 500).json({
       status: "error",
       message: storageMissing
         ? "Flashcard storage is not initialized. Apply the flashcards database migration first."
         : "Could not load flashcards.",
+    });
+  }
+};
+
+exports.listFlashcardSets = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    if (isGuestUser(req.user)) {
+      return res.status(200).json({ status: "success", data: [] });
+    }
+
+    const { data: sets, error: setsError } = await supabase
+      .from("flashcard_sets")
+      .select("id, document_id, workspace_id, creator_id, title, created_at")
+      .eq("creator_id", userId)
+      .order("created_at", { ascending: false });
+    if (setsError) throw setsError;
+
+    const setIds = (sets || []).map((set) => set.id);
+    let cardCounts = new Map();
+    if (setIds.length > 0) {
+      const { data: cardRows, error: cardsError } = await supabase
+        .from("flashcards")
+        .select("set_id")
+        .in("set_id", setIds)
+        .eq("creator_id", userId);
+      if (cardsError) throw cardsError;
+
+      cardCounts = (cardRows || []).reduce((counts, card) => {
+        counts.set(card.set_id, (counts.get(card.set_id) || 0) + 1);
+        return counts;
+      }, new Map());
+    }
+
+    return res.status(200).json({
+      status: "success",
+      data: (sets || []).map((set) => ({
+        ...set,
+        card_count: cardCounts.get(set.id) || 0,
+      })),
+    });
+  } catch (error) {
+    console.error("listFlashcardSets error:", error);
+    return res.status(500).json({
+      status: "error",
+      message: "Could not load flashcard history.",
+    });
+  }
+};
+
+exports.getFlashcardSet = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { setId } = req.params;
+
+    const { data: set, error: setError } = await supabase
+      .from("flashcard_sets")
+      .select("id, document_id, workspace_id, creator_id, title, created_at")
+      .eq("id", setId)
+      .eq("creator_id", userId)
+      .maybeSingle();
+    if (setError) throw setError;
+    if (!set) {
+      return res.status(404).json({
+        status: "error",
+        message: "Flashcard set not found.",
+      });
+    }
+
+    const { data: cards, error: cardsError } = await supabase
+      .from("flashcards")
+      .select("id, set_id, document_id, workspace_id, creator_id, question, answer, created_at")
+      .eq("set_id", setId)
+      .eq("creator_id", userId)
+      .order("created_at", { ascending: true });
+    if (cardsError) throw cardsError;
+
+    return res.status(200).json({
+      status: "success",
+      data: { ...set, cards: cards || [] },
+    });
+  } catch (error) {
+    console.error("getFlashcardSet error:", error);
+    return res.status(500).json({
+      status: "error",
+      message: "Could not load this flashcard set.",
+    });
+  }
+};
+
+exports.deleteFlashcardSet = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { setId } = req.params;
+
+    const { data: set, error: findError } = await supabase
+      .from("flashcard_sets")
+      .select("id")
+      .eq("id", setId)
+      .eq("creator_id", userId)
+      .maybeSingle();
+    if (findError) throw findError;
+    if (!set) {
+      return res.status(404).json({
+        status: "error",
+        message: "Flashcard set not found.",
+      });
+    }
+
+    const { error: deleteError } = await supabase
+      .from("flashcard_sets")
+      .delete()
+      .eq("id", setId)
+      .eq("creator_id", userId);
+    if (deleteError) throw deleteError;
+
+    return res.status(200).json({
+      status: "success",
+      data: { id: setId },
+      message: "Flashcard set deleted permanently.",
+    });
+  } catch (error) {
+    console.error("deleteFlashcardSet error:", error);
+    return res.status(500).json({
+      status: "error",
+      message: "Could not delete this flashcard set.",
     });
   }
 };

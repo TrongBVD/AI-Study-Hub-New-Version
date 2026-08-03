@@ -19,7 +19,7 @@ const EMBEDDING_RETRY_BASE_DELAY_MS = 2500;
 const SOURCE_TITLE_MAX_CHARS = 180;
 const RAG_CONTEXT_MAX_CHARS = 150000;
 const CHAT_CLASSIFICATION_MAX_CHARS = 2000;
-const FLASHCARD_CONTEXT_MAX_CHARS = 25000;
+const FLASHCARD_CONTEXT_MAX_CHARS = 150000;
 const DOCUMENT_ANALYSIS_MAX_CHARS = 8000;
 const MAX_GENERATED_FLASHCARDS = 20;
 const EMBEDDING_BATCH_SIZE = 10;
@@ -407,6 +407,7 @@ async function classifyChatQuestion(question) {
 You are an intent router for StudyHub, a document-learning application.
 
 Classify the user's question into exactly one intent:
+- FLASHCARD: the user asks to create, generate, make, or build flashcards, study cards, or quiz-style review cards from uploaded material.
 - CONTENT: answering requires reading the content of uploaded documents.
 - METADATA: answering only requires database information about libraries or files.
 - MIXED: answering requires both document content and database metadata.
@@ -430,7 +431,7 @@ Scope rules:
 
 Return JSON only in this exact shape:
 {
-  "intent": "CONTENT" | "METADATA" | "MIXED" | "GENERAL",
+  "intent": "FLASHCARD" | "CONTENT" | "METADATA" | "MIXED" | "GENERAL",
   "metadataScope": "ACCOUNT" | "LIBRARY" | "SELECTED",
   "contentMode": "OVERVIEW" | "SEARCH" | "NONE"
 }
@@ -442,7 +443,13 @@ ${String(question || "").slice(0, CHAT_CLASSIFICATION_MAX_CHARS)}
 `;
 
   const result = extractJson(await generateText(prompt));
-  const allowedIntents = new Set(["CONTENT", "METADATA", "MIXED", "GENERAL"]);
+  const allowedIntents = new Set([
+    "FLASHCARD",
+    "CONTENT",
+    "METADATA",
+    "MIXED",
+    "GENERAL",
+  ]);
   const allowedMetadataScopes = new Set(["ACCOUNT", "LIBRARY", "SELECTED"]);
   const allowedContentModes = new Set(["OVERVIEW", "SEARCH", "NONE"]);
   const intent = String(result.intent || "").toUpperCase();
@@ -506,11 +513,23 @@ ${JSON.stringify(metadataContext)}
 /**
  * Generate flashcards from document chunks.
  */
-async function generateFlashcardsFromChunks(chunks) {
+async function generateFlashcardsFromChunks(chunks, options = {}) {
   const content = chunks
     .map((chunk) => chunk.content)
     .join("\n\n")
     .slice(0, FLASHCARD_CONTEXT_MAX_CHARS);
+  const sources = Array.isArray(options.sources) ? options.sources : [];
+  const targetCardCount = Math.min(
+    MAX_GENERATED_FLASHCARDS,
+    Math.max(1, Number(options.targetCardCount) || MAX_GENERATED_FLASHCARDS),
+  );
+  const sourcePlan = sources.length > 0
+    ? sources
+        .map((source, index) =>
+          `${index + 1}. ${source.title} (${source.chunkCount || 0} available chunks)`,
+        )
+        .join("\n")
+    : "One source document";
 
   const prompt = `
 Create study flashcards from the document content.
@@ -524,14 +543,20 @@ Return JSON array only in this exact format:
 ]
 
 Rules:
-- Generate up to ${MAX_GENERATED_FLASHCARDS} flashcards depending on text length and content depth:
+- Generate up to ${targetCardCount} flashcards depending on text length and content depth:
   * For shorter documents: Generate 3 to 8 essential flashcards.
   * For longer, richer documents: Generate 10 to 20 diverse, non-repetitive, high-yield study flashcards covering key topics across the entire text.
+- The selected sources are listed below. When multiple sources are present, cover EVERY source and distribute the flashcards as evenly as their usable content allows.
+- Include at least one flashcard from every source that contains usable study content. Do not let a longer or more detailed source dominate the whole set.
+- Source labels identify document boundaries; do not use those labels as facts or mention them in questions and answers.
 - Write every question and answer in the document's primary language. For bilingual documents, use the language that is most prominent in the source content.
 - Ensure questions and answers cover distinct, diverse concepts without duplicate content.
 - Keep answers clear and concise.
 - Use only the document content.
 - Do not invent information.
+
+Selected sources:
+${sourcePlan}
 
 Document content:
 ${content}

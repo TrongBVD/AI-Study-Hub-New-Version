@@ -2,6 +2,7 @@ import { useState } from "react";
 import FormInput from "../../common/FormInput/FormInput.jsx";
 import api from "../../../utils/api.js";
 import { useNavigate, useLocation, Navigate } from "react-router-dom";
+import { HiOutlineShieldCheck } from "react-icons/hi2";
 import "./Register.css";
 
 function OTPVerification() {
@@ -39,7 +40,10 @@ function OTPVerification() {
   return (
     <div className="register_page">
       <form className="register_form" onSubmit={handleSubmit} style={{ backgroundColor: 'var(--bg-card)', padding: '30px', borderRadius: '15px' }}>
-        <p className="register_title">Email Verification</p>
+        <p className="register_title register_title_with_icon">
+          <HiOutlineShieldCheck aria-hidden="true" />
+          Email Verification
+        </p>
         <p className="register_message">Please enter the 6-digit code sent to <b>{email}</b></p>
         <FormInput
           type="text"

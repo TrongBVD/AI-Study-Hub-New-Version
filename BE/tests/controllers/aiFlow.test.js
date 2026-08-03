@@ -9,6 +9,7 @@ jest.mock("../../src/config/supabase", () => {
     gte: jest.fn().mockReturnThis(),
     lt: jest.fn().mockReturnThis(),
     is: jest.fn().mockReturnThis(),
+    in: jest.fn().mockReturnThis(),
     order: jest.fn().mockReturnThis(),
     limit: jest.fn().mockReturnThis(),
     maybeSingle: jest.fn().mockResolvedValue({ data: null, error: null }),
@@ -57,6 +58,7 @@ jest.mock("../../src/services/documentAccessService", () => ({
 
 const supabase = require("../../src/config/supabase");
 const { canAccessDocument } = require("../../src/services/documentAccessService");
+const aiService = require("../../src/services/aiService");
 const aiController = require("../../src/controllers/aiController");
 
 describe("AI Pipeline Main Flow Tests", () => {
@@ -186,6 +188,70 @@ describe("AI Pipeline Main Flow Tests", () => {
         })
       );
     });
+
+    test("returns a flashcard navigation action instead of a chat answer", async () => {
+      req.body = {
+        scope: "SELECTED",
+        documentIds: ["doc-approved-1"],
+        question: "Create quiz-style flashcards from this file",
+      };
+
+      const mockChain = supabase.from();
+      mockChain.maybeSingle.mockResolvedValueOnce({
+        data: {
+          id: "doc-approved-1",
+          status: "APPROVED",
+          title: "physics.pdf",
+          file_url: "user/physics.pdf",
+        },
+        error: null,
+      });
+      canAccessDocument.mockResolvedValueOnce(true);
+      aiService.classifyChatQuestion.mockResolvedValueOnce({
+        intent: "FLASHCARD",
+        metadataScope: "SELECTED",
+        contentMode: "NONE",
+      });
+
+      await aiController.chatWithDocument(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json).toHaveBeenCalledWith({
+        status: "success",
+        data: expect.objectContaining({
+          action: "OPEN_FLASHCARDS",
+          intent: "FLASHCARD",
+          documentId: "doc-approved-1",
+          autoGenerate: true,
+        }),
+      });
+      expect(aiService.answerWithContext).not.toHaveBeenCalled();
+    });
+
+    test("opens the flashcard page without auto-generating when no file is selected", async () => {
+      req.body = {
+        scope: "SELECTED",
+        documentIds: [],
+        question: "Tạo flashcard cho tôi",
+      };
+      aiService.classifyChatQuestion.mockResolvedValueOnce({
+        intent: "FLASHCARD",
+        metadataScope: "SELECTED",
+        contentMode: "NONE",
+      });
+
+      await aiController.chatWithDocument(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json).toHaveBeenCalledWith({
+        status: "success",
+        data: expect.objectContaining({
+          action: "OPEN_FLASHCARDS",
+          documentId: null,
+          autoGenerate: false,
+        }),
+      });
+    });
   });
 
   describe("2. AI Usage & Summary Flow", () => {
@@ -248,11 +314,170 @@ describe("AI Pipeline Main Flow Tests", () => {
       await aiController.generateFlashcards(req, res);
 
       expect(res.status).toHaveBeenCalledWith(201);
+      expect(supabase.from).toHaveBeenCalledWith("flashcard_sets");
+      expect(supabase.from).toHaveBeenCalledWith("flashcard_set_documents");
+      expect(supabase.from).toHaveBeenCalledWith("flashcards");
+      expect(mockChain.insert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          document_id: "doc-flashcards-1",
+          creator_id: "user-student-1",
+        }),
+      );
+      expect(mockChain.insert).toHaveBeenCalledWith(
+        expect.arrayContaining([
+          expect.objectContaining({
+            document_id: "doc-flashcards-1",
+            creator_id: "user-student-1",
+            set_id: expect.any(String),
+          }),
+        ]),
+      );
       expect(res.json).toHaveBeenCalledWith(
         expect.objectContaining({
           status: "success",
+          flashcardSet: expect.objectContaining({
+            document_id: "doc-flashcards-1",
+          }),
         })
       );
+    });
+
+    test("combines multiple approved documents into one flashcard set", async () => {
+      req.body = { documentIds: ["doc-1", "doc-2"] };
+
+      const mockChain = supabase.from();
+      mockChain.maybeSingle
+        .mockResolvedValueOnce({
+          data: { id: "doc-1", status: "APPROVED", title: "one.pdf", file_url: "user/one.pdf" },
+          error: null,
+        })
+        .mockResolvedValueOnce({
+          data: { id: "doc-2", status: "APPROVED", title: "two.pdf", file_url: "user/two.pdf" },
+          error: null,
+        });
+      canAccessDocument
+        .mockResolvedValueOnce(true)
+        .mockResolvedValueOnce(true);
+      mockChain.order
+        .mockResolvedValueOnce({ data: [{ chunk_index: 0, content: "First source" }], error: null })
+        .mockResolvedValueOnce({ data: [{ chunk_index: 0, content: "Second source" }], error: null });
+
+      await aiController.generateFlashcards(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(201);
+      expect(aiService.generateFlashcardsFromChunks).toHaveBeenCalledWith(
+        expect.arrayContaining([
+          expect.objectContaining({ content: expect.stringContaining("[Source: one.pdf]") }),
+          expect.objectContaining({ content: expect.stringContaining("[Source: two.pdf]") }),
+        ]),
+        expect.objectContaining({
+          sources: [
+            expect.objectContaining({ title: "one.pdf", chunkCount: 1 }),
+            expect.objectContaining({ title: "two.pdf", chunkCount: 1 }),
+          ],
+        }),
+      );
+      expect(mockChain.insert).toHaveBeenCalledWith(
+        expect.arrayContaining([
+          expect.objectContaining({ document_id: "doc-1", set_id: expect.any(String) }),
+          expect.objectContaining({ document_id: "doc-2", set_id: expect.any(String) }),
+        ]),
+      );
+      expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
+        status: "success",
+        documentIds: ["doc-1", "doc-2"],
+        flashcardSet: expect.objectContaining({
+          title: "Combined flashcards (2 sources)",
+        }),
+      }));
+    });
+
+    test("rejects more than five documents for one flashcard set", async () => {
+      req.body = {
+        documentIds: ["doc-1", "doc-2", "doc-3", "doc-4", "doc-5", "doc-6"],
+      };
+
+      await aiController.generateFlashcards(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
+        message: "Select up to 5 documents per flashcard set.",
+      }));
+    });
+
+    test("lists saved flashcard sets for the authenticated user", async () => {
+      const mockChain = supabase.from();
+      mockChain.eq
+        .mockReturnValueOnce(mockChain)
+        .mockResolvedValueOnce({
+          data: [{ set_id: "set-1" }, { set_id: "set-1" }],
+          error: null,
+        });
+      mockChain.order.mockResolvedValueOnce({
+        data: [{
+          id: "set-1",
+          document_id: "doc-1",
+          creator_id: "user-student-1",
+          title: "Physics",
+          created_at: "2026-08-03T00:00:00.000Z",
+        }],
+        error: null,
+      });
+
+      await aiController.listFlashcardSets(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json).toHaveBeenCalledWith({
+        status: "success",
+        data: [expect.objectContaining({ id: "set-1", card_count: 2 })],
+      });
+    });
+
+    test("loads one owned flashcard set with its cards", async () => {
+      req.params = { setId: "set-1" };
+      const mockChain = supabase.from();
+      mockChain.maybeSingle.mockResolvedValueOnce({
+        data: {
+          id: "set-1",
+          document_id: "doc-1",
+          creator_id: "user-student-1",
+          title: "Physics",
+        },
+        error: null,
+      });
+      mockChain.order.mockResolvedValueOnce({
+        data: [{ id: "card-1", set_id: "set-1", question: "Q", answer: "A" }],
+        error: null,
+      });
+
+      await aiController.getFlashcardSet(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json).toHaveBeenCalledWith({
+        status: "success",
+        data: expect.objectContaining({
+          id: "set-1",
+          cards: [expect.objectContaining({ id: "card-1" })],
+        }),
+      });
+    });
+
+    test("permanently deletes an owned flashcard set", async () => {
+      req.params = { setId: "set-1" };
+      const mockChain = supabase.from();
+      mockChain.maybeSingle.mockResolvedValueOnce({
+        data: { id: "set-1" },
+        error: null,
+      });
+
+      await aiController.deleteFlashcardSet(req, res);
+
+      expect(mockChain.delete).toHaveBeenCalled();
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
+        status: "success",
+        data: { id: "set-1" },
+      }));
     });
   });
 });
