@@ -6,6 +6,7 @@ import "./CreateLibraryPage.css";
 import api from "../../../utils/api.js";
 import { getMyLibraries } from "../../../utils/documentApi.js";
 import { getMyProfile } from "../../../utils/profileApi.js";
+import { getStoredUser } from "../../../utils/authToken.js";
 import ActionPopup from "../../common/ActionPopup/ActionPopup.jsx";
 
 function normalizeLibraryName(value) {
@@ -200,9 +201,7 @@ function CreateLibraryPage() {
             is_public: createdLib.is_public,
             share_on_profile: createdLib.share_on_profile,
             documents: 0,
-            stars: 0,
             downloads: 0,
-            isStarred: false,
           },
         },
       });

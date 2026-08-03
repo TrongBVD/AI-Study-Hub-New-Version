@@ -21,35 +21,6 @@ function normalizeUploadedFileName(fileName) {
     : decoded.normalize("NFC");
 }
 
-function normalizeDiscussionTopicTitle(value) {
-  return String(value || "")
-    .trim()
-    .replace(/\s+/g, " ")
-    .toLocaleLowerCase();
-}
-
-async function findDuplicateDiscussionTopic(
-  workspaceId,
-  title,
-  excludedTopicId = null,
-) {
-  let query = supabase
-    .from("workspace_discussion_topics")
-    .select("id, title")
-    .eq("workspace_id", workspaceId)
-    .is("deleted_at", null);
-
-  if (excludedTopicId) query = query.neq("id", excludedTopicId);
-
-  const { data, error } = await query;
-  if (error) throw error;
-
-  const normalizedTitle = normalizeDiscussionTopicTitle(title);
-  return (data || []).find(
-    (topic) => normalizeDiscussionTopicTitle(topic.title) === normalizedTitle,
-  );
-}
-
 async function moveWorkspaceDocumentToBucket(document, targetBucket) {
   if (!document?.file_url) {
     return { moved: false, sourceBucket: null, targetBucket };
@@ -174,79 +145,6 @@ const WORKSPACE_DOCUMENT_SELECT = `
     email,
     username,
     full_name
-  )
-`;
-const DISCUSSION_TOPIC_SELECT = `
-  id,
-  workspace_id,
-  created_by,
-  title,
-  content,
-  topic_type,
-  status,
-  priority,
-  date_mode,
-  start_date,
-  end_date,
-  is_pinned,
-  created_at,
-  updated_at,
-  creator:profiles!workspace_discussion_topics_created_by_fkey (
-    id,
-    email,
-    username,
-    full_name,
-    avatar_url
-  ),
-  comments:workspace_discussion_comments (
-    id,
-    topic_id,
-    user_id,
-    content,
-    is_edited,
-    created_at,
-    updated_at,
-    author:profiles!workspace_discussion_comments_user_id_fkey (
-      id,
-      email,
-      username,
-      full_name,
-      avatar_url
-    )
-  ),
-  subtasks:workspace_discussion_subtasks (
-    id,
-    topic_id,
-    created_by,
-    title,
-    is_done,
-    sort_order,
-    created_at,
-    updated_at,
-    creator:profiles!workspace_discussion_subtasks_created_by_fkey (
-      id,
-      email,
-      username,
-      full_name,
-      avatar_url
-    )
-  ),
-  attachments:workspace_discussion_attachments (
-    id,
-    topic_id,
-    uploaded_by,
-    file_name,
-    file_url,
-    file_size_bytes,
-    mime_type,
-    created_at,
-    uploader:profiles!workspace_discussion_attachments_uploaded_by_fkey (
-      id,
-      email,
-      username,
-      full_name,
-      avatar_url
-    )
   )
 `;
 
@@ -381,43 +279,6 @@ async function countWorkspaceAdmins(workspaceId) {
   return count || 0;
 }
 
-async function getWorkspaceDiscussionAccess(workspaceId, userId) {
-  const access = await getWorkspaceAccess(workspaceId, userId);
-  if (!access.workspace || !access.member) {
-    return {
-      ...access,
-      canReadDiscussion: false,
-      canWriteDiscussion: false,
-      canSubmitSolutions: false,
-    };
-  }
-
-  // Editor remains here only for backward compatibility with existing rows.
-  // New invitations and role updates can only create Contributors.
-  const canWriteDiscussion =
-    access.isAdmin || ["Admin", "Editor"].includes(access.member?.role);
-
-  return {
-    ...access,
-    canReadDiscussion: true,
-    canWriteDiscussion,
-    canSubmitSolutions: true,
-  };
-}
-
-async function getDiscussionTopicInWorkspace(workspaceId, topicId) {
-  const { data, error } = await supabase
-    .from("workspace_discussion_topics")
-    .select("id, created_by")
-    .eq("workspace_id", workspaceId)
-    .eq("id", topicId)
-    .is("deleted_at", null)
-    .maybeSingle();
-
-  if (error) throw error;
-  return data;
-}
-
 function mapWorkspaceMessage(row) {
   const sender = row.sender || {};
   return {
@@ -475,125 +336,6 @@ function mapWorkspaceDocument(row) {
   };
 }
 
-function mapDiscussionUser(user, fallback = "Workspace member") {
-  return {
-    id: user?.id || null,
-    email: user?.email || "",
-    username: user?.username || "",
-    fullName: user?.full_name || "",
-    avatarUrl: user?.avatar_url || "",
-    name: user?.full_name || user?.username || user?.email || fallback,
-  };
-}
-
-function mapDiscussionComment(row) {
-  const solutionPrefix = "[[SOLUTION]]";
-  const solutionReplyMatch = String(row.content || "").match(
-    /^\[\[SOLUTION_REPLY:([^\]]+)\]\]/,
-  );
-  const isSolution = String(row.content || "").startsWith(solutionPrefix);
-  const isSolutionReply = Boolean(solutionReplyMatch);
-  const storedPrefix = solutionReplyMatch?.[0] || "";
-
-  return {
-    id: row.id,
-    topicId: row.topic_id,
-    userId: row.user_id,
-    content: isSolution
-      ? row.content.slice(solutionPrefix.length)
-      : isSolutionReply
-        ? row.content.slice(storedPrefix.length)
-        : row.content,
-    kind: isSolution ? "solution" : isSolutionReply ? "solutionReply" : "comment",
-    solutionId: solutionReplyMatch?.[1] || null,
-    isEdited: row.is_edited === true,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
-    author: mapDiscussionUser(row.author),
-  };
-}
-
-function mapDiscussionSubtask(row) {
-  return {
-    id: row.id,
-    topicId: row.topic_id,
-    createdBy: row.created_by,
-    title: row.title,
-    isDone: row.is_done === true,
-    sortOrder: row.sort_order || 0,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
-    creator: mapDiscussionUser(row.creator),
-  };
-}
-
-function mapDiscussionAttachment(row) {
-  const storedMimeType = row.mime_type || "";
-  const isSolution = storedMimeType.startsWith("solution:");
-  const solutionMetadata = isSolution
-    ? storedMimeType.slice("solution:".length)
-    : "";
-  const solutionSeparatorIndex = solutionMetadata.indexOf("|");
-  const solutionId = solutionSeparatorIndex >= 0
-    ? solutionMetadata.slice(0, solutionSeparatorIndex) || null
-    : null;
-  const cleanMimeType = solutionSeparatorIndex >= 0
-    ? solutionMetadata.slice(solutionSeparatorIndex + 1)
-    : solutionMetadata;
-
-  return {
-    id: row.id,
-    topicId: row.topic_id,
-    uploadedBy: row.uploaded_by,
-    fileName: normalizeUploadedFileName(row.file_name),
-    fileUrl: row.file_url,
-    fileSizeBytes: row.file_size_bytes || 0,
-    mimeType: isSolution ? cleanMimeType : storedMimeType,
-    kind: isSolution ? "solution" : "attachment",
-    solutionId,
-    createdAt: row.created_at,
-    uploader: mapDiscussionUser(row.uploader),
-  };
-}
-
-function mapDiscussionTopic(row) {
-  const creator = row.creator || {};
-  const mappedComments = (row.comments || []).map(mapDiscussionComment);
-
-  return {
-    id: row.id,
-    workspaceId: row.workspace_id,
-    createdBy: row.created_by,
-    creator: creator.full_name || creator.username || creator.email || "Workspace member",
-    creatorDetails: mapDiscussionUser(creator),
-    title: row.title,
-    content: row.content || "",
-    type: row.topic_type,
-    status: row.status,
-    priority: row.priority,
-    dateMode: row.date_mode,
-    startDate: row.start_date,
-    endDate: row.end_date,
-    isPinned: row.is_pinned === true,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
-    comments: mappedComments
-      .filter((comment) => comment.kind === "comment"),
-    solutions: mappedComments
-      .filter((comment) => comment.kind === "solution")
-      .map((solution) => ({
-        ...solution,
-        replies: mappedComments.filter(
-          (comment) =>
-            comment.kind === "solutionReply" &&
-            String(comment.solutionId) === String(solution.id),
-        ),
-      })),
-    subtasks: (row.subtasks || []).map(mapDiscussionSubtask),
-    files: (row.attachments || []).map(mapDiscussionAttachment),
-  };
-}
-
 module.exports = {
   MEMBER_ROLES,
   ASSIGNABLE_MEMBER_ROLES,
@@ -602,10 +344,7 @@ module.exports = {
   MESSAGE_SELECT,
   FLASHCARD_SELECT,
   WORKSPACE_DOCUMENT_SELECT,
-  DISCUSSION_TOPIC_SELECT,
   normalizeUploadedFileName,
-  normalizeDiscussionTopicTitle,
-  findDuplicateDiscussionTopic,
   moveWorkspaceDocumentToBucket,
   getWorkspaceRoleLabel,
   formatRelativeTime,
@@ -614,14 +353,7 @@ module.exports = {
   sendWorkspaceInviteEmail,
   getWorkspaceAccess,
   countWorkspaceAdmins,
-  getWorkspaceDiscussionAccess,
-  getDiscussionTopicInWorkspace,
   mapWorkspaceMessage,
   mapWorkspaceFlashcard,
   mapWorkspaceDocument,
-  mapDiscussionUser,
-  mapDiscussionComment,
-  mapDiscussionSubtask,
-  mapDiscussionAttachment,
-  mapDiscussionTopic,
 };

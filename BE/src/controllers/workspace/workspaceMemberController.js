@@ -500,6 +500,20 @@ exports.respondToInvitation = async (req, res) => {
 
       const userDisplayName = userProfile?.full_name || userProfile?.username || "A new member";
 
+      await supabase.from("activity_logs").insert({
+        user_id: userId,
+        admin_id: userId,
+        action_type: "WORKSPACE_ROLE_CHANGED",
+        entity_type: "workspace",
+        entity_id: workspaceId,
+        new_data: {
+          notificationType: "roleChanged",
+          role,
+          workspaceName,
+        },
+        details: `You have successfully joined workspace "${workspaceName}" as ${getWorkspaceRoleLabel(role)}.`,
+      });
+
       const { data: adminsAndEditors } = await supabase
         .from("workspace_members")
         .select("user_id")

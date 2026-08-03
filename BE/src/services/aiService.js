@@ -601,6 +601,10 @@ Your tasks:
    - Does it reflect the content or study topic?
 2. Suggest 3-5 additional relevant hashtags based on document content (always starting with #, no spaces, written in English).
 3. Check for profane, inappropriate, or violating words in the text.
+4. Classify the document into a 3-level subject hierarchy:
+   - "level1": Select STRICTLY ONE from this list: ["Literature", "Mathematics", "History", "Languages", "Geography", "Physics, Chemistry, Biology", "Information Technology", "Engineering & Technology: Engineering", "Architecture", "Economics", "Business Administration", "Finance & Banking", "Medicine", "Law", "Other"]. If the file covers multiple unrelated subjects or is not listed, select "Other". Do NOT invent new level 1 tags.
+   - "level2": Specialized sub-discipline or sub-field within level 1 (e.g. "Software Engineering" for IT, "Derivatives" for Math). Set to null if not applicable. Cannot be "Other".
+   - "level3": Hyper-specific topic within level 2 (e.g. "Definite Integrals"). Set to null if not applicable or if level2 is null. Cannot be "Other".
 
 MUST return strictly in the following JSON format:
 {
@@ -613,6 +617,11 @@ MUST return strictly in the following JSON format:
     }
   ],
   "aiRecommendedTags": ["#recommendation1", "#recommendation2", "#recommendation3"],
+  "hierarchicalTags": {
+    "level1": "Exact level 1 subject from list",
+    "level2": "Level 2 sub-field or null",
+    "level3": "Level 3 topic or null"
+  },
   "sensitivity": {
     "classification": "SEVERE" or "MILD" or "NONE",
     "word": "violating words separated by commas, or null",
@@ -662,10 +671,20 @@ MUST return strictly in the following JSON format:
       ? sensitivityObj.classification
       : "NONE";
 
+    const hTags = result.hierarchicalTags || {};
+    const level1 = String(hTags.level1 || hTags.level_1 || "Other").trim();
+    const level2 = hTags.level2 || hTags.level_2 ? String(hTags.level2 || hTags.level_2).trim() : null;
+    const level3 = level2 && (hTags.level3 || hTags.level_3) ? String(hTags.level3 || hTags.level_3).trim() : null;
+
     return {
       isValid,
       tagValidations,
       aiRecommendedTags,
+      hierarchicalTags: {
+        level1: level1 || "Other",
+        level2: level2 || null,
+        level3: level3 || null,
+      },
       sensitivity: {
         classification,
         word: extractedWords,
@@ -687,6 +706,7 @@ MUST return strictly in the following JSON format:
         reason: "",
       })),
       aiRecommendedTags: [],
+      hierarchicalTags: { level1: "Other", level2: null, level3: null },
       sensitivity: { classification: "NONE", word: null, suspicious_text: null },
     };
   }
@@ -714,6 +734,11 @@ async function validateTagsAndContent(
   return analyzeDocumentForUpload(extractedText, originalName, userTags, options);
 }
 
+async function classifyDocumentHierarchicalTags(extractedText, originalName) {
+  const result = await analyzeDocumentForUpload(extractedText, originalName, []);
+  return result.hierarchicalTags || { level1: "Other", level2: null, level3: null };
+}
+
 module.exports = {
   removeChunkReferences,
   moderateDocument,
@@ -727,5 +752,6 @@ module.exports = {
   generateFlashcardsFromChunks,
   validateTagsAndContent,
   analyzeDocumentForUpload,
+  classifyDocumentHierarchicalTags,
 };
 

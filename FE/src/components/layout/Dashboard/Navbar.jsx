@@ -629,12 +629,13 @@ function Navbar({
                     </div>
                   ) : (
                     notifications.map((notification) => (
-                      <button
-                        type="button"
+                      <div
                         key={notification.id}
                         className={`notification_item ${notification.isRead ? "" : "unread"}`}
                         onClick={() => {
-                          if (notification.link) {
+                          if (notification.isInvitation) {
+                            setSelectedInviteNotification(notification);
+                          } else if (notification.link) {
                             navigate(notification.link);
                           }
                         }}
@@ -647,8 +648,50 @@ function Navbar({
                           <strong>{notification.title}</strong>
                           <p>{getNotificationMessage(notification.message)}</p>
                           <span>{notification.createdAt}</span>
+
+                          {notification.isInvitation && (
+                            <div
+                              className="notification_invite_actions"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              {notification.status === "PENDING" ? (
+                                <>
+                                  <button
+                                    type="button"
+                                    className="invite_btn_sm reject"
+                                    onClick={() =>
+                                      handleRespondInvite(notification.logId, "reject")
+                                    }
+                                  >
+                                    Decline
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="invite_btn_sm accept"
+                                    onClick={() =>
+                                      handleRespondInvite(notification.logId, "accept")
+                                    }
+                                  >
+                                    Accept
+                                  </button>
+                                </>
+                              ) : (
+                                <span
+                                  className={`invite_status_tag ${
+                                    notification.status
+                                      ? notification.status.toLowerCase()
+                                      : ""
+                                  }`}
+                                >
+                                  {notification.status === "ACCEPTED"
+                                    ? "Accepted"
+                                    : "Declined"}
+                                </span>
+                              )}
+                            </div>
+                          )}
                         </div>
-                      </button>
+                      </div>
                     ))
                   )}
                 </div>

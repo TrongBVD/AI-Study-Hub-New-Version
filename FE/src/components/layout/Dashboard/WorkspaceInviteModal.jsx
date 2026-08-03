@@ -15,6 +15,7 @@ export function WorkspaceInviteModal({ invitation, onClose, onRespond }) {
     workspaceDescription,
     role,
     status,
+    memberCount,
   } = invitation;
 
   const handleAction = async (action) => {
@@ -69,6 +70,13 @@ export function WorkspaceInviteModal({ invitation, onClose, onRespond }) {
               <FaShieldHalved className="label-icon" /> Invited Role:
             </span>
             <span className="invite-detail-value badge-role">{roleLabel}</span>
+          </div>
+
+          <div className="invite-detail-item">
+            <span className="invite-detail-label">
+              <FaUsers className="label-icon" /> Members:
+            </span>
+            <span className="invite-detail-value">{memberCount || 1} {(memberCount || 1) === 1 ? "user" : "users"}</span>
           </div>
 
           <div className="invite-detail-item column">

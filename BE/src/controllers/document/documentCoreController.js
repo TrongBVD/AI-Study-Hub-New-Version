@@ -13,7 +13,9 @@ const {
   createBatchEmbeddings,
   toVectorLiteral,
   validateTagsAndContent,
+  classifyDocumentHierarchicalTags,
 } = require("../../services/aiService");
+const { ensureAndLinkDocumentTags } = require("../../services/tagService");
 const {
   mapWithConcurrency,
   normalizeConcurrency,
@@ -174,12 +176,23 @@ async function processDocumentWithAI(
         throw chunkInsertError;
       }
 
-      const updatePayload = {
-        status: status,
-        ai_reject_reason: aiRejectReason,
-      };
-
       await supabase.from("documents").update(updatePayload).eq("id", documentId);
+
+      try {
+        const { data: docInfo } = await supabase
+          .from("documents")
+          .select("title")
+          .eq("id", documentId)
+          .maybeSingle();
+
+        const classification = await classifyDocumentHierarchicalTags(
+          extractedText,
+          docInfo?.title || "Document"
+        );
+        await ensureAndLinkDocumentTags(documentId, classification);
+      } catch (tagErr) {
+        console.warn("3-level document tagging warning:", tagErr.message);
+      }
 
       return {
         status: status,
@@ -1468,25 +1481,19 @@ exports.getLibrary = async (req, res) => {
       });
     }
 
-    const [{ count: docCount, error: docCountError }, { count: starCount, error: starCountError }, { count: downloadCount, error: downloadCountError }, { data: myStar, error: myStarError }] =
+    const [{ count: docCount, error: docCountError }, { count: downloadCount, error: downloadCountError }] =
       await Promise.all([
         supabase.from("documents").select("id", { count: "exact", head: true }).eq("library_id", libraryId).is("deleted_at", null),
-        supabase.from("library_stars").select("library_id", { count: "exact", head: true }).eq("library_id", libraryId),
         supabase.from("library_downloads").select("id", { count: "exact", head: true }).eq("library_id", libraryId),
-        supabase.from("library_stars").select("library_id").eq("library_id", libraryId).eq("user_id", userID).maybeSingle(),
       ]);
 
     if (docCountError) throw docCountError;
-    if (starCountError) throw starCountError;
     if (downloadCountError) throw downloadCountError;
-    if (myStarError) throw myStarError;
 
     const mapped = {
       ...data,
       documents: docCount || 0,
-      stars: starCount || 0,
       downloads: downloadCount || 0,
-      isStarred: Boolean(myStar),
     };
 
     return res.status(200).json({
@@ -1503,108 +1510,6 @@ exports.getLibrary = async (req, res) => {
   }
 };
 
-exports.toggleLibraryStar = async (req, res) => {
-  try {
-    const { libraryId } = req.params;
-    const userID = req.user.id;
-    const { data: library, error: libraryError } = await supabase
-      .from("libraries")
-      .select("id, is_public")
-      .eq("id", libraryId)
-      .maybeSingle();
-
-    if (libraryError) throw libraryError;
-    if (!library || !library.is_public) {
-      return res.status(404).json({ status: "error", message: "Public library not found." });
-    }
-
-    const { data: existing, error: existingError } = await supabase
-      .from("library_stars")
-      .select("library_id")
-      .eq("library_id", libraryId)
-      .eq("user_id", userID)
-      .maybeSingle();
-
-    if (existingError) throw existingError;
-
-    if (existing) {
-      const { error } = await supabase
-        .from("library_stars")
-        .delete()
-        .eq("library_id", libraryId)
-        .eq("user_id", userID);
-      if (error) throw error;
-    } else {
-      const { error } = await supabase
-        .from("library_stars")
-        .insert({ library_id: libraryId, user_id: userID });
-      if (error) throw error;
-    }
-
-    const { count, error: countError } = await supabase
-      .from("library_stars")
-      .select("library_id", { count: "exact", head: true })
-      .eq("library_id", libraryId);
-
-    if (countError) throw countError;
-    return res.status(200).json({
-      status: "success",
-      data: { libraryId, isStarred: !existing, stars: count || 0 },
-    });
-  } catch (error) {
-    console.error("Toggle library star error:", error);
-    return res.status(500).json({
-      status: "error",
-      message: "Could not update library star.",
-      error: error.message,
-    });
-  }
-};
-
-exports.getLibraryEngagement = async (req, res) => {
-  try {
-    const { libraryId } = req.params;
-    const userID = req.user.id;
-    const { data: library, error: libraryError } = await supabase
-      .from("libraries")
-      .select("id, is_public, user_id")
-      .eq("id", libraryId)
-      .maybeSingle();
-
-    if (libraryError) throw libraryError;
-    if (!library || (!library.is_public && String(library.user_id) !== String(userID))) {
-      return res.status(404).json({ status: "error", message: "Library not found." });
-    }
-
-    const [{ count: stars, error: starsError }, { count: downloads, error: downloadsError }, { data: myStar, error: myStarError }] =
-      await Promise.all([
-        supabase.from("library_stars").select("library_id", { count: "exact", head: true }).eq("library_id", libraryId),
-        supabase.from("library_downloads").select("id", { count: "exact", head: true }).eq("library_id", libraryId),
-        supabase.from("library_stars").select("library_id").eq("library_id", libraryId).eq("user_id", userID).maybeSingle(),
-      ]);
-
-    if (starsError) throw starsError;
-    if (downloadsError) throw downloadsError;
-    if (myStarError) throw myStarError;
-
-    return res.status(200).json({
-      status: "success",
-      data: {
-        libraryId,
-        stars: stars || 0,
-        downloads: downloads || 0,
-        isStarred: Boolean(myStar),
-      },
-    });
-  } catch (error) {
-    console.error("Get library engagement error:", error);
-    return res.status(500).json({
-      status: "error",
-      message: "Could not load library engagement.",
-      error: error.message,
-    });
-  }
-};
 
 // Hàm API xóa thư viện
 exports.deleteLibrary = async (req, res) => {
@@ -1689,7 +1594,6 @@ exports.deleteLibrary = async (req, res) => {
 
     // Fallback if RPC fails or is missing on backend database
     if (!rpcSuccess) {
-      await supabase.from("library_stars").delete().eq("library_id", id);
       await supabase.from("library_downloads").delete().eq("library_id", id);
       await supabase
         .from("documents")
@@ -1719,61 +1623,3 @@ exports.deleteLibrary = async (req, res) => {
   }
 };
 
-// Hàm API toggle thả sao cho Thư viện (lưu trực tiếp vào bảng library_stars)
-exports.toggleStarLibrary = async (req, res) => {
-  try {
-    const { libraryId } = req.params;
-    const userID = req.user.id;
-
-    if (userID === "guest" || userID === "00000000-0000-0000-0000-000000000000" || req.user.role === "GUEST") {
-      return res.status(403).json({
-        status: "error",
-        message: "Tài khoản Guest không hỗ trợ thả sao thư viện.",
-      });
-    }
-
-    const { data: existing } = await supabase
-      .from("library_stars")
-      .select("library_id")
-      .eq("library_id", libraryId)
-      .eq("user_id", userID)
-      .maybeSingle();
-
-    let isStarred = false;
-
-    if (existing) {
-      await supabase
-        .from("library_stars")
-        .delete()
-        .eq("library_id", libraryId)
-        .eq("user_id", userID);
-      isStarred = false;
-    } else {
-      await supabase
-        .from("library_stars")
-        .insert({ library_id: libraryId, user_id: userID });
-      isStarred = true;
-    }
-
-    const { count } = await supabase
-      .from("library_stars")
-      .select("*", { count: "exact", head: true })
-      .eq("library_id", libraryId);
-
-    return res.status(200).json({
-      status: "success",
-      data: {
-        libraryId,
-        isStarred,
-        stars: count || 0,
-      },
-    });
-  } catch (error) {
-    console.error("Lỗi toggleStarLibrary:", error);
-    return res.status(500).json({
-      status: "error",
-      message: "Không thể thay đổi trạng thái sao cho thư viện.",
-      error: error.message,
-    });
-  }
-};

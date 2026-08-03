@@ -1145,6 +1145,62 @@ body[data-theme="white"] .logout_btn:hover {
   font-size: 11px;
 }
 
+.notification_invite_actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.invite_btn_sm {
+  padding: 4px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: all 0.15s ease;
+}
+
+.invite_btn_sm.accept {
+  background: var(--primary-color, #2563eb);
+  color: #ffffff;
+}
+
+.invite_btn_sm.accept:hover {
+  background: #1d4ed8;
+}
+
+.invite_btn_sm.reject {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.invite_btn_sm.reject:hover {
+  background: rgba(239, 68, 68, 0.25);
+}
+
+.invite_status_tag {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.invite_status_tag.accepted {
+  background: rgba(34, 197, 94, 0.15);
+  color: #22c55e;
+  border: 1px solid rgba(34, 197, 94, 0.3);
+}
+
+.invite_status_tag.rejected {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
 .nav_actions .notification_header button {
   width: auto !important;
   height: 32px !important;

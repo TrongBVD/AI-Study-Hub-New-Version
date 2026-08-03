@@ -88,6 +88,34 @@ exports.listMyWorkspaceNotifications = async (req, res) => {
 
     if (error) throw error;
 
+    const invitationWorkspaceIds = Array.from(
+      new Set(
+        (data || [])
+          .filter(
+            (item) =>
+              (item.new_data?.notificationType || "roleChanged") ===
+              "workspaceInvitation"
+          )
+          .map((item) => item.entity_id)
+          .filter(Boolean)
+      )
+    );
+
+    const memberCountMap = {};
+    if (invitationWorkspaceIds.length > 0) {
+      const { data: memberRows } = await supabase
+        .from("workspace_members")
+        .select("workspace_id")
+        .in("workspace_id", invitationWorkspaceIds);
+
+      if (memberRows) {
+        for (const row of memberRows) {
+          const wsId = row.workspace_id;
+          memberCountMap[wsId] = (memberCountMap[wsId] || 0) + 1;
+        }
+      }
+    }
+
     return res.status(200).json({
       status: "success",
       data: (data || []).map((item) => {
@@ -110,6 +138,7 @@ exports.listMyWorkspaceNotifications = async (req, res) => {
             workspaceDescription: item.new_data?.workspaceDescription || "No description provided.",
             inviterName: item.new_data?.inviterName || "Workspace Admin",
             role: item.new_data?.role || "Contributor",
+            memberCount: memberCountMap[item.entity_id] || 1,
             status: invStatus,
             isInvitation: true,
             isRead,

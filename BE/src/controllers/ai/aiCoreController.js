@@ -1115,21 +1115,6 @@ exports.generateFlashcards = async (req, res) => {
       .insert(flashcardSet);
     if (setInsertError) throw setInsertError;
 
-    const setDocumentRows = documents.map((document) => ({
-      set_id: flashcardSet.id,
-      document_id: document.id,
-    }));
-    const { error: setDocumentsError } = await supabase
-      .from("flashcard_set_documents")
-      .insert(setDocumentRows);
-    if (setDocumentsError) {
-      await supabase
-        .from("flashcard_sets")
-        .delete()
-        .eq("id", flashcardSet.id)
-        .eq("creator_id", userId);
-      throw setDocumentsError;
-    }
 
     const rows = cards.map((card) => ({
       set_id: flashcardSet.id,
@@ -1189,8 +1174,7 @@ exports.generateFlashcards = async (req, res) => {
     const storageMissing =
       error.code === "PGRST205" ||
       String(error.message || "").includes("public.flashcards") ||
-      String(error.message || "").includes("public.flashcard_sets") ||
-      String(error.message || "").includes("public.flashcard_set_documents");
+      String(error.message || "").includes("public.flashcard_sets");
 
     return res.status(storageMissing ? 503 : error.statusCode || 500).json({
       status: "error",

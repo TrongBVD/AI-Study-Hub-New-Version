@@ -5,7 +5,10 @@ import {
   getNotifications,
   markAllNotificationsAsRead,
   saveNotifications,
+  mergeAppNotifications,
 } from "../../../utils/notificationStore.js";
+import { getMyWorkspaceNotifications, respondToInvitation } from "../../../utils/workspaceApi.js";
+import { WorkspaceInviteModal } from "../../layout/Dashboard/WorkspaceInviteModal.jsx";
 import "./NotificationsPage.css";
 
 const FILTERS = ["All", "Unread", "Read"];
@@ -20,6 +23,7 @@ function getTimestamp(notification) {
 function NotificationsPage() {
   const navigate = useNavigate();
   const [notifications, setNotifications] = useState(getNotifications);
+  const [selectedInviteNotification, setSelectedInviteNotification] = useState(null);
   const [activeFilter, setActiveFilter] = useState("All");
   const [query, setQuery] = useState("");
   const notificationSettings = getNotificationSettings();
@@ -36,6 +40,19 @@ function NotificationsPage() {
       window.removeEventListener("storage", syncNotifications);
     };
   }, []);
+
+  const handleRespondInvite = async (invitationId, action) => {
+    try {
+      const res = await respondToInvitation(invitationId, action);
+      const updatedNotifications = await getMyWorkspaceNotifications();
+      setNotifications(mergeAppNotifications(updatedNotifications || []));
+      if (res?.action === "ACCEPTED" && res?.workspaceId) {
+        navigate(`/dashboard/workspaces/${res.workspaceId}`);
+      }
+    } catch (err) {
+      console.error("Could not respond to invitation:", err);
+    }
+  };
 
   const unreadCount = notifications.filter((notification) => !notification.isRead).length;
   const visibleNotifications = useMemo(() => {
@@ -71,7 +88,11 @@ function NotificationsPage() {
       setNotifications(updatedNotifications);
     }
 
-    if (notification.link) navigate(notification.link);
+    if (notification.isInvitation) {
+      setSelectedInviteNotification(notification);
+    } else if (notification.link) {
+      navigate(notification.link);
+    }
   }
 
   return (
@@ -129,26 +150,60 @@ function NotificationsPage() {
           ) : (
             <div className="all-notifications-page__list">
               {visibleNotifications.map((notification) => (
-                <button
-                  type="button"
+                <div
                   key={notification.id}
-                  className={notification.isRead ? "" : "unread"}
+                  className={`notification_page_item ${notification.isRead ? "" : "unread"}`}
                   onClick={() => openNotification(notification)}
+                  style={{ cursor: "pointer" }}
                 >
                   <span className="all-notifications-page__icon"><i className={notification.icon || "ti-bell"} /></span>
                   <span className="all-notifications-page__copy">
                     <strong>{notification.title}</strong>
                     <p>{notification.message}</p>
                     <small>{getTimestamp(notification)}</small>
+                    {notification.isInvitation && (
+                      <div className="notification_invite_actions" onClick={(e) => e.stopPropagation()}>
+                        {notification.status === "PENDING" ? (
+                          <>
+                            <button
+                              type="button"
+                              className="invite_btn_sm reject"
+                              onClick={() => handleRespondInvite(notification.logId, "reject")}
+                            >
+                              Decline
+                            </button>
+                            <button
+                              type="button"
+                              className="invite_btn_sm accept"
+                              onClick={() => handleRespondInvite(notification.logId, "accept")}
+                            >
+                              Accept
+                            </button>
+                          </>
+                        ) : (
+                          <span className={`invite_status_tag ${notification.status ? notification.status.toLowerCase() : ""}`}>
+                            {notification.status === "ACCEPTED" ? "Accepted" : "Declined"}
+                          </span>
+                        )}
+                      </div>
+                    )}
                   </span>
                   {!notification.isRead && <i className="all-notifications-page__unread-dot" aria-label="Unread" />}
                   {notification.link && <i className="ti-angle-right all-notifications-page__arrow" />}
-                </button>
+                </div>
               ))}
             </div>
           )}
         </section>
       </div>
+
+      {selectedInviteNotification && (
+        <WorkspaceInviteModal
+          invitation={selectedInviteNotification}
+          onClose={() => setSelectedInviteNotification(null)}
+          onRespond={handleRespondInvite}
+        />
+      )}
     </main>
   );
 }

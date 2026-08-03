@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { getPublicLibraries } from "../../../utils/publicApi.js";
-import { isLibraryStarred } from "../../../utils/starredLibraries.js";
+import { getPublicLibraries, getPublicTags } from "../../../utils/publicApi.js";
 import { getCurrentUserId } from "../../../utils/userStorage.js";
 import "./DiscoverPage.css";
 
@@ -38,13 +37,9 @@ function getLibraryTheme(index) {
 
 function normalizeLibrary(library, index) {
   const id = library.id || library.libraryId;
-  const isStarredLocally = isLibraryStarred(id);
   const name = library.name || library.libraryName || "Untitled library";
   const documents = Number(library.documents || library.document_count || 0);
-  const baseStars = Number(
-    library.stars ?? library.star_count ?? library.starCount ?? 0,
-  );
-  const stars = isStarredLocally ? Math.max(baseStars, 1) : baseStars;
+  const matchingFileCount = Number(library.matchingFileCount || 0);
   const downloads = Number(
     library.downloads ?? library.download_count ?? library.downloadCount ?? 0,
   );
@@ -68,9 +63,9 @@ function normalizeLibrary(library, index) {
     id,
     name,
     documents,
-    stars,
+    matchingFileCount,
     downloads,
-    trendingScore: ageInDays ? stars / Math.sqrt(ageInDays) : 0,
+    trendingScore: ageInDays ? downloads / Math.sqrt(ageInDays) : 0,
     ownerId,
     ownerName,
     ownerAvatar,
@@ -110,7 +105,7 @@ function DiscoverCategoryEmpty({ children }) {
   return <p className="discover_category_empty">{children}</p>;
 }
 
-function DiscoverLibraryCard({ library, rank, metricLabel, wide }) {
+function DiscoverLibraryCard({ library, rank, metricLabel, activeTag, wide }) {
   const theme = getLibraryTheme(library.coverIndex || 0);
 
   return (
@@ -140,14 +135,19 @@ function DiscoverLibraryCard({ library, rank, metricLabel, wide }) {
         </div>
         <footer>
           <span>
-            <i className="ti-star" /> {formatNumber(library.stars)}
+          <i className="ti-download" /> {formatNumber(library.downloads)}
           </span>
           <span>
             <i className="ti-download" /> {formatNumber(library.downloads)}
           </span>
-          <span title="Documents">
+          <span title="Total Documents">
             <i className="ti-files" /> {formatNumber(library.documents)} {library.documents === 1 ? "document" : "documents"}
           </span>
+          {activeTag && library.matchingFileCount > 0 && (
+            <span className="matching_count_badge" title={`Matching tag: ${activeTag}`}>
+              <i className="ti-tag" /> {library.matchingFileCount} matching {library.matchingFileCount === 1 ? "file" : "files"}
+            </span>
+          )}
           <span className="discover_card_created">
             <i className="ti-calendar" /> {formatCreatedDate(library.createdAt)}
           </span>
@@ -160,8 +160,23 @@ function DiscoverLibraryCard({ library, rank, metricLabel, wide }) {
 
 function DiscoverPage() {
   const [libraries, setLibraries] = useState([]);
+  const [tagsList, setTagsList] = useState([]);
+  const [selectedTag, setSelectedTag] = useState("");
+  const [tagInput, setTagInput] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    async function loadTags() {
+      try {
+        const tags = await getPublicTags();
+        setTagsList(Array.isArray(tags) ? tags : []);
+      } catch {
+        setTagsList([]);
+      }
+    }
+    loadTags();
+  }, []);
 
   useEffect(() => {
     let isMounted = true;
@@ -170,7 +185,7 @@ function DiscoverPage() {
       try {
         setIsLoading(true);
         setError("");
-        const publicLibraries = await getPublicLibraries();
+        const publicLibraries = await getPublicLibraries(selectedTag);
 
         if (!isMounted) return;
 
@@ -204,21 +219,30 @@ function DiscoverPage() {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [selectedTag]);
 
-  const favoriteLibraries = useMemo(
-    () =>
-      [...libraries]
-        .sort(
-          (a, b) =>
-            b.stars - a.stars ||
-            b.downloads - a.downloads ||
-            b.documents - a.documents ||
-            getCreatedTimestamp(b) - getCreatedTimestamp(a),
-        )
-        .slice(0, 5),
-    [libraries],
-  );
+  const handleTagSearchSubmit = (e) => {
+    e.preventDefault();
+    setSelectedTag(tagInput.trim());
+  };
+
+  const favoriteLibraries = useMemo(() => {
+    return [...libraries].sort((a, b) => {
+      if (selectedTag) {
+        return (
+          b.matchingFileCount - a.matchingFileCount ||
+          b.downloads - a.downloads ||
+          getCreatedTimestamp(b) - getCreatedTimestamp(a)
+        );
+      }
+      return (
+        b.downloads - a.downloads ||
+        b.documents - a.documents ||
+        getCreatedTimestamp(b) - getCreatedTimestamp(a)
+      );
+    });
+  }, [libraries, selectedTag]);
+
   return (
     <main className="discover_page">
       <section className="discover_shell">
@@ -227,8 +251,67 @@ function DiscoverPage() {
             <span>StudyHub Discover</span>
             <h1>Find the collections everyone is studying from.</h1>
             <p>
-              Explore favorite public study collections shared by the community.
+              Explore public study collections categorized by AI subjects and sub-topics.
             </p>
+
+            <div className="discover_tag_bar">
+              <form className="discover_tag_search_box" onSubmit={handleTagSearchSubmit}>
+                <i className="ti-search" />
+                <input
+                  type="text"
+                  placeholder="Search by subject or topic (e.g. Mathematics, Integrals)..."
+                  value={tagInput}
+                  onChange={(e) => setTagInput(e.target.value)}
+                />
+                {tagInput && (
+                  <button
+                    type="button"
+                    style={{ background: "none", border: "none", color: "#64748b", cursor: "pointer" }}
+                    onClick={() => {
+                      setTagInput("");
+                      setSelectedTag("");
+                    }}
+                  >
+                    <i className="ti-close" />
+                  </button>
+                )}
+              </form>
+
+              <div className="discover_tag_pills">
+                <button
+                  type="button"
+                  className={`tag_pill ${!selectedTag ? "active" : ""}`}
+                  onClick={() => {
+                    setSelectedTag("");
+                    setTagInput("");
+                  }}
+                >
+                  All Subjects
+                </button>
+                {tagsList.map((tagObj) => {
+                  const tagName = tagObj.name || tagObj;
+                  const isActive = selectedTag.toLowerCase() === tagName.toLowerCase();
+                  return (
+                    <button
+                      type="button"
+                      key={tagName}
+                      className={`tag_pill ${isActive ? "active" : ""}`}
+                      onClick={() => {
+                        if (isActive) {
+                          setSelectedTag("");
+                          setTagInput("");
+                        } else {
+                          setSelectedTag(tagName);
+                          setTagInput(tagName);
+                        }
+                      }}
+                    >
+                      {tagName}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
           </div>
         </header>
 
@@ -242,15 +325,23 @@ function DiscoverPage() {
         ) : libraries.length === 0 ? (
           <section className="discover_empty">
             <i className="ti-archive" />
-            <h2>No public libraries yet</h2>
-            <p>Shared libraries will appear here once users publish them.</p>
+            <h2>No matching public libraries found</h2>
+            <p>
+              {selectedTag
+                ? `No libraries contain files tagged with "${selectedTag}". Try selecting another subject.`
+                : "Shared libraries will appear here once users publish them."}
+            </p>
           </section>
         ) : (
           <section className="discover_split">
             <section className="discover_section">
               <div className="discover_section_title">
-                <h2>Most favorite</h2>
-                <p>Public libraries ranked by stars, downloads, documents and recency.</p>
+                <h2>{selectedTag ? `Libraries for "${selectedTag}"` : "Most favorite"}</h2>
+                <p>
+                  {selectedTag
+                    ? `Sorted by number of files matching tag "${selectedTag}"`
+                    : "Public libraries ranked by downloads, documents and recency."}
+                </p>
               </div>
               <div className="discover_list">
                 {favoriteLibraries.length > 0 ? (
@@ -259,12 +350,13 @@ function DiscoverPage() {
                       key={library.id}
                       library={library}
                       rank={index + 1}
-                      metricLabel="Favorite"
+                      activeTag={selectedTag}
+                      metricLabel={selectedTag ? `${library.matchingFileCount} files` : "Favorite"}
                     />
                   ))
                 ) : (
                   <DiscoverCategoryEmpty>
-                    No favorite library is available yet.
+                    No library is available for this tag.
                   </DiscoverCategoryEmpty>
                 )}
               </div>

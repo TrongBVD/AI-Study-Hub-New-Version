@@ -25,8 +25,6 @@ const {
     updateLibrary,
     getLibrary,
     deleteLibrary,
-    toggleLibraryStar,
-    getLibraryEngagement,
 } = require("../controllers/document/libraryController");
 
 const router = express.Router();
@@ -92,8 +90,6 @@ router.get("/libraries", authMiddleware, listMyLibraries);
 router.get("/libraries/:libraryId/import-preview", authMiddleware, previewLibraryImport);
 router.post("/libraries/:libraryId/import", authMiddleware, importLibrary);
 router.get("/libraries/:libraryId", authMiddleware, getLibrary);
-router.get("/libraries/:libraryId/engagement", authMiddleware, getLibraryEngagement);
-router.post("/libraries/:libraryId/star", authMiddleware, toggleLibraryStar);
 router.post("/libraries", authMiddleware, createLibrary);
 router.put("/libraries/:id", authMiddleware, updateLibrary);
 router.delete("/libraries/:id", authMiddleware, deleteLibrary);
