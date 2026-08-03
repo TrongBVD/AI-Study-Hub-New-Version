@@ -26,6 +26,10 @@ import {
   deleteLibrary,
 } from "../../../utils/documentApi.js";
 import {
+  downloadPublicDocument,
+  getPublicLibrary,
+} from "../../../utils/publicApi.js";
+import {
   LuPanelLeftOpen,
   LuPanelRightClose,
   LuPanelRightOpen,
@@ -67,6 +71,17 @@ function formatAiMessageText(content) {
     .trim();
 }
 
+function formatLibraryDate(value) {
+  const date = new Date(value || "");
+  return Number.isNaN(date.getTime())
+    ? "Date unavailable"
+    : date.toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      });
+}
+
 /**
  * NotebookWorkspacePage Component
  * 2-Panel Google NotebookLM Style Workspace Interface:
@@ -87,6 +102,8 @@ export default function NotebookWorkspacePage() {
   const [documents, setDocuments] = useState([]);
   const [selectedDocIds, setSelectedDocIds] = useState(new Set());
   const [selectAll, setSelectAll] = useState(true);
+  const [accessMode, setAccessMode] = useState("loading");
+  const [libraryLoadError, setLibraryLoadError] = useState("");
 
   // Left Panel visibility state
   const [showLeftPanel, setShowLeftPanel] = useState(true);
@@ -130,6 +147,16 @@ export default function NotebookWorkspacePage() {
   const userDisplayName =
     user?.full_name || user?.username || user?.email || "User";
   const userInitial = String(userDisplayName).trim().charAt(0).toUpperCase() || "U";
+  const canManageLibrary = accessMode === "owner" && !isGuest;
+  const isPublicLearner = accessMode === "publicLearner";
+  const libraryOwner = library?.owner || {};
+  const libraryOwnerName =
+    libraryOwner.full_name ||
+    libraryOwner.fullName ||
+    libraryOwner.username ||
+    "StudyHub member";
+  const libraryOwnerInitial =
+    String(libraryOwnerName).trim().charAt(0).toUpperCase() || "S";
 
   const setCurrentConversation = (conversationId) => {
     const nextConversationId = conversationId || createConversationId();
@@ -146,25 +173,54 @@ export default function NotebookWorkspacePage() {
 
     async function loadWorkspaceData() {
       try {
-        const libData = await getLibrary(libraryId);
-        const docsData = await getMyDocuments(libraryId);
-        const docs = Array.isArray(docsData)
-          ? docsData
-          : docsData?.data || [];
+        setAccessMode("loading");
+        setLibraryLoadError("");
+
+        let loadedLibrary;
+        let docs;
+        let resolvedAccessMode;
+
+        if (isGuest) {
+          const publicData = await getPublicLibrary(libraryId);
+          loadedLibrary = publicData?.library;
+          docs = Array.isArray(publicData?.documents) ? publicData.documents : [];
+          resolvedAccessMode = "publicLearner";
+        } else {
+          try {
+            const [ownedLibrary, ownedDocuments] = await Promise.all([
+              getLibrary(libraryId),
+              getMyDocuments(libraryId),
+            ]);
+            loadedLibrary = ownedLibrary?.data || ownedLibrary;
+            docs = Array.isArray(ownedDocuments)
+              ? ownedDocuments
+              : ownedDocuments?.data || [];
+            resolvedAccessMode = "owner";
+          } catch (ownerError) {
+            if (ownerError.response?.status !== 404) throw ownerError;
+
+            const publicData = await getPublicLibrary(libraryId);
+            loadedLibrary = publicData?.library;
+            docs = Array.isArray(publicData?.documents) ? publicData.documents : [];
+            resolvedAccessMode = "publicLearner";
+          }
+        }
+
+        if (!loadedLibrary) {
+          throw new Error("Library data is unavailable.");
+        }
 
         if (isMounted) {
-          const loadedLibrary = libData?.data || libData || { name: "Untitled Library" };
           setLibrary(loadedLibrary);
           setLibraryName(loadedLibrary.name || loadedLibrary.libraryName || "");
           setAllowPublish(Boolean(loadedLibrary.is_public ?? loadedLibrary.isPublic));
-          const docs = Array.isArray(docsData) ? docsData : (docsData?.data || []);
-          setLibrary(libData?.data || libData || { name: "Untitled Library" });
           setDocuments(docs);
+          setAccessMode(resolvedAccessMode);
 
           // Select all files by default for AI context
           const allIds = new Set(docs.map((d) => d.id));
           setSelectedDocIds(allIds);
-          setSelectAll(true);
+          setSelectAll(docs.length > 0);
         }
 
         // Fetch DB chat history (no localStorage)
@@ -181,6 +237,17 @@ export default function NotebookWorkspacePage() {
         }
       } catch (err) {
         console.error("Failed to load workspace data:", err);
+        if (isMounted) {
+          setLibrary(null);
+          setDocuments([]);
+          setSelectedDocIds(new Set());
+          setSelectAll(false);
+          setAccessMode("denied");
+          setLibraryLoadError(
+            err.response?.data?.message ||
+              "This library does not exist or is not available to your account.",
+          );
+        }
       }
     }
 
@@ -251,6 +318,8 @@ export default function NotebookWorkspacePage() {
    * Perform document upload with optional replacement IDs
    */
   const performUpload = async (files, replacementIds = []) => {
+    if (!canManageLibrary) return;
+
     setUploading(true);
     try {
       const res = await uploadDocuments(files, null, libraryId, [], null, replacementIds);
@@ -324,7 +393,9 @@ export default function NotebookWorkspacePage() {
   const handleDownloadDocument = async (docId, title, e) => {
     e?.stopPropagation();
     try {
-      const downloadData = await downloadDocument(docId);
+      const downloadData = isPublicLearner
+        ? await downloadPublicDocument(docId)
+        : await downloadDocument(docId);
       if (downloadData?.downloadUrl) {
         window.open(downloadData.downloadUrl, "_blank");
       } else {
@@ -342,7 +413,7 @@ export default function NotebookWorkspacePage() {
    * Handle document deletion from DB and Supabase storage bucket
    */
   const handleConfirmDelete = async () => {
-    if (!deleteConfirmDoc) return;
+    if (!deleteConfirmDoc || !canManageLibrary) return;
     const { id: docId, title } = deleteConfirmDoc;
     setDeleteConfirmDoc(null);
 
@@ -382,6 +453,7 @@ export default function NotebookWorkspacePage() {
   };
 
   const handleOpenSettings = () => {
+    if (!canManageLibrary) return;
     setLibraryName(library?.name || library?.libraryName || "");
     setAllowPublish(Boolean(library?.is_public ?? library?.isPublic));
     setIsSettingsOpen(true);
@@ -389,6 +461,7 @@ export default function NotebookWorkspacePage() {
 
   const handleSaveLibrarySettings = async (event) => {
     event.preventDefault();
+    if (!canManageLibrary) return;
     const trimmedName = libraryName.trim();
 
     if (!trimmedName) {
@@ -419,6 +492,8 @@ export default function NotebookWorkspacePage() {
   };
 
   const handleDeleteLibrary = async () => {
+    if (!canManageLibrary) return;
+
     const confirmed = await showPopupConfirm(
       `Delete “${library?.name || "this library"}”? This action cannot be undone.`,
       { title: "Delete library?", confirmText: "Delete", tone: "danger" },
@@ -722,6 +797,29 @@ export default function NotebookWorkspacePage() {
     },
   ];
 
+  if (accessMode === "loading") {
+    return (
+      <main className="library_access_state">
+        <i className="ti-reload library_access_spinner" aria-hidden="true" />
+        <h1>Opening library</h1>
+        <p>Please wait while we prepare this study space.</p>
+      </main>
+    );
+  }
+
+  if (accessMode === "denied" || !library) {
+    return (
+      <main className="library_access_state">
+        <i className="ti-alert" aria-hidden="true" />
+        <h1>Library unavailable</h1>
+        <p>{libraryLoadError}</p>
+        <button type="button" onClick={() => navigate("/dashboard/discover")}>
+          Back to Discover
+        </button>
+      </main>
+    );
+  }
+
   return (
     <div className="notebook_workspace_container">
       {/* Custom English Toast Notification Banner */}
@@ -739,7 +837,7 @@ export default function NotebookWorkspacePage() {
         selectAll={selectAll}
         showLeftPanel={showLeftPanel}
         uploading={uploading}
-        isGuest={isGuest}
+        canManageLibrary={canManageLibrary}
         fileInputRef={fileInputRef}
         onTogglePanel={() => setShowLeftPanel(!showLeftPanel)}
         onToggleSelectAll={handleToggleSelectAll}
@@ -764,12 +862,18 @@ export default function NotebookWorkspacePage() {
             <button
               type="button"
               className="back_to_libraries_btn"
-              onClick={() => navigate("/dashboard/libraries")}
-              title="Back to Libraries"
-              aria-label="Back to Libraries"
+              onClick={() =>
+                navigate(
+                  isPublicLearner
+                    ? location.state?.from || "/dashboard/discover"
+                    : "/dashboard/libraries",
+                )
+              }
+              title={isPublicLearner ? "Back to Discover" : "Back to Libraries"}
+              aria-label={isPublicLearner ? "Back to Discover" : "Back to Libraries"}
             >
               <HiOutlineArrowLeft />
-              <span>Libraries</span>
+              <span>{isPublicLearner ? "Discover" : "Libraries"}</span>
             </button>
             {!showLeftPanel && (
               <button
@@ -815,7 +919,7 @@ export default function NotebookWorkspacePage() {
                 <LuPanelRightOpen />
               </button>
             )}
-            {!isGuest && (
+            {canManageLibrary && (
               <button
                 type="button"
                 className="library_settings_btn"
@@ -828,6 +932,28 @@ export default function NotebookWorkspacePage() {
             )}
           </div>
         </header>
+
+        {isPublicLearner && (
+          <section className="public_library_owner_banner" aria-label="Library owner">
+            <div className="public_library_owner_avatar" aria-hidden="true">
+              {libraryOwner.avatar_url ? (
+                <img src={libraryOwner.avatar_url} alt="" />
+              ) : (
+                <span>{libraryOwnerInitial}</span>
+              )}
+            </div>
+            <div className="public_library_owner_copy">
+              <span>Library by {libraryOwnerName}</span>
+              <strong>{library.name || library.libraryName}</strong>
+              {library.description && <p>{library.description}</p>}
+            </div>
+            <div className="public_library_owner_meta">
+              <span>Public learning access</span>
+              <small>{documents.length} {documents.length === 1 ? "document" : "documents"}</small>
+              <small>Created {formatLibraryDate(library.created_at || library.createdAt)}</small>
+            </div>
+          </section>
+        )}
 
         {/* Chat Messages Stream or NotebookLM Welcome Hero */}
         <div className="chat_stream" ref={chatContainerRef}>
@@ -1094,7 +1220,7 @@ export default function NotebookWorkspacePage() {
 
       {/* Duplicate File Replacement Confirmation Modal */}
       <DuplicateConfirmModal
-        isOpen={Boolean(duplicateConfirm)}
+        isOpen={canManageLibrary && Boolean(duplicateConfirm)}
         filename={duplicateConfirm?.filename || ""}
         onConfirm={handleConfirmReplace}
         onClose={() => setDuplicateConfirm(null)}
@@ -1102,13 +1228,13 @@ export default function NotebookWorkspacePage() {
 
       {/* Delete File Confirmation Modal */}
       <DeleteConfirmModal
-        isOpen={Boolean(deleteConfirmDoc)}
+        isOpen={canManageLibrary && Boolean(deleteConfirmDoc)}
         filename={deleteConfirmDoc?.title || ""}
         onConfirm={handleConfirmDelete}
         onClose={() => setDeleteConfirmDoc(null)}
       />
 
-      {isSettingsOpen && (
+      {canManageLibrary && isSettingsOpen && (
         <div
           className="library_settings_overlay"
           role="presentation"

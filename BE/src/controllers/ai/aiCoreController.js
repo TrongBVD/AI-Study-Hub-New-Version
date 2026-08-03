@@ -151,16 +151,19 @@ async function getAccessibleLibraryDocuments(libraryId, userId) {
   return accessResults.filter(Boolean);
 }
 
-async function getOwnedLibraryMetadata(libraryId, userId) {
+async function getAccessibleLibraryMetadata(libraryId, userId) {
   const { data: library, error } = await supabase
     .from("libraries")
-    .select("id, name, created_at")
+    .select("id, user_id, name, created_at, is_public")
     .eq("id", libraryId)
-    .eq("user_id", userId)
     .maybeSingle();
   if (error) throw error;
-  if (!library) {
-    const notFoundError = new Error("Current library was not found or does not belong to this account.");
+  const canAccessLibrary =
+    library &&
+    (String(library.user_id) === String(userId) || library.is_public === true);
+
+  if (!canAccessLibrary) {
+    const notFoundError = new Error("Current library was not found or is unavailable to this account.");
     notFoundError.statusCode = 404;
     throw notFoundError;
   }
@@ -867,7 +870,7 @@ exports.chatWithDocument = async (req, res) => {
           message: "Select a library before asking about the current library.",
         });
       }
-      currentLibraryMetadata = await getOwnedLibraryMetadata(metadataLibraryId, userId);
+      currentLibraryMetadata = await getAccessibleLibraryMetadata(metadataLibraryId, userId);
       metadataDocuments = await getAccessibleLibraryDocuments(metadataLibraryId, userId);
       metadataLibraries = [currentLibraryMetadata];
       metadataAnswerScope = "LIBRARY";

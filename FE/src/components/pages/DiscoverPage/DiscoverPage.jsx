@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { getPublicLibraries } from "../../../utils/publicApi.js";
 import { isLibraryStarred } from "../../../utils/starredLibraries.js";
+import { getCurrentUserId } from "../../../utils/userStorage.js";
 import "./DiscoverPage.css";
 
 const libraryThemes = [
@@ -79,71 +80,6 @@ function normalizeLibrary(library, index) {
     coverIndex: index % 6,
     createdAt,
   };
-}
-
-function buildActiveUsers(libraries) {
-  const users = new Map();
-
-  libraries.forEach((library) => {
-    const key = library.ownerId || library.ownerName;
-    const current = users.get(key) || {
-      id: key,
-      profileId: library.ownerId || "",
-      name: library.ownerName,
-      avatar: library.ownerAvatar,
-      libraries: 0,
-      stars: 0,
-      downloads: 0,
-    };
-
-    current.libraries += 1;
-    current.stars += library.stars;
-    current.downloads += library.downloads;
-    users.set(key, current);
-  });
-
-  return [...users.values()]
-    .sort(
-      (a, b) =>
-        b.libraries - a.libraries ||
-        b.stars - a.stars ||
-        b.downloads - a.downloads,
-    )
-    .slice(0, 5);
-}
-
-function DiscoverUserAvatar({ user }) {
-  const [imageFailed, setImageFailed] = useState(false);
-  const initials = user?.name?.slice(0, 2).toUpperCase() || "SH";
-
-  return (
-    <div className="discover_user_avatar">
-      {user?.avatar && !imageFailed ? (
-        <img
-          src={user.avatar}
-          alt={`${user.name} avatar`}
-          onError={() => setImageFailed(true)}
-        />
-      ) : (
-        initials
-      )}
-    </div>
-  );
-}
-
-function DiscoverUserSurface({ user, className, children }) {
-  if (user?.profileId) {
-    return (
-      <Link
-        to={`/dashboard/profile/${user.profileId}`}
-        className={`${className} discover_user_link`}
-      >
-        {children}
-      </Link>
-    );
-  }
-
-  return <div className={className}>{children}</div>;
 }
 
 function formatNumber(value) {
@@ -238,10 +174,17 @@ function DiscoverPage() {
 
         if (!isMounted) return;
 
+        const currentUserId = getCurrentUserId();
+
         setLibraries(
           (Array.isArray(publicLibraries) ? publicLibraries : [])
             .filter((library) => library?.id || library?.libraryId)
-            .map(normalizeLibrary),
+            .map(normalizeLibrary)
+            .filter(
+              (library) =>
+                !currentUserId ||
+                String(library.ownerId) !== String(currentUserId),
+            ),
         );
       } catch (requestError) {
         if (!isMounted) return;
@@ -276,9 +219,6 @@ function DiscoverPage() {
         .slice(0, 5),
     [libraries],
   );
-  const activeUsers = useMemo(() => buildActiveUsers(libraries), [libraries]);
-  const featuredUser = activeUsers[0];
-
   return (
     <main className="discover_page">
       <section className="discover_shell">
@@ -287,31 +227,9 @@ function DiscoverPage() {
             <span>StudyHub Discover</span>
             <h1>Find the collections everyone is studying from.</h1>
             <p>
-              Explore active creators and favorite public study collections.
+              Explore favorite public study collections shared by the community.
             </p>
           </div>
-
-          <DiscoverUserSurface
-            user={featuredUser}
-            className="discover_featured_user"
-          >
-            <span>Most active user</span>
-            {featuredUser ? (
-              <>
-                <DiscoverUserAvatar user={featuredUser} />
-                <h2>{featuredUser.name}</h2>
-                <p>
-                  {featuredUser.libraries} public libraries shared
-                </p>
-              </>
-            ) : (
-              <>
-                <DiscoverUserAvatar />
-                <h2>StudyHub community</h2>
-                <p>Public activity will appear as libraries are shared.</p>
-              </>
-            )}
-          </DiscoverUserSurface>
         </header>
 
         {error && <p className="discover_error">{error}</p>}
@@ -328,57 +246,30 @@ function DiscoverPage() {
             <p>Shared libraries will appear here once users publish them.</p>
           </section>
         ) : (
-          <>
-            <section className="discover_split">
-              <section className="discover_section">
-                <div className="discover_section_title">
-                  <h2>Most favorite</h2>
-                  <p>Public libraries ranked by stars, downloads, documents and recency.</p>
-                </div>
-                <div className="discover_list">
-                  {favoriteLibraries.length > 0 ? (
-                    favoriteLibraries.map((library, index) => (
-                      <DiscoverLibraryCard
-                        key={library.id}
-                        library={library}
-                        rank={index + 1}
-                        metricLabel="Favorite"
-                      />
-                    ))
-                  ) : (
-                    <DiscoverCategoryEmpty>
-                      No favorite library is available yet.
-                    </DiscoverCategoryEmpty>
-                  )}
-                </div>
-              </section>
-            </section>
-
+          <section className="discover_split">
             <section className="discover_section">
               <div className="discover_section_title">
-                <h2>Active creators</h2>
-                <p>Users sharing the liveliest public study collections.</p>
+                <h2>Most favorite</h2>
+                <p>Public libraries ranked by stars, downloads, documents and recency.</p>
               </div>
-              <div className="discover_users">
-                {activeUsers.map((user, index) => (
-                  <DiscoverUserSurface
-                    user={user}
-                    className="discover_user_card"
-                    key={user.id}
-                  >
-                    <span>{index + 1}</span>
-                    <DiscoverUserAvatar user={user} />
-                    <div>
-                      <strong>{user.name}</strong>
-                      <p>
-                        {user.libraries} public libraries shared
-                      </p>
-                    </div>
-                  </DiscoverUserSurface>
-                ))}
+              <div className="discover_list">
+                {favoriteLibraries.length > 0 ? (
+                  favoriteLibraries.map((library, index) => (
+                    <DiscoverLibraryCard
+                      key={library.id}
+                      library={library}
+                      rank={index + 1}
+                      metricLabel="Favorite"
+                    />
+                  ))
+                ) : (
+                  <DiscoverCategoryEmpty>
+                    No favorite library is available yet.
+                  </DiscoverCategoryEmpty>
+                )}
               </div>
             </section>
-          </>
+          </section>
         )}
       </section>
     </main>

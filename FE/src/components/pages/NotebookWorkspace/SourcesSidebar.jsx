@@ -19,7 +19,7 @@ export default function SourcesSidebar({
   selectAll = false,
   showLeftPanel = true,
   uploading = false,
-  isGuest = false,
+  canManageLibrary = false,
   fileInputRef,
   onTogglePanel,
   onToggleSelectAll,
@@ -55,7 +55,7 @@ export default function SourcesSidebar({
       {showLeftPanel && (
         <div className="panel_content">
           {/* Upload Button */}
-          {!isGuest && (
+          {canManageLibrary && (
             <button
               type="button"
               className="add_source_btn"
@@ -133,14 +133,16 @@ export default function SourcesSidebar({
                     >
                       <HiOutlineArrowDownTray />
                     </button>
-                    <button
-                      type="button"
-                      className="doc_action_btn delete_btn"
-                      title="Delete Document"
-                      onClick={(e) => onDeleteDoc(doc.id, doc.title, e)}
-                    >
-                      <HiOutlineTrash />
-                    </button>
+                    {canManageLibrary && (
+                      <button
+                        type="button"
+                        className="doc_action_btn delete_btn"
+                        title="Delete Document"
+                        onClick={(e) => onDeleteDoc(doc.id, doc.title, e)}
+                      >
+                        <HiOutlineTrash />
+                      </button>
+                    )}
                   </div>
                 </div>
               ))
