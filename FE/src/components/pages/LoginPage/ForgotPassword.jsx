@@ -2,6 +2,7 @@ import { useState } from "react";
 import FormInput from "../../common/FormInput/FormInput.jsx";
 import api from "../../../utils/api.js";
 import { useNavigate } from "react-router-dom";
+import { HiOutlineEnvelope } from "react-icons/hi2";
 import "./LoginPage.css";
 
 function ForgotPassword() {
@@ -32,7 +33,12 @@ function ForgotPassword() {
   return (
     <div className="login_page">
       <form className="login_form" onSubmit={handleSubmit}>
-        <p className="login_title">Forgot Password</p>
+        <p className="login_title login_title--with-icon">
+          <span className="login_title_icon" aria-hidden="true">
+            <HiOutlineEnvelope />
+          </span>
+          Forgot Password
+        </p>
         <p className="login_message" style={{textAlign: "left", marginBottom: "15px"}}>
           Enter your registered email. We will send a 6-digit OTP code to verify.
         </p>

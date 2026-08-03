@@ -1,10 +1,58 @@
 .login_page {
+  --bg-primary: #f8faff;
+  --bg-secondary: #f3f0ff;
+  --bg-card: #ffffff;
+  --text-primary: #0f172a;
+  --text-secondary: #334155;
+  --text-muted: #64748b;
+  --border-color: #ddd6fe;
+  --input-bg: #ffffff;
+  --input-border: #bfdbfe;
+  --accent-color: #2563eb;
+  --accent-hover: #1d4ed8;
+  --button-bg: #2563eb;
+  --button-text: #ffffff;
+  --focus-ring: rgba(124, 58, 237, 0.2);
+  --shadow-soft: 0 28px 70px rgba(30, 41, 90, 0.16);
   display: flex;
   justify-content: center;
   align-items: center;
-  height: 100vh;
-  background-color: var(--bg-secondary);
+  min-height: 100vh;
+  padding: 28px;
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 12% 18%, rgba(56, 189, 248, 0.28), transparent 28rem),
+    radial-gradient(circle at 88% 82%, rgba(196, 181, 253, 0.48), transparent 30rem),
+    linear-gradient(145deg, #f8fbff 0%, #f3f0ff 56%, #eef6ff 100%);
+  color: var(--text-primary);
+  color-scheme: light;
   margin: 0;
+}
+
+.login_page::before,
+.login_page::after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  border-radius: 999px;
+}
+
+.login_page::before {
+  width: 220px;
+  height: 220px;
+  top: -80px;
+  right: 8%;
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.18), rgba(124, 58, 237, 0.2));
+}
+
+.login_page::after {
+  width: 150px;
+  height: 150px;
+  bottom: -52px;
+  left: 10%;
+  background: rgba(56, 189, 248, 0.18);
 }
 
 /* Form Login - Khớp hoàn toàn với card Register */
@@ -17,10 +65,13 @@
   padding: 40px;
   /* Bằng hệt register */
   border-radius: 24px;
-  background-color: var(--bg-card);
+  background: rgba(255, 255, 255, 0.94);
   box-shadow: var(--shadow-soft);
-  border: 1px solid var(--border-color);
+  border: 1px solid rgba(196, 181, 253, 0.72);
   box-sizing: border-box;
+  position: relative;
+  z-index: 1;
+  backdrop-filter: blur(18px);
 }
 
 .login_form--main {
@@ -36,7 +87,7 @@
   display: flex;
   align-items: center;
   padding-left: 35px;
-  color: var(--text-secondary);
+  color: #071426;
 }
 
 .login_title::before,
@@ -52,6 +103,55 @@
 
 .login_title::after {
   animation: pulse 1s linear infinite;
+}
+
+.login_title::before,
+.login_title::after {
+  background: linear-gradient(135deg, #38bdf8, #2563eb 55%, #8b5cf6);
+}
+
+.login_title--with-icon {
+  gap: 12px;
+  padding-left: 0;
+}
+
+.login_title--with-icon::before,
+.login_title--with-icon::after {
+  display: none;
+}
+
+.login_title_icon {
+  width: 36px;
+  height: 36px;
+  border: 1px solid rgba(196, 181, 253, 0.72);
+  border-radius: 11px;
+  background: linear-gradient(135deg, #2563eb, #7c3aed);
+  color: #ffffff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 36px;
+  box-shadow: 0 8px 20px rgba(37, 99, 235, 0.2);
+}
+
+.login_title_icon svg {
+  width: 21px;
+  height: 21px;
+  stroke-width: 2;
+}
+
+.login_heading {
+  display: grid;
+  gap: 6px;
+}
+
+.login_title_subtitle {
+  margin: 0;
+  padding-left: 0;
+  text-align: left;
+  color: #64748b;
+  font-size: 13.5px;
+  line-height: 1.5;
 }
 
 .login_flex {
@@ -102,13 +202,20 @@
   color: var(--bg-card);
   font-size: 16px;
   font-weight: 600;
-  background-color: var(--accent-hover);
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 55%, #7c3aed 100%);
+  box-shadow: 0 12px 26px rgba(37, 99, 235, 0.24);
   transition: 0.3s ease;
   cursor: pointer;
 }
 
 .login_submit:hover {
-  background-color: var(--sidebar-bg);
+  background: linear-gradient(135deg, #1d4ed8, #6d28d9);
+  transform: translateY(-1px);
+}
+
+.login_page .form_input_group .form_input:focus {
+  border-color: #7c3aed;
+  box-shadow: 0 0 0 4px rgba(196, 181, 253, 0.34);
 }
 
 .login_message,

@@ -77,7 +77,7 @@ body[data-theme="white"] .user_dashboard_layout .settings_field select {
   height: 2.75rem;
   border-radius: 0.8rem;
   background: var(--settings-dark);
-  color: #f8d9bc;
+  color: #bfdbfe;
   display: grid;
   place-items: center;
   box-shadow: var(--shadow-soft);
@@ -752,19 +752,35 @@ body[data-theme="black"] .user_dashboard_layout .settings_table {
 }
 
 .theme_white .settings_theme_preview {
-  background: var(--bg-card);
+  background: #ffffff;
 }
 
-.theme_white .settings_theme_preview span {
-  background: var(--accent-color);
+.theme_white .settings_theme_preview span:first-child {
+  background: #2563eb;
+}
+
+.theme_white .settings_theme_preview span:nth-child(2) {
+  background: #38bdf8;
+}
+
+.theme_white .settings_theme_preview span:last-child {
+  background: #0f172a;
 }
 
 .theme_black .settings_theme_preview {
-  background: var(--bg-secondary);
+  background: #05070b;
 }
 
-.theme_black .settings_theme_preview span {
-  background: var(--text-primary);
+.theme_black .settings_theme_preview span:first-child {
+  background: #38bdf8;
+}
+
+.theme_black .settings_theme_preview span:nth-child(2) {
+  background: #2563eb;
+}
+
+.theme_black .settings_theme_preview span:last-child {
+  background: #ffffff;
 }
 
 .settings_theme_text {

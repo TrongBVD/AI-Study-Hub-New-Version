@@ -10,7 +10,7 @@
   background:
     radial-gradient(circle at 8% 6%, var(--focus-ring), transparent 28%),
     radial-gradient(circle at 86% 18%, var(--focus-ring), transparent 26%),
-    linear-gradient(135deg, #fbf4e5 0%, #efe0c5 48%, #f8ecd7 100%);
+    linear-gradient(135deg, #f8fafc 0%, #dbeafe 48%, #eff6ff 100%);
   position: relative;
   overflow-x: hidden;
 }
@@ -50,7 +50,7 @@
   padding: 22px;
   color: var(--bg-card);
   background:
-    linear-gradient(115deg, rgba(47, 32, 21, 0.98), rgba(73, 48, 30, 0.92)),
+    linear-gradient(115deg, rgba(15, 23, 42, 0.98), rgba(73, 48, 30, 0.92)),
     url("https://picsum.photos/seed/quiet-study-table/1600/1000");
   background-size: cover;
   background-position: center;

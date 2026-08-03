@@ -1,12 +1,11 @@
-import React from "react";
 import {
   HiOutlinePlus,
-  HiOutlineChevronLeft,
   HiOutlineDocumentText,
   HiOutlineEye,
   HiOutlineArrowDownTray,
   HiOutlineTrash,
 } from "react-icons/hi2";
+import { LuPanelLeftClose } from "react-icons/lu";
 
 /**
  * SourcesSidebar Component
@@ -28,21 +27,27 @@ export default function SourcesSidebar({
   onViewDoc,
   onDownloadDoc,
   onDeleteDoc,
+  chatHistory = [],
+  activeConversationId = "",
+  onOpenHistoryConversation,
+  onDeleteHistoryConversation,
+  onClearHistory,
+  historyActionBusy = false,
 }) {
   return (
     <aside className={`workspace_panel sources_panel ${showLeftPanel ? "" : "collapsed"}`}>
       <div className="panel_header">
         <div className="panel_title">
           <h3>Sources</h3>
-          <span className="source_count_badge">{documents.length}</span>
         </div>
         <button
           type="button"
-          className="icon_btn"
+          className="icon_btn collapse_sidebar_btn"
           onClick={onTogglePanel}
-          title="Toggle Sources Panel"
+          title="Collapse sources sidebar"
+          aria-label="Collapse sources sidebar"
         >
-          <HiOutlineChevronLeft />
+          <LuPanelLeftClose />
         </button>
       </div>
 
@@ -140,8 +145,94 @@ export default function SourcesSidebar({
               ))
             )}
           </div>
+
+          <section className="chat_history_section" aria-label="Chat history">
+            <div className="chat_history_heading">
+              <div>
+                <span>Conversations</span>
+                <strong>Chat History</strong>
+              </div>
+              <div className="chat_history_heading_actions">
+                {chatHistory.length > 0 && (
+                  <button
+                    type="button"
+                    className="chat_history_clear"
+                    onClick={onClearHistory}
+                    disabled={historyActionBusy}
+                    title="Delete all chat history in this library"
+                  >
+                    Clear all
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {chatHistory.length > 0 ? (
+              <div className="chat_history_list">
+                {[...chatHistory]
+                  .sort(
+                    (first, second) =>
+                      new Date(second.createdAt || 0).getTime() -
+                      new Date(first.createdAt || 0).getTime(),
+                  )
+                  .map((conversation) => (
+                    <div
+                      key={conversation.id}
+                      className={`chat_history_row ${
+                        String(activeConversationId) === String(conversation.id)
+                          ? "is_active"
+                          : ""
+                      }`}
+                    >
+                      <button
+                        type="button"
+                        className={`chat_history_item ${
+                          String(activeConversationId) === String(conversation.id)
+                            ? "is_active"
+                            : ""
+                        }`}
+                        onClick={() => onOpenHistoryConversation?.(conversation)}
+                        disabled={historyActionBusy}
+                      >
+                        <span>{conversation.title || "Untitled conversation"}</span>
+                        <small>{formatChatHistoryDate(conversation.createdAt)}</small>
+                      </button>
+                      <button
+                        type="button"
+                        className="chat_history_delete"
+                        onClick={() => onDeleteHistoryConversation?.(conversation)}
+                        disabled={historyActionBusy}
+                        title="Delete this conversation"
+                        aria-label={`Delete ${conversation.title || "conversation"}`}
+                      >
+                        <HiOutlineTrash />
+                      </button>
+                    </div>
+                  ))}
+              </div>
+            ) : (
+              <p className="chat_history_empty">Your conversations will appear here.</p>
+            )}
+          </section>
         </div>
       )}
     </aside>
   );
+}
+
+function formatChatHistoryDate(value) {
+  const timestamp = new Date(value).getTime();
+  if (!Number.isFinite(timestamp)) return "Recently";
+
+  const elapsedMinutes = Math.max(0, Math.floor((Date.now() - timestamp) / 60000));
+  if (elapsedMinutes < 1) return "Just now";
+  if (elapsedMinutes < 60) return `${elapsedMinutes}m ago`;
+
+  const elapsedHours = Math.floor(elapsedMinutes / 60);
+  if (elapsedHours < 24) return `${elapsedHours}h ago`;
+
+  const elapsedDays = Math.floor(elapsedHours / 24);
+  return elapsedDays < 7
+    ? `${elapsedDays}d ago`
+    : new Date(timestamp).toLocaleDateString();
 }

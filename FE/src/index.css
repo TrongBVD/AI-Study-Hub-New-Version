@@ -1,43 +1,43 @@
 body[data-theme="current"] {
-  --bg-primary: #f7f1df;
-  --bg-secondary: #faf3e1;
-  --bg-card: #fffaf0;
-  --bg-elevated: #fffdf8;
-  --text-primary: #2f2015;
-  --text-secondary: #735f4c;
-  --text-muted: #9a826b;
-  --border-color: #e2d3bc;
-  --accent-color: #b4531a;
-  --accent-hover: #923f12;
-  --accent-soft: #ead7bd;
-  --sidebar-bg: #3b2a1a;
-  --sidebar-text: #faf3e1;
-  --sidebar-active-bg: #4a3425;
-  --sidebar-active-text: #fffaf0;
-  --input-bg: #fffdf8;
-  --input-border: #cfbda1;
-  --button-bg: #b4531a;
+  --bg-primary: #f8fafc;
+  --bg-secondary: #f1f5f9;
+  --bg-card: #ffffff;
+  --bg-elevated: #ffffff;
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-muted: #64748b;
+  --border-color: #dbeafe;
+  --accent-color: #2563eb;
+  --accent-hover: #1d4ed8;
+  --accent-soft: #dbeafe;
+  --sidebar-bg: #0f172a;
+  --sidebar-text: #f1f5f9;
+  --sidebar-active-bg: #172033;
+  --sidebar-active-text: #ffffff;
+  --input-bg: #ffffff;
+  --input-border: #bfdbfe;
+  --button-bg: #2563eb;
   --button-text: #ffffff;
-  --button-hover-bg: #923f12;
+  --button-hover-bg: #1d4ed8;
   --danger-color: #b42318;
   --danger-bg: #f8d7da;
   --success-color: #238636;
-  --warning-color: #b4531a;
-  --shadow-soft: 0 18px 46px rgba(59, 38, 24, 0.12);
-  --hero-bg: linear-gradient(135deg, #3b2a1a 0%, #7a3b1d 62%, #b4531a 100%);
-  --hero-card-bg: rgba(255, 250, 240, 0.78);
-  --hero-text: #fffaf0;
-  --hero-muted: #efcbb0;
-  --table-row-bg: #fffaf0;
-  --table-border: #e2d3bc;
-  --badge-bg: #ead7bd;
-  --badge-text: #3b2a1a;
-  --overlay-bg: rgba(47, 32, 21, 0.55);
-  --focus-ring: rgba(180, 83, 26, 0.22);
-  --hero-preview-bg: rgba(255, 250, 240, 0.13);
-  --hero-preview-border: rgba(255, 250, 240, 0.18);
-  --hero-preview-icon-bg: #efcbb0;
-  --hero-preview-icon-text: #3b2a1a;
+  --warning-color: #2563eb;
+  --shadow-soft: 0 18px 46px rgba(15, 23, 42, 0.12);
+  --hero-bg: linear-gradient(135deg, #0f172a 0%, #1e3a8a 62%, #2563eb 100%);
+  --hero-card-bg: rgba(255, 255, 255, 0.78);
+  --hero-text: #ffffff;
+  --hero-muted: #bfdbfe;
+  --table-row-bg: #ffffff;
+  --table-border: #dbeafe;
+  --badge-bg: #dbeafe;
+  --badge-text: #0f172a;
+  --overlay-bg: rgba(15, 23, 42, 0.55);
+  --focus-ring: rgba(37, 99, 235, 0.22);
+  --hero-preview-bg: rgba(255, 255, 255, 0.13);
+  --hero-preview-border: rgba(255, 255, 255, 0.18);
+  --hero-preview-icon-bg: #bfdbfe;
+  --hero-preview-icon-text: #0f172a;
   --hero-blob-gradient: radial-gradient(
     circle,
     rgba(245, 226, 196, 0.28) 0%,
@@ -47,10 +47,10 @@ body[data-theme="current"] {
   );
   --hero-blob-opacity: 0.48;
   --hero-blob-blur: 10px;
-  --collection-card-bg: linear-gradient(135deg, #fffaf0 0%, #f2e9d6 100%);
-  --collection-card-hover-bg: linear-gradient(135deg, #fffdf8 0%, #ead7bd 100%);
-  --collection-action-bg: #fffaf0;
-  --collection-action-text: #3b2a1a;
+  --collection-card-bg: linear-gradient(135deg, #ffffff 0%, #eff6ff 100%);
+  --collection-card-hover-bg: linear-gradient(135deg, #ffffff 0%, #dbeafe 100%);
+  --collection-action-bg: #ffffff;
+  --collection-action-text: #0f172a;
 }
 
 body[data-theme="white"] {
@@ -100,54 +100,54 @@ body[data-theme="white"] {
 }
 
 body[data-theme="black"] {
-  --bg-primary: #0f0f0f;
-  --bg-secondary: #141414;
-  --bg-card: #1a1a1a;
-  --bg-elevated: #222222;
-  --text-primary: #f5f5f5;
-  --text-secondary: #d4d4d4;
-  --text-muted: #a3a3a3;
-  --border-color: #333333;
-  --accent-color: #f97316;
-  --accent-hover: #fb923c;
-  --accent-soft: rgba(249, 115, 22, 0.14);
-  --sidebar-bg: #1a1a1a;
-  --sidebar-text: #d4d4d4;
-  --sidebar-active-bg: #2d2d2d;
-  --sidebar-active-text: #f5f5f5;
-  --input-bg: #171717;
-  --input-border: #3a3a3a;
-  --button-bg: #f97316;
-  --button-text: #111111;
-  --button-hover-bg: #fb923c;
+  --bg-primary: #05070b;
+  --bg-secondary: #0b1220;
+  --bg-card: #111827;
+  --bg-elevated: #172033;
+  --text-primary: #ffffff;
+  --text-secondary: #cbd5e1;
+  --text-muted: #94a3b8;
+  --border-color: #26344a;
+  --accent-color: #38bdf8;
+  --accent-hover: #60a5fa;
+  --accent-soft: rgba(56, 189, 248, 0.14);
+  --sidebar-bg: #0b1220;
+  --sidebar-text: #cbd5e1;
+  --sidebar-active-bg: #172554;
+  --sidebar-active-text: #ffffff;
+  --input-bg: #111827;
+  --input-border: #334155;
+  --button-bg: #2563eb;
+  --button-text: #ffffff;
+  --button-hover-bg: #1d4ed8;
   --danger-color: #f87171;
   --danger-bg: #3f1d1d;
   --success-color: #4ade80;
   --warning-color: #facc15;
-  --shadow-soft: 0 18px 45px rgba(0, 0, 0, 0.35);
-  --hero-bg: #1a1a1a;
-  --hero-card-bg: #1f1f1f;
-  --hero-text: #f5f5f5;
-  --hero-muted: #d4d4d4;
-  --table-row-bg: #1a1a1a;
-  --table-border: #3a3a3a;
-  --badge-bg: rgba(249, 115, 22, 0.16);
-  --badge-text: #fb923c;
+  --shadow-soft: 0 18px 45px rgba(0, 0, 0, 0.42);
+  --hero-bg: linear-gradient(135deg, #05070b 0%, #0b1220 55%, #172554 100%);
+  --hero-card-bg: #111827;
+  --hero-text: #ffffff;
+  --hero-muted: #bfdbfe;
+  --table-row-bg: #111827;
+  --table-border: #26344a;
+  --badge-bg: rgba(56, 189, 248, 0.16);
+  --badge-text: #7dd3fc;
   --overlay-bg: rgba(0, 0, 0, 0.66);
-  --focus-ring: rgba(249, 115, 22, 0.24);
-  --hero-preview-bg: #1f1f1f;
-  --hero-preview-border: #333333;
-  --hero-preview-icon-bg: rgba(249, 115, 22, 0.16);
-  --hero-preview-icon-text: #fb923c;
-  --collection-card-bg: #1a1a1a;
-  --collection-card-hover-bg: #222222;
-  --collection-action-bg: rgba(249, 115, 22, 0.16);
-  --collection-action-text: #fb923c;
+  --focus-ring: rgba(56, 189, 248, 0.26);
+  --hero-preview-bg: #111827;
+  --hero-preview-border: #26344a;
+  --hero-preview-icon-bg: rgba(56, 189, 248, 0.16);
+  --hero-preview-icon-text: #7dd3fc;
+  --collection-card-bg: #111827;
+  --collection-card-hover-bg: #172033;
+  --collection-action-bg: rgba(56, 189, 248, 0.16);
+  --collection-action-text: #7dd3fc;
 }
 
 body {
-  background: var(--bg-primary, #f7f1df);
-  color: var(--text-primary, #2f2015);
+  background: var(--bg-primary, #05070b);
+  color: var(--text-primary, #ffffff);
 }
 
 .ti-reload {
@@ -205,7 +205,7 @@ body[data-theme="current"] .focus_card_dark {
 }
 
 body[data-theme="current"] .import_library_hero {
-  background: linear-gradient(135deg, var(--sidebar-bg), #563820);
+  background: linear-gradient(135deg, var(--sidebar-bg), #172554);
 }
 
 body[data-theme="current"] .create_workspace_page,
@@ -214,7 +214,7 @@ body[data-theme="current"] .import_library_page {
   background:
     radial-gradient(circle at 8% 6%, var(--focus-ring), transparent 28%),
     radial-gradient(circle at 86% 18%, var(--focus-ring), transparent 26%),
-    linear-gradient(135deg, #fbf4e5 0%, #efe0c5 48%, #f8ecd7 100%);
+    linear-gradient(135deg, #f8fafc 0%, #dbeafe 48%, #eff6ff 100%);
 }
 
 body[data-theme="white"],

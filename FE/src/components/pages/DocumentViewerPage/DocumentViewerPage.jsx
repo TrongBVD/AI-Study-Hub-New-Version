@@ -3,25 +3,9 @@ import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { getDocumentView } from "../../../utils/documentApi";
 import { viewPublicDocument } from "../../../utils/publicApi";
 import { getStoredUser } from "../../../utils/authToken";
-import { setUserStoredItem } from "../../../utils/userStorage.js";
 import { viewWorkspaceDiscussionAttachment } from "../../../utils/workspaceApi.js";
 import FileViewer from "../FileViewer/FileViewer";
 import "./DocumentViewerPage.css";
-
-const PENDING_DOCUMENT_CHAT_KEY = "aiStudyHubPendingDocumentChat";
-
-const QUICK_PROMPTS = [
-  {
-    label: "Summary",
-    icon: "ti-write",
-    prompt: "Summarize the key points in this document.",
-  },
-  {
-    label: "Generate Flashcards",
-    icon: "ti-layers",
-    action: "flashcards",
-  },
-];
 
 function formatDisplayFileName(fileName) {
   return String(fileName || "Untitled document")
@@ -38,7 +22,6 @@ function DocumentViewerPage() {
   const [documentData, setDocumentData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
-  const [question, setQuestion] = useState("");
   const isGuest = getStoredUser()?.role === "GUEST";
   const isWorkspaceAttachment = Boolean(attachmentId);
   const returnContext = location.state?.returnContext;
@@ -125,93 +108,23 @@ function DocumentViewerPage() {
     );
   }
 
-  function openDocumentChat(nextQuestion = question) {
-    const trimmedQuestion = nextQuestion.trim();
-    if (!trimmedQuestion) return;
-
-    setUserStoredItem(
-      PENDING_DOCUMENT_CHAT_KEY,
-      JSON.stringify({
-        id: `${documentData.documentId}-${Date.now()}`,
-        documentId: documentData.documentId,
-        documentTitle: formatDisplayFileName(documentData.fileName),
-        question: trimmedQuestion,
-        createdAt: new Date().toISOString(),
-      }),
-    );
-
-    navigate("/dashboard/ai-chat");
-  }
-
-  function handleQuickAction(item) {
-    if (item.action === "flashcards") {
-      navigate(
-        `/dashboard/flashcards?documentId=${encodeURIComponent(documentData.documentId)}`,
-      );
-      return;
-    }
-
-    openDocumentChat(item.prompt);
-  }
-
   return (
-    <>
-      <FileViewer
-        documentUrl={documentData.viewUrl}
-        documentName={documentData.fileName}
-        displayName={formatDisplayFileName(documentData.fileName)}
-        documentId={documentData.documentId}
-        backLabel={
-          returnContext === "solution"
-            ? "Back to Solution"
-            : returnContext === "topic"
-              ? "Back to Topic"
-            : returnContext === "files"
-              ? "Back to Files"
-              : ""
-        }
-        onBack={returnContext ? handleReturnToWorkspace : undefined}
-      />
-
-      {!isGuest && !isWorkspaceAttachment && (
-        <section className="document_chat_assistant" aria-label="Document AI assistant">
-          <div className="document_chat_quick_actions">
-            {QUICK_PROMPTS.map((item) => (
-              <button
-                type="button"
-                key={item.label}
-                onClick={() => handleQuickAction(item)}
-              >
-                <i className={item.icon} />
-                {item.label}
-              </button>
-            ))}
-          </div>
-
-          <form
-            className="document_chat_input"
-            onSubmit={(event) => {
-              event.preventDefault();
-              openDocumentChat();
-            }}
-          >
-            <input
-              type="text"
-              value={question}
-              onChange={(event) => setQuestion(event.target.value)}
-              placeholder="Ask a question about this document"
-            />
-            <button
-              type="submit"
-              disabled={question.trim() === ""}
-              aria-label="Send question"
-            >
-              <i className="ti-arrow-right" />
-            </button>
-          </form>
-        </section>
-      )}
-    </>
+    <FileViewer
+      documentUrl={documentData.viewUrl}
+      documentName={documentData.fileName}
+      displayName={formatDisplayFileName(documentData.fileName)}
+      documentId={documentData.documentId}
+      backLabel={
+        returnContext === "solution"
+          ? "Back to Solution"
+          : returnContext === "topic"
+            ? "Back to Topic"
+          : returnContext === "files"
+            ? "Back to Files"
+            : ""
+      }
+      onBack={returnContext ? handleReturnToWorkspace : undefined}
+    />
   );
 }
 

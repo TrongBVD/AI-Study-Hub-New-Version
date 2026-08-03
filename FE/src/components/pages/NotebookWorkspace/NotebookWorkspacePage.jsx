@@ -1,11 +1,10 @@
 import { useState, useEffect, useRef } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useLocation, useParams, useNavigate } from "react-router-dom";
 import {
   HiOutlineChevronRight,
+  HiOutlineChevronDown,
   HiOutlinePaperAirplane,
-  HiOutlineHandThumbUp,
-  HiOutlineHandThumbDown,
-  HiOutlineBookmark,
+  HiOutlineDocumentDuplicate,
   HiOutlineSparkles,
   HiOutlineLightBulb,
   HiOutlineAcademicCap,
@@ -26,7 +25,22 @@ import {
   deleteLibrary,
 } from "../../../utils/documentApi.js";
 import { chatWithDocument, getChatHistory } from "../../../utils/aiApi.js";
+  HiOutlineArrowPath,
+  HiOutlinePlayCircle,
+} from "react-icons/hi2";
+import {
+  LuPanelLeftOpen,
+  LuPanelRightClose,
+  LuPanelRightOpen,
+} from "react-icons/lu";
+import { getLibrary, getMyDocuments, uploadDocuments, downloadDocument, deleteDocument } from "../../../utils/documentApi.js";
+import {
+  chatWithDocument,
+  deleteChatHistory,
+  getChatHistory,
+} from "../../../utils/aiApi.js";
 import { getStoredUser } from "../../../utils/authToken.js";
+import { getMyProfile } from "../../../utils/profileApi.js";
 import { createAppNotification } from "../../../utils/notificationStore.js";
 import Toast from "../../common/Toast/Toast.jsx";
 import { showPopupConfirm } from "../../common/ActionPopup/actionPopupService.js";
@@ -34,6 +48,27 @@ import SourcesSidebar from "./SourcesSidebar.jsx";
 import DeleteConfirmModal from "./DeleteConfirmModal.jsx";
 import DuplicateConfirmModal from "./DuplicateConfirmModal.jsx";
 import "./NotebookWorkspacePage.css";
+
+function createConversationId() {
+  if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID();
+
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (character) => {
+    const randomValue = Math.floor(Math.random() * 16);
+    const value = character === "x" ? randomValue : (randomValue & 0x3) | 0x8;
+    return value.toString(16);
+  });
+}
+
+function formatAiMessageText(content) {
+  return String(content || "")
+    .replace(/\r\n?/g, "\n")
+    .replace(/([^\n])\s+(#{1,6})\s+/g, "$1\n\n$2 ")
+    .replace(/^\s*#{1,6}\s*/gm, "")
+    .replace(/`([^`\n]+)`/g, "$1")
+    .replace(/\*\*([^*\n]+)\*\*/g, "$1")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
 
 /**
  * NotebookWorkspacePage Component
@@ -46,6 +81,7 @@ import "./NotebookWorkspacePage.css";
 export default function NotebookWorkspacePage() {
   const { libraryId } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const user = getStoredUser();
   const isGuest = String(user?.role || "").toUpperCase() === "GUEST";
 
@@ -57,12 +93,21 @@ export default function NotebookWorkspacePage() {
 
   // Left Panel visibility state
   const [showLeftPanel, setShowLeftPanel] = useState(true);
+  const [showRightPanel, setShowRightPanel] = useState(true);
 
   // Chat stream & message state
   const [messages, setMessages] = useState([]);
+  const [chatHistory, setChatHistory] = useState([]);
+  const [activeConversationId, setActiveConversationId] = useState("");
+  const [sessionConversationId, setSessionConversationId] = useState(
+    () => createConversationId(),
+  );
+  const sessionConversationIdRef = useRef(sessionConversationId);
+  const [historyActionBusy, setHistoryActionBusy] = useState(false);
   const [inputQuery, setInputQuery] = useState("");
   const [isAsking, setIsAsking] = useState(false);
   const [thoughtsOpenMap, setThoughtsOpenMap] = useState({});
+  const [userAvatar, setUserAvatar] = useState(user?.avatar_url || "");
 
   // File upload state
   const [uploading, setUploading] = useState(false);
@@ -83,6 +128,18 @@ export default function NotebookWorkspacePage() {
 
   const chatContainerRef = useRef(null);
   const fileInputRef = useRef(null);
+  const pendingChatHandledRef = useRef(false);
+  const primarySelectedDocumentId = Array.from(selectedDocIds)[0] || "";
+  const userDisplayName =
+    user?.full_name || user?.username || user?.email || "User";
+  const userInitial = String(userDisplayName).trim().charAt(0).toUpperCase() || "U";
+
+  const setCurrentConversation = (conversationId) => {
+    const nextConversationId = conversationId || createConversationId();
+    sessionConversationIdRef.current = nextConversationId;
+    setSessionConversationId(nextConversationId);
+    return nextConversationId;
+  };
 
   /**
    * Load library details, documents, and chat history on mount
@@ -94,6 +151,9 @@ export default function NotebookWorkspacePage() {
       try {
         const libData = await getLibrary(libraryId);
         const docsData = await getMyDocuments(libraryId);
+        const docs = Array.isArray(docsData)
+          ? docsData
+          : docsData?.data || [];
 
         if (isMounted) {
           const loadedLibrary = libData?.data || libData || { name: "Untitled Library" };
@@ -101,6 +161,7 @@ export default function NotebookWorkspacePage() {
           setLibraryName(loadedLibrary.name || loadedLibrary.libraryName || "");
           setAllowPublish(Boolean(loadedLibrary.is_public ?? loadedLibrary.isPublic));
           const docs = Array.isArray(docsData) ? docsData : (docsData?.data || []);
+          setLibrary(libData?.data || libData || { name: "Untitled Library" });
           setDocuments(docs);
 
           // Select all files by default for AI context
@@ -112,19 +173,13 @@ export default function NotebookWorkspacePage() {
         // Fetch DB chat history (no localStorage)
         if (!isGuest) {
           const history = await getChatHistory();
-          if (isMounted && history && Array.isArray(history.data)) {
-            const formatted = (history.data || []).flatMap((conv) => {
-              return (conv.messages || []).map((m) => ({
-                id: m.id,
-                role: m.role === "user" ? "user" : "ai",
-                content: m.text || m.content,
-                thoughts: "Analyzed source documents for exact citations and relevant key points.",
-                citations: [1, 2],
-              }));
-            });
-            if (formatted.length > 0) {
-              setMessages(formatted);
-            }
+          if (isMounted && Array.isArray(history)) {
+            const documentIds = new Set(docs.map((document) => String(document.id)));
+            const libraryHistory = history
+              .filter((conversation) =>
+                documentIds.has(String(conversation.documentId || "")),
+              );
+            setChatHistory(libraryHistory);
           }
         }
       } catch (err) {
@@ -137,6 +192,24 @@ export default function NotebookWorkspacePage() {
       isMounted = false;
     };
   }, [libraryId, isGuest]);
+
+  useEffect(() => {
+    if (isGuest) return undefined;
+
+    let isMounted = true;
+
+    getMyProfile()
+      .then((profile) => {
+        if (isMounted) setUserAvatar(profile?.avatar_url || "");
+      })
+      .catch(() => {
+        // Keep the stored avatar or initials fallback when profile loading fails.
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [isGuest]);
 
   /**
    * Scroll chat to bottom when messages update
@@ -372,14 +445,11 @@ export default function NotebookWorkspacePage() {
   /**
    * Send question to AI
    */
-  const handleSendMessage = async (queryText = null) => {
+  const handleSendMessage = async (queryText = null, documentIdsOverride = null) => {
     const query = (queryText || inputQuery).trim();
     if (!query || isAsking) return;
 
-    if (selectedDocIds.size === 0) {
-      showToast("Please select at least 1 source document on the left panel to ask AI.", "Select Sources", "info");
-      return;
-    }
+    const activeDocumentIds = documentIdsOverride || Array.from(selectedDocIds);
 
     const userMsg = { id: `user-${Date.now()}`, role: "user", content: query };
     setMessages((prev) => [...prev, userMsg]);
@@ -387,23 +457,80 @@ export default function NotebookWorkspacePage() {
     setIsAsking(true);
 
     try {
-      const primaryDocId = Array.from(selectedDocIds)[0];
       const res = await chatWithDocument({
-        documentId: primaryDocId,
+        scope: "SELECTED",
+        documentIds: activeDocumentIds,
+        metadataScope: "AUTO",
+        currentLibraryId: libraryId,
+        conversationId: sessionConversationIdRef.current,
         question: query,
-        selectedDocIds: Array.from(selectedDocIds),
       });
 
       const aiAnswer = res?.data?.answer || res?.answer || "I parsed your selected sources and summarized the answer.";
+      const sourceCitations = [
+        ...new Map(
+          (res?.sources || [])
+            .map((source) => {
+              const documentId = source.document_id || source.documentId;
+              const title = source.document_title || source.documentTitle;
+              return documentId && title
+                ? [String(documentId), { documentId, title }]
+                : null;
+            })
+            .filter(Boolean),
+        ).values(),
+      ];
       const aiMsg = {
         id: `ai-${Date.now()}`,
         role: "ai",
         content: aiAnswer,
-        thoughts: "Reviewed source documents, filtered key evidence, and compiled citations.",
-        citations: [1, 2],
+        citations: sourceCitations,
       };
 
       setMessages((prev) => [...prev, aiMsg]);
+
+      if (res?.chatHistory) {
+        const savedConversationId =
+          res.chatHistory.conversationId || res.chatHistory.id;
+        const savedConversation = {
+          id: savedConversationId,
+          documentId: res.chatHistory.documentId || primarySelectedDocumentId,
+          title: res.chatHistory.title || query,
+          createdAt: res.chatHistory.createdAt || new Date().toISOString(),
+          messages: res.chatHistory.messages || [
+            { id: userMsg.id, role: "user", text: query },
+            { id: aiMsg.id, role: "ai", text: aiAnswer },
+          ],
+        };
+        setCurrentConversation(savedConversationId);
+        setChatHistory((current) => {
+          const existingConversation = current.find(
+            (conversation) =>
+              String(conversation.id) === String(savedConversationId),
+          );
+          const existingMessages = existingConversation?.messages || [];
+          const messageMap = new Map(
+            [...existingMessages, ...savedConversation.messages].map((message) => [
+              String(message.id),
+              message,
+            ]),
+          );
+          const updatedConversation = {
+            ...existingConversation,
+            ...savedConversation,
+            messages: [...messageMap.values()],
+          };
+
+          return [
+            updatedConversation,
+            ...current.filter(
+              (conversation) =>
+                String(conversation.id) !== String(savedConversationId),
+            ),
+          ];
+        });
+        setActiveConversationId(savedConversationId);
+      }
     } catch (err) {
       console.error("Chat AI error:", err);
       setMessages((prev) => [
@@ -411,12 +538,144 @@ export default function NotebookWorkspacePage() {
         {
           id: `err-${Date.now()}`,
           role: "ai",
-          content: "Sorry, I could not process your query at this moment: " + (err.message || "Network error"),
+          content: "Sorry, I could not process your query at this moment: " +
+            (err.response?.data?.message || err.message || "Network error"),
         },
       ]);
     } finally {
       setIsAsking(false);
     }
+  };
+
+  useEffect(() => {
+    const pendingDocumentId = location.state?.chatDocumentId;
+    const pendingQuestion = String(location.state?.chatQuestion || "").trim();
+    if (
+      pendingChatHandledRef.current ||
+      !pendingDocumentId ||
+      !pendingQuestion ||
+      !documents.some((document) => String(document.id) === String(pendingDocumentId))
+    ) {
+      return;
+    }
+
+    pendingChatHandledRef.current = true;
+    const selectedId = String(pendingDocumentId);
+    setSelectedDocIds(new Set([selectedId]));
+    setSelectAll(documents.length === 1);
+    navigate(location.pathname, { replace: true, state: null });
+    handleSendMessage(pendingQuestion, [selectedId]);
+    // The route state is consumed once after this library's documents load.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [documents, location.pathname, location.state, navigate]);
+
+  const mapHistoryMessages = (conversations) =>
+    [...conversations]
+      .sort(
+        (first, second) =>
+          new Date(first.createdAt || 0).getTime() -
+          new Date(second.createdAt || 0).getTime(),
+      )
+      .flatMap((conversation) =>
+        [...(conversation.messages || [])]
+          .sort(
+            (first, second) =>
+              new Date(first.createdAt || 0).getTime() -
+              new Date(second.createdAt || 0).getTime(),
+          )
+          .map((message) => ({
+            id: message.id,
+            role: message.role === "user" ? "user" : "ai",
+            content: message.text || message.content,
+          })),
+      );
+
+  const handleOpenHistoryConversation = (conversation) => {
+    setActiveConversationId(conversation.id);
+    setCurrentConversation(conversation.id);
+    setMessages(mapHistoryMessages([conversation]));
+  };
+
+  const handleResetChat = () => {
+    setMessages([]);
+    setActiveConversationId("");
+    setInputQuery("");
+    setThoughtsOpenMap({});
+    setCurrentConversation();
+  };
+
+  const handleDeleteHistoryConversation = async (conversation) => {
+    if (historyActionBusy || !conversation?.id) return;
+    if (!window.confirm(`Delete chat history "${conversation.title || "Untitled conversation"}"?`)) {
+      return;
+    }
+
+    try {
+      setHistoryActionBusy(true);
+      await deleteChatHistory(conversation.id);
+      setChatHistory((current) =>
+        current.filter((item) => String(item.id) !== String(conversation.id)),
+      );
+
+      if (String(activeConversationId) === String(conversation.id)) {
+        setActiveConversationId("");
+        setMessages([]);
+      }
+      if (String(sessionConversationId) === String(conversation.id)) {
+        setCurrentConversation();
+      }
+      showToast("Chat history deleted.", "History Updated", "success");
+    } catch (error) {
+      showToast(
+        error.response?.data?.message || "Could not delete chat history.",
+        "Delete Error",
+        "error",
+      );
+    } finally {
+      setHistoryActionBusy(false);
+    }
+  };
+
+  const handleClearLibraryHistory = async () => {
+    if (historyActionBusy || chatHistory.length === 0) return;
+    if (!window.confirm("Delete all chat history in this library? This cannot be undone.")) {
+      return;
+    }
+
+    try {
+      setHistoryActionBusy(true);
+      await Promise.all(
+        chatHistory.map((conversation) => deleteChatHistory(conversation.id)),
+      );
+      setChatHistory([]);
+      setMessages([]);
+      setActiveConversationId("");
+      setCurrentConversation();
+      showToast("All chat history in this library was deleted.", "History Cleared", "success");
+    } catch (error) {
+      showToast(
+        error.response?.data?.message || "Could not clear chat history.",
+        "Clear History Error",
+        "error",
+      );
+    } finally {
+      setHistoryActionBusy(false);
+    }
+  };
+
+  const handleOpenFlashcards = () => {
+    if (!primarySelectedDocumentId) {
+      showToast(
+        "Select a source document before opening flashcards.",
+        "Select a Source",
+        "info",
+      );
+      return;
+    }
+
+    navigate(
+      `/dashboard/flashcards?documentId=${encodeURIComponent(primarySelectedDocumentId)}&generate=1`,
+    );
   };
 
   // Starter prompt starter cards
@@ -469,6 +728,12 @@ export default function NotebookWorkspacePage() {
         onViewDoc={handleViewDocument}
         onDownloadDoc={handleDownloadDocument}
         onDeleteDoc={(docId, title) => setDeleteConfirmDoc({ id: docId, title: title || "Untitled Document" })}
+        chatHistory={chatHistory}
+        activeConversationId={activeConversationId}
+        onOpenHistoryConversation={handleOpenHistoryConversation}
+        onDeleteHistoryConversation={handleDeleteHistoryConversation}
+        onClearHistory={handleClearLibraryHistory}
+        historyActionBusy={historyActionBusy}
       />
 
       {/* 2. MAIN PANEL: CHAT STREAM & WORKSPACE */}
@@ -489,12 +754,12 @@ export default function NotebookWorkspacePage() {
             {!showLeftPanel && (
               <button
                 type="button"
-                className="toggle_sidebar_header_btn"
+                className="icon_btn expand_sources_btn"
                 onClick={() => setShowLeftPanel(true)}
-                title="Expand Sources Panel"
+                title="Expand sources sidebar"
+                aria-label="Expand sources sidebar"
               >
-                <HiOutlineChevronRight />
-                <span>Sources ({documents.length})</span>
+                <LuPanelLeftOpen />
               </button>
             )}
             <h2>{library?.name || library?.libraryName}</h2>
@@ -510,6 +775,36 @@ export default function NotebookWorkspacePage() {
               <HiOutlineCog6Tooth />
             </button>
           )}
+          <div className="workspace_context_badges" aria-label="Chat context">
+            <button
+              type="button"
+              className="reset_chat_btn"
+              onClick={handleResetChat}
+              disabled={isAsking || (messages.length === 0 && !activeConversationId)}
+              title="Start a new chat without deleting history"
+            >
+              <HiOutlineArrowPath aria-hidden="true" />
+              <span>Reset chat</span>
+            </button>
+            <span className="workspace_source_badge">
+              {selectedDocIds.size}/{documents.length} sources selected
+            </span>
+            <span className="workspace_ai_badge">
+              <span aria-hidden="true" />
+              StudyHub AI ready
+            </span>
+            {!showRightPanel && (
+              <button
+                type="button"
+                className="icon_btn expand_studio_btn"
+                onClick={() => setShowRightPanel(true)}
+                title="Expand study tools sidebar"
+                aria-label="Expand study tools sidebar"
+              >
+                <LuPanelRightOpen />
+              </button>
+            )}
+          </div>
         </header>
 
         {/* Chat Messages Stream or NotebookLM Welcome Hero */}
@@ -585,14 +880,34 @@ export default function NotebookWorkspacePage() {
 
                   {/* Message Body Content */}
                   <div className="message_content">
-                    <p>{msg.content}</p>
+                    <p className={msg.role === "ai" ? "formatted_ai_text" : ""}>
+                      {msg.role === "ai"
+                        ? formatAiMessageText(msg.content)
+                        : msg.content}
+                    </p>
                     {msg.citations && msg.citations.length > 0 && (
                       <div className="citations_row">
-                        {msg.citations.map((c, i) => (
-                          <span key={i} className="citation_chip">
-                            [{c}]
-                          </span>
-                        ))}
+                        {msg.citations.map((citation) => {
+                          const documentId = typeof citation === "string"
+                            ? documents.find((document) => document.title === citation)?.id
+                            : citation.documentId;
+                          const title = typeof citation === "string"
+                            ? citation
+                            : citation.title;
+
+                          return (
+                            <button
+                              type="button"
+                              key={documentId || title}
+                              className="citation_chip"
+                              disabled={!documentId}
+                              title={`View ${title}`}
+                              onClick={() => handleViewDocument(documentId)}
+                            >
+                              {title}
+                            </button>
+                          );
+                        })}
                       </div>
                     )}
                   </div>
@@ -610,15 +925,22 @@ export default function NotebookWorkspacePage() {
                       >
                         <HiOutlineDocumentDuplicate />
                       </button>
-                      <button type="button" title="Helpful">
-                        <HiOutlineHandThumbUp />
-                      </button>
-                      <button type="button" title="Not helpful">
-                        <HiOutlineHandThumbDown />
-                      </button>
                     </div>
                   )}
                 </div>
+                {msg.role === "user" && (
+                  <div className="user_chat_avatar" title={userDisplayName}>
+                    {userAvatar ? (
+                      <img
+                        src={userAvatar}
+                        alt={`${userDisplayName} avatar`}
+                        onError={() => setUserAvatar("")}
+                      />
+                    ) : (
+                      <span aria-hidden="true">{userInitial}</span>
+                    )}
+                  </div>
+                )}
               </div>
             ))
           )}
@@ -629,7 +951,7 @@ export default function NotebookWorkspacePage() {
                 <HiOutlineSparkles />
               </div>
               <div className="message_bubble">
-                <p>Synthesizing response from selected sources...</p>
+                <p>StudyHub AI is preparing a response...</p>
               </div>
             </div>
           )}
@@ -666,6 +988,87 @@ export default function NotebookWorkspacePage() {
           </div>
         </form>
       </main>
+
+      {/* 3. RIGHT PANEL: STUDY TOOLS */}
+      <aside className={`workspace_panel studio_panel ${showRightPanel ? "" : "collapsed"}`}>
+        <div className="studio_panel_header">
+          <div>
+            <span>Workspace</span>
+            <h3>Study Tools</h3>
+          </div>
+          <button
+            type="button"
+            className="icon_btn collapse_sidebar_btn"
+            onClick={() => setShowRightPanel(false)}
+            title="Collapse study tools sidebar"
+            aria-label="Collapse study tools sidebar"
+          >
+            <LuPanelRightClose />
+          </button>
+        </div>
+
+        <div className="studio_panel_content">
+          <p className="studio_intro">
+            Create learning materials from the sources selected on the left.
+          </p>
+
+          <div className="studio_tool_list">
+            {starterPrompts.map((tool) => {
+              const Icon = tool.icon;
+              return (
+                <button
+                  type="button"
+                  className="studio_tool_button"
+                  key={tool.title}
+                  onClick={() => handleSendMessage(tool.prompt)}
+                  disabled={selectedDocIds.size === 0 || isAsking}
+                >
+                  <span className="studio_tool_icon">
+                    <Icon />
+                  </span>
+                  <span>
+                    <strong>{tool.title}</strong>
+                    <small>Use {selectedDocIds.size} selected sources</small>
+                  </span>
+                  <HiOutlinePlayCircle className="studio_tool_arrow" />
+                </button>
+              );
+            })}
+
+            <button
+              type="button"
+              className="studio_tool_button"
+              onClick={handleOpenFlashcards}
+              disabled={selectedDocIds.size === 0 || isGuest}
+            >
+              <span className="studio_tool_icon">
+                <HiOutlineAcademicCap />
+              </span>
+              <span>
+                <strong>Generate Flashcards</strong>
+                <small>Open the flashcard study page</small>
+              </span>
+              <HiOutlinePlayCircle className="studio_tool_arrow" />
+            </button>
+          </div>
+
+          <div className="studio_general_note">
+            <HiOutlineQuestionMarkCircle />
+            <p>
+              You can also ask general-knowledge questions directly in the chat.
+            </p>
+          </div>
+
+          <div className="studio_context_card">
+            <span>Current context</span>
+            <strong>{library?.name || library?.libraryName || "Library"}</strong>
+            <div>
+              <span>{selectedDocIds.size} selected</span>
+              <span>{documents.length} total sources</span>
+            </div>
+          </div>
+        </div>
+      </aside>
 
       {/* Duplicate File Replacement Confirmation Modal */}
       <DuplicateConfirmModal

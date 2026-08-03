@@ -70,7 +70,7 @@
   color: var(--text-secondary); background: var(--bg-secondary); font-size: 9px; font-weight: 850; text-align: left;
 }
 .usage_admin_table td {
-  height: 82px; padding: 11px 14px; border-bottom: 1px solid #eadfd1; color: var(--text-primary); font-size: 10px; vertical-align: middle;
+  height: 82px; padding: 11px 14px; border-bottom: 1px solid #dbeafe; color: var(--text-primary); font-size: 10px; vertical-align: middle;
 }
 .usage_admin_table tbody tr { cursor: pointer; }
 .usage_admin_table tbody tr:hover td { background: var(--bg-secondary); }

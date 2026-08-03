@@ -1,16 +1,4 @@
-const supabase = require("../../config/supabase");
-const {
-  createEmbedding,
-  toVectorLiteral,
-  answerWithContext,
-} = require("../../services/aiService");
-const {
-  ensureDocumentChunks,
-  getAllowedDocument,
-  increaseChatUsage,
-  isGuestUser,
-  saveChatHistory,
-} = require("./aiHelpers");
+const aiCoreController = require("./aiCoreController");
 
 exports.getChatHistory = async (req, res) => {
   try {
@@ -218,4 +206,9 @@ exports.chatWithDocument = async (req, res) => {
       message: error.message || "Could not chat with document.",
     });
   }
+module.exports = {
+  chatWithDocument: aiCoreController.chatWithDocument,
+  getChatHistory: aiCoreController.getChatHistory,
+  deleteChatHistoryItem: aiCoreController.deleteChatHistoryItem,
+  clearChatHistory: aiCoreController.clearChatHistory,
 };

@@ -480,6 +480,14 @@
   color: #f8fafc;
 }
 
+/* Keep library card copy readable on the dark blue/black dashboard even when
+   global theme variables still contain colors from another palette. */
+body:not([data-theme="white"])
+  .notebook_dashboard_container
+  :is(.card_body h3, .card_description, .card_meta, .create_card span) {
+  color: #ffffff;
+}
+
 /* Light Mode Overrides for Library Cards */
 body[data-theme="white"] .library_card {
   background: #ffffff;
@@ -771,4 +779,98 @@ body[data-theme="white"] .card_meta {
   opacity: 0.6;
   cursor: not-allowed;
   transform: none;
+}
+
+/* Complete Light theme for the Library dashboard. The original page was
+   authored as dark-only, so every page-level surface must explicitly inherit
+   the shared light palette instead of keeping its hard-coded black fill. */
+body[data-theme="white"] .notebook_dashboard_container {
+  background: #f8fafc;
+  color: #0f172a;
+}
+
+body[data-theme="white"] .notebook_dashboard_container
+  :is(.tab_navigation, .search_input_wrapper input, .view_mode_toggle,
+  .sort_dropdown, .storage_indicator_card) {
+  background: #ffffff;
+  border-color: rgba(37, 99, 235, 0.1);
+  color: #0f172a;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.04);
+}
+
+body[data-theme="white"] .notebook_dashboard_container .tab_btn {
+  color: #475569;
+}
+
+body[data-theme="white"] .notebook_dashboard_container .tab_btn:hover {
+  color: #2563eb;
+}
+
+body[data-theme="white"] .notebook_dashboard_container .tab_btn.active {
+  background: #dbeafe;
+  color: #1d4ed8;
+  box-shadow: none;
+}
+
+body[data-theme="white"] .notebook_dashboard_container .toggle_btn.active {
+  background: #eff6ff;
+  color: #0284c7;
+}
+
+body[data-theme="white"] .notebook_dashboard_container .create_new_btn {
+  background: #2563eb;
+  color: #ffffff;
+}
+
+body[data-theme="white"] .notebook_dashboard_container .create_new_btn:hover {
+  background: #1d4ed8;
+}
+
+body[data-theme="white"] .notebook_dashboard_container
+  :is(.section_title h2, .recent_section h2, .storage_info strong) {
+  color: #0f172a;
+}
+
+body[data-theme="white"] .notebook_dashboard_container .storage_info {
+  color: #475569;
+}
+
+body[data-theme="white"] .notebook_dashboard_container .storage_bar_track {
+  background: #e2e8f0;
+}
+
+body[data-theme="white"] .notebook_dashboard_container .library_card.create_card {
+  background: #ffffff;
+  border-color: #cbd5e1;
+}
+
+body[data-theme="white"] .notebook_dashboard_container .library_card.create_card:hover {
+  background: #eff6ff;
+  border-color: #38bdf8;
+}
+
+body[data-theme="white"] .notebook_dashboard_container .create_icon_circle,
+body[data-theme="white"] .notebook_dashboard_container .card_cover_icon {
+  background: #eff6ff;
+  color: #0284c7;
+}
+
+body[data-theme="white"] .notebook_dashboard_container .more_btn:hover {
+  background: #eff6ff;
+  color: #2563eb;
+}
+
+body[data-theme="white"] .notebook_dashboard_container .card_dropdown_menu {
+  background: #ffffff;
+  border-color: #dbeafe;
+  box-shadow: 0 14px 34px rgba(15, 23, 42, 0.12);
+}
+
+body[data-theme="white"] .notebook_dashboard_container .card_dropdown_menu button {
+  color: #334155;
+}
+
+body[data-theme="white"] .notebook_dashboard_container .card_dropdown_menu button:hover {
+  background: #eff6ff;
+  color: #1d4ed8;
 }

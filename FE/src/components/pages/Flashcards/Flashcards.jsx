@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { FaArrowLeft, FaArrowRight, FaRotate } from "react-icons/fa6";
 import { FaCheck, FaClock, FaHistory, FaPlus, FaTrash } from "react-icons/fa";
@@ -10,8 +10,10 @@ function loadFlashcardHistory() {
 }
 
 function Flashcards() {
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const requestedDocumentId = searchParams.get("documentId");
+  const shouldAutoGenerate = searchParams.get("generate") === "1";
+  const autoGenerateHandledRef = useRef(false);
   const [documents, setDocuments] = useState([]);
   const [selectedDocumentId, setSelectedDocumentId] = useState("");
   const [flashcards, setFlashcards] = useState([]);
@@ -144,6 +146,24 @@ function Flashcards() {
       setLoading(false);
     }
   }
+
+  useEffect(() => {
+    if (
+      !shouldAutoGenerate ||
+      !selectedDocumentId ||
+      autoGenerateHandledRef.current
+    ) {
+      return;
+    }
+
+    autoGenerateHandledRef.current = true;
+    const nextSearchParams = new URLSearchParams(searchParams);
+    nextSearchParams.delete("generate");
+    setSearchParams(nextSearchParams, { replace: true });
+    generateFlashcards();
+    // Generate exactly once after the requested document has been selected.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedDocumentId, shouldAutoGenerate]);
 
   function selectDocument(documentId) {
     setSelectedDocumentId(documentId);

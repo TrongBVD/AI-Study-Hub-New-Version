@@ -43,7 +43,7 @@
   right: -170px;
   top: -170px;
   border-radius: 50%;
-  background: rgba(180, 83, 26, 0.04);
+  background: rgba(37, 99, 235, 0.04);
   pointer-events: none;
 }
 
@@ -445,8 +445,8 @@
   margin-top: 14px;
   padding: 14px;
   border-radius: 15px;
-  color: #665743;
-  background: var(--accent-soft);
+  color: #bfdbfe;
+  background: rgba(14, 165, 233, 0.14);
   display: flex;
   gap: 12px;
 }
@@ -455,7 +455,8 @@
   width: 34px;
   height: 34px;
   border-radius: 11px;
-  background: rgba(255, 255, 255, 0.7);
+  background: rgba(56, 189, 248, 0.16);
+  color: #7dd3fc;
   display: grid;
   place-items: center;
   flex-shrink: 0;
@@ -479,6 +480,31 @@
   margin: 4px 0 0;
   font-size: 12px;
   line-height: 1.5;
+  color: #93c5fd;
+}
+
+.import_validation.is-valid p,
+.import_validation.has-error p {
+  color: inherit;
+}
+
+body[data-theme="white"] .import_validation {
+  color: #1e3a8a;
+  background: #eff6ff;
+}
+
+body[data-theme="white"] .import_validation > i {
+  background: #dbeafe;
+  color: #0284c7;
+}
+
+body[data-theme="white"] .import_validation p {
+  color: #475569;
+}
+
+body[data-theme="white"] .import_validation.is-valid p,
+body[data-theme="white"] .import_validation.has-error p {
+  color: inherit;
 }
 
 .import_library_actions {

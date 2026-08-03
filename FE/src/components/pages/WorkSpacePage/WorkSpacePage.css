@@ -456,10 +456,10 @@
 
 .workspace_member_admin_actions select {
   min-width: 110px;
-  border: 1px solid #d9bd94;
+  border: 1px solid #93c5fd;
   border-radius: 999px;
-  background-color: #fffaf0;
-  color: #4a2f1f;
+  background-color: #ffffff;
+  color: #172033;
   padding: 0 34px 0 14px;
   cursor: pointer;
   appearance: none;
@@ -471,33 +471,33 @@
 }
 
 .workspace_member_admin_actions select:hover:not(:disabled) {
-  border-color: #b9682f;
+  border-color: #2563eb;
   background-color: #fff5e5;
 }
 
 .workspace_member_admin_actions select:focus-visible {
-  border-color: #bd5516;
+  border-color: #1d4ed8;
   outline: none;
   box-shadow: 0 0 0 3px rgba(189, 85, 22, 0.15);
 }
 
 .workspace_role_select.role_admin {
-  border-color: #4a2f1f;
-  background-color: #4a2f1f;
+  border-color: #172033;
+  background-color: #172033;
   color: #ffffff;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5 6 6.5l5-5' fill='none' stroke='%23ffffff' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
 }
 
 .workspace_role_select.role_editor {
-  border-color: #c46429;
-  background-color: #fff0df;
+  border-color: #3b82f6;
+  background-color: #eff6ff;
   color: #a4420c;
 }
 
 .workspace_role_select.role_viewer {
-  border-color: #d9bd94;
-  background-color: #fffaf0;
-  color: #4a2f1f;
+  border-color: #93c5fd;
+  background-color: #ffffff;
+  color: #172033;
 }
 
 .workspace_member_admin_actions button {
@@ -530,36 +530,36 @@
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  border: 1px solid #d9bd94;
+  border: 1px solid #93c5fd;
   border-radius: 999px;
-  background: #fffaf0;
-  color: #4a2f1f;
+  background: #ffffff;
+  color: #172033;
   padding: 0 13px 0 15px;
   box-shadow: 0 2px 8px rgba(79, 50, 30, 0.06);
   transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
 }
 
 .workspace_member_admin_actions .workspace_role_trigger:hover:not(:disabled) {
-  border-color: #b9682f;
+  border-color: #2563eb;
   transform: translateY(-1px);
   box-shadow: 0 5px 14px rgba(126, 70, 31, 0.12);
 }
 
 .workspace_member_admin_actions .workspace_role_trigger:focus-visible {
   outline: none;
-  border-color: #bd5516;
+  border-color: #1d4ed8;
   box-shadow: 0 0 0 3px rgba(189, 85, 22, 0.15);
 }
 
 .workspace_member_admin_actions .workspace_role_trigger.role_admin {
-  border-color: #4a2f1f;
-  background: #4a2f1f;
+  border-color: #172033;
+  background: #172033;
   color: #ffffff;
 }
 
 .workspace_member_admin_actions .workspace_role_trigger.role_editor {
-  border-color: #c46429;
-  background: #fff0df;
+  border-color: #3b82f6;
+  background: #eff6ff;
   color: #a4420c;
 }
 
@@ -582,7 +582,7 @@
   padding: 6px;
   border: 1px solid #e1c9a5;
   border-radius: 14px;
-  background: #fffdf8;
+  background: #ffffff;
   box-shadow: 0 14px 30px rgba(65, 38, 20, 0.18);
 }
 
@@ -596,7 +596,7 @@
   border: none;
   border-radius: 9px;
   background: transparent;
-  color: #4a2f1f;
+  color: #172033;
   padding: 0 9px;
   text-align: left;
   font-size: 12px;
@@ -610,7 +610,7 @@
 }
 
 .workspace_role_menu button i {
-  color: #bd5516;
+  color: #1d4ed8;
   font-size: 11px;
 }
 
@@ -622,11 +622,11 @@
 }
 
 .workspace_role_dot.role_admin {
-  background: #4a2f1f;
+  background: #172033;
 }
 
 .workspace_role_dot.role_editor {
-  background: #c46429;
+  background: #3b82f6;
 }
 
 .workspace_role_dot.role_viewer {
@@ -7652,7 +7652,7 @@ body[data-theme] .workspace_delete_btn.workspace_transfer_admin_btn:hover {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  border: 1px solid #b9682f;
+  border: 1px solid #2563eb;
   border-radius: 999px;
   background: #fff4e2;
   color: #a44512;
@@ -7691,7 +7691,7 @@ body[data-theme] .workspace_delete_btn.workspace_transfer_admin_btn:hover {
   gap: 8px;
   border: 1px solid #d99b88;
   border-radius: 999px;
-  background: #fff1ec;
+  background: #eff6ff;
   color: #b23d22;
   padding: 0 16px;
   cursor: pointer;
