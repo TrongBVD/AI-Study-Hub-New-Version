@@ -2202,15 +2202,131 @@ body[data-theme="white"] .workspace_transfer_admin_icon {
 }
 
 body[data-theme] .workspace_delete_btn.workspace_transfer_admin_btn {
-  background: #dc2626 !important;
-  border-color: #dc2626 !important;
+  background: #2563eb !important;
+  border-color: #2563eb !important;
   color: #ffffff !important;
 }
 
 body[data-theme] .workspace_delete_btn.workspace_transfer_admin_btn:hover {
-  background: #b91c1c !important;
-  border-color: #b91c1c !important;
+  background: #1d4ed8 !important;
+  border-color: #1d4ed8 !important;
   color: #ffffff !important;
+}
+
+.workspace_delete_card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.workspace_delete_card .workspace_settings_card_header {
+  min-width: 0;
+  margin-bottom: 0;
+}
+
+body[data-theme] .workspace_delete_workspace_btn {
+  flex: 0 0 auto;
+  border: 1px solid #dc2626 !important;
+  background: #dc2626 !important;
+  color: #ffffff !important;
+}
+
+body[data-theme] .workspace_delete_workspace_btn:hover {
+  border-color: #b91c1c !important;
+  background: #b91c1c !important;
+  color: #ffffff !important;
+}
+
+body[data-theme="white"] .workspace_delete_card .workspace_settings_icon.danger {
+  border: 1px solid #fecaca;
+  background: #fef2f2;
+  color: #dc2626;
+}
+
+/* Invite members modal — light theme */
+body[data-theme="white"] .workspace_invite_modal {
+  border-color: #dbe5f1;
+  background: #ffffff;
+  color: #0f172a;
+  box-shadow: 0 24px 70px rgba(15, 23, 42, 0.2);
+}
+
+body[data-theme="white"] .workspace_invite_header_icon,
+body[data-theme="white"] .workspace_invite_no_result_icon {
+  border: 1px solid #dbeafe;
+  background: #eff6ff;
+  color: #2563eb;
+}
+
+body[data-theme="white"] .workspace_invite_header h2,
+body[data-theme="white"] .workspace_invite_field label,
+body[data-theme="white"] .workspace_invite_result_title,
+body[data-theme="white"] .workspace_invite_candidate h3,
+body[data-theme="white"] .workspace_invite_no_result h3,
+body[data-theme="white"] .workspace_invite_permission p {
+  color: #0f172a;
+}
+
+body[data-theme="white"] .workspace_invite_header p,
+body[data-theme="white"] .workspace_invite_header > button,
+body[data-theme="white"] .workspace_invite_candidate p,
+body[data-theme="white"] .workspace_invite_empty_result,
+body[data-theme="white"] .workspace_invite_no_result p,
+body[data-theme="white"] .workspace_invite_footer span {
+  color: #64748b;
+}
+
+body[data-theme="white"] .workspace_invite_search,
+body[data-theme="white"] .workspace_invite_empty_result,
+body[data-theme="white"] .workspace_invite_no_result,
+body[data-theme="white"] .workspace_invite_result {
+  border-color: #cbd5e1;
+  background: #ffffff;
+}
+
+body[data-theme="white"] .workspace_invite_search input {
+  color: #0f172a;
+  -webkit-text-fill-color: #0f172a;
+}
+
+body[data-theme="white"] .workspace_invite_search input::placeholder {
+  color: #94a3b8;
+  -webkit-text-fill-color: #94a3b8;
+}
+
+body[data-theme="white"] .workspace_invite_permission_buttons button {
+  border-color: #bfdbfe;
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+body[data-theme="white"] .workspace_invite_permission_buttons button.active {
+  border-color: #2563eb;
+  background: #2563eb;
+  color: #ffffff;
+}
+
+body[data-theme="white"] .workspace_invite_footer {
+  border-top-color: #dbe5f1;
+  background: #f8fafc;
+}
+
+body[data-theme="white"] .workspace_invite_footer button:not(.workspace_send_invite_btn) {
+  border-color: #cbd5e1;
+  background: #ffffff;
+  color: #0f172a;
+}
+
+@media (max-width: 720px) {
+  .workspace_delete_card {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .workspace_delete_workspace_btn {
+    width: 100%;
+  }
 }
 
 .workspace_settings_message {
@@ -3077,7 +3193,7 @@ body[data-theme] .workspace_delete_btn.workspace_transfer_admin_btn:hover {
   min-height: calc(100vh - 150px);
   width: auto;
   margin: -28px -28px -28px -12px;
-  border-left: 1px solid #2b3545;
+  border-left: 0;
   border-radius: 16px 0 0 16px;
   display: grid;
   grid-template-columns: 310px minmax(0, 1fr);
@@ -9976,4 +10092,351 @@ body[data-theme="white"] .workspace_document_status.pending_retry {
 .workspace_page .workspace_settings_message {
   color: #4ade80 !important;
   font-weight: 800;
+}
+
+/* Keep the workspace palette in sync with the active light theme. */
+body[data-theme="white"] .workspace_page {
+  --text-primary: #0f172a;
+  --text-secondary: #334155;
+  --text-muted: #64748b;
+  --bg-primary: #f8fafc;
+  --bg-card: #ffffff;
+  --bg-secondary: #f1f5f9;
+  --bg-elevated: #ffffff;
+  --hero-bg: #f8fafc;
+  --hero-card-bg: #ffffff;
+  --border-color: #e2e8f0;
+  --input-bg: #ffffff;
+  --input-border: #cbd5e1;
+  --accent-color: #2563eb;
+  --accent-soft: #eff6ff;
+  --button-bg: #2563eb;
+  --button-hover-bg: #1d4ed8;
+  --button-text: #ffffff;
+  --sidebar-bg: #ffffff;
+  --sidebar-active-bg: #eff6ff;
+  --sidebar-active-text: #2563eb;
+  --badge-bg: #eff6ff;
+  --badge-text: #2563eb;
+  --focus-ring: rgba(37, 99, 235, 0.2);
+  --danger-color: #dc2626;
+  --danger-bg: #fee2e2;
+  --shadow-soft: 0 14px 36px rgba(15, 23, 42, 0.08);
+  --study-theme-input: #ffffff;
+  --study-theme-input-border: #cbd5e1;
+  --study-theme-text: #0f172a;
+  --study-theme-muted: #64748b;
+  --ws-bg: #f8fafc;
+  --ws-panel: #ffffff;
+  --ws-panel-2: #f1f5f9;
+  --ws-border: #e2e8f0;
+  --ws-text: #0f172a;
+  --ws-muted: #64748b;
+  --ws-accent: #2563eb;
+  --ws-dark: #ffffff;
+  background: #f8fafc !important;
+  color: #0f172a;
+}
+
+body[data-theme="white"] .workspace_page :is(input, textarea, select) {
+  color-scheme: light;
+}
+
+body[data-theme="white"] .workspace_page :is(input, textarea)::placeholder {
+  color: #94a3b8 !important;
+}
+
+body[data-theme="white"] .workspace_top_tabs,
+body[data-theme="white"] .workspace_message_tab,
+body[data-theme="white"] .workspace_documents_header,
+body[data-theme="white"] .workspace_documents_upload_card,
+body[data-theme="white"] .workspace_documents_list_card,
+body[data-theme="white"] .workspace_study_sidebar,
+body[data-theme="white"] .workspace_study_main,
+body[data-theme="white"] .workspace_member_top,
+body[data-theme="white"] .workspace_member_table,
+body[data-theme="white"] .workspace_pending_card,
+body[data-theme="white"] .workspace_side_card,
+body[data-theme="white"] .workspace_settings_header,
+body[data-theme="white"] .workspace_settings_card {
+  border-color: #e2e8f0 !important;
+  background: #ffffff !important;
+  color: #0f172a !important;
+  box-shadow: 0 14px 36px rgba(15, 23, 42, 0.08);
+}
+
+body[data-theme="white"] .workspace_message_empty,
+body[data-theme="white"] .workspace_message_composer,
+body[data-theme="white"] .workspace_study_ai_card,
+body[data-theme="white"] .workspace_study_stats article,
+body[data-theme="white"] .workspace_permission_empty {
+  border-color: #e2e8f0 !important;
+  background: #f8fafc !important;
+  color: #334155 !important;
+}
+
+body[data-theme="white"] .workspace_page
+  :is(h1, h2, h3, h4, .workspace_nav_title, .workspace_member_row,
+  .workspace_member_identity strong, .workspace_settings_form label) {
+  color: #0f172a !important;
+}
+
+body[data-theme="white"] .workspace_page
+  :is(p, small, .workspace_message_hint, .workspace_member_note,
+  .workspace_member_join_date) {
+  color: #64748b;
+}
+
+body[data-theme="white"] .workspace_top_tabs button {
+  color: #475569 !important;
+}
+
+body[data-theme="white"] .workspace_top_tabs button:hover,
+body[data-theme="white"] .workspace_top_tabs button.active {
+  border-color: #bfdbfe !important;
+  background: #eff6ff !important;
+  color: #2563eb !important;
+}
+
+body[data-theme="white"] .workspace_message_day {
+  background: #eff6ff !important;
+  color: #2563eb !important;
+}
+
+body[data-theme="white"] .workspace_settings_icon:not(.danger) {
+  border-color: #bfdbfe;
+  background: #eff6ff;
+  color: #2563eb;
+}
+
+body[data-theme="white"] .workspace_page .workspace_settings_card p {
+  color: #64748b;
+}
+
+body[data-theme="white"] .workspace_page .workspace_settings_form button:disabled {
+  border-color: #e2e8f0;
+  background: #f1f5f9;
+  color: #94a3b8;
+}
+
+body[data-theme="white"] .workspace_documents_list_header {
+  border-bottom-color: #e2e8f0;
+}
+
+body[data-theme="white"] .workspace_documents_list_header h3,
+body[data-theme="white"] .workspace_documents_source_summary {
+  color: #0f172a !important;
+}
+
+body[data-theme="white"] .workspace_documents_list_header span {
+  border-color: #bfdbfe;
+  background: #eff6ff;
+  color: #2563eb;
+}
+
+body[data-theme="white"] .workspace_documents_source_summary small,
+body[data-theme="white"] .workspace_document_info p,
+body[data-theme="white"] .workspace_document_uploader {
+  color: #64748b !important;
+}
+
+body[data-theme="white"] .workspace_document_row {
+  border-color: #dbeafe !important;
+  background: #ffffff !important;
+  color: #0f172a !important;
+  box-shadow: 0 5px 16px rgba(15, 23, 42, 0.06);
+}
+
+body[data-theme="white"] .workspace_document_row:hover {
+  border-color: #60a5fa !important;
+  background: #f8fbff !important;
+}
+
+body[data-theme="white"] .workspace_document_info h3 {
+  color: #0f172a !important;
+}
+
+body[data-theme="white"] .workspace_document_icon {
+  border-color: #bfdbfe;
+  background: #eff6ff;
+  color: #2563eb;
+}
+
+body[data-theme="white"] .workspace_document_status.approved {
+  border: 1px solid #bbf7d0;
+  background: #f0fdf4;
+  color: #15803d;
+}
+
+body[data-theme="white"] .workspace_document_status.flagged,
+body[data-theme="white"] .workspace_document_status.rejected {
+  border: 1px solid #fed7aa;
+  background: #fff7ed;
+  color: #c2410c;
+}
+
+body[data-theme="white"] .workspace_document_actions button.view {
+  border-color: #2563eb;
+  background: #2563eb;
+  color: #ffffff;
+}
+
+body[data-theme="white"] .workspace_document_actions button.view:hover {
+  border-color: #1d4ed8;
+  background: #1d4ed8;
+}
+
+body[data-theme="white"] .workspace_document_actions button.download {
+  border-color: #38bdf8;
+  background: #ffffff;
+  color: #0284c7;
+}
+
+body[data-theme="white"] .workspace_document_actions button.download:hover {
+  background: #eff6ff;
+}
+
+body[data-theme="white"] .workspace_page--documents .workspace_documents_list {
+  scrollbar-color: rgba(2, 132, 199, 0.6) transparent;
+}
+
+body[data-theme="white"] .workspace_page--documents
+  .workspace_documents_list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+body[data-theme="white"] .workspace_page--documents
+  .workspace_documents_list::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  background: rgba(2, 132, 199, 0.52);
+  background-clip: padding-box;
+}
+
+body[data-theme="white"] .workspace_page--documents
+  .workspace_documents_list::-webkit-scrollbar-thumb:hover {
+  background: rgba(2, 132, 199, 0.82);
+  background-clip: padding-box;
+}
+
+body[data-theme="white"] .workspace_page--documents
+  .workspace_documents_list::-webkit-scrollbar-button {
+  width: 0;
+  height: 0;
+  display: none;
+}
+
+body[data-theme="white"] .workspace_member_tab
+  :is(.workspace_member_top h2, .workspace_member_table_header > span,
+  .workspace_member_identity strong, .workspace_member_join_date,
+  .workspace_member_readonly_action, .workspace_pending_header h3,
+  .workspace_pending_info strong, .workspace_side_card h3,
+  .workspace_role_item strong) {
+  color: #0f172a !important;
+}
+
+body[data-theme="white"] .workspace_member_tab
+  :is(.workspace_member_top p, .workspace_member_identity p,
+  .workspace_pending_info p, .workspace_pending_empty p,
+  .workspace_role_item p) {
+  color: #64748b !important;
+}
+
+body[data-theme="white"] .workspace_member_search {
+  border-color: #cbd5e1;
+  background: #ffffff;
+  color: #475569;
+}
+
+body[data-theme="white"] .workspace_member_search input {
+  color: #0f172a !important;
+  -webkit-text-fill-color: #0f172a;
+}
+
+body[data-theme="white"] .workspace_member_search input::placeholder {
+  color: #94a3b8 !important;
+  -webkit-text-fill-color: #94a3b8;
+}
+
+body[data-theme="white"] .workspace_member_table_header {
+  border-bottom-color: #e2e8f0;
+  background: #f8fafc;
+}
+
+body[data-theme="white"] .workspace_member_row {
+  border-bottom-color: #e2e8f0;
+  background: #ffffff;
+}
+
+body[data-theme="white"] .workspace_member_row:hover {
+  background: #f8fafc !important;
+}
+
+body[data-theme="white"] .workspace_role_item {
+  border-color: #e2e8f0;
+  background: #f8fafc;
+}
+
+body[data-theme="white"] .workspace_top_tabs .workspace_leave_tab_btn {
+  border-color: #dc2626 !important;
+  background: #dc2626 !important;
+  color: #ffffff !important;
+  box-shadow: 0 7px 18px rgba(220, 38, 38, 0.22);
+}
+
+body[data-theme="white"] .workspace_top_tabs .workspace_leave_tab_btn:hover {
+  border-color: #f0a3a3 !important;
+  background: #f1dddd !important;
+  color: #475569 !important;
+  box-shadow: none;
+}
+
+/* Keep the complete invite dialog aligned with the current light UI. */
+.workspace_invite_modal {
+  border-color: #dbe5f1 !important;
+  background: #ffffff !important;
+  color: #0f172a !important;
+}
+
+.workspace_invite_modal .workspace_invite_header h2,
+.workspace_invite_modal .workspace_invite_field label,
+.workspace_invite_modal .workspace_invite_result_title,
+.workspace_invite_modal .workspace_invite_permission p {
+  color: #0f172a !important;
+}
+
+.workspace_invite_modal .workspace_invite_header p,
+.workspace_invite_modal .workspace_invite_header > button,
+.workspace_invite_modal .workspace_invite_empty_result,
+.workspace_invite_modal .workspace_invite_no_result p {
+  color: #64748b !important;
+}
+
+.workspace_invite_modal .workspace_invite_search,
+.workspace_invite_modal .workspace_invite_result,
+.workspace_invite_modal .workspace_invite_empty_result,
+.workspace_invite_modal .workspace_invite_no_result,
+.workspace_invite_modal .workspace_invite_candidate {
+  border-color: #cbd5e1 !important;
+  background: #ffffff !important;
+}
+
+.workspace_invite_modal .workspace_invite_permission {
+  background: #ffffff;
+}
+
+.workspace_invite_modal .workspace_invite_permission_buttons button {
+  border-color: #bfdbfe !important;
+  background: #eff6ff !important;
+  color: #1d4ed8 !important;
+}
+
+.workspace_invite_modal .workspace_invite_permission_buttons button.active {
+  border-color: #2563eb !important;
+  background: #2563eb !important;
+  color: #ffffff !important;
+}
+
+.workspace_invite_modal .workspace_invite_footer {
+  border-top-color: #dbe5f1 !important;
+  background: #f8fafc !important;
 }

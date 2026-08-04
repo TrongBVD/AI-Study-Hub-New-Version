@@ -3,7 +3,6 @@ import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { getDocumentView } from "../../../utils/documentApi";
 import { viewPublicDocument } from "../../../utils/publicApi";
 import { getStoredUser } from "../../../utils/authToken";
-import { viewWorkspaceDiscussionAttachment } from "../../../utils/workspaceApi.js";
 import FileViewer from "../FileViewer/FileViewer";
 import "./DocumentViewerPage.css";
 
@@ -16,14 +15,13 @@ function formatDisplayFileName(fileName) {
 }
 
 function DocumentViewerPage() {
-  const { documentId, workspaceId, topicId, attachmentId } = useParams();
+  const { documentId } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
   const [documentData, setDocumentData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
   const isGuest = getStoredUser()?.role === "GUEST";
-  const isWorkspaceAttachment = Boolean(attachmentId);
   const returnContext = location.state?.returnContext;
 
   function handleReturnToWorkspace() {
@@ -49,15 +47,9 @@ function DocumentViewerPage() {
         setIsLoading(true);
         setErrorMessage("");
 
-        const data = isWorkspaceAttachment
-          ? await viewWorkspaceDiscussionAttachment(
-              workspaceId,
-              topicId,
-              attachmentId,
-            )
-          : isGuest
-            ? await viewPublicDocument(documentId)
-            : await getDocumentView(documentId);
+        const data = isGuest
+          ? await viewPublicDocument(documentId)
+          : await getDocumentView(documentId);
         if (!isMounted) return;
 
         setDocumentData(data);
@@ -79,7 +71,7 @@ function DocumentViewerPage() {
     return () => {
       isMounted = false;
     };
-  }, [attachmentId, documentId, isGuest, isWorkspaceAttachment, topicId, workspaceId]);
+  }, [documentId, isGuest]);
 
   if (isLoading) {
     return (

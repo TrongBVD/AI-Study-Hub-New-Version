@@ -71,22 +71,16 @@ exports.getWorkspacePurgePreview = async (req, res) => {
     const deletedDocumentIds = deletedDocuments.map((document) => document.id);
     const documentFilter = (query) => deletedDocumentIds.length ? query.in("document_id", deletedDocumentIds) : query.eq("document_id", "00000000-0000-0000-0000-000000000000");
     const workspaceFilter = (query) => query.eq("workspace_id", workspaceId);
-    const topicIdsResult = await supabase.from("workspace_discussion_topics").select("id").eq("workspace_id", workspaceId);
-    if (topicIdsResult.error && !["42P01", "PGRST205"].includes(topicIdsResult.error.code)) throw topicIdsResult.error;
-    const topicIds = (topicIdsResult.data || []).map((topic) => topic.id);
-    const topicFilter = (query) => topicIds.length ? query.in("topic_id", topicIds) : query.eq("topic_id", "00000000-0000-0000-0000-000000000000");
-
-    const [members, messages, aiSummaries, documentChunks, discussionComments, discussionSubtasks, discussionAttachments] = await Promise.all([
+    const [members, messages, aiSummaries, documentChunks] = await Promise.all([
       countRows("workspace_members", workspaceFilter), countRows("workspace_messages", workspaceFilter),
       countRows("ai_summaries", documentFilter), countRows("document_chunks", documentFilter),
-      countRows("workspace_discussion_comments", topicFilter), countRows("workspace_discussion_subtasks", topicFilter), countRows("workspace_discussion_attachments", topicFilter),
     ]);
 
     return res.status(200).json({
       status: "success",
       data: {
         workspace,
-        deletion: { members, messages, documents: deletedDocuments.length, aiSummaries, documentChunks, discussionTopics: topicIds.length, discussionComments, discussionSubtasks, discussionAttachments, reclaimableBytes: deletedDocuments.reduce((total, document) => total + Number(document.file_size_bytes || 0), 0) },
+        deletion: { members, messages, documents: deletedDocuments.length, aiSummaries, documentChunks, reclaimableBytes: deletedDocuments.reduce((total, document) => total + Number(document.file_size_bytes || 0), 0) },
         preservation: { documents: preservedDocuments.length, documentList: preservedDocuments.map(({ id, title, library_id: libraryId, file_size_bytes: fileSizeBytes }) => ({ id, title, libraryId, fileSizeBytes })) },
       },
     });

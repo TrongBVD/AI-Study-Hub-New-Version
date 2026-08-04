@@ -34,7 +34,6 @@ import {
   LuPanelRightClose,
   LuPanelRightOpen,
 } from "react-icons/lu";
-import { MdQuiz } from "react-icons/md";
 import {
   chatWithDocument,
   deleteChatHistory,
@@ -764,15 +763,6 @@ export default function NotebookWorkspacePage() {
     navigate(`/dashboard/flashcards?${flashcardParams.toString()}`);
   };
 
-  const handleOpenFlashcardsList = () => {
-    const flashcardParams = new URLSearchParams();
-    [...selectedDocIds].slice(0, 5).forEach((documentId) => {
-      flashcardParams.append("documentId", documentId);
-    });
-    const flashcardQuery = flashcardParams.toString();
-    navigate(`/dashboard/flashcards${flashcardQuery ? `?${flashcardQuery}` : ""}`);
-  };
-
   // Starter prompt starter cards
   const starterPrompts = [
     {
@@ -832,6 +822,7 @@ export default function NotebookWorkspacePage() {
 
       {/* 1. LEFT PANEL: SOURCES */}
       <SourcesSidebar
+        libraryName={library?.name || library?.libraryName || "Library"}
         documents={documents}
         selectedDocIds={selectedDocIds}
         selectAll={selectAll}
@@ -886,28 +877,8 @@ export default function NotebookWorkspacePage() {
                 <LuPanelLeftOpen />
               </button>
             )}
-            <h2>{library?.name || library?.libraryName}</h2>
           </div>
           <div className="workspace_context_badges" aria-label="Chat context">
-            <button
-              type="button"
-              className="flashcards_list_btn"
-              onClick={handleOpenFlashcardsList}
-              title="Open your flashcard sets"
-            >
-              <MdQuiz aria-hidden="true" />
-              <span>Flashcards List</span>
-            </button>
-            <button
-              type="button"
-              className="reset_chat_btn"
-              onClick={handleResetChat}
-              disabled={isAsking || (messages.length === 0 && !activeConversationId)}
-              title="Start a new chat without deleting history"
-            >
-              <HiOutlineArrowPath aria-hidden="true" />
-              <span>Reset Chat</span>
-            </button>
             {!showRightPanel && (
               <button
                 type="button"
@@ -956,7 +927,10 @@ export default function NotebookWorkspacePage() {
         )}
 
         {/* Chat Messages Stream or NotebookLM Welcome Hero */}
-        <div className="chat_stream" ref={chatContainerRef}>
+        <div
+          className={`chat_stream ${messages.length > 0 ? "has_conversation" : ""}`}
+          ref={chatContainerRef}
+        >
           {messages.length === 0 ? (
             <div className="workspace_welcome_hero">
               <div className="sparkle_badge_hero">
@@ -1116,15 +1090,22 @@ export default function NotebookWorkspacePage() {
           <div className="input_box_wrapper">
             <input
               type="text"
-              placeholder="Ask a question or create content from your sources..."
+              placeholder="You can also ask general-knowledge questions directly in the chat."
               value={inputQuery}
               onChange={(e) => setInputQuery(e.target.value)}
               disabled={isAsking}
             />
             <div className="input_actions_right">
-              <span className="sources_indicator_tag">
-                {selectedDocIds.size} {selectedDocIds.size === 1 ? "source" : "sources"}
-              </span>
+              <button
+                type="button"
+                className="reset_chat_btn"
+                onClick={handleResetChat}
+                disabled={isAsking || (messages.length === 0 && !activeConversationId)}
+                title="Start a new chat without deleting history"
+              >
+                <HiOutlineArrowPath aria-hidden="true" />
+                <span>Reset Chat</span>
+              </button>
               <button
                 type="submit"
                 className="send_btn"
@@ -1140,10 +1121,7 @@ export default function NotebookWorkspacePage() {
       {/* 3. RIGHT PANEL: STUDY TOOLS */}
       <aside className={`workspace_panel studio_panel ${showRightPanel ? "" : "collapsed"}`}>
         <div className="studio_panel_header">
-          <div>
-            <span>Workspace</span>
-            <h3>Study Tools</h3>
-          </div>
+          <h3>Study Tools</h3>
           <button
             type="button"
             className="icon_btn collapse_sidebar_btn"
@@ -1156,10 +1134,6 @@ export default function NotebookWorkspacePage() {
         </div>
 
         <div className="studio_panel_content">
-          <p className="studio_intro">
-            Create learning materials from the sources selected on the left.
-          </p>
-
           <div className="studio_tool_list">
             {starterPrompts.map((tool) => {
               const Icon = tool.icon;
@@ -1200,21 +1174,12 @@ export default function NotebookWorkspacePage() {
             </button>
           </div>
 
-          <div className="studio_general_note">
-            <HiOutlineQuestionMarkCircle />
-            <p>
-              You can also ask general-knowledge questions directly in the chat.
-            </p>
+          <div className="library_summary_box">
+            <span className="library_file_count">
+              {documents.length} total {documents.length === 1 ? "file" : "files"}
+            </span>
           </div>
 
-          <div className="studio_context_card">
-            <span>Current context</span>
-            <strong>{library?.name || library?.libraryName || "Library"}</strong>
-            <div>
-              <span>{selectedDocIds.size} selected</span>
-              <span>{documents.length} total sources</span>
-            </div>
-          </div>
         </div>
       </aside>
 

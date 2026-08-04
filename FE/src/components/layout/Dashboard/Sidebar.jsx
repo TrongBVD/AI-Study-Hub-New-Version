@@ -1,8 +1,8 @@
 import { NavLink, useNavigate } from "react-router-dom";
 import {
-  HiOutlineHome,
   HiOutlineMagnifyingGlass,
   HiOutlineBookOpen,
+  HiOutlineAcademicCap,
   HiOutlineSquares2X2,
   HiOutlineQuestionMarkCircle,
   HiOutlineCog6Tooth,
@@ -38,14 +38,19 @@ function Sidebar({ isOpen, onClose }) {
   const isSystemAdmin = userRole === "SYSTEM_ADMIN";
   const isGuest = userRole === "GUEST";
 
-  // Sidebar navigation menu items (AI Flashcards item removed as requested)
+  // Sidebar navigation menu items
   const menuItems = [
-    { icon: HiOutlineHome, label: "Home", path: "/dashboard/home" },
     { icon: HiOutlineMagnifyingGlass, label: "Discover", path: "/dashboard/discover" },
     {
       icon: HiOutlineBookOpen,
       label: "Libraries",
       path: "/dashboard/libraries",
+      hideForGuest: true,
+    },
+    {
+      icon: HiOutlineAcademicCap,
+      label: "Flashcards List",
+      path: "/dashboard/flashcards",
       hideForGuest: true,
     },
     {

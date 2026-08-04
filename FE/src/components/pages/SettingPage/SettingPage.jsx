@@ -4,7 +4,6 @@ import {
   getNotificationSettings,
   saveNotificationSettings,
 } from "../../../utils/notificationStore.js";
-import { useTheme } from "../../../context/ThemeContext.jsx";
 import api from "../../../utils/api.js";
 import {
   clearStoredSession,
@@ -67,16 +66,6 @@ function getInitialAdminSettings() {
 }
 
 const NOTIFICATION_CATEGORIES = [
-  {
-    key: "discussion",
-    icon: "ti-comments",
-    title: "Discussion",
-    description: "New topics and solved discussions.",
-    options: [
-      ["newTopic", "New topic"],
-      ["solved", "Topic solved"],
-    ],
-  },
   {
     key: "file",
     icon: "ti-folder",
@@ -178,7 +167,6 @@ function getProfileNameCooldownText(lastChangedAt) {
 function SettingPage() {
   const location = useLocation();
   const isAdminSettings = location.pathname.startsWith("/admin/");
-  const { theme, setTheme, availableThemes } = useTheme();
   const [workspaceName, setWorkspaceName] = useState(getInitialProfileName);
   const [savedProfileName, setSavedProfileName] =
     useState(getInitialProfileName);
@@ -394,9 +382,6 @@ function SettingPage() {
               isSavingProfileName={isSavingProfileName}
               onWorkspaceNameChange={handleProfileNameChange}
               onSaveProfileName={handleSaveProfileName}
-              selectedTheme={theme}
-              setSelectedTheme={setTheme}
-              availableThemes={availableThemes}
             />
           )}
 
@@ -552,9 +537,6 @@ function ProfileAppearanceSettings({
   isSavingProfileName,
   onWorkspaceNameChange,
   onSaveProfileName,
-  selectedTheme,
-  setSelectedTheme,
-  availableThemes,
 }) {
   const trimmedName = workspaceName.trim().replace(/\s+/g, " ");
   const isNameLocked = Boolean(profileNameCooldownText);
@@ -626,52 +608,6 @@ function ProfileAppearanceSettings({
         </div>
       </SettingsPanel>
 
-      <SettingsPanel
-        title="Workspace appearance"
-        description="Keep shared pages visually consistent with your study space."
-      >
-        <div className="settings_table">
-          <SettingRow
-            title="Theme"
-            description="Choose the visual style used across your StudyHub workspace."
-          >
-            <div
-              className="settings_theme_list"
-              role="radiogroup"
-              aria-label="Choose StudyHub theme"
-            >
-              {availableThemes.map((theme) => (
-                <button
-                  type="button"
-                  key={theme.value}
-                  className={`settings_theme_option theme_${theme.value} ${
-                    selectedTheme === theme.value ? "active" : ""
-                  }`}
-                  onClick={() => setSelectedTheme(theme.value)}
-                  role="radio"
-                  aria-checked={selectedTheme === theme.value}
-                >
-                  {selectedTheme === theme.value && (
-                    <span className="settings_theme_check" aria-hidden="true">
-                      <i className="ti-check"></i>
-                    </span>
-                  )}
-                  <span className="settings_theme_preview" aria-hidden="true">
-                    <span></span>
-                    <span></span>
-                    <span></span>
-                  </span>
-                  <span className="settings_theme_text">
-                    <strong>{theme.label}</strong>
-                    <small>{theme.description}</small>
-                  </span>
-                </button>
-              ))}
-            </div>
-          </SettingRow>
-
-        </div>
-      </SettingsPanel>
     </>
   );
 }
@@ -729,7 +665,7 @@ function NotificationSettings({
           {NOTIFICATION_CATEGORIES.map((category) => (
             <article
               className={`notification_category_card ${
-                ["discussion", "file"].includes(category.key)
+                category.key === "file"
                   ? "is_compact"
                   : ""
               }`}
