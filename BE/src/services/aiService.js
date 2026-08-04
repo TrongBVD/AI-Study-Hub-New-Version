@@ -12,10 +12,10 @@ const DEFAULT_GEMINI_EMBEDDING_MODEL = "gemini-embedding-2";
 const TEXT_GENERATION_TEMPERATURE = 0.2;
 const GEMINI_FALLBACK_DELAY_MS = 1000;
 const MODERATION_INPUT_MAX_CHARS = 12000;
-const DEFAULT_EMBEDDING_RETRIES = 3;
+const DEFAULT_EMBEDDING_RETRIES = 5;
 const EMBEDDING_INPUT_MAX_CHARS = 7000;
 const EMBEDDING_OUTPUT_DIMENSIONS = 768;
-const EMBEDDING_RETRY_BASE_DELAY_MS = 2500;
+const EMBEDDING_RETRY_BASE_DELAY_MS = 4000;
 const SOURCE_TITLE_MAX_CHARS = 180;
 const RAG_CONTEXT_MAX_CHARS = 150000;
 const CHAT_CLASSIFICATION_MAX_CHARS = 2000;
@@ -720,14 +720,23 @@ async function createBatchEmbeddings(chunks, mode = "document") {
   const results = [];
   for (let i = 0; i < chunks.length; i += EMBEDDING_BATCH_SIZE) {
     if (i > 0) {
-      // Pause 1.2s between batches to strictly comply with Gemini API Free Tier 15 RPM limits
-      await new Promise((resolve) => setTimeout(resolve, 1200));
+      // Pause 2.5s between batches to strictly keep API rate under Google Gemini Free Tier 15 RPM
+      await new Promise((resolve) => setTimeout(resolve, 2500));
     }
     const batch = chunks.slice(i, i + EMBEDDING_BATCH_SIZE);
-    const batchResults = await Promise.all(
-      batch.map((chunk) => createEmbedding(chunk, mode)),
-    );
-    results.push(...batchResults);
+    for (let j = 0; j < batch.length; j += 1) {
+      if (j > 0) {
+        // Micro-pause 600ms between single requests within batch to prevent burst spikes
+        await new Promise((resolve) => setTimeout(resolve, 600));
+      }
+      try {
+        const emb = await createEmbedding(batch[j], mode);
+        results.push(emb);
+      } catch (err) {
+        console.warn(`[Gemini Embedding] Non-blocking warning for chunk ${i + j + 1}/${chunks.length}:`, err.message);
+        results.push(null);
+      }
+    }
   }
   return results;
 }
