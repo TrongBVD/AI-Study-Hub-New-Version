@@ -14,7 +14,12 @@ import {
   HiOutlineXMark,
   HiOutlineChevronDown,
 } from "react-icons/hi2";
-import { getMyLibraries, createLibrary, deleteLibrary } from "../../../utils/documentApi.js";
+import {
+  getMyLibraries,
+  getMyLibraryStorageUsage,
+  createLibrary,
+  deleteLibrary,
+} from "../../../utils/documentApi.js";
 import { getStoredUser } from "../../../utils/authToken.js";
 import Toast from "../../common/Toast/Toast.jsx";
 import { showPopupConfirm } from "../../common/ActionPopup/actionPopupService.js";
@@ -37,11 +42,13 @@ export default function NotebookDashboardPage() {
   const [sortBy, setSortBy] = useState("recent"); // 'recent' | 'name'
   const [isSortOpen, setIsSortOpen] = useState(false);
   const sortDropdownRef = useRef(null);
+  const activeMenuRef = useRef(null);
 
   // Data states for libraries & storage
   const [libraries, setLibraries] = useState([]);
   const [loading, setLoading] = useState(true);
   const [totalStorageBytes, setTotalStorageBytes] = useState(0);
+  const [storageLimitBytes, setStorageLimitBytes] = useState(50 * 1024 * 1024);
 
   // Modal state for creating a new library
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -65,6 +72,19 @@ export default function NotebookDashboardPage() {
     return () => document.removeEventListener("pointerdown", closeSortDropdown);
   }, []);
 
+  useEffect(() => {
+    if (activeMenuId === null) return undefined;
+
+    const closeCardMenu = (event) => {
+      if (!activeMenuRef.current?.contains(event.target)) {
+        setActiveMenuId(null);
+      }
+    };
+
+    document.addEventListener("pointerdown", closeCardMenu);
+    return () => document.removeEventListener("pointerdown", closeCardMenu);
+  }, [activeMenuId]);
+
   /**
    * Helper to trigger custom English toast popup
    */
@@ -81,16 +101,22 @@ export default function NotebookDashboardPage() {
       setLoading(true);
       try {
         if (!isGuest) {
-          const myLibs = await getMyLibraries();
+          const [myLibs, storageUsage] = await Promise.all([
+            getMyLibraries(),
+            getMyLibraryStorageUsage().catch((storageError) => {
+              console.warn("Failed to load library storage usage:", storageError);
+              return null;
+            }),
+          ]);
 
           if (isMounted) {
             setLibraries(myLibs || []);
-
-            // Compute total storage used across all libraries (50MB limit)
-            const usedBytes = (myLibs || []).reduce((acc, lib) => {
-              return acc + (Number(lib.total_size_bytes) || Number(lib.size_bytes) || 0);
-            }, 0);
-            setTotalStorageBytes(usedBytes);
+            if (storageUsage) {
+              setTotalStorageBytes(Math.max(0, Number(storageUsage.usedBytes) || 0));
+              setStorageLimitBytes(
+                Math.max(1, Number(storageUsage.limitBytes) || 50 * 1024 * 1024),
+              );
+            }
           }
         }
       } catch (err) {
@@ -155,6 +181,15 @@ export default function NotebookDashboardPage() {
     try {
       await deleteLibrary(libId);
       setLibraries((prev) => prev.filter((lib) => lib.id !== libId));
+      try {
+        const storageUsage = await getMyLibraryStorageUsage();
+        setTotalStorageBytes(Math.max(0, Number(storageUsage?.usedBytes) || 0));
+        setStorageLimitBytes(
+          Math.max(1, Number(storageUsage?.limitBytes) || 50 * 1024 * 1024),
+        );
+      } catch (storageError) {
+        console.warn("Failed to refresh library storage usage:", storageError);
+      }
       showToast("Library deleted successfully.", "Success", "success");
     } catch (err) {
       showToast("Failed to delete library: " + (err.message || "Unknown error"), "Error", "error");
@@ -188,11 +223,11 @@ export default function NotebookDashboardPage() {
   }, [libraries, searchQuery, sortBy]);
 
   // Compute 50MB storage stats
-  const MAX_STORAGE_BYTES = 50 * 1024 * 1024;
   const storageMB = (totalStorageBytes / (1024 * 1024)).toFixed(1);
+  const storageLimitMB = (storageLimitBytes / (1024 * 1024)).toFixed(0);
   const storagePercentage = Math.min(
     100,
-    Math.round((totalStorageBytes / MAX_STORAGE_BYTES) * 100)
+    Math.round((totalStorageBytes / storageLimitBytes) * 100)
   );
 
   return (
@@ -297,7 +332,7 @@ export default function NotebookDashboardPage() {
           <div className="storage_info">
             <HiOutlineCircleStack className="storage_icon" />
             <span>
-              Total Storage Used: <strong>{storageMB} MB</strong> / 50 MB
+              Total Storage Used: <strong>{storageMB} MB</strong> / {storageLimitMB} MB
             </span>
           </div>
           <div className="storage_bar_track">
@@ -321,6 +356,19 @@ export default function NotebookDashboardPage() {
           </div>
         ) : (
           <div className={`libraries_layout ${viewMode}`}>
+            {!isGuest && (
+              <button
+                type="button"
+                className="create_library_tile"
+                onClick={() => setIsCreateModalOpen(true)}
+              >
+                <span className="create_library_tile_icon" aria-hidden="true">
+                  <HiOutlinePlus />
+                </span>
+                <span>Create new library</span>
+              </button>
+            )}
+
             {filteredLibraries.map((lib) => (
               <div
                 key={lib.id}
@@ -331,7 +379,10 @@ export default function NotebookDashboardPage() {
                   <div className="card_cover_icon">
                     <HiOutlineBookOpen />
                   </div>
-                  <div className="card_actions">
+                  <div
+                    className="card_actions"
+                    ref={activeMenuId === lib.id ? activeMenuRef : null}
+                  >
                     <button
                       type="button"
                       className="more_btn"

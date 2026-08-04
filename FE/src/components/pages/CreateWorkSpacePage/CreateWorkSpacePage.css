@@ -3,35 +3,35 @@
 }
 
 .create_workspace_page {
-  --text-primary: #f8fafc;
-  --text-secondary: #cbd5e1;
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
   --text-muted: #94a3b8;
-  --bg-primary: #0d0f12;
-  --bg-card: #181b20;
-  --bg-secondary: #202532;
-  --bg-elevated: #1e2229;
-  --hero-bg: #0d0f12;
-  --hero-card-bg: #171b24;
-  --border-color: #2a2e37;
-  --input-bg: #0d1016;
-  --input-border: #334155;
-  --accent-color: #38bdf8;
-  --accent-soft: rgba(56, 189, 248, 0.13);
+  --bg-primary: #f8fafc;
+  --bg-card: #ffffff;
+  --bg-secondary: #eff6ff;
+  --bg-elevated: #ffffff;
+  --hero-bg: #f8fafc;
+  --hero-card-bg: #ffffff;
+  --border-color: #dbeafe;
+  --input-bg: #ffffff;
+  --input-border: #cbd5e1;
+  --accent-color: #0284c7;
+  --accent-soft: rgba(2, 132, 199, 0.1);
   --button-bg: #0284c7;
   --button-hover-bg: #0369a1;
   --button-text: #ffffff;
-  --collection-action-bg: #202938;
-  --collection-action-text: #38bdf8;
-  --badge-bg: #202938;
-  --badge-text: #38bdf8;
-  --focus-ring: rgba(56, 189, 248, 0.28);
-  --shadow-soft: 0 16px 38px rgba(0, 0, 0, 0.28);
-  --study-theme-input: #0d1016;
-  --study-theme-input-border: #334155;
-  --study-theme-text: #f8fafc;
-  --study-theme-muted: #94a3b8;
+  --collection-action-bg: #eff6ff;
+  --collection-action-text: #0284c7;
+  --badge-bg: #eff6ff;
+  --badge-text: #0284c7;
+  --focus-ring: rgba(2, 132, 199, 0.2);
+  --shadow-soft: 0 16px 38px rgba(15, 23, 42, 0.08);
+  --study-theme-input: #ffffff;
+  --study-theme-input-border: #cbd5e1;
+  --study-theme-text: #0f172a;
+  --study-theme-muted: #64748b;
   min-height: calc(100dvh - 74px);
-  background: #0d0f12 !important;
+  background: #f8fafc !important;
   color: var(--text-primary);
   padding: 38px 24px 72px;
   font-family: "Outfit", "Segoe UI", Arial, sans-serif;
@@ -83,10 +83,9 @@
 .create_workspace_header {
   min-height: 330px;
   border-radius: 32px;
-  background:
-    linear-gradient(135deg, rgba(11, 13, 17, 0.98), rgba(25, 36, 52, 0.95)),
-    linear-gradient(120deg, #111827, #1e293b);
-  color: #f8fafc;
+  background: #ffffff;
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
   padding: 88px 42px 42px;
   box-shadow: var(--shadow-soft);
   overflow: hidden;
@@ -97,12 +96,12 @@
   content: "";
   position: absolute;
   inset: 0;
-  opacity: 0.16;
+  opacity: 0.55;
   background-image:
-    linear-gradient(var(--sidebar-active-bg) 1px, transparent 1px),
-    linear-gradient(90deg, var(--sidebar-active-bg) 1px, transparent 1px);
+    linear-gradient(#dbeafe 1px, transparent 1px),
+    linear-gradient(90deg, #dbeafe 1px, transparent 1px);
   background-size: 42px 42px;
-  mask-image: linear-gradient(to bottom, var(--text-primary), transparent 80%);
+  mask-image: linear-gradient(to bottom, #000000, transparent 80%);
 }
 
 .create_workspace_header::after {
@@ -114,8 +113,8 @@
   width: 320px;
   height: 320px;
   border-radius: 50%;
-  border: 1px solid var(--sidebar-active-bg);
-  box-shadow: inset 0 0 0 38px rgba(255, 255, 255, 0.035);
+  border: 1px solid #93c5fd;
+  box-shadow: inset 0 0 0 38px rgba(37, 99, 235, 0.04);
 }
 
 .workspace_eyebrow,
@@ -131,7 +130,7 @@
 }
 
 .create_workspace_header .workspace_eyebrow {
-  color: #38bdf8;
+  color: var(--accent-color);
   margin-bottom: 16px;
   position: relative;
   z-index: 1;
@@ -140,7 +139,7 @@
 .create_workspace_header h1 {
   max-width: 660px;
   margin: 0;
-  color: #f8fafc;
+  color: var(--text-primary);
   font-size: clamp(38px, 5vw, 64px);
   line-height: 0.96;
   letter-spacing: -0.06em;
@@ -152,7 +151,7 @@
 .create_workspace_header p {
   max-width: 560px;
   margin: 20px 0 0;
-  color: #cbd5e1;
+  color: var(--text-secondary);
   font-size: 16px;
   line-height: 1.75;
   position: relative;
@@ -184,9 +183,9 @@
   width: 56px;
   height: 56px;
   border-radius: 18px;
-  background: #202938;
-  color: #38bdf8;
-  border: 1px solid rgba(56, 189, 248, 0.24);
+  background: #eff6ff;
+  color: var(--accent-color);
+  border: 1px solid #bae6fd;
   display: inline-flex;
   align-items: center;
   justify-content: center;

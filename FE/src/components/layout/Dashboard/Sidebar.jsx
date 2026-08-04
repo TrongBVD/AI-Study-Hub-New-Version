@@ -38,7 +38,11 @@ function Sidebar({ isOpen, onClose }) {
 
   // Sidebar navigation menu items
   const menuItems = [
-    { icon: HiOutlineMagnifyingGlass, label: "Discover", path: "/dashboard/discover" },
+    {
+      icon: HiOutlineMagnifyingGlass,
+      label: "Discover",
+      path: "/dashboard/discover",
+    },
     {
       icon: HiOutlineBookOpen,
       label: "Libraries",
@@ -47,7 +51,7 @@ function Sidebar({ isOpen, onClose }) {
     },
     {
       icon: HiOutlineAcademicCap,
-      label: "Flashcards List",
+      label: "Flashcards",
       path: "/dashboard/flashcards",
       hideForGuest: true,
     },
@@ -57,8 +61,17 @@ function Sidebar({ isOpen, onClose }) {
       path: "/dashboard/workspaces",
       hideForGuest: true,
     },
-    { icon: HiOutlineQuestionMarkCircle, label: "Report Issues", path: "/dashboard/report-issue", hideForGuest: true },
-    { icon: HiOutlineCog6Tooth, label: "Settings", path: "/dashboard/settings" },
+    {
+      icon: HiOutlineQuestionMarkCircle,
+      label: "Report Issues",
+      path: "/dashboard/report-issue",
+      hideForGuest: true,
+    },
+    {
+      icon: HiOutlineCog6Tooth,
+      label: "Settings",
+      path: "/dashboard/settings",
+    },
   ];
 
   // Filter visible items for guest users

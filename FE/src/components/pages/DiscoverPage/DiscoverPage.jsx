@@ -138,11 +138,16 @@ function DiscoverLibraryCard({ library, rank, activeTag, wide }) {
             <i className="ti-download" /> {formatNumber(library.downloads)}
           </span>
           <span title="Total Documents">
-            <i className="ti-files" /> {formatNumber(library.documents)} {library.documents === 1 ? "document" : "documents"}
+            <i className="ti-files" /> {formatNumber(library.documents)}{" "}
+            {library.documents === 1 ? "document" : "documents"}
           </span>
           {activeTag && library.matchingFileCount > 0 && (
-            <span className="matching_count_badge" title={`Matching tag: ${activeTag}`}>
-              <i className="ti-tag" /> {library.matchingFileCount} matching {library.matchingFileCount === 1 ? "file" : "files"}
+            <span
+              className="matching_count_badge"
+              title={`Matching tag: ${activeTag}`}
+            >
+              <i className="ti-tag" /> {library.matchingFileCount} matching{" "}
+              {library.matchingFileCount === 1 ? "file" : "files"}
             </span>
           )}
           <span className="discover_card_created">
@@ -161,7 +166,7 @@ function DiscoverPage() {
   const [tagInput, setTagInput] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery] = useState("");
 
   useEffect(() => {
     async function loadTags() {
@@ -261,11 +266,15 @@ function DiscoverPage() {
             <span>StudyHub Discover</span>
             <h1>Find the collections everyone is studying from.</h1>
             <p>
-              Explore public study collections categorized by AI subjects and sub-topics.
+              Explore public study collections categorized by AI subjects and
+              sub-topics.
             </p>
 
             <div className="discover_tag_bar">
-              <form className="discover_tag_search_box" onSubmit={handleTagSearchSubmit}>
+              <form
+                className="discover_tag_search_box"
+                onSubmit={handleTagSearchSubmit}
+              >
                 <i className="ti-search" />
                 <input
                   type="text"
@@ -276,7 +285,12 @@ function DiscoverPage() {
                 {tagInput && (
                   <button
                     type="button"
-                    style={{ background: "none", border: "none", color: "#64748b", cursor: "pointer" }}
+                    style={{
+                      background: "none",
+                      border: "none",
+                      color: "#64748b",
+                      cursor: "pointer",
+                    }}
                     onClick={() => {
                       setTagInput("");
                       setSelectedTag("");
@@ -300,7 +314,8 @@ function DiscoverPage() {
                 </button>
                 {tagsList.map((tagObj) => {
                   const tagName = tagObj.name || tagObj;
-                  const isActive = selectedTag.toLowerCase() === tagName.toLowerCase();
+                  const isActive =
+                    selectedTag.toLowerCase() === tagName.toLowerCase();
                   return (
                     <button
                       type="button"
@@ -352,7 +367,11 @@ function DiscoverPage() {
           <section className="discover_split">
             <section className="discover_section">
               <div className="discover_section_title">
-                <h2>{selectedTag ? `Libraries for "${selectedTag}"` : "Public Libraries"}</h2>
+                <h2>
+                  {selectedTag
+                    ? `Libraries for "${selectedTag}"`
+                    : "Public Libraries"}
+                </h2>
                 <p>
                   {selectedTag
                     ? `Sorted by number of files matching tag "${selectedTag}"`
