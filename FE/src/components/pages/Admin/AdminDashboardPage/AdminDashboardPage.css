@@ -729,10 +729,6 @@
   background: var(--admin-subtle);
 }
 
-.admin-dashboard__log-dot.is-moderation {
-  background: var(--admin-danger);
-}
-
 .admin-dashboard__log-dot.is-quota {
   background: var(--admin-accent);
 }

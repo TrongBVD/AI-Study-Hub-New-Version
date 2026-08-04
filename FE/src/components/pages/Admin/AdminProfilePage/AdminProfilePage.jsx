@@ -137,7 +137,7 @@ function AdminProfilePage() {
           <section className="admin-profile-page__card">
             <header><div><LuBell /><span><h2>Preferences</h2><p>Administrative notifications.</p></span></div></header>
             <label className="admin-profile-page__toggle-row">
-              <span><strong>Email alerts</strong><small>Security and moderation updates</small></span>
+              <span><strong>Email alerts</strong><small>Security and account updates</small></span>
               <input type="checkbox" checked={emailAlerts} onChange={(event) => setEmailAlerts(event.target.checked)} />
               <i aria-hidden="true" />
             </label>

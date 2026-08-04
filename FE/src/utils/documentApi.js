@@ -111,21 +111,6 @@ export async function createLibrary(payload) {
   return response.data.data;
 }
 
-export async function previewLibraryImport(libraryId) {
-  const response = await api.get(
-    `/documents/libraries/${libraryId}/import-preview`,
-  );
-  return response.data.data;
-}
-
-export async function importLibrary(libraryId, payload) {
-  const response = await api.post(
-    `/documents/libraries/${libraryId}/import`,
-    payload,
-  );
-  return response.data.data;
-}
-
 export async function updateLibrary(libraryId, payload) {
   const response = await api.put(`/documents/libraries/${libraryId}`, payload);
   return response.data.data;

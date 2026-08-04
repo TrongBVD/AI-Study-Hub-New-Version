@@ -5,11 +5,6 @@ const { rateLimit } = require("express-rate-limit");
 
 const authMiddleware = require("../middleware/authMiddleware");
 const {
-    previewLibraryImport,
-    importLibrary,
-} = require("../controllers/libraryImportController");
-
-const {
     listMyDocuments,
     getMyLibraryStorageUsage,
     uploadDocuments,
@@ -88,8 +83,6 @@ router.post(
 );
 
 router.get("/libraries", authMiddleware, listMyLibraries);
-router.get("/libraries/:libraryId/import-preview", authMiddleware, previewLibraryImport);
-router.post("/libraries/:libraryId/import", authMiddleware, importLibrary);
 router.get("/libraries/:libraryId", authMiddleware, getLibrary);
 router.post("/libraries", authMiddleware, createLibrary);
 router.put("/libraries/:id", authMiddleware, updateLibrary);

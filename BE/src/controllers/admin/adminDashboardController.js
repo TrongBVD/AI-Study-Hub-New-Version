@@ -22,14 +22,6 @@ exports.getDashboardStats = async (req, res) => {
 
     if (documentError) throw documentError;
 
-    const { count: pendingModeration, error: moderationError } = await supabase
-      .from("documents")
-      .select("id", { count: "exact", head: true })
-      .in("status", ["REJECTED", "FLAGGED", "PENDING_RETRY"])
-      .is("deleted_at", null);
-
-    if (moderationError) throw moderationError;
-
     const { data: quotaRows, error: quotaError } = await supabase
       .from("daily_quota_usage")
       .select("bytes_uploaded, bytes_downloaded")
@@ -69,7 +61,6 @@ exports.getDashboardStats = async (req, res) => {
       data: {
         totalUsers: totalUsers || 0,
         totalDocuments: totalDocuments || 0,
-        pendingModeration: pendingModeration || 0,
         totalBytesUploadedToday,
         totalBytesDownloadedToday,
         totalAiChatsToday,

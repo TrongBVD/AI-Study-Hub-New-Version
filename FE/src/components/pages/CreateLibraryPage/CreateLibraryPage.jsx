@@ -411,18 +411,6 @@ function CreateLibraryPage() {
             <button type="button" className="return_library_btn" onClick={handleReturn}>
               Return
             </button>
-            <button
-              type="button"
-              className="create_form_import_btn"
-              onClick={() =>
-                navigate("/dashboard/import-library", {
-                  state: { from: location.state?.from || "/dashboard/libraries" },
-                })
-              }
-            >
-              <i className="ti-import" />
-              Import library
-            </button>
             <button type="submit" className="create_library_btn">
               <LuBookPlus aria-hidden="true" />
               Create library

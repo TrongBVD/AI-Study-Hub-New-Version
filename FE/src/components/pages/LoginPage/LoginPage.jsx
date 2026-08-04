@@ -9,6 +9,8 @@ import { useNavigate } from "react-router-dom";
 import {
   clearStoredSession,
   getAccessToken,
+  getStoredRole,
+  getStoredUser,
   isTokenValid,
   storeAuthSession,
 } from "../../../utils/authToken";
@@ -20,6 +22,12 @@ const GOOGLE_CLIENT_ID = String(
 )
   .trim()
   .replace(/^["']|["']$/g, "");
+
+function getAuthenticatedHomePath() {
+  return getStoredRole() === "SYSTEM_ADMIN"
+    ? "/admin/dashboard"
+    : "/dashboard/home";
+}
 
 function LoginPage() {
   const [username, setUsername] = useState("");
@@ -34,11 +42,11 @@ function LoginPage() {
       localStorage.getItem("rememberMe") === "true";
 
     if (isTokenValid(token)) {
-      navigate("/dashboard/home", { replace: true });
+      navigate(getAuthenticatedHomePath(), { replace: true });
     } else if (shouldRestoreRememberedSession) {
       refreshAccessToken()
         .then(() => {
-          if (isMounted) navigate("/dashboard/home", { replace: true });
+          if (isMounted) navigate(getAuthenticatedHomePath(), { replace: true });
         })
         .catch(() => {
           // Nếu token đã hết hạn, dọn dẹp vùng nhớ tránh bị loop hoặc tự động log in lỗi
@@ -168,7 +176,7 @@ function LoginPage() {
 
       if (!user) return;
 
-      if (user.role === "SYSTEM_ADMIN") {
+      if (getStoredRole() === "SYSTEM_ADMIN") {
         navigate("/admin/dashboard", { replace: true });
       } else {
         navigate("/dashboard/home", { replace: true });
@@ -228,7 +236,7 @@ function LoginPage() {
 
       if (!user) return;
 
-      if (user.role === "SYSTEM_ADMIN") {
+      if (getStoredRole() === "SYSTEM_ADMIN") {
         navigate("/admin/dashboard", { replace: true });
       } else {
         navigate("/dashboard/home", { replace: true });

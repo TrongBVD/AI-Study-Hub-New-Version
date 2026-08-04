@@ -3,7 +3,6 @@ const authMiddleware = require("../middleware/authMiddleware");
 const requireAdmin = require("../middleware/requireAdmin");
 
 const adminDashboardController = require("../controllers/admin/adminDashboardController");
-const adminDocumentController = require("../controllers/admin/adminDocumentController");
 const adminUserController = require("../controllers/admin/adminUserController");
 const adminWorkspaceController = require("../controllers/admin/adminWorkspaceController");
 const issueReportController = require("../controllers/issueReportController");
@@ -14,10 +13,6 @@ router.use(authMiddleware);
 router.use(requireAdmin);
 
 router.get("/dashboard", adminDashboardController.getDashboardStats);
-router.get("/moderation", adminDocumentController.getModerationDocuments);
-router.get("/moderation/:documentId/view", adminDocumentController.viewModerationDocument);
-router.patch("/moderation/:documentId", adminDocumentController.reviewDocument);
-
 router.get("/users", adminUserController.getUsers);
 router.patch("/users/:userId/status", adminUserController.updateUserStatus);
 router.patch("/users/:userId/role", adminUserController.updateUserRole);

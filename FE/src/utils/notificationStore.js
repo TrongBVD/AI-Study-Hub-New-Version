@@ -17,8 +17,6 @@ export const defaultNotificationSettings = {
   file: {
     uploaded: true,
     deleted: true,
-    moderationApproved: true,
-    moderationRejected: true,
   },
 
   member: {

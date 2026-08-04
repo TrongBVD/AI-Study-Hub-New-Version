@@ -6,19 +6,16 @@ import {
   LuListChecks,
   LuLogOut,
   LuSettings,
-  LuShieldCheck,
   LuUsers,
   LuX,
   LuCircleHelp,
 } from "react-icons/lu";
-import { HiOutlineHome } from "react-icons/hi2";
 import Logo from "../../../../assets/logo/Logo.jsx";
 import api from "../../../../utils/api.js";
 import { clearStoredSession } from "../../../../utils/authToken.js";
 
 const ADMIN_MENU_ITEMS = [
   { icon: LuLayoutDashboard, label: "Dashboard", path: "/admin/dashboard" },
-  { icon: LuShieldCheck, label: "AI Moderation", path: "/admin/moderation" },
   { icon: LuUsers, label: "Users", path: "/admin/users" },
   { icon: LuCircleHelp, label: "Issue Reports", path: "/admin/issues" },
   { icon: LuListChecks, label: "Activity Logs", path: "/admin/logs" },
@@ -89,15 +86,6 @@ function AdminSidebar({ isOpen, onClose }) {
         </div>
 
         <div className="sidebar_bottom_actions">
-          <NavLink
-            to="/dashboard/home"
-            className="admin_dashboard_btn"
-            onClick={onClose}
-          >
-            <HiOutlineHome aria-hidden="true" />
-            <span>User dashboard</span>
-          </NavLink>
-
           <button type="button" className="logout_btn" onClick={handleLogout}>
             <LuLogOut aria-hidden="true" />
             <span>Sign Out</span>

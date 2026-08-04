@@ -110,30 +110,4 @@ describe("Admin Track Log & Moderation Flow Tests", () => {
       expect(res.status).toHaveBeenCalledWith(404);
     });
   });
-
-  describe("3. Document Moderation Review Flow (AI Flagged Files)", () => {
-    test("returns 400 when reviewing document without valid decision", async () => {
-      req.params = { documentId: "doc-1" };
-      req.body = {}; // missing decision & reason
-
-      await adminController.reviewDocument(req, res);
-
-      expect(res.status).toHaveBeenCalledWith(400);
-    });
-
-    test("handles non-existent document review safely", async () => {
-      const mockChain = supabase.from();
-      mockChain.maybeSingle.mockResolvedValueOnce({ data: null, error: null });
-
-      req.params = { documentId: "doc-ghost" };
-      req.body = { decision: "APPROVE", reason: "All clear" };
-
-      await adminController.reviewDocument(req, res);
-
-      expect(res.status).toHaveBeenCalledWith(500);
-      expect(res.json).toHaveBeenCalledWith(
-        expect.objectContaining({ status: "error" })
-      );
-    });
-  });
 });

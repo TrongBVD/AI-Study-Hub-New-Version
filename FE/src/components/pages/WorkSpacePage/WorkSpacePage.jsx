@@ -1524,7 +1524,7 @@ async function handleUploadWorkspaceDocuments() {
     ]);
 
     // Show newly uploaded files immediately while the server performs its
-    // moderation work and the workspace list catches up.
+    // background document processing and the workspace list catches up.
     setWorkspaceDocuments((currentDocuments) => {
       const uploadedIds = new Set(
         uploadedDocuments.map((document) => String(document.id)),
@@ -1542,7 +1542,7 @@ async function handleUploadWorkspaceDocuments() {
     setWorkspaceReplacementDocumentIds([]);
     await loadWorkspaceDocuments();
 
-    // A background moderation transaction can make the list endpoint lag
+    // A background processing transaction can make the list endpoint lag
     // briefly. Keep any just-uploaded entry visible until the next refresh.
     setWorkspaceDocuments((currentDocuments) => {
       const currentIds = new Set(
