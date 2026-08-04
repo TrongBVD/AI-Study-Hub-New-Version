@@ -9,7 +9,6 @@ const {
 } = require("../../services/textExtractService");
 
 const {
-  moderateDocument,
   createBatchEmbeddings,
   toVectorLiteral,
   validateTagsAndContent,
@@ -103,14 +102,6 @@ async function getWorkspaceDocumentUploadAccess(workspaceId, userId) {
   };
 }
 
-function isSensitiveClassification(classification) {
-  const normalizedClassification = String(classification || "")
-    .trim()
-    .toUpperCase();
-
-  return normalizedClassification === "SEVERE" || normalizedClassification === "MILD";
-}
-
 async function processDocumentWithAI(
   file,
   documentId,
@@ -136,24 +127,16 @@ async function processDocumentWithAI(
     let status = overrideStatus || "APPROVED";
     let aiRejectReason = overrideRejectReason || null;
 
-    if (!overrideStatus) {
-      const moderation = await moderateDocument(extractedText);
+      const chunks = splitTextIntoChunks(extractedText);
 
-      if (moderation.status === "REJECTED") {
+      if (chunks.length === 0) {
         await supabase
           .from("documents")
-          .update({ status: "REJECTED", ai_reject_reason: moderation })
+          .update({
+            status: "REJECTED",
+            ai_reject_reason: { reason: "No readable text chunks could be created." },
+          })
           .eq("id", documentId);
-
-        return { status: "REJECTED", reason: moderation.reason, chunkCount: 0 };
-      }
-    }
-
-
-    const updatePayload = {
-      status,
-      ai_reject_reason: aiRejectReason,
-    };
 
     await supabase.from("documents").update(updatePayload).eq("id", documentId);
 
@@ -239,10 +222,11 @@ async function processWorkspaceDocumentInBackground(
 ) {
   try {
     const extractedText = await extractTextFromFile(file);
-    const [moderation, tagValidation] = await Promise.all([
-      moderateDocument(extractedText),
-      validateTagsAndContent(extractedText, file.originalname, userTags),
-    ]);
+    const tagValidation = await validateTagsAndContent(
+      extractedText,
+      file.originalname,
+      userTags,
+    );
 
     if (!tagValidation.isValid) {
       await supabase
@@ -258,28 +242,12 @@ async function processWorkspaceDocumentInBackground(
       return;
     }
 
-    const isFlagged = moderation.status === "REJECTED";
-    if (isFlagged) {
-      const { error: waitingUploadError } = await supabase.storage
-        .from(WAITING_BUCKET)
-        .upload(storagePath, file.buffer, {
-          contentType: file.mimetype || "application/octet-stream",
-          upsert: true,
-        });
-      if (waitingUploadError) throw waitingUploadError;
-
-      const { error: sourceRemoveError } = await supabase.storage
-        .from(BUCKET)
-        .remove([storagePath]);
-      if (sourceRemoveError) throw sourceRemoveError;
-    }
-
     await processDocumentWithAI(
       file,
       documentId,
       extractedText,
-      isFlagged ? "FLAGGED" : "PENDING",
-      isFlagged ? moderation : null,
+      "PENDING",
+      null,
     );
   } catch (error) {
     console.error("Background workspace document validation failed:", error);
@@ -705,18 +673,8 @@ exports.uploadDocuments = async (req, res) => {
       }
     }
 
-    // A sensitive document must still reach the admin moderation queue.
-    // Tag validation is advisory for flagged files; blocking here would stop
-    // the document before it can be saved in the waiting bucket for review.
     for (const processedData of processedFilesData) {
-      const isFlaggedForAdmin = isSensitiveClassification(
-        processedData.sensitivity?.classification,
-      );
-
-      if (
-        !isFlaggedForAdmin &&
-        !processedData.tagValidationResult.isValid
-      ) {
+      if (!processedData.tagValidationResult.isValid) {
         return res.status(400).json({
           status: "error",
           code: "TAG_VALIDATION_FAILED",
@@ -763,36 +721,21 @@ exports.uploadDocuments = async (req, res) => {
       processedFilesData,
       FILE_UPLOAD_CONCURRENCY,
       async (processedData) => {
-      const { file, fileIndex, extractedText, sensitivity } = processedData;
+      const { file, fileIndex, extractedText } = processedData;
 
       const safeFileName = sanitizeFileName(file.originalname);
       const storagePath = `${userID}/${Date.now()}-${crypto.randomUUID()}-${safeFileName}`;
 
-      const isFlagged = isSensitiveClassification(sensitivity.classification);
-      const targetBucket = isFlagged ? WAITING_BUCKET : BUCKET;
-
       const { error: uploadError } = await supabase.storage
-        .from(targetBucket)
+        .from(BUCKET)
         .upload(storagePath, file.buffer, {
           contentType: file.mimetype || "application/octet-stream"
         });
 
       if (uploadError) throw uploadError;
 
-      // Xác định status và reject reason dựa trên mức độ nhạy cảm
       let status = workspaceId ? "PENDING" : "APPROVED";
       let aiRejectReason = null;
-
-      if (isFlagged) {
-        status = "FLAGGED";
-        aiRejectReason = {
-          reason: `Contains ${sensitivity.classification.toLowerCase()} inappropriate language`,
-          word: sensitivity.word,
-          classification: sensitivity.classification,
-          suspicious_text: sensitivity.suspicious_text || (sensitivity.word ? `Found sensitive term "${sensitivity.word}" in document content.` : "Inappropriate content detected."),
-          bucket: WAITING_BUCKET
-        };
-      }
 
       // Lưu thông tin vào DB, bao gồm cả library_id
       const { data: document, error: insertError } = await supabase
@@ -812,38 +755,17 @@ exports.uploadDocuments = async (req, res) => {
 
       if (insertError) throw insertError;
 
-      // Nếu tài liệu bị gắn cờ nhạy cảm, log activity để thông báo cho user & admin
-      if (status === "FLAGGED") {
-        await createActivityLog({
-          actorUserId: userID,
-          actionType: "FILE_FLAGGED",
-          entityType: "document",
-          entityId: document.id,
-          newData: {
-            notificationType: "fileUnderReview",
-            documentTitle: file.originalname,
-            libraryId: libraryId,
-            reason: "AI detected sensitive language",
-            word: sensitivity.word,
-            classification: sensitivity.classification
-          },
-          request: req,
-          riskLevel: sensitivity.classification === "SEVERE" ? "HIGH" : "MEDIUM",
-          details: `Your file "${file.originalname}" contains sensitive content and has been submitted for admin review. Please wait for moderation.`,
-        });
-      }
-
       // Lưu tags vào DB
       // Loại bỏ các tag trùng lặp và làm sạch
       const uniqueTags = [...new Set(userTags.map(t => t.trim().toLowerCase().replace("#", "")))];
 
 
       // Gọi hàm xử lý AI (embedding và chunking)
-      const shouldKeepReviewStatus = status === "FLAGGED" || Boolean(workspaceId);
+      const shouldKeepReviewStatus = Boolean(workspaceId);
       let aiResult = { status };
       if (isDirectWorkspaceUpload) {
         // The document is already stored as PENDING. Continue extraction,
-        // moderation, chunking and embeddings without holding the upload
+        // chunking and embeddings without holding the upload
         // response open. processDocumentWithAI records controlled failure
         // states, including PENDING_RETRY.
         void processWorkspaceDocumentInBackground(
@@ -1087,28 +1009,11 @@ exports.viewDocument = async (req, res) => {
       });
     }
 
-    const primaryBucket = (document.status === "FLAGGED" || document.status === "REJECTED" || document.status === "PENDING_RETRY")
-      ? WAITING_BUCKET
-      : BUCKET;
-
-    let signedUrlData = null;
-    let { data, error: signedUrlError } = await supabase.storage
-      .from(primaryBucket)
+    const { data: signedUrlData, error: signedUrlError } = await supabase.storage
+      .from(BUCKET)
       .createSignedUrl(document.file_url, 60 * 60);
 
-    if (data?.signedUrl) {
-      signedUrlData = data;
-    } else {
-      const fallbackBucket = primaryBucket === WAITING_BUCKET ? BUCKET : WAITING_BUCKET;
-      const { data: fallbackData, error: fallbackError } = await supabase.storage
-        .from(fallbackBucket)
-        .createSignedUrl(document.file_url, 60 * 60);
-
-      if (fallbackError || !fallbackData?.signedUrl) {
-        throw signedUrlError || fallbackError;
-      }
-      signedUrlData = fallbackData;
-    }
+    if (signedUrlError || !signedUrlData?.signedUrl) throw signedUrlError;
 
     return res.status(200).json({
       status: "success",
@@ -1177,11 +1082,10 @@ exports.deleteDocument = async (req, res) => {
       });
     }
 
-    // Xóa file vật lý khỏi Supabase Storage (cả bucket chính và bucket chờ duyệt)
+    // Xóa file vật lý khỏi Supabase Storage.
     if (document.file_url) {
       try {
         await supabase.storage.from(BUCKET).remove([document.file_url]);
-        await supabase.storage.from(WAITING_BUCKET).remove([document.file_url]);
       } catch (storageErr) {
         console.warn("[deleteDocument] Warning removing file from storage:", storageErr);
       }

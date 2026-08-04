@@ -182,7 +182,6 @@ body[data-theme="current"] .create_workspace_header::after {
 
 body[data-theme="current"] .focus_card_light,
 body[data-theme="current"] .recent_library_card,
-body[data-theme="current"] .import_library_hero,
 body[data-theme="current"] .library_command_panel,
 body[data-theme="current"] .landing_ai_preview,
 body[data-theme="current"] .landing_cta {
@@ -204,13 +203,8 @@ body[data-theme="current"] .focus_card_dark {
   background-image: none;
 }
 
-body[data-theme="current"] .import_library_hero {
-  background: linear-gradient(135deg, var(--sidebar-bg), #172554);
-}
-
 body[data-theme="current"] .create_workspace_page,
-body[data-theme="current"] .create_library_page,
-body[data-theme="current"] .import_library_page {
+body[data-theme="current"] .create_library_page {
   background:
     radial-gradient(circle at 8% 6%, var(--focus-ring), transparent 28%),
     radial-gradient(circle at 86% 18%, var(--focus-ring), transparent 26%),
@@ -285,8 +279,6 @@ body[data-theme="white"] .my_library_page,
 body[data-theme="black"] .my_library_page,
 body[data-theme="white"] .create_library_page,
 body[data-theme="black"] .create_library_page,
-body[data-theme="white"] .import_library_page,
-body[data-theme="black"] .import_library_page,
 body[data-theme="white"] .my_workspace_page,
 body[data-theme="black"] .my_workspace_page,
 body[data-theme="white"] .create_workspace_page,
@@ -306,9 +298,7 @@ body[data-theme="black"] .workspace_command_hero,
 body[data-theme="white"] .create_workspace_header,
 body[data-theme="black"] .create_workspace_header,
 body[data-theme="white"] .create_library_hero,
-body[data-theme="black"] .create_library_hero,
-body[data-theme="white"] .import_library_hero,
-body[data-theme="black"] .import_library_hero {
+body[data-theme="black"] .create_library_hero {
   background:
     linear-gradient(135deg, var(--bg-card), var(--bg-elevated));
   border: 1px solid var(--border-color);
@@ -319,8 +309,7 @@ body[data-theme="black"] .home_command_panel,
 body[data-theme="black"] .my_library_hero,
 body[data-theme="black"] .workspace_command_hero,
 body[data-theme="black"] .create_workspace_header,
-body[data-theme="black"] .create_library_hero,
-body[data-theme="black"] .import_library_hero {
+body[data-theme="black"] .create_library_hero {
   background: var(--hero-bg);
 }
 
@@ -328,8 +317,7 @@ body[data-theme="black"] .home_command_panel::after,
 body[data-theme="black"] .my_library_hero::after,
 body[data-theme="black"] .workspace_command_hero::after,
 body[data-theme="black"] .create_workspace_header::after,
-body[data-theme="black"] .create_library_hero::after,
-body[data-theme="black"] .import_library_hero::after {
+body[data-theme="black"] .create_library_hero::after {
   opacity: 0;
   background: none;
   box-shadow: none;
@@ -339,7 +327,6 @@ body[data-theme="black"] .home_page,
 body[data-theme="black"] .library_page,
 body[data-theme="black"] .my_library_page,
 body[data-theme="black"] .create_library_page,
-body[data-theme="black"] .import_library_page,
 body[data-theme="black"] .my_workspace_page,
 body[data-theme="black"] .create_workspace_page,
 body[data-theme="black"] .workspace_page,
@@ -362,7 +349,6 @@ body[data-theme="black"] .focus_card_light,
 body[data-theme="black"] .recent_library_card,
 body[data-theme="black"] .home_focus_panel,
 body[data-theme="black"] .workspace_study_main,
-body[data-theme="black"] .import_library_hero,
 body[data-theme="black"] .library_hero {
   background: var(--bg-card);
   border-color: var(--border-color);
@@ -385,13 +371,11 @@ body[data-theme="white"] .my_library_hero p,
 body[data-theme="white"] .workspace_hero_copy p,
 body[data-theme="white"] .create_workspace_header p,
 body[data-theme="white"] .create_library_hero_content > p,
-body[data-theme="white"] .import_library_hero p,
 body[data-theme="black"] .home_headline_block p,
 body[data-theme="black"] .my_library_hero p,
 body[data-theme="black"] .workspace_hero_copy p,
 body[data-theme="black"] .create_workspace_header p,
-body[data-theme="black"] .create_library_hero_content > p,
-body[data-theme="black"] .import_library_hero p {
+body[data-theme="black"] .create_library_hero_content > p {
   color: var(--hero-muted);
 }
 
@@ -400,13 +384,11 @@ body[data-theme="white"] .my_library_hero h1,
 body[data-theme="white"] .workspace_hero_copy h1,
 body[data-theme="white"] .create_workspace_header h1,
 body[data-theme="white"] .create_library_hero h1,
-body[data-theme="white"] .import_library_hero h1,
 body[data-theme="black"] .home_headline_block h1,
 body[data-theme="black"] .my_library_hero h1,
 body[data-theme="black"] .workspace_hero_copy h1,
 body[data-theme="black"] .create_workspace_header h1,
-body[data-theme="black"] .create_library_hero h1,
-body[data-theme="black"] .import_library_hero h1 {
+body[data-theme="black"] .create_library_hero h1 {
   color: var(--hero-text);
 }
 
@@ -433,8 +415,6 @@ body[data-theme="white"] .my_library_hero_card,
 body[data-theme="black"] .my_library_hero_card,
 body[data-theme="white"] .library_details_panel,
 body[data-theme="black"] .library_details_panel,
-body[data-theme="white"] .import_library_panel,
-body[data-theme="black"] .import_library_panel,
 body[data-theme="white"] .create_library_panel,
 body[data-theme="black"] .create_library_panel,
 body[data-theme="white"] .workspace_focus_card,
@@ -463,8 +443,6 @@ body[data-theme="white"] .workspace_settings_card,
 body[data-theme="black"] .workspace_settings_card,
 body[data-theme="white"] .workspace_settings_header,
 body[data-theme="black"] .workspace_settings_header,
-body[data-theme="white"] .settings_panel,
-body[data-theme="black"] .settings_panel,
 body[data-theme="white"] .settings_sidebar,
 body[data-theme="black"] .settings_sidebar,
 body[data-theme="white"] .settings_theme_option,
@@ -498,8 +476,6 @@ body[data-theme="black"] .settings_menu_group button.active {
 
 body[data-theme="white"] .library_tabs,
 body[data-theme="black"] .library_tabs,
-body[data-theme="white"] .settings_table,
-body[data-theme="black"] .settings_table,
 body[data-theme="white"] .workspace_member_top,
 body[data-theme="black"] .workspace_member_top,
 body[data-theme="white"] .workspace_permission_empty,
@@ -549,8 +525,6 @@ body[data-theme="white"] .return_workspace_btn,
 body[data-theme="black"] .return_workspace_btn,
 body[data-theme="white"] .create_library_back,
 body[data-theme="black"] .create_library_back,
-body[data-theme="white"] .import_library_back,
-body[data-theme="black"] .import_library_back,
 body[data-theme="white"] .workspace_back_chip,
 body[data-theme="black"] .workspace_back_chip {
   background: var(--bg-elevated);
@@ -585,7 +559,6 @@ body[data-theme="black"] .workspace_flashcard {
 body[data-theme="white"] .library_page,
 body[data-theme="white"] .my_library_page,
 body[data-theme="white"] .create_library_page,
-body[data-theme="white"] .import_library_page,
 body[data-theme="white"] .my_workspace_page,
 body[data-theme="white"] .create_workspace_page,
 body[data-theme="white"] .workspace_page,
@@ -602,7 +575,6 @@ body[data-theme="white"] .home_page::before {
 body[data-theme="white"] .library_hero,
 body[data-theme="white"] .my_library_hero,
 body[data-theme="white"] .create_library_hero,
-body[data-theme="white"] .import_library_hero,
 body[data-theme="white"] .workspace_command_hero,
 body[data-theme="white"] .create_workspace_header {
   background: var(--hero-bg);
@@ -620,7 +592,6 @@ body[data-theme="white"] .create_workspace_header::after {
 body[data-theme="white"] .library_hero h1,
 body[data-theme="white"] .my_library_hero h1,
 body[data-theme="white"] .create_library_hero h1,
-body[data-theme="white"] .import_library_hero h1,
 body[data-theme="white"] .workspace_command_hero h1,
 body[data-theme="white"] .create_workspace_header h1,
 body[data-theme="white"] .library_title h1,
@@ -634,7 +605,6 @@ body[data-theme="white"] .settings_panel h3 {
 body[data-theme="white"] .library_hero p,
 body[data-theme="white"] .my_library_hero p,
 body[data-theme="white"] .create_library_hero_content > p,
-body[data-theme="white"] .import_library_hero_content p,
 body[data-theme="white"] .workspace_hero_copy p,
 body[data-theme="white"] .create_workspace_header p,
 body[data-theme="white"] .library_body p,
@@ -647,7 +617,6 @@ body[data-theme="white"] .settings_panel p {
 
 body[data-theme="white"] .library_overline,
 body[data-theme="white"] .create_library_kicker,
-body[data-theme="white"] .import_library_kicker,
 body[data-theme="white"] .workspace_eyebrow,
 body[data-theme="white"] .settings_sidebar_mark,
 body[data-theme="white"] .workspace_top_tabs::before {
@@ -681,9 +650,6 @@ body[data-theme="white"] .library_step_card,
 body[data-theme="white"] .create_library_steps article,
 body[data-theme="white"] .create_library_preview,
 body[data-theme="white"] .create_library_form,
-body[data-theme="white"] .import_library_steps article,
-body[data-theme="white"] .import_library_preview,
-body[data-theme="white"] .import_library_card,
 body[data-theme="white"] .workspace_focus_card,
 body[data-theme="white"] .workspace_stats_grid article,
 body[data-theme="white"] .workspace_card,
@@ -711,9 +677,7 @@ body[data-theme="white"] .workspace_clickup_activity,
 body[data-theme="white"] .workspace_clickup_attachment_card,
 body[data-theme="white"] .workspace_topic_info_item,
 body[data-theme="white"] .workspace_permission_empty,
-body[data-theme="white"] .settings_panel,
 body[data-theme="white"] .settings_empty_panel,
-body[data-theme="white"] .settings_table,
 body[data-theme="white"] .notification_category_card,
 body[data-theme="white"] .settings_theme_option {
   background: var(--bg-card);
@@ -731,8 +695,7 @@ body[data-theme="white"] .workspace_message_file,
 body[data-theme="white"] .workspace_clickup_drop_zone,
 body[data-theme="white"] .workspace_clickup_comment_form,
 body[data-theme="white"] .workspace_clickup_activity header,
-body[data-theme="white"] .workspace_clickup_attachment_empty,
-body[data-theme="white"] .settings_table_row {
+body[data-theme="white"] .workspace_clickup_attachment_empty {
   background: var(--bg-elevated);
   border-color: var(--border-color);
   color: var(--text-primary);
@@ -789,7 +752,6 @@ body[data-theme="white"] .workspace_clickup_attachment_header {
 body[data-theme="white"] .create_library_btn,
 body[data-theme="white"] .create_workspace_btn,
 body[data-theme="white"] .create_workspace_link,
-body[data-theme="white"] .import_library_submit,
 body[data-theme="white"] .upload_btn,
 body[data-theme="white"] .workspace_message_send_btn,
 body[data-theme="white"] .workspace_settings_form button,
@@ -808,7 +770,6 @@ body[data-theme="white"] .empty_workspace_state a {
 body[data-theme="white"] .create_library_btn:hover:not(:disabled),
 body[data-theme="white"] .create_workspace_btn:hover:not(:disabled),
 body[data-theme="white"] .create_workspace_link:hover,
-body[data-theme="white"] .import_library_submit:hover:not(:disabled),
 body[data-theme="white"] .upload_btn:hover,
 body[data-theme="white"] .workspace_settings_form button:hover,
 body[data-theme="white"] .workspace_topic_done_btn:hover,
@@ -825,7 +786,6 @@ body[data-theme="white"] .my_library_import_btn,
 body[data-theme="white"] .workspace_secondary_link,
 body[data-theme="white"] .return_workspace_btn,
 body[data-theme="white"] .create_library_back,
-body[data-theme="white"] .import_library_back,
 body[data-theme="white"] .workspace_back_chip,
 body[data-theme="white"] .light_btn,
 body[data-theme="white"] .star_btn,
@@ -839,7 +799,6 @@ body[data-theme="white"] .my_library_import_btn:hover,
 body[data-theme="white"] .workspace_secondary_link:hover,
 body[data-theme="white"] .return_workspace_btn:hover,
 body[data-theme="white"] .create_library_back:hover,
-body[data-theme="white"] .import_library_back:hover,
 body[data-theme="white"] .workspace_back_chip:hover,
 body[data-theme="white"] .light_btn:hover,
 body[data-theme="white"] .star_btn:hover {
@@ -960,7 +919,6 @@ body[data-theme="black"] .settings_theme_option.active {
   .register_bio_modal,
   .deleted-workspaces__modal,
   .user-management-page__confirm-modal,
-  .ai-moderation-preview-modal,
   .library_share_modal,
   .hashtag_modal,
   .library_confirm_modal,

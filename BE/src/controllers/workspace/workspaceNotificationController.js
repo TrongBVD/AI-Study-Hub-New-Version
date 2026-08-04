@@ -209,51 +209,30 @@ exports.listMyWorkspaceNotifications = async (req, res) => {
           };
         }
 
-        const isDocumentModeration =
-          actionType === "moderationApproved" ||
-          actionType === "moderationRejected";
         const isDeleted = actionType === "deleted";
-        const documentTitle = item.new_data?.documentTitle || "Your document";
-        const libraryLink = item.new_data?.libraryId
-          ? `/dashboard/libraries/${item.new_data.libraryId}`
-          : "/dashboard/libraries";
         return {
           id: `workspace-event-${item.id}`,
-          category: isDocumentModeration
-            ? "file"
-            : actionType === "roleChanged"
+          category: actionType === "roleChanged"
               ? "member"
               : "workspace",
           action: actionType,
           title:
-            actionType === "moderationApproved"
-              ? "Document approved"
-              : actionType === "moderationRejected"
-                ? "Document rejected"
-                : actionType === "renamed"
+            actionType === "renamed"
               ? "Workspace renamed"
               : isDeleted
                 ? "Workspace deleted"
                 : "Workspace role changed",
           message: (
             item.details ||
-            (isDocumentModeration
-              ? `${documentTitle} has been reviewed by admin.`
-              : `Your workspace role changed from ${getWorkspaceRoleLabel(item.old_data?.role || "member")} to ${getWorkspaceRoleLabel(item.new_data?.role || "a new role")}.`)
+            `Your workspace role changed from ${getWorkspaceRoleLabel(item.old_data?.role || "member")} to ${getWorkspaceRoleLabel(item.new_data?.role || "a new role")}.`
           ).replace(/\bViewer\b/gi, "Contributor"),
           isRead,
-          icon: isDocumentModeration
-            ? actionType === "moderationApproved"
-              ? "ti-check"
-              : "ti-trash"
-            : isDeleted
+          icon: isDeleted
               ? "ti-trash"
               : actionType === "renamed"
                 ? "ti-pencil"
                 : "ti-user",
-          link: isDocumentModeration
-            ? libraryLink
-            : isDeleted
+          link: isDeleted
               ? "/dashboard/workspaces"
               : `/dashboard/workspaces/${item.entity_id}`,
           createdAt: formatRelativeTime(item.created_at),

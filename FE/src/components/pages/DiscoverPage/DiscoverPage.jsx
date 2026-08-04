@@ -165,6 +165,7 @@ function DiscoverPage() {
   const [tagInput, setTagInput] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     async function loadTags() {
@@ -243,6 +244,32 @@ function DiscoverPage() {
     });
   }, [libraries, selectedTag]);
 
+  const filteredLibraries = useMemo(() => {
+    const normalizedQuery = searchQuery.trim().toLocaleLowerCase();
+    if (!normalizedQuery) return libraries;
+
+    return libraries.filter((library) =>
+      [library.name, library.description, library.ownerName]
+        .filter(Boolean)
+        .some((value) =>
+          String(value).toLocaleLowerCase().includes(normalizedQuery),
+        ),
+    );
+  }, [libraries, searchQuery]);
+
+  const favoriteLibraries = useMemo(
+    () =>
+      [...filteredLibraries]
+        .sort(
+          (a, b) =>
+            b.stars - a.stars ||
+            b.downloads - a.downloads ||
+            b.documents - a.documents ||
+            getCreatedTimestamp(b) - getCreatedTimestamp(a),
+        )
+        .slice(0, 5),
+    [filteredLibraries],
+  );
   return (
     <main className="discover_page">
       <section className="discover_shell">
@@ -331,6 +358,12 @@ function DiscoverPage() {
                 ? `No libraries contain files tagged with "${selectedTag}". Try selecting another subject.`
                 : "Shared libraries will appear here once users publish them."}
             </p>
+          </section>
+        ) : filteredLibraries.length === 0 ? (
+          <section className="discover_empty">
+            <i className="ti-search" />
+            <h2>No matching collections</h2>
+            <p>Try another collection name, description, or owner.</p>
           </section>
         ) : (
           <section className="discover_split">

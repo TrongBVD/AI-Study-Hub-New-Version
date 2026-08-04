@@ -3,10 +3,12 @@ import { Navigate, useLocation } from "react-router-dom";
 import {
   clearStoredSession,
   getAccessToken,
-  getStoredUser,
+  getAuthStorage,
+  getStoredRole,
   isTokenValid,
 } from "../../../utils/authToken";
 import { refreshAccessToken } from "../../../utils/api";
+import { getMyProfile } from "../../../utils/profileApi";
 
 const GUEST_ALLOWED_PATHS = [
   "/dashboard",
@@ -42,19 +44,22 @@ function isGuestAllowedPath(pathname) {
 
 function ProtectedRoute({ children, allowedRoles }) {
   const location = useLocation();
+  const storedRole = getStoredRole();
   const [authState, setAuthState] = useState(() => {
-    const initialRole = String(getStoredUser()?.role || "").toUpperCase();
-    return initialRole === "GUEST" || isTokenValid(getAccessToken())
+    return storedRole === "GUEST" || isTokenValid(getAccessToken())
       ? "authenticated"
       : "checking";
   });
+  const [verifiedRole, setVerifiedRole] = useState(() =>
+    storedRole === "GUEST" ? "GUEST" : null,
+  );
   const token = getAccessToken();
-  const user = getStoredUser();
-  const role = String(user?.role || "").toUpperCase();
+  const role = verifiedRole || storedRole;
   const isGuest = role === "GUEST";
+  const isSystemAdmin = role === "SYSTEM_ADMIN";
 
   useEffect(() => {
-    if (String(getStoredUser()?.role || "").toUpperCase() === "GUEST") {
+    if (getStoredRole() === "GUEST") {
       return undefined;
     }
 
@@ -76,7 +81,41 @@ function ProtectedRoute({ children, allowedRoles }) {
     };
   }, []);
 
-  if (authState === "checking") {
+  useEffect(() => {
+    if (authState !== "authenticated" || getStoredRole() === "GUEST") {
+      return undefined;
+    }
+
+    let isMounted = true;
+
+    getMyProfile()
+      .then((profile) => {
+        if (!isMounted) return;
+
+        let currentUser = {};
+        try {
+          currentUser = JSON.parse(getAuthStorage().getItem("user") || "{}");
+        } catch {
+          currentUser = {};
+        }
+        const serverRole = String(profile?.role || "USER").toUpperCase();
+
+        getAuthStorage().setItem(
+          "user",
+          JSON.stringify({ ...currentUser, ...profile, role: serverRole }),
+        );
+        setVerifiedRole(serverRole);
+      })
+      .catch(() => {
+        if (isMounted) setVerifiedRole(getStoredRole() || "USER");
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [authState]);
+
+  if (authState === "checking" || (authState === "authenticated" && !verifiedRole)) {
     return null;
   }
 
@@ -97,9 +136,19 @@ function ProtectedRoute({ children, allowedRoles }) {
     );
   }
 
+  // System admins use only the dedicated admin application shell.
+  if (isSystemAdmin && location.pathname.startsWith("/dashboard")) {
+    return <Navigate to="/admin/dashboard" replace />;
+  }
+
   // Logged in, but does not have required role
-  if (allowedRoles && !allowedRoles.includes(user?.role)) {
-    return <Navigate to="/dashboard/home" replace />;
+  if (allowedRoles && !allowedRoles.map((item) => item.toUpperCase()).includes(role)) {
+    return (
+      <Navigate
+        to={isSystemAdmin ? "/admin/dashboard" : "/dashboard/home"}
+        replace
+      />
+    );
   }
 
   if (isGuest && !isGuestAllowedPath(location.pathname)) {

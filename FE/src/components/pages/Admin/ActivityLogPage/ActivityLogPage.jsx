@@ -7,7 +7,6 @@ const ACTION_OPTIONS = [
   { value: "ADMIN_REVIEW_DOCUMENT", label: "ADMIN_REVIEW_DOCUMENT (Admin Review)" },
   { value: "DOCUMENT_APPROVED", label: "DOCUMENT_APPROVED (File Approved)" },
   { value: "DOCUMENT_REJECTED", label: "DOCUMENT_REJECTED (File Rejected)" },
-  { value: "FILE_FLAGGED", label: "FILE_FLAGGED (AI Moderation Flagged)" },
   { value: "WORKSPACE_ROLE_CHANGED", label: "WORKSPACE_ROLE_CHANGED (Role Update)" },
   { value: "WORKSPACE_DELETED", label: "WORKSPACE_DELETED (Workspace Removed)" },
   { value: "WORKSPACE_RENAMED", label: "WORKSPACE_RENAMED (Workspace Renamed)" },
@@ -60,12 +59,9 @@ function mapLog(row) {
   let workspaceName = row.entity_type === "workspaces" ? (newData.name || oldData.name || row.entity_id) : "System";
   let changeSummary;
 
-  if (action === "ADMIN_REVIEW_DOCUMENT" || action === "DOCUMENT_APPROVED" || action === "DOCUMENT_REJECTED") {
+  if (action === "DOCUMENT_APPROVED" || action === "DOCUMENT_REJECTED") {
     targetUser = oldData.uploader_id ? (oldData.uploader_name || `User ID: ${oldData.uploader_id.slice(0, 8)}...`) : actorName;
     changeSummary = row.details || `${newData.notificationType || action}`;
-  } else if (action === "FILE_FLAGGED") {
-    targetUser = actorName;
-    changeSummary = newData.word ? `Flagged word: "${newData.word}" (${newData.classification || "FLAGGED"})` : row.details;
   } else if (action === "WORKSPACE_ROLE_CHANGED") {
     targetUser = newData.targetUserName || newData.targetUserId || "Workspace Member";
     changeSummary = `Role change: ${oldData.role || "Member"} → ${newData.role || "Updated"}`;
@@ -349,7 +345,7 @@ function ActivityLogPage() {
   const statCards = [
     ["Total events", stats.total, "Filtered action events", "ti-list", "neutral"],
     ["High risk events", stats.security, "Security & high risk actions", "ti-shield", "danger"],
-    ["Document actions", stats.document, "Document reviews and moderation", "ti-file", "orange"],
+    ["Document actions", stats.document, "Document uploads and changes", "ti-file", "orange"],
     ["Active scopes", stats.workspace, "Workspaces and targets", "ti-user", "green"],
   ];
 

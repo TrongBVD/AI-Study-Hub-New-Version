@@ -1414,6 +1414,31 @@ body[data-theme] .user_dashboard_layout .sidebar_divider {
   background: rgba(255, 255, 255, 0.16);
 }
 
+/* Keep the user sidebar visually aligned with the white admin navigation. */
+body[data-theme] .user_dashboard_layout .sidebar {
+  background: #ffffff;
+  border-right: 1px solid #dbe3ef;
+  color: #334155;
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.14);
+}
+
+body[data-theme] .user_dashboard_layout .sidebar_link,
+body[data-theme] .user_dashboard_layout .close_btn {
+  color: #334155;
+}
+
+body[data-theme] .user_dashboard_layout .sidebar_link:hover {
+  background: #f1f5f9;
+  color: #2563eb;
+  box-shadow: none;
+}
+
+body[data-theme] .user_dashboard_layout .sidebar_link.active {
+  background: #eff6ff;
+  color: #2563eb;
+  box-shadow: inset 3px 0 0 #2563eb;
+}
+
 body[data-theme] .user_dashboard_layout .top_navbar :is(
   .menu_btn,
   .create_dropdown > .create_dropdown_btn,

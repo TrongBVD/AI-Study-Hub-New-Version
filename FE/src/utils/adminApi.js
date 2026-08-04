@@ -5,25 +5,6 @@ export async function getAdminDashboard() {
   return response.data.data;
 }
 
-export async function getModerationDocuments() {
-  const response = await api.get("/admin/moderation");
-  return response.data.data;
-}
-
-export async function getModerationDocumentViewUrl(documentId) {
-  const response = await api.get(`/admin/moderation/${documentId}/view`);
-  return response.data.data;
-}
-
-export async function reviewDocument(documentId, decision, reason) {
-  const response = await api.patch(`/admin/moderation/${documentId}`, {
-    decision,
-    reason,
-  });
-
-  return response.data.data;
-}
-
 export async function getAdminUsers(search = "") {
   const response = await api.get("/admin/users", {
     params: search ? { search } : {},
