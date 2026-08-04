@@ -435,23 +435,31 @@ async function retrieveChatChunks(question, documents, contentMode = "SEARCH") {
     return overviewChunks.flat().slice(0, MAX_RAG_CONTEXT_CHUNKS);
   }
 
-  const questionEmbedding = await createEmbedding(question, "query");
-  const vectorLiteral = toVectorLiteral(questionEmbedding);
+  let vectorLiteral = null;
+  try {
+    const questionEmbedding = await createEmbedding(question, "query");
+    vectorLiteral = toVectorLiteral(questionEmbedding);
+  } catch (embErr) {
+    console.warn("[Chat RAG] Question embedding skipped/fallback:", embErr.message);
+  }
+
   const chunksByDocument = await mapWithConcurrency(
     documents,
     RAG_RETRIEVAL_CONCURRENCY,
     async (document) => {
       let chunks = [];
-      try {
-        const { data, error } = await supabase.rpc("match_document_chunks", {
-          match_document_id: document.id,
-          query_embedding: vectorLiteral,
-          match_count: documents.length === 1 ? 20 : 10,
-        });
-        if (error) throw error;
-        chunks = Array.isArray(data) ? data : [];
-      } catch (error) {
-        console.warn(`Could not retrieve vector chunks for document ${document.id}:`, error.message);
+      if (vectorLiteral) {
+        try {
+          const { data, error } = await supabase.rpc("match_document_chunks", {
+            match_document_id: document.id,
+            query_embedding: vectorLiteral,
+            match_count: documents.length === 1 ? 20 : 10,
+          });
+          if (error) throw error;
+          chunks = Array.isArray(data) ? data : [];
+        } catch (error) {
+          console.warn(`Could not retrieve vector chunks for document ${document.id}:`, error.message);
+        }
       }
 
       if (chunks.length === 0) {

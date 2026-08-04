@@ -258,6 +258,7 @@ async function createEmbedding(
   maxRetries = DEFAULT_EMBEDDING_RETRIES,
 ) {
   const ai = await getAiClient();
+  const effectiveMaxRetries = mode === "query" ? 1 : maxRetries;
 
   const prefix =
     mode === "query"
@@ -267,7 +268,7 @@ async function createEmbedding(
   const promptText =
     prefix + String(text || "").slice(0, EMBEDDING_INPUT_MAX_CHARS);
 
-  for (let attempt = 1; attempt <= maxRetries; attempt += 1) {
+  for (let attempt = 1; attempt <= effectiveMaxRetries; attempt += 1) {
     try {
       const response = await ai.models.embedContent({
         model:
@@ -291,10 +292,10 @@ async function createEmbedding(
       const isQuotaError =
         statusCode === 429 || String(error?.message).includes("quota");
 
-      if (isQuotaError && attempt < maxRetries) {
+      if (isQuotaError && attempt < effectiveMaxRetries) {
         const delayMs = attempt * EMBEDDING_RETRY_BASE_DELAY_MS;
         console.warn(
-          `[Gemini Embedding] 429 Rate-limited/Quota exceeded. Retrying batch in ${delayMs}ms (Attempt ${attempt}/${maxRetries})...`,
+          `[Gemini Embedding] 429 Rate-limited/Quota exceeded. Retrying batch in ${delayMs}ms (Attempt ${attempt}/${effectiveMaxRetries})...`,
         );
         await new Promise((resolve) => setTimeout(resolve, delayMs));
         continue;
