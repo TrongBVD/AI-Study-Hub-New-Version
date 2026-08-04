@@ -81,6 +81,11 @@ export async function suggestDocumentTags(files) {
   return response.data.data || [];
 }
 
+export async function retryDocumentTags(documentId) {
+  const response = await api.post(`/documents/${documentId}/tags/retry`);
+  return response.data.data;
+}
+
 export async function downloadDocument(documentId) {
   const response = await api.get(`/documents/${documentId}/download`);
   return response.data.data;

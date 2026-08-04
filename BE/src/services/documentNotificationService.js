@@ -116,6 +116,59 @@ async function notifyDocumentUploaded({ userId, documentId, documentTitle, libra
 }
 
 /**
+ * Notify the uploader when hierarchical AI tagging could not be completed.
+ */
+async function notifyDocumentTaggingFailed({
+  userId,
+  documentId,
+  documentTitle,
+  libraryId = null,
+  workspaceId = null,
+  libraryName = null,
+  workspaceName = null,
+  errorMessage = "The AI tagging service is temporarily unavailable.",
+}) {
+  if (!userId || !documentId) return;
+
+  try {
+    const container = await resolveContainerName({
+      libraryId,
+      workspaceId,
+      libraryName,
+      workspaceName,
+    });
+    const link = workspaceId
+      ? `/dashboard/workspaces/${workspaceId}`
+      : libraryId
+        ? `/dashboard/libraries/${libraryId}`
+        : "/dashboard/libraries";
+    const details = `AI tagging failed for "${documentTitle || "Document"}": ${errorMessage} Open the file card and retry.`;
+
+    const { error } = await supabase.from("activity_logs").insert({
+      user_id: userId,
+      action_type: "DOCUMENT_TAGGING_FAILED",
+      entity_type: "DOCUMENT",
+      entity_id: documentId,
+      new_data: {
+        notificationType: "documentTaggingFailed",
+        documentTitle: documentTitle || "Document",
+        libraryId,
+        workspaceId,
+        containerName: container.name,
+        taggingError: errorMessage,
+        link,
+      },
+      details,
+      risk_level: "MEDIUM",
+    });
+
+    if (error) throw error;
+  } catch (error) {
+    console.error("Failed to record document tagging failure notification:", error);
+  }
+}
+
+/**
  * Record document deletion notification
  */
 async function notifyDocumentDeleted({ userId, documentId, documentTitle, libraryId = null, workspaceId = null, libraryName = null, workspaceName = null }) {
@@ -154,5 +207,6 @@ async function notifyDocumentDeleted({ userId, documentId, documentTitle, librar
 
 module.exports = {
   notifyDocumentUploaded,
+  notifyDocumentTaggingFailed,
   notifyDocumentDeleted,
 };

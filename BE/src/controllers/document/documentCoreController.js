@@ -31,6 +31,7 @@ const WAITING_BUCKET = process.env.SUPABASE_DOCUMENT_WAITING_ADMIN_APPROVED || "
 const { createActivityLog } = require("../../services/activityLogService");
 const {
   notifyDocumentUploaded,
+  notifyDocumentTaggingFailed,
   notifyDocumentDeleted,
 } = require("../../services/documentNotificationService");
 const { canAccessDocument } = require("../../services/documentAccessService");
@@ -67,6 +68,58 @@ function sanitizeFileName(fileName) {
     .replace(/[^a-zA-Z0-9._-]/g, "_")
     .replace(/_+/g, "_")
     .slice(0, 160);
+}
+
+function getTaggingErrorMessage(error) {
+  const status = Number(error?.status || error?.statusCode);
+  if (status === 429) {
+    return "The AI tagging quota has been reached. Please retry later.";
+  }
+  if (status === 503) {
+    return "The AI tagging service is temporarily unavailable. Please retry.";
+  }
+  if (String(error?.message || "").includes("extract")) {
+    return "The file does not contain enough readable text for AI tagging.";
+  }
+  return error?.message || "The AI could not generate tags for this file.";
+}
+
+async function updateDocumentTaggingState(
+  documentId,
+  taggingStatus,
+  taggingError = null,
+) {
+  const { error } = await supabase
+    .from("documents")
+    .update({
+      tagging_status: taggingStatus,
+      tagging_error: taggingError,
+      tagging_updated_at: new Date().toISOString(),
+    })
+    .eq("id", documentId);
+
+  if (error) throw error;
+}
+
+async function markDocumentTaggingFailed(documentId, error, context = {}) {
+  const message = getTaggingErrorMessage(error);
+
+  // Keep the document discoverable under a safe fallback classification while
+  // still exposing FAILED so the owner can request a better classification.
+  await ensureAndLinkDocumentTags(documentId, {
+    level1: "Other",
+    level2: null,
+    level3: null,
+  });
+
+  await updateDocumentTaggingState(documentId, "FAILED", message);
+  await notifyDocumentTaggingFailed({
+    ...context,
+    documentId,
+    errorMessage: message,
+  });
+
+  return message;
 }
 
 async function getWorkspaceDocumentUploadAccess(workspaceId, userId) {
@@ -117,11 +170,18 @@ async function processDocumentWithAI(
   preExtractedText = null,
   overrideStatus = null,
   overrideRejectReason = null,
+  taggingContext = {},
+  preclassifiedTags = null,
 ) {
   try {
+    await updateDocumentTaggingState(documentId, "PROCESSING");
     const extractedText = preExtractedText || await extractTextFromFile(file);
 
     if (!extractedText || extractedText.trim().length < 20) {
+      const taggingError = new Error(
+        "The file does not contain enough readable text for AI tagging.",
+      );
+      await markDocumentTaggingFailed(documentId, taggingError, taggingContext);
       await supabase
         .from("documents")
         .update({
@@ -140,6 +200,11 @@ async function processDocumentWithAI(
       const moderation = await moderateDocument(extractedText);
 
       if (moderation.status === "REJECTED") {
+        await markDocumentTaggingFailed(
+          documentId,
+          new Error("The document was rejected before AI tags could be generated."),
+          taggingContext,
+        );
         await supabase
           .from("documents")
           .update({ status: "REJECTED", ai_reject_reason: moderation })
@@ -157,7 +222,10 @@ async function processDocumentWithAI(
 
     await supabase.from("documents").update(updatePayload).eq("id", documentId);
 
-    // Classify 3-level tags IMMEDIATELY (Fast 1s LLM call) so document_tags are ALWAYS saved
+    let taggingStatus = "COMPLETED";
+
+    // Persist the hierarchy strictly. A tagging failure must be visible to the
+    // user instead of being silently treated as a successful upload.
     try {
       const { data: docInfo } = await supabase
         .from("documents")
@@ -165,13 +233,21 @@ async function processDocumentWithAI(
         .eq("id", documentId)
         .maybeSingle();
 
-      const classification = await classifyDocumentHierarchicalTags(
-        extractedText,
-        docInfo?.title || "Document"
-      );
-      await ensureAndLinkDocumentTags(documentId, classification);
+      const classification =
+        preclassifiedTags ||
+        (await classifyDocumentHierarchicalTags(
+          extractedText,
+          docInfo?.title || "Document",
+          { throwOnError: true },
+        ));
+      await ensureAndLinkDocumentTags(documentId, classification, {
+        throwOnError: true,
+      });
+      await updateDocumentTaggingState(documentId, "COMPLETED");
     } catch (tagErr) {
       console.warn("3-level document tagging warning:", tagErr.message);
+      taggingStatus = "FAILED";
+      await markDocumentTaggingFailed(documentId, tagErr, taggingContext);
     }
 
     // Process vector embeddings for RAG search
@@ -207,9 +283,16 @@ async function processDocumentWithAI(
       status: status,
       reason: "Document processed.",
       chunkCount: chunks.length,
+      tagging_status: taggingStatus,
     };
   } catch (error) {
     console.error("AI processing failed:", error);
+
+    const taggingError = await markDocumentTaggingFailed(
+      documentId,
+      error,
+      taggingContext,
+    ).catch(() => getTaggingErrorMessage(error));
 
     await supabase
       .from("documents")
@@ -217,7 +300,7 @@ async function processDocumentWithAI(
         status: "PENDING_RETRY",
         ai_reject_reason: {
           reason: "AI processing failed. Manual review may be needed.",
-          error: error.message,
+          error: taggingError,
         },
       })
       .eq("id", documentId);
@@ -225,8 +308,9 @@ async function processDocumentWithAI(
     return {
       status: "PENDING_RETRY",
       reason: "AI processing failed. Manual review may be needed.",
-      error: error.message,
+      error: taggingError,
       chunkCount: 0,
+      tagging_status: "FAILED",
     };
   }
 }
@@ -236,15 +320,23 @@ async function processWorkspaceDocumentInBackground(
   documentId,
   storagePath,
   userTags,
+  taggingContext = {},
 ) {
   try {
     const extractedText = await extractTextFromFile(file);
     const [moderation, tagValidation] = await Promise.all([
       moderateDocument(extractedText),
-      validateTagsAndContent(extractedText, file.originalname, userTags),
+      validateTagsAndContent(extractedText, file.originalname, userTags, {
+        throwOnError: true,
+      }),
     ]);
 
     if (!tagValidation.isValid) {
+      await markDocumentTaggingFailed(
+        documentId,
+        new Error("The supplied tags do not match the document content."),
+        taggingContext,
+      );
       await supabase
         .from("documents")
         .update({
@@ -278,11 +370,22 @@ async function processWorkspaceDocumentInBackground(
       file,
       documentId,
       extractedText,
-      isFlagged ? "FLAGGED" : "PENDING",
+      isFlagged
+        ? "FLAGGED"
+        : taggingContext.workspaceId
+          ? "PENDING"
+          : "APPROVED",
       isFlagged ? moderation : null,
+      taggingContext,
+      tagValidation.hierarchicalTags,
     );
   } catch (error) {
     console.error("Background workspace document validation failed:", error);
+    await markDocumentTaggingFailed(
+      documentId,
+      error,
+      taggingContext,
+    ).catch(() => {});
     await supabase
       .from("documents")
       .update({
@@ -294,6 +397,39 @@ async function processWorkspaceDocumentInBackground(
       })
       .eq("id", documentId);
   }
+}
+
+async function loadDocumentFileForProcessing(document) {
+  const preferredBucket = ["FLAGGED", "REJECTED"].includes(
+    String(document.status || "").toUpperCase(),
+  )
+    ? WAITING_BUCKET
+    : BUCKET;
+  const bucketCandidates = [preferredBucket, BUCKET, WAITING_BUCKET].filter(
+    (bucket, index, buckets) => buckets.indexOf(bucket) === index,
+  );
+  let lastError = null;
+
+  for (const bucket of bucketCandidates) {
+    const { data, error } = await supabase.storage
+      .from(bucket)
+      .download(document.file_url);
+
+    if (error || !data) {
+      lastError = error || new Error("Stored document data is unavailable.");
+      continue;
+    }
+
+    const arrayBuffer = await data.arrayBuffer();
+    return {
+      originalname: document.title || "Document",
+      mimetype: document.mime_type || "application/octet-stream",
+      size: Number(document.file_size_bytes) || arrayBuffer.byteLength,
+      buffer: Buffer.from(arrayBuffer),
+    };
+  }
+
+  throw lastError || new Error("The stored document could not be loaded.");
 }
 
 exports.listMyDocuments = async (req, res) => {
@@ -321,6 +457,9 @@ exports.listMyDocuments = async (req, res) => {
         is_public,
         status,
         ai_reject_reason,
+        tagging_status,
+        tagging_error,
+        tagging_updated_at,
         created_at
       `
       )
@@ -341,11 +480,35 @@ exports.listMyDocuments = async (req, res) => {
       throw error;
     }
 
-    const approvedDocuments = (data || []).filter(
+    const documents = data || [];
+    const approvedDocuments = documents.filter(
       (document) => String(document.status || "").toUpperCase() === "APPROVED",
     );
     const approvedDocumentIds = approvedDocuments.map((document) => document.id);
     let aiReadyDocumentIds = new Set();
+    const tagsByDocumentId = new Map();
+
+    if (documents.length > 0) {
+      const { data: documentTagRows, error: documentTagError } = await supabase
+        .from("document_tags")
+        .select(`
+          document_id,
+          l1:tags!document_tags_level_1_tag_id_fkey(name),
+          l2:tags!document_tags_level_2_tag_id_fkey(name),
+          l3:tags!document_tags_level_3_tag_id_fkey(name)
+        `)
+        .in("document_id", documents.map((document) => document.id));
+
+      if (documentTagError) throw documentTagError;
+
+      (documentTagRows || []).forEach((row) => {
+        tagsByDocumentId.set(String(row.document_id), {
+          level1: row.l1?.name || null,
+          level2: row.l2?.name || null,
+          level3: row.l3?.name || null,
+        });
+      });
+    }
 
     if (approvedDocumentIds.length > 0) {
       const { data: chunkRows, error: chunkError } = await supabase
@@ -364,9 +527,10 @@ exports.listMyDocuments = async (req, res) => {
 
     return res.status(200).json({
       status: "success",
-      data: approvedDocuments.map((document) => ({
+      data: documents.map((document) => ({
         ...document,
         ai_ready: aiReadyDocumentIds.has(String(document.id)),
+        tags: tagsByDocumentId.get(String(document.id)) || null,
       })),
     });
   } catch (error) {
@@ -471,12 +635,13 @@ exports.uploadDocuments = async (req, res) => {
 
     // CHECK GIỚI HẠN 50MB NẾU UP VÀO WORKSPACE
     const isDirectWorkspaceUpload = Boolean(workspaceId && !libraryId);
+    const isBackgroundUpload = Boolean(workspaceId || libraryId);
 
     let targetLibrary = null;
     if (libraryId) {
       const { data: lib, error: libErr } = await supabase
         .from("libraries")
-        .select("id, user_id, is_public")
+        .select("id, user_id, name, is_public")
         .eq("id", libraryId)
         .maybeSingle();
 
@@ -663,7 +828,7 @@ exports.uploadDocuments = async (req, res) => {
 
     // 1. Trích xuất text và chạy kiểm tra nhạy cảm + tag validation song song cho tất cả các file
     let processedFilesData = [];
-    if (isDirectWorkspaceUpload) {
+    if (isBackgroundUpload) {
       processedFilesData = files.map((file, fileIndex) => ({
         file,
         fileIndex,
@@ -780,7 +945,7 @@ exports.uploadDocuments = async (req, res) => {
       if (uploadError) throw uploadError;
 
       // Xác định status và reject reason dựa trên mức độ nhạy cảm
-      let status = workspaceId ? "PENDING" : "APPROVED";
+      let status = isBackgroundUpload ? "PENDING" : "APPROVED";
       let aiRejectReason = null;
 
       if (isFlagged) {
@@ -806,7 +971,10 @@ exports.uploadDocuments = async (req, res) => {
           file_size_bytes: file.size,
           is_public: targetLibrary ? Boolean(targetLibrary.is_public) : false,
           status: status,
-          ai_reject_reason: aiRejectReason
+          ai_reject_reason: aiRejectReason,
+          tagging_status: "PENDING",
+          tagging_error: null,
+          tagging_updated_at: new Date().toISOString(),
         })
         .select("*").single();
 
@@ -841,7 +1009,7 @@ exports.uploadDocuments = async (req, res) => {
       // Gọi hàm xử lý AI (embedding và chunking)
       const shouldKeepReviewStatus = status === "FLAGGED" || Boolean(workspaceId);
       let aiResult = { status };
-      if (isDirectWorkspaceUpload) {
+      if (isBackgroundUpload) {
         // The document is already stored as PENDING. Continue extraction,
         // moderation, chunking and embeddings without holding the upload
         // response open. processDocumentWithAI records controlled failure
@@ -851,6 +1019,13 @@ exports.uploadDocuments = async (req, res) => {
           document.id,
           storagePath,
           userTags,
+          {
+            userId: userID,
+            documentTitle: file.originalname,
+            libraryId,
+            workspaceId,
+            libraryName: targetLibrary?.name || null,
+          },
         ).catch((processingError) => {
           console.error(
             "Background workspace document processing failed:",
@@ -863,7 +1038,15 @@ exports.uploadDocuments = async (req, res) => {
           document.id,
           extractedText,
           shouldKeepReviewStatus ? status : null,
-          shouldKeepReviewStatus ? aiRejectReason : null
+          shouldKeepReviewStatus ? aiRejectReason : null,
+          {
+            userId: userID,
+            documentTitle: file.originalname,
+            libraryId,
+            workspaceId,
+            libraryName: targetLibrary?.name || null,
+          },
+          processedData.tagValidationResult.hierarchicalTags || null,
         );
       }
 
@@ -880,7 +1063,10 @@ exports.uploadDocuments = async (req, res) => {
         const replacedDocumentIds =
           duplicateDecision.replacementTargetIds[fileIndex] || [];
 
-        if (replacedDocumentIds.length > 0 && aiResult.status === "APPROVED") {
+        if (
+          replacedDocumentIds.length > 0 &&
+          (isBackgroundUpload || aiResult.status === "APPROVED")
+        ) {
           const replacementTimestamp = new Date().toISOString();
           let replacementDeleteQuery = supabase
             .from("documents")
@@ -979,6 +1165,81 @@ exports.suggestDocumentTags = async (req, res) => {
         : isAiServiceUnavailable
           ? "AI tag suggestions are temporarily unavailable. Please try again shortly."
           : "AI could not suggest tags for this document.",
+    });
+  }
+};
+
+exports.retryDocumentTags = async (req, res) => {
+  try {
+    const userID = req.user.id;
+    const { documentId } = req.params;
+    const { data: document, error } = await supabase
+      .from("documents")
+      .select(
+        "id, uploader_id, library_id, workspace_id, title, file_url, file_size_bytes, status",
+      )
+      .eq("id", documentId)
+      .is("deleted_at", null)
+      .maybeSingle();
+
+    if (error) throw error;
+    if (!document) {
+      return res.status(404).json({
+        status: "error",
+        message: "Document not found.",
+      });
+    }
+    if (String(document.uploader_id) !== String(userID)) {
+      return res.status(403).json({
+        status: "error",
+        message: "You can only retry tags for documents you uploaded.",
+      });
+    }
+
+    await updateDocumentTaggingState(documentId, "PENDING");
+
+    void (async () => {
+      try {
+        const file = await loadDocumentFileForProcessing(document);
+        await processDocumentWithAI(
+          file,
+          document.id,
+          null,
+          ["APPROVED", "FLAGGED"].includes(
+            String(document.status || "").toUpperCase(),
+          )
+            ? document.status
+            : null,
+          null,
+          {
+            userId: userID,
+            documentTitle: document.title,
+            libraryId: document.library_id,
+            workspaceId: document.workspace_id,
+          },
+        );
+      } catch (retryError) {
+        await markDocumentTaggingFailed(document.id, retryError, {
+          userId: userID,
+          documentTitle: document.title,
+          libraryId: document.library_id,
+          workspaceId: document.workspace_id,
+        }).catch(() => {});
+      }
+    })();
+
+    return res.status(202).json({
+      status: "success",
+      data: {
+        documentId,
+        tagging_status: "PENDING",
+      },
+    });
+  } catch (error) {
+    console.error("Retry document tags error:", error);
+    return res.status(500).json({
+      status: "error",
+      message: "Could not retry AI tag generation.",
     });
   }
 };

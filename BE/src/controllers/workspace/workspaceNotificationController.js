@@ -79,6 +79,7 @@ exports.listMyWorkspaceNotifications = async (req, res) => {
         "DOCUMENT_APPROVED",
         "DOCUMENT_REJECTED",
         "DOCUMENT_UPLOADED",
+        "DOCUMENT_TAGGING_FAILED",
         "DOCUMENT_DELETED",
         "WORKSPACE_INVITATION_PENDING",
         "WORKSPACE_MEMBER_LEFT",
@@ -183,6 +184,29 @@ exports.listMyWorkspaceNotifications = async (req, res) => {
             message: item.details || `File "${documentTitle}" has been uploaded to ${containerName} successfully.`,
             isRead,
             icon: "ti-file",
+            link: libraryLink,
+            createdAt: formatRelativeTime(item.created_at),
+            createdAtMs,
+          };
+        }
+
+        if (
+          actionType === "documentTaggingFailed" ||
+          item.action_type === "DOCUMENT_TAGGING_FAILED"
+        ) {
+          const libraryLink = item.new_data?.link ||
+            (item.new_data?.libraryId
+              ? `/dashboard/libraries/${item.new_data.libraryId}`
+              : "/dashboard/libraries");
+          return {
+            id: `doc-tagging-failed-${item.id}`,
+            category: "file",
+            action: "taggingFailed",
+            title: "AI tagging needs attention",
+            message: item.details,
+            documentId: item.entity_id,
+            isRead,
+            icon: "ti-alert",
             link: libraryLink,
             createdAt: formatRelativeTime(item.created_at),
             createdAtMs,

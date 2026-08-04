@@ -14,6 +14,7 @@ const {
     getMyLibraryStorageUsage,
     uploadDocuments,
     suggestDocumentTags,
+    retryDocumentTags,
     downloadDocument,
     viewDocument,
     deleteDocument,
@@ -96,6 +97,7 @@ router.delete("/libraries/:id", authMiddleware, deleteLibrary);
 
 router.get("/:documentId/download", authMiddleware, downloadDocument);
 router.get("/:documentId/view", authMiddleware, viewDocument);
+router.post("/:documentId/tags/retry", authMiddleware, retryDocumentTags);
 
 router.delete("/:documentId", authMiddleware, deleteDocument);
 

@@ -750,8 +750,17 @@ async function validateTagsAndContent(
   return analyzeDocumentForUpload(extractedText, originalName, userTags, options);
 }
 
-async function classifyDocumentHierarchicalTags(extractedText, originalName) {
-  const result = await analyzeDocumentForUpload(extractedText, originalName, []);
+async function classifyDocumentHierarchicalTags(
+  extractedText,
+  originalName,
+  options = {},
+) {
+  const result = await analyzeDocumentForUpload(
+    extractedText,
+    originalName,
+    [],
+    options,
+  );
   return result.hierarchicalTags || { level1: "Other", level2: null, level3: null };
 }
 

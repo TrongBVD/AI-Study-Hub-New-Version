@@ -3,7 +3,9 @@
         "start": "node server.js",
         "test": "jest",
         "test:watch": "jest --watch",
-        "test:coverage": "jest --coverage"
+        "test:coverage": "jest --coverage",
+        "tags:backfill:dry-run": "node scripts/backfillDocumentTags.js",
+        "tags:backfill": "node scripts/backfillDocumentTags.js --execute"
     },
     "jest": {
         "testEnvironment": "node",

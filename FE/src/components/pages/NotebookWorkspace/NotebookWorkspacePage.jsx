@@ -24,6 +24,7 @@ import {
   deleteDocument,
   updateLibrary,
   deleteLibrary,
+  retryDocumentTags,
 } from "../../../utils/documentApi.js";
 import {
   downloadPublicDocument,
@@ -125,6 +126,7 @@ export default function NotebookWorkspacePage() {
 
   // File upload state
   const [uploading, setUploading] = useState(false);
+  const [retryingDocumentIds, setRetryingDocumentIds] = useState(new Set());
 
   // Library settings state
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -275,6 +277,36 @@ export default function NotebookWorkspacePage() {
     };
   }, [isGuest]);
 
+  useEffect(() => {
+    if (isGuest || accessMode !== "owner") return undefined;
+
+    const hasPendingTagging = documents.some((document) =>
+      ["PENDING", "PROCESSING"].includes(
+        String(document.tagging_status || "").toUpperCase(),
+      ),
+    );
+    if (!hasPendingTagging) return undefined;
+
+    let isMounted = true;
+    const intervalId = window.setInterval(async () => {
+      try {
+        const updatedDocuments = await getMyDocuments(libraryId);
+        if (!isMounted) return;
+        const nextDocuments = Array.isArray(updatedDocuments)
+          ? updatedDocuments
+          : updatedDocuments?.data || [];
+        setDocuments(nextDocuments);
+      } catch (error) {
+        console.warn("Could not refresh AI tagging status:", error);
+      }
+    }, 2500);
+
+    return () => {
+      isMounted = false;
+      window.clearInterval(intervalId);
+    };
+  }, [accessMode, documents, isGuest, libraryId]);
+
   /**
    * Scroll chat to bottom when messages update
    */
@@ -370,6 +402,55 @@ export default function NotebookWorkspacePage() {
     if (files.length === 0) return;
     performUpload(files);
     e.target.value = "";
+  };
+
+  const handleRetryDocumentTags = async (documentId) => {
+    if (!canManageLibrary) return;
+
+    setRetryingDocumentIds((current) => new Set(current).add(documentId));
+    setDocuments((current) =>
+      current.map((document) =>
+        String(document.id) === String(documentId)
+          ? {
+              ...document,
+              tagging_status: "PENDING",
+              tagging_error: null,
+            }
+          : document,
+      ),
+    );
+
+    try {
+      await retryDocumentTags(documentId);
+      showToast(
+        "AI tag generation has restarted.",
+        "Generating Tags",
+        "info",
+      );
+    } catch (error) {
+      const message =
+        error.response?.data?.message ||
+        error.message ||
+        "Could not retry AI tag generation.";
+      setDocuments((current) =>
+        current.map((document) =>
+          String(document.id) === String(documentId)
+            ? {
+                ...document,
+                tagging_status: "FAILED",
+                tagging_error: message,
+              }
+            : document,
+        ),
+      );
+      showToast(message, "Tagging Retry Failed", "error");
+    } finally {
+      setRetryingDocumentIds((current) => {
+        const next = new Set(current);
+        next.delete(documentId);
+        return next;
+      });
+    }
   };
 
   const handleConfirmReplace = async () => {
@@ -846,6 +927,8 @@ export default function NotebookWorkspacePage() {
         onViewDoc={handleViewDocument}
         onDownloadDoc={handleDownloadDocument}
         onDeleteDoc={(docId, title) => setDeleteConfirmDoc({ id: docId, title: title || "Untitled Document" })}
+        onRetryDocumentTags={handleRetryDocumentTags}
+        retryingDocumentIds={retryingDocumentIds}
         chatHistory={chatHistory}
         activeConversationId={activeConversationId}
         onOpenHistoryConversation={handleOpenHistoryConversation}
