@@ -37,12 +37,10 @@ import GlobalActionPopup from "./components/common/ActionPopup/GlobalActionPopup
 import AdminLayout from "./components/pages/Admin/AdminLayout/AdminLayout.jsx";
 import ReportIssuePage from "./components/pages/ReportIssuePage/ReportIssuePage.jsx";
 
-const ImportLibraryPage = lazy(() => import("./components/pages/ImportLibraryPage/ImportLibraryPage.jsx"));
 const DocumentViewerPage = lazy(() => import("./components/pages/DocumentViewerPage/DocumentViewerPage.jsx"));
 const WorkSpacePage = lazy(() => import("./components/pages/WorkSpacePage/WorkSpacePage.jsx"));
 const Flashcards = lazy(() => import("./components/pages/Flashcards/Flashcards.jsx"));
 const AdminDashboardPage = lazy(() => import("./components/pages/Admin/AdminDashboardPage/AdminDashboardPage.jsx"));
-const AdminModerationPage = lazy(() => import("./components/pages/Admin/AiContentModerationPage/AIContentModerationPage.jsx"));
 const AdminUsersPage = lazy(() => import("./components/pages/Admin/UserManagementPage/UserManagementPage.jsx"));
 const AdminLogsPage = lazy(() => import("./components/pages/Admin/ActivityLogPage/ActivityLogPage.jsx"));
 const AdminUsagePage = lazy(() => import("./components/pages/Admin/AdminUsagePage/AdminUsagePage.jsx"));
@@ -102,7 +100,6 @@ function App() {
             />
 
             <Route path="create-library" element={<CreateLibraryPage />} />
-            <Route path="import-library" element={<ImportLibraryPage />} />
             <Route path="documents/:documentId" element={<DocumentViewerPage />} />
             <Route path="settings" element={<SettingPage />} />
             <Route path="create-workspace" element={<CreateWorkSpacePage />} />
@@ -129,7 +126,6 @@ function App() {
           >
             <Route index element={<Navigate to="/admin/dashboard" replace />} />
             <Route path="dashboard" element={<AdminDashboardPage />} />
-            <Route path="moderation" element={<AdminModerationPage />} />
             <Route path="users" element={<AdminUsersPage />} />
             <Route path="logs" element={<AdminLogsPage />} />
             <Route path="usage" element={<AdminUsagePage />} />

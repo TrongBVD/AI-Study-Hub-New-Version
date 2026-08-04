@@ -564,14 +564,6 @@ function Navbar({
                   Create Library
                 </Link>
 
-                <Link
-                  to="/dashboard/import-library"
-                  state={{ from: "/dashboard/home" }}
-                >
-                  <i className="ti-import"></i>
-                  Import Library
-                </Link>
-
                 <Link to="/dashboard/create-workspace">
                   <HiOutlineSquaresPlus aria-hidden="true" />
                   Create Workspace

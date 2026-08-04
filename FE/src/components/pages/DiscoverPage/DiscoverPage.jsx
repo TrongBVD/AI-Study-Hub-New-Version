@@ -162,6 +162,7 @@ function DiscoverPage() {
   const [libraries, setLibraries] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     let isMounted = true;
@@ -206,9 +207,22 @@ function DiscoverPage() {
     };
   }, []);
 
+  const filteredLibraries = useMemo(() => {
+    const normalizedQuery = searchQuery.trim().toLocaleLowerCase();
+    if (!normalizedQuery) return libraries;
+
+    return libraries.filter((library) =>
+      [library.name, library.description, library.ownerName]
+        .filter(Boolean)
+        .some((value) =>
+          String(value).toLocaleLowerCase().includes(normalizedQuery),
+        ),
+    );
+  }, [libraries, searchQuery]);
+
   const favoriteLibraries = useMemo(
     () =>
-      [...libraries]
+      [...filteredLibraries]
         .sort(
           (a, b) =>
             b.stars - a.stars ||
@@ -217,7 +231,7 @@ function DiscoverPage() {
             getCreatedTimestamp(b) - getCreatedTimestamp(a),
         )
         .slice(0, 5),
-    [libraries],
+    [filteredLibraries],
   );
   return (
     <main className="discover_page">
@@ -229,6 +243,25 @@ function DiscoverPage() {
             <p>
               Explore favorite public study collections shared by the community.
             </p>
+            <label className="discover_search">
+              <i className="ti-search" aria-hidden="true" />
+              <input
+                type="search"
+                value={searchQuery}
+                onChange={(event) => setSearchQuery(event.target.value)}
+                placeholder="Search by collection, description, or owner..."
+                aria-label="Search public study collections"
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery("")}
+                  aria-label="Clear search"
+                >
+                  <i className="ti-close" aria-hidden="true" />
+                </button>
+              )}
+            </label>
           </div>
         </header>
 
@@ -244,6 +277,12 @@ function DiscoverPage() {
             <i className="ti-archive" />
             <h2>No public libraries yet</h2>
             <p>Shared libraries will appear here once users publish them.</p>
+          </section>
+        ) : filteredLibraries.length === 0 ? (
+          <section className="discover_empty">
+            <i className="ti-search" />
+            <h2>No matching collections</h2>
+            <p>Try another collection name, description, or owner.</p>
           </section>
         ) : (
           <section className="discover_split">

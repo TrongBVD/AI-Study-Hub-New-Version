@@ -6,7 +6,6 @@ import {
   HiOutlineSquares2X2,
   HiOutlineQuestionMarkCircle,
   HiOutlineCog6Tooth,
-  HiOutlineSquaresPlus,
   HiOutlineArrowRightOnRectangle,
   HiOutlineXMark,
 } from "react-icons/hi2";
@@ -35,7 +34,6 @@ function getStoredUserRole() {
 function Sidebar({ isOpen, onClose }) {
   const navigate = useNavigate();
   const userRole = getStoredUserRole();
-  const isSystemAdmin = userRole === "SYSTEM_ADMIN";
   const isGuest = userRole === "GUEST";
 
   // Sidebar navigation menu items
@@ -133,17 +131,6 @@ function Sidebar({ isOpen, onClose }) {
         </div>
 
         <div className="sidebar_bottom_actions">
-          {isSystemAdmin && (
-            <NavLink
-              to="/admin/dashboard"
-              className="admin_dashboard_btn"
-              onClick={onClose}
-            >
-              <HiOutlineSquaresPlus aria-hidden="true" />
-              <span>Admin Dashboard</span>
-            </NavLink>
-          )}
-
           <button type="button" className="logout_btn" onClick={handleLogout}>
             <HiOutlineArrowRightOnRectangle aria-hidden="true" />
             <span>Sign Out</span>

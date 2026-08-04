@@ -42,28 +42,44 @@ export function getAccessToken() {
   return getAuthStorage().getItem("accessToken");
 }
 
-export function getTokenExpiryMs(token) {
-  if (!token) {
-    return null;
-  }
+export function getAccessTokenPayload(token = getAccessToken()) {
+  if (!token) return null;
 
   try {
     const payloadBase64 = token.split(".")[1];
-    if (!payloadBase64) {
-      return null;
-    }
+    if (!payloadBase64) return null;
 
-    const normalizePayload = payloadBase64
+    const normalizedPayload = payloadBase64
       .replace(/-/g, "+")
       .replace(/_/g, "/");
+    const paddedPayload = normalizedPayload.padEnd(
+      Math.ceil(normalizedPayload.length / 4) * 4,
+      "=",
+    );
 
-    const payloadJson = atob(normalizePayload);
-    const payload = JSON.parse(payloadJson);
-
-    return payload.exp ? payload.exp * 1000 : null;
+    return JSON.parse(atob(paddedPayload));
   } catch {
     return null;
   }
+}
+
+export function getStoredRole() {
+  const user = getStoredUser();
+  const tokenPayload = getAccessTokenPayload();
+
+  return String(
+    tokenPayload?.role ||
+      user?.role ||
+      user?.system_role ||
+      user?.systemRole ||
+      user?.profile?.role ||
+      "",
+  ).toUpperCase();
+}
+
+export function getTokenExpiryMs(token) {
+  const payload = getAccessTokenPayload(token);
+  return payload?.exp ? payload.exp * 1000 : null;
 }
 
 export function clearAccessToken() {

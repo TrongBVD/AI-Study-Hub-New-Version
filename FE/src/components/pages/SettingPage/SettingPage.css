@@ -310,6 +310,9 @@ body[data-theme="black"] .settings_header_icon {
 
 .settings_panel {
   margin-top: 2.75rem;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
 }
 
 body[data-theme="white"] .user_dashboard_layout .settings_panel,
@@ -322,6 +325,9 @@ body[data-theme="black"] .user_dashboard_layout .settings_panel {
 .settings_panel_title {
   max-width: 42rem;
   margin-bottom: 1rem;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
 }
 
 .settings_panel_title h2 {
@@ -340,11 +346,11 @@ body[data-theme="black"] .user_dashboard_layout .settings_panel {
 }
 
 .settings_table {
-  border: 1px solid var(--settings-line);
-  border-radius: 1rem;
-  background: var(--hero-card-bg);
-  overflow: hidden;
-  box-shadow: var(--shadow-soft);
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  overflow: visible;
+  box-shadow: none;
 }
 
 body[data-theme="white"] .user_dashboard_layout .settings_table,
