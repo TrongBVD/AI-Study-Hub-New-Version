@@ -7,7 +7,6 @@ import {
   HiOutlineListBullet,
   HiOutlineBookOpen,
   HiOutlineTrash,
-  HiOutlineShare,
   HiOutlinePencil,
   HiOutlineCircleStack,
   HiEllipsisVertical,

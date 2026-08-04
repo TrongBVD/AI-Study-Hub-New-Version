@@ -6,7 +6,6 @@ import {
 } from "react-router-dom";
 import ActionPopup from "../../common/ActionPopup/ActionPopup.jsx";
 import useActionPopup from "../../common/ActionPopup/useActionPopup.js";
-import { createAppNotification } from "../../../utils/notificationStore.js";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   addWorkspaceMember,
@@ -168,31 +167,8 @@ function getWorkspaceRoleLabel(role) {
     : role;
 }
 
-function normalizeDisplayFileName(fileName) {
-  const value = String(fileName || "");
-  if (!value || [...value].some((character) => character.charCodeAt(0) > 255)) {
-    return value.normalize("NFC");
-  }
 
-  try {
-    const bytes = Uint8Array.from(value, (character) =>
-      character.charCodeAt(0),
-    );
-    const decoded = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
-    return decoded.normalize("NFC");
-  } catch {
-    return value.normalize("NFC");
-  }
-}
 
-function getSolutionPreview(content, wordLimit = 15) {
-  const words = String(content || "")
-    .trim()
-    .split(/\s+/)
-    .filter(Boolean);
-  if (words.length <= wordLimit) return words.join(" ");
-  return `${words.slice(0, wordLimit).join(" ")}...`;
-}
 function normalizeWorkspaceDocumentTitle(value) {
   return String(value || "")
     .trim()
@@ -607,7 +583,6 @@ function WorkSpacePage() {
 
   useEffect(() => {
     if (!workspaceId) return;
-
     let isMounted = true;
 
     async function loadWorkspaceMessages() {
@@ -2150,11 +2125,11 @@ function renderMembersTab() {
       <aside className="workspace_member_sidebar">
         <section className="workspace_side_card">
           <h3>About Roles</h3>
-
           <div className="workspace_role_item">
             <strong>Admin</strong>
             <p>
-              Can manage workspace settings and members, and review documents.
+              Can manage workspace settings and members, review documents, and
+              manage workspace files.
             </p>
           </div>
 
@@ -2165,7 +2140,6 @@ function renderMembersTab() {
             </p>
           </div>
         </section>
-
       </aside>
     </section>
   );

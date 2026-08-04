@@ -72,15 +72,24 @@ exports.getWorkspacePurgePreview = async (req, res) => {
     const documentFilter = (query) => deletedDocumentIds.length ? query.in("document_id", deletedDocumentIds) : query.eq("document_id", "00000000-0000-0000-0000-000000000000");
     const workspaceFilter = (query) => query.eq("workspace_id", workspaceId);
     const [members, messages, aiSummaries, documentChunks] = await Promise.all([
-      countRows("workspace_members", workspaceFilter), countRows("workspace_messages", workspaceFilter),
-      countRows("ai_summaries", documentFilter), countRows("document_chunks", documentFilter),
+      countRows("workspace_members", workspaceFilter),
+      countRows("workspace_messages", workspaceFilter),
+      countRows("ai_summaries", documentFilter),
+      countRows("document_chunks", documentFilter),
     ]);
 
     return res.status(200).json({
       status: "success",
       data: {
         workspace,
-        deletion: { members, messages, documents: deletedDocuments.length, aiSummaries, documentChunks, reclaimableBytes: deletedDocuments.reduce((total, document) => total + Number(document.file_size_bytes || 0), 0) },
+        deletion: {
+          members,
+          messages,
+          documents: deletedDocuments.length,
+          aiSummaries,
+          documentChunks,
+          reclaimableBytes: deletedDocuments.reduce((total, document) => total + Number(document.file_size_bytes || 0), 0),
+        },
         preservation: { documents: preservedDocuments.length, documentList: preservedDocuments.map(({ id, title, library_id: libraryId, file_size_bytes: fileSizeBytes }) => ({ id, title, libraryId, fileSizeBytes })) },
       },
     });

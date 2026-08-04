@@ -62,6 +62,7 @@ async function extractTextFromFile(file) {
  */
 function cleanExtractedText(text) {
   return String(text || "")
+    .replace(/\u0000/g, "")       // strip null bytes – PostgreSQL rejects \u0000 (error 22P05)
     .replace(/\r\n/g, "\n")
     .replace(/\r/g, "\n")
     .replace(/\n{3,}/g, "\n\n")

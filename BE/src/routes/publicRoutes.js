@@ -4,6 +4,7 @@ const publicDocumentController = require("../controllers/public/publicDocumentCo
 
 const router = express.Router();
 
+router.get("/tags", publicLibraryController.listPublicTags);
 router.get("/libraries", publicLibraryController.listPublicLibraries);
 router.get("/libraries/:libraryId", publicLibraryController.getPublicLibrary);
 router.post("/libraries/:libraryId/download", publicLibraryController.recordPublicLibraryDownload);

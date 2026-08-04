@@ -435,23 +435,31 @@ async function retrieveChatChunks(question, documents, contentMode = "SEARCH") {
     return overviewChunks.flat().slice(0, MAX_RAG_CONTEXT_CHUNKS);
   }
 
-  const questionEmbedding = await createEmbedding(question, "query");
-  const vectorLiteral = toVectorLiteral(questionEmbedding);
+  let vectorLiteral = null;
+  try {
+    const questionEmbedding = await createEmbedding(question, "query");
+    vectorLiteral = toVectorLiteral(questionEmbedding);
+  } catch (embErr) {
+    console.warn("[Chat RAG] Question embedding skipped/fallback:", embErr.message);
+  }
+
   const chunksByDocument = await mapWithConcurrency(
     documents,
     RAG_RETRIEVAL_CONCURRENCY,
     async (document) => {
       let chunks = [];
-      try {
-        const { data, error } = await supabase.rpc("match_document_chunks", {
-          match_document_id: document.id,
-          query_embedding: vectorLiteral,
-          match_count: documents.length === 1 ? 20 : 10,
-        });
-        if (error) throw error;
-        chunks = Array.isArray(data) ? data : [];
-      } catch (error) {
-        console.warn(`Could not retrieve vector chunks for document ${document.id}:`, error.message);
+      if (vectorLiteral) {
+        try {
+          const { data, error } = await supabase.rpc("match_document_chunks", {
+            match_document_id: document.id,
+            query_embedding: vectorLiteral,
+            match_count: documents.length === 1 ? 20 : 10,
+          });
+          if (error) throw error;
+          chunks = Array.isArray(data) ? data : [];
+        } catch (error) {
+          console.warn(`Could not retrieve vector chunks for document ${document.id}:`, error.message);
+        }
       }
 
       if (chunks.length === 0) {
@@ -1115,21 +1123,6 @@ exports.generateFlashcards = async (req, res) => {
       .insert(flashcardSet);
     if (setInsertError) throw setInsertError;
 
-    const setDocumentRows = documents.map((document) => ({
-      set_id: flashcardSet.id,
-      document_id: document.id,
-    }));
-    const { error: setDocumentsError } = await supabase
-      .from("flashcard_set_documents")
-      .insert(setDocumentRows);
-    if (setDocumentsError) {
-      await supabase
-        .from("flashcard_sets")
-        .delete()
-        .eq("id", flashcardSet.id)
-        .eq("creator_id", userId);
-      throw setDocumentsError;
-    }
 
     const rows = cards.map((card) => ({
       set_id: flashcardSet.id,
@@ -1189,8 +1182,7 @@ exports.generateFlashcards = async (req, res) => {
     const storageMissing =
       error.code === "PGRST205" ||
       String(error.message || "").includes("public.flashcards") ||
-      String(error.message || "").includes("public.flashcard_sets") ||
-      String(error.message || "").includes("public.flashcard_set_documents");
+      String(error.message || "").includes("public.flashcard_sets");
 
     return res.status(storageMissing ? 503 : error.statusCode || 500).json({
       status: "error",

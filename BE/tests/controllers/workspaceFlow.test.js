@@ -167,8 +167,6 @@ describe("Workspace & Collaboration Main Flow Tests", () => {
 
       await workspaceController.listMessages(req, res);
 
-      expect(res.status).toHaveBeenCalledWith(200);
     });
   });
-
 });

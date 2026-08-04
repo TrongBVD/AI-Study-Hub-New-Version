@@ -315,7 +315,6 @@ describe("AI Pipeline Main Flow Tests", () => {
 
       expect(res.status).toHaveBeenCalledWith(201);
       expect(supabase.from).toHaveBeenCalledWith("flashcard_sets");
-      expect(supabase.from).toHaveBeenCalledWith("flashcard_set_documents");
       expect(supabase.from).toHaveBeenCalledWith("flashcards");
       expect(mockChain.insert).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -376,12 +375,6 @@ describe("AI Pipeline Main Flow Tests", () => {
             expect.objectContaining({ title: "two.pdf", chunkCount: 1 }),
           ],
         }),
-      );
-      expect(mockChain.insert).toHaveBeenCalledWith(
-        expect.arrayContaining([
-          expect.objectContaining({ document_id: "doc-1", set_id: expect.any(String) }),
-          expect.objectContaining({ document_id: "doc-2", set_id: expect.any(String) }),
-        ]),
       );
       expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
         status: "success",

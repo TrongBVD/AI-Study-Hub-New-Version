@@ -4,30 +4,21 @@ const downloadDeduplicationCache = new Map();
 
 async function getLibraryEngagement(libraryIds) {
   const ids = (libraryIds || []).filter(Boolean);
-  const starsByLibrary = new Map();
   const downloadsByLibrary = new Map();
 
-  if (ids.length === 0) return { starsByLibrary, downloadsByLibrary };
+  if (ids.length === 0) return { downloadsByLibrary };
 
-  const [{ data: stars, error: starsError }, { data: downloads, error: downloadsError }] =
-    await Promise.all([
-      supabase.from("library_stars").select("library_id").in("library_id", ids),
-      supabase.from("library_downloads").select("library_id").in("library_id", ids),
-    ]);
+  const { data: downloads, error: downloadsError } =
+    await supabase.from("library_downloads").select("library_id").in("library_id", ids);
 
-  if (starsError) throw starsError;
   if (downloadsError) throw downloadsError;
 
-  (stars || []).forEach(({ library_id }) => {
-    const key = String(library_id);
-    starsByLibrary.set(key, (starsByLibrary.get(key) || 0) + 1);
-  });
   (downloads || []).forEach(({ library_id }) => {
     const key = String(library_id);
     downloadsByLibrary.set(key, (downloadsByLibrary.get(key) || 0) + 1);
   });
 
-  return { starsByLibrary, downloadsByLibrary };
+  return { downloadsByLibrary };
 }
 
 function mapDocument(document) {
@@ -41,8 +32,28 @@ function mapDocument(document) {
   };
 }
 
+const { getLevel1Tags } = require("../../services/tagService");
+
+exports.listPublicTags = async (req, res) => {
+  try {
+    const tags = await getLevel1Tags();
+    return res.status(200).json({
+      status: "success",
+      data: tags,
+    });
+  } catch (error) {
+    console.error("listPublicTags error:", error);
+    return res.status(500).json({
+      status: "error",
+      message: "Could not load tags.",
+    });
+  }
+};
+
 exports.listPublicLibraries = async (req, res) => {
   try {
+    const searchTag = String(req.query.tag || req.query.tagQuery || "").trim();
+
     const { data: libraries, error: libraryError } = await supabase
       .from("libraries")
       .select("id, user_id, name, description, is_public, share_on_profile, created_at")
@@ -56,17 +67,17 @@ exports.listPublicLibraries = async (req, res) => {
       ...new Set((libraries || []).map((library) => library.user_id).filter(Boolean)),
     ];
     let documentCounts = new Map();
+    let matchingFileCounts = new Map();
     let ownersById = new Map();
-    const { starsByLibrary, downloadsByLibrary } =
+    const { downloadsByLibrary } =
       await getLibraryEngagement(libraryIds);
 
-    let starCounts = new Map();
     let downloadCounts = new Map();
 
     if (libraryIds.length > 0) {
       const { data: documents, error: documentError } = await supabase
         .from("documents")
-        .select("library_id")
+        .select("id, library_id")
         .in("library_id", libraryIds)
         .eq("is_public", true)
         .eq("status", "APPROVED")
@@ -80,16 +91,35 @@ exports.listPublicLibraries = async (req, res) => {
         return counts;
       }, new Map());
 
-      const { data: starsData } = await supabase
-        .from("library_stars")
-        .select("library_id")
-        .in("library_id", libraryIds);
+      // If searchTag is specified, calculate matching file count per library
+      if (searchTag && documents && documents.length > 0) {
+        const docIds = documents.map((d) => d.id);
+        const { data: matchedTags } = await supabase
+          .from("tags")
+          .select("id")
+          .ilike("name", `%${searchTag}%`);
 
-      starCounts = (starsData || []).reduce((counts, row) => {
-        const key = String(row.library_id);
-        counts.set(key, (counts.get(key) || 0) + 1);
-        return counts;
-      }, new Map());
+        const matchedTagIds = (matchedTags || []).map((t) => t.id);
+
+        if (matchedTagIds.length > 0) {
+          const { data: matchedDocTags } = await supabase
+            .from("document_tags")
+            .select("document_id")
+            .in("document_id", docIds)
+            .or(
+              `level_1_tag_id.in.(${matchedTagIds.join(",")}),level_2_tag_id.in.(${matchedTagIds.join(",")}),level_3_tag_id.in.(${matchedTagIds.join(",")})`
+            );
+
+          const matchedDocIdSet = new Set((matchedDocTags || []).map((d) => String(d.document_id)));
+
+          documents.forEach((doc) => {
+            if (matchedDocIdSet.has(String(doc.id))) {
+              const key = String(doc.library_id);
+              matchingFileCounts.set(key, (matchingFileCounts.get(key) || 0) + 1);
+            }
+          });
+        }
+      }
 
       const { data: downloadsData } = await supabase
         .from("library_downloads")
@@ -118,18 +148,35 @@ exports.listPublicLibraries = async (req, res) => {
       }, new Map());
     }
 
-    return res.status(200).json({
-      status: "success",
-      data: (libraries || []).map((library) => ({
+    let mappedLibraries = (libraries || []).map((library) => {
+      const key = String(library.id);
+      const matchCount = matchingFileCounts.get(key) || 0;
+      return {
         ...library,
-        documents: documentCounts.get(String(library.id)) || 0,
-        stars: starCounts.get(String(library.id)) || 0,
-        downloads: downloadCounts.get(String(library.id)) || 0,
+        documents: documentCounts.get(key) || 0,
+        matchingFileCount: matchCount,
+        downloads: downloadsByLibrary.get(key) || downloadCounts.get(key) || 0,
         owner: ownersById.get(String(library.user_id)) || null,
         visibility: "public",
-        stars: starsByLibrary.get(String(library.id)) || 0,
-        downloads: downloadsByLibrary.get(String(library.id)) || 0,
-      })),
+      };
+    });
+
+    if (searchTag) {
+      // Filter libraries that have matching files, or if name/desc matches tag
+      mappedLibraries = mappedLibraries.filter(
+        (lib) =>
+          lib.matchingFileCount > 0 ||
+          String(lib.name || "").toLowerCase().includes(searchTag.toLowerCase()) ||
+          String(lib.description || "").toLowerCase().includes(searchTag.toLowerCase())
+      );
+
+      // Sort libraries by matchingFileCount DESC, then created_at DESC
+      mappedLibraries.sort((a, b) => b.matchingFileCount - a.matchingFileCount || new Date(b.created_at) - new Date(a.created_at));
+    }
+
+    return res.status(200).json({
+      status: "success",
+      data: mappedLibraries,
     });
   } catch (error) {
     console.error("Public library list error:", error);
@@ -181,14 +228,9 @@ exports.getPublicLibrary = async (req, res) => {
     ]);
 
     if (documentError) throw documentError;
-    const { starsByLibrary, downloadsByLibrary } =
+    const { downloadsByLibrary } =
       await getLibraryEngagement([library.id]);
     if (ownerError) throw ownerError;
-
-    const { count: starsCount } = await supabase
-      .from("library_stars")
-      .select("*", { count: "exact", head: true })
-      .eq("library_id", libraryId);
 
     const { count: downloadsCount } = await supabase
       .from("library_downloads")
@@ -202,10 +244,8 @@ exports.getPublicLibrary = async (req, res) => {
           ...library,
           owner: owner || null,
           documents: documents?.length || 0,
-          stars: starsCount || 0,
           downloads: downloadsCount || 0,
           visibility: "public",
-          stars: starsByLibrary.get(String(library.id)) || 0,
           downloads: downloadsByLibrary.get(String(library.id)) || 0,
         },
         documents: (documents || []).map(mapDocument),

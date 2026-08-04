@@ -144,9 +144,9 @@ const WORKSPACE_DOCUMENT_SELECT = `
     id,
     email,
     username,
-    full_name
   )
 `;
+
 function getFrontendUrl() {
   return (process.env.FRONTEND_URL || "http://localhost:5173").replace(/\/+$/, "");
 }

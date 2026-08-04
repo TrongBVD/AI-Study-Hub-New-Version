@@ -11,17 +11,18 @@ const DEFAULT_GEMINI_TEXT_FALLBACK_MODELS = [
 const DEFAULT_GEMINI_EMBEDDING_MODEL = "gemini-embedding-2";
 const TEXT_GENERATION_TEMPERATURE = 0.2;
 const GEMINI_FALLBACK_DELAY_MS = 1000;
-const DEFAULT_EMBEDDING_RETRIES = 3;
+const MODERATION_INPUT_MAX_CHARS = 12000;
+const DEFAULT_EMBEDDING_RETRIES = 5;
 const EMBEDDING_INPUT_MAX_CHARS = 7000;
 const EMBEDDING_OUTPUT_DIMENSIONS = 768;
-const EMBEDDING_RETRY_BASE_DELAY_MS = 2500;
+const EMBEDDING_RETRY_BASE_DELAY_MS = 4000;
 const SOURCE_TITLE_MAX_CHARS = 180;
 const RAG_CONTEXT_MAX_CHARS = 150000;
 const CHAT_CLASSIFICATION_MAX_CHARS = 2000;
 const FLASHCARD_CONTEXT_MAX_CHARS = 150000;
 const DOCUMENT_ANALYSIS_MAX_CHARS = 8000;
 const MAX_GENERATED_FLASHCARDS = 20;
-const EMBEDDING_BATCH_SIZE = 10;
+const EMBEDDING_BATCH_SIZE = 4;
 
 /**
  * Create and reuse Gemini client.
@@ -205,6 +206,7 @@ async function createEmbedding(
   maxRetries = DEFAULT_EMBEDDING_RETRIES,
 ) {
   const ai = await getAiClient();
+  const effectiveMaxRetries = mode === "query" ? 1 : maxRetries;
 
   const prefix =
     mode === "query"
@@ -214,7 +216,7 @@ async function createEmbedding(
   const promptText =
     prefix + String(text || "").slice(0, EMBEDDING_INPUT_MAX_CHARS);
 
-  for (let attempt = 1; attempt <= maxRetries; attempt += 1) {
+  for (let attempt = 1; attempt <= effectiveMaxRetries; attempt += 1) {
     try {
       const response = await ai.models.embedContent({
         model:
@@ -238,10 +240,10 @@ async function createEmbedding(
       const isQuotaError =
         statusCode === 429 || String(error?.message).includes("quota");
 
-      if (isQuotaError && attempt < maxRetries) {
+      if (isQuotaError && attempt < effectiveMaxRetries) {
         const delayMs = attempt * EMBEDDING_RETRY_BASE_DELAY_MS;
         console.warn(
-          `[Gemini Embedding] 429 Rate-limited/Quota exceeded. Retrying batch in ${delayMs}ms (Attempt ${attempt}/${maxRetries})...`,
+          `[Gemini Embedding] 429 Rate-limited/Quota exceeded. Retrying batch in ${delayMs}ms (Attempt ${attempt}/${effectiveMaxRetries})...`,
         );
         await new Promise((resolve) => setTimeout(resolve, delayMs));
         continue;
@@ -536,18 +538,25 @@ async function analyzeDocumentForUpload(
     DOCUMENT_ANALYSIS_MAX_CHARS,
   );
 
-  const prompt = `You are an AI document analysis system for student study materials on AI StudyHub.
+  const prompt = `You are an expert academic document classifier and analysis system for students on AI StudyHub.
 Original filename: "${originalName}"
 Document content (first ${DOCUMENT_ANALYSIS_MAX_CHARS} chars): "${sampleText}"
 User input hashtags: ${JSON.stringify(userTags)}
 
-Your tasks:
-1. For EACH hashtag in the user list, check:
-   - Does it have spelling errors? Note: CamelCase like #SoftwareTesting, #BugReport, #SecurityVulnerability are standard valid hashtag formats and MUST be marked valid (isValid: true).
-   - Format: Starts with # and no spaces. If user entered with # (e.g. #BugReport), consider it VALID (isValid: true).
-   - Does it reflect the content or study topic?
-2. Suggest 3-5 additional relevant hashtags based on document content (always starting with #, no spaces, written in English).
-3. Check for profane, inappropriate, or violating words in the text.
+Your primary goal is to analyze the document's academic content and classify it with high precision into a 3-level educational hierarchy to help students organize and search their study materials effectively.
+
+Tasks:
+1. Validate user hashtags:
+   - Mark standard CamelCase/pascal_case formats like #SoftwareTesting, #DataStructures, #MicroEconomics as valid (isValid: true).
+   - If tag has spelling errors, suggest replacement.
+2. Suggest 3-5 high-quality, relevant hashtags based on key study topics in the document (written in standard English/Vietnamese hashtag format starting with #).
+3. Check for content policy violations or inappropriate text.
+4. Classify the document into a 3-level academic subject hierarchy:
+   - "level1": MUST select EXACTLY ONE string from this list of 15 primary subjects:
+     ["Literature", "Mathematics", "History", "Languages", "Geography", "Physics, Chemistry, Biology", "Information Technology", "Engineering & Technology: Engineering", "Architecture", "Economics", "Business Administration", "Finance & Banking", "Medicine", "Law", "Other"].
+     Rule: If the content fits a specific subject above, select it. Only pick "Other" if completely unrelated or multi-disciplinary without a clear core subject.
+   - "level2": A concise, standard academic sub-discipline within Level 1 (e.g., "Software Engineering" or "Artificial Intelligence" for IT; "Calculus" or "Algebra" for Math; "Macroeconomics" for Economics; "Organic Chemistry" for Physics, Chemistry, Biology). Set to null if not applicable. Do NOT use "Other".
+   - "level3": A specific key study concept or topic within Level 2 (e.g., "Design Patterns", "Definite Integrals", "Supply & Demand", "Esterification"). Set to null if Level 2 is null or not applicable. Do NOT use "Other".
 
 MUST return strictly in the following JSON format:
 {
@@ -556,10 +565,15 @@ MUST return strictly in the following JSON format:
       "tag": "tag_name",
       "isValid": true or false,
       "recommendedReplacement": "#suggested_replacement_tag",
-      "reason": "English explanation ONLY if replacement is needed; otherwise empty string"
+      "reason": "Explanation ONLY if replacement is needed; otherwise empty string"
     }
   ],
   "aiRecommendedTags": ["#recommendation1", "#recommendation2", "#recommendation3"],
+  "hierarchicalTags": {
+    "level1": "Exact level 1 subject string from list",
+    "level2": "Level 2 sub-field string or null",
+    "level3": "Level 3 concept string or null"
+  },
   "sensitivity": {
     "classification": "SEVERE" or "MILD" or "NONE",
     "word": "violating words separated by commas, or null",
@@ -609,10 +623,20 @@ MUST return strictly in the following JSON format:
       ? sensitivityObj.classification
       : "NONE";
 
+    const hTags = result.hierarchicalTags || {};
+    const level1 = String(hTags.level1 || hTags.level_1 || "Other").trim();
+    const level2 = hTags.level2 || hTags.level_2 ? String(hTags.level2 || hTags.level_2).trim() : null;
+    const level3 = level2 && (hTags.level3 || hTags.level_3) ? String(hTags.level3 || hTags.level_3).trim() : null;
+
     return {
       isValid,
       tagValidations,
       aiRecommendedTags,
+      hierarchicalTags: {
+        level1: level1 || "Other",
+        level2: level2 || null,
+        level3: level3 || null,
+      },
       sensitivity: {
         classification,
         word: extractedWords,
@@ -634,6 +658,7 @@ MUST return strictly in the following JSON format:
         reason: "",
       })),
       aiRecommendedTags: [],
+      hierarchicalTags: { level1: "Other", level2: null, level3: null },
       sensitivity: { classification: "NONE", word: null, suspicious_text: null },
     };
   }
@@ -643,11 +668,24 @@ async function createBatchEmbeddings(chunks, mode = "document") {
   if (!Array.isArray(chunks) || chunks.length === 0) return [];
   const results = [];
   for (let i = 0; i < chunks.length; i += EMBEDDING_BATCH_SIZE) {
+    if (i > 0) {
+      // Pause 2.5s between batches to strictly keep API rate under Google Gemini Free Tier 15 RPM
+      await new Promise((resolve) => setTimeout(resolve, 2500));
+    }
     const batch = chunks.slice(i, i + EMBEDDING_BATCH_SIZE);
-    const batchResults = await Promise.all(
-      batch.map((chunk) => createEmbedding(chunk, mode)),
-    );
-    results.push(...batchResults);
+    for (let j = 0; j < batch.length; j += 1) {
+      if (j > 0) {
+        // Micro-pause 600ms between single requests within batch to prevent burst spikes
+        await new Promise((resolve) => setTimeout(resolve, 600));
+      }
+      try {
+        const emb = await createEmbedding(batch[j], mode);
+        results.push(emb);
+      } catch (err) {
+        console.warn(`[Gemini Embedding] Non-blocking warning for chunk ${i + j + 1}/${chunks.length}:`, err.message);
+        results.push(null);
+      }
+    }
   }
   return results;
 }
@@ -659,6 +697,11 @@ async function validateTagsAndContent(
   options = {},
 ) {
   return analyzeDocumentForUpload(extractedText, originalName, userTags, options);
+}
+
+async function classifyDocumentHierarchicalTags(extractedText, originalName) {
+  const result = await analyzeDocumentForUpload(extractedText, originalName, []);
+  return result.hierarchicalTags || { level1: "Other", level2: null, level3: null };
 }
 
 module.exports = {
@@ -673,5 +716,6 @@ module.exports = {
   generateFlashcardsFromChunks,
   validateTagsAndContent,
   analyzeDocumentForUpload,
+  classifyDocumentHierarchicalTags,
 };
 
