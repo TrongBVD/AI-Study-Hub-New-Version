@@ -29,6 +29,10 @@ const {
 const BUCKET = process.env.SUPABASE_DOCUMENT_BUCKET || "documents";
 const WAITING_BUCKET = process.env.SUPABASE_DOCUMENT_WAITING_ADMIN_APPROVED || "document_waiting_admin";
 const { createActivityLog } = require("../../services/activityLogService");
+const {
+  notifyDocumentUploaded,
+  notifyDocumentDeleted,
+} = require("../../services/documentNotificationService");
 const { canAccessDocument } = require("../../services/documentAccessService");
 const FILE_VALIDATION_CONCURRENCY = Math.min(
   normalizeConcurrency(process.env.FILE_VALIDATION_CONCURRENCY, 2),
@@ -146,59 +150,64 @@ async function processDocumentWithAI(
     }
 
 
-      const chunks = splitTextIntoChunks(extractedText);
+    const updatePayload = {
+      status,
+      ai_reject_reason: aiRejectReason,
+    };
 
-      if (chunks.length === 0) {
-        await supabase
-          .from("documents")
-          .update({
-            status: "REJECTED",
-            ai_reject_reason: { reason: "No readable text chunks could be created." },
-          })
-          .eq("id", documentId);
+    await supabase.from("documents").update(updatePayload).eq("id", documentId);
 
-        return { status: "REJECTED", reason: "No readable text chunks could be created.", chunkCount: 0 };
-      }
+    // Classify 3-level tags IMMEDIATELY (Fast 1s LLM call) so document_tags are ALWAYS saved
+    try {
+      const { data: docInfo } = await supabase
+        .from("documents")
+        .select("title")
+        .eq("id", documentId)
+        .maybeSingle();
 
-      const embeddings = await createBatchEmbeddings(chunks, "document");
-      const chunkRows = chunks.map((chunk, index) => ({
-        document_id: documentId,
-        chunk_index: index,
-        content: chunk,
-        embedding: toVectorLiteral(embeddings[index]),
-      }));
+      const classification = await classifyDocumentHierarchicalTags(
+        extractedText,
+        docInfo?.title || "Document"
+      );
+      await ensureAndLinkDocumentTags(documentId, classification);
+    } catch (tagErr) {
+      console.warn("3-level document tagging warning:", tagErr.message);
+    }
 
-      await supabase.from("document_chunks").delete().eq("document_id", documentId);
-
-      const { error: chunkInsertError } = await supabase.from("document_chunks").insert(chunkRows);
-
-      if (chunkInsertError) {
-        throw chunkInsertError;
-      }
-
-      await supabase.from("documents").update(updatePayload).eq("id", documentId);
-
+    // Process vector embeddings for RAG search
+    const chunks = splitTextIntoChunks(extractedText);
+    if (chunks.length > 0) {
       try {
-        const { data: docInfo } = await supabase
-          .from("documents")
-          .select("title")
-          .eq("id", documentId)
-          .maybeSingle();
+        const embeddings = await createBatchEmbeddings(chunks, "document");
+        if (Array.isArray(embeddings) && embeddings.length > 0) {
+          const chunkRows = chunks
+            .map((chunk, index) => {
+              const emb = embeddings[index];
+              if (!emb) return null;
+              return {
+                document_id: documentId,
+                chunk_index: index,
+                content: chunk,
+                embedding: toVectorLiteral(emb),
+              };
+            })
+            .filter(Boolean);
 
-        const classification = await classifyDocumentHierarchicalTags(
-          extractedText,
-          docInfo?.title || "Document"
-        );
-        await ensureAndLinkDocumentTags(documentId, classification);
-      } catch (tagErr) {
-        console.warn("3-level document tagging warning:", tagErr.message);
+          if (chunkRows.length > 0) {
+            await supabase.from("document_chunks").delete().eq("document_id", documentId);
+            await supabase.from("document_chunks").insert(chunkRows);
+          }
+        }
+      } catch (embErr) {
+        console.warn("RAG Vector embedding warning (quota/rate-limit):", embErr.message);
       }
+    }
 
-      return {
-        status: status,
-        reason: "Document processed.",
-        chunkCount: chunks.length,
-      };
+    return {
+      status: status,
+      reason: "Document processed.",
+      chunkCount: chunks.length,
+    };
   } catch (error) {
     console.error("AI processing failed:", error);
 
@@ -858,32 +867,15 @@ exports.uploadDocuments = async (req, res) => {
         );
       }
 
-      for (const tagName of uniqueTags) {
-        if (!tagName) continue;
-
-        const tagData = await resolveTag(tagName);
-
-        if (tagData && tagData.id) {
-          const { error: documentTagInsertError } = await supabase.from("document_tags").insert({
-            document_id: document.id,
-            tag_id: tagData.id,
-            assigned_by: userID
-          });
-
-          if (documentTagInsertError) {
-            throw documentTagInsertError;
-          }
-        }
-      }
-
-      const { count: finalTagCount, error: finalTagCountError } = await supabase
-        .from("document_tags")
-        .select("document_id", { count: "exact", head: true })
-        .eq("document_id", document.id);
-
-      if (finalTagCountError) {
-        throw finalTagCountError;
-      }
+      // Call notification service to persist document upload notification log
+      await notifyDocumentUploaded({
+        userId: userID,
+        documentId: document.id,
+        documentTitle: file.originalname,
+        libraryId,
+        workspaceId,
+        libraryName: targetLibrary?.name || null,
+      });
 
         const replacedDocumentIds =
           duplicateDecision.replacementTargetIds[fileIndex] || [];
@@ -1218,7 +1210,19 @@ exports.deleteDocument = async (req, res) => {
       .eq("document_id", documentId);
 
     if (deleteTagsError) {
-      throw deleteTagsError;
+      console.warn("deleteDocument tags cleanup warning:", deleteTagsError.message);
+    }
+
+    try {
+      await notifyDocumentDeleted({
+        userId: userID,
+        documentId: document.id,
+        documentTitle: document.title,
+        libraryId: document.library_id,
+        workspaceId: document.workspace_id,
+      });
+    } catch (notifErr) {
+      console.warn("Could not record document deletion notification:", notifErr.message);
     }
 
     return res.status(200).json({
