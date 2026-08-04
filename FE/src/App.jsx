@@ -23,7 +23,6 @@ import PersonalProfilePage from "./components/pages/PersonalProfilePage/Personal
 import CreateWorkSpacePage from "./components/pages/CreateWorkSpacePage/CreateWorkSpacePage.jsx";
 import SearchUserPage from "./components/pages/SearchUserPage/SearchUserPage";
 import SearchResultPage from "./components/pages/SearchResultPage/SearchResultPage.jsx";
-import NotificationsPage from "./components/pages/NotificationsPage/NotificationsPage.jsx";
 import DiscoverPage from "./components/pages/DiscoverPage/DiscoverPage.jsx";
 
 // ================= NOTEBOOK LM REDESIGN IMPORTS =================
@@ -105,10 +104,6 @@ function App() {
             <Route path="create-library" element={<CreateLibraryPage />} />
             <Route path="import-library" element={<ImportLibraryPage />} />
             <Route path="documents/:documentId" element={<DocumentViewerPage />} />
-            <Route
-              path="workspaces/:workspaceId/topics/:topicId/attachments/:attachmentId"
-              element={<DocumentViewerPage />}
-            />
             <Route path="settings" element={<SettingPage />} />
             <Route path="create-workspace" element={<CreateWorkSpacePage />} />
             <Route path="workspaces" element={<MyWorkSpace />} />
@@ -120,7 +115,6 @@ function App() {
             <Route path="flashcards" element={<Flashcards />} />
             <Route path="search-user" element={<SearchUserPage />} />
             <Route path="search" element={<SearchResultPage />} />
-            <Route path="notifications" element={<NotificationsPage />} />
             <Route path="report-issue" element={<ReportIssuePage />} />
           </Route>
 

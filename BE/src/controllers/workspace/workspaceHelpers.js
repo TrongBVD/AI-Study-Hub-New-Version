@@ -144,7 +144,6 @@ const WORKSPACE_DOCUMENT_SELECT = `
     id,
     email,
     username,
-    full_name
   )
 `;
 

@@ -254,6 +254,13 @@ body[data-theme="white"] .my_workspace_page {
   font-size: 13px;
 }
 
+body[data-theme="white"] .workspace_focus_card > span,
+body[data-theme="white"] .workspace_focus_card h2,
+body[data-theme="white"] .workspace_focus_card p {
+  color: #0f172a;
+  opacity: 1;
+}
+
 .workspace_stats_grid {
   margin-top: 16px;
   display: grid;

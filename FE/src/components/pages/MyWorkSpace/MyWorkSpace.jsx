@@ -76,7 +76,7 @@ function MyWorkSpace() {
             <span className="workspace_eyebrow">Workspace command center</span>
             <h1>Build focused rooms for every project.</h1>
             <p>
-              Organize discussions, files, members and study material in
+              Organize files, members and study material in
               dedicated collaboration spaces.
             </p>
 
@@ -108,7 +108,7 @@ function MyWorkSpace() {
 
             <p>
               {workspaceSummary.latest
-                ? "Open your newest workspace to continue discussion, manage files and track progress."
+                ? "Open your newest workspace to manage files and track progress."
                 : "Create your first workspace to start collaborating with your team."}
             </p>
           </aside>

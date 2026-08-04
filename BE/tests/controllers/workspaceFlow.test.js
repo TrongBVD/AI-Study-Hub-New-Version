@@ -40,18 +40,8 @@ jest.mock("../../src/services/workspaceLimitService", () => ({
   countActiveOwnedWorkspaces: jest.fn().mockResolvedValue(1),
 }));
 
-jest.mock("../../src/services/textExtractService", () => ({
-  extractTextFromFile: jest.fn(),
-}));
-
-jest.mock("../../src/services/aiService", () => ({
-  moderateDocument: jest.fn(),
-}));
-
 const supabase = require("../../src/config/supabase");
 const { createMailTransporter } = require("../../src/utils/mailerService");
-const { extractTextFromFile } = require("../../src/services/textExtractService");
-const { moderateDocument } = require("../../src/services/aiService");
 const workspaceController = require("../../src/controllers/workspaceController");
 
 describe("Workspace & Collaboration Main Flow Tests", () => {

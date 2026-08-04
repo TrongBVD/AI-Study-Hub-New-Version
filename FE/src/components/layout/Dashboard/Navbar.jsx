@@ -696,13 +696,6 @@ function Navbar({
                   )}
                 </div>
 
-                <button
-                  type="button"
-                  className="notification_view_all"
-                  onClick={() => navigate("/dashboard/notifications")}
-                >
-                  View all notifications
-                </button>
               </div>
             </div>
 

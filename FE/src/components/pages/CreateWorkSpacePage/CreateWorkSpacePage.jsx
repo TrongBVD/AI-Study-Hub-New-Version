@@ -165,7 +165,7 @@ function CreateWorkSpacePage() {
             <span className="workspace_eyebrow">Workspace builder</span>
             <h1>Build a focused space for study and teamwork.</h1>
             <p>
-              Create a private workspace for topics, files, discussion threads,
+              Create a private workspace for files, members, and study resources,
               and study materials before inviting your members.
             </p>
             <p>{ownedWorkspaceCount} / {MAX_OWNED_WORKSPACES} workspaces created</p>
@@ -294,7 +294,7 @@ function CreateWorkSpacePage() {
               <h3>Workspace is private by default</h3>
               <p>
                 Only you and invited members can access this workspace. Public
-                visibility is not available for workspaces, so your discussions
+                visibility is not available for workspaces, so your resources
                 and files stay protected.
               </p>
             </div>

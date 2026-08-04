@@ -1032,22 +1032,6 @@ body[data-theme="white"] .logout_btn:hover {
   font-weight: 700;
 }
 
-.notification_view_all {
-  width: 100% !important;
-  height: 44px !important;
-  border: none !important;
-  border-top: 1px solid var(--study-theme-border, var(--border-color)) !important;
-  border-radius: 0 !important;
-  background: var(--study-theme-surface, var(--bg-card)) !important;
-  color: var(--study-theme-accent, var(--accent-color)) !important;
-  font-weight: 900;
-}
-
-.notification_view_all:hover {
-  background: var(--study-theme-surface-strong, var(--accent-soft)) !important;
-  color: var(--study-theme-text, var(--sidebar-bg)) !important;
-}
-
 .notification_empty {
   min-height: 120px;
   border-radius: 12px;
@@ -1204,11 +1188,6 @@ body[data-theme="white"] .logout_btn:hover {
 .nav_actions .notification_header button {
   width: auto !important;
   height: 32px !important;
-}
-
-.nav_actions .notification_view_all {
-  width: 100% !important;
-  height: 44px !important;
 }
 
 .sidebar {

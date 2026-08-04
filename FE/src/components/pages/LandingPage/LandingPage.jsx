@@ -61,8 +61,8 @@ const STUDY_FLOW = [
     number: "02",
     title: "Build a workspace",
     description:
-      "Invite classmates, manage shared files, and keep project discussions connected.",
-    details: ["Member roles", "Shared materials", "Topic discussions"],
+      "Invite classmates, manage shared files, and keep study resources connected.",
+    details: ["Member roles", "Shared materials", "Study resources"],
     highlighted: true,
   },
   {

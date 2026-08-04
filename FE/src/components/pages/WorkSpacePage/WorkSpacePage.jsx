@@ -86,8 +86,6 @@ function shortenPopupFileName(fileName, maxLength = 48) {
   return `${value.slice(0, availableNameLength)}...${extension}`;
 }
 
-
-
 function getStoredUserProfile() {
   return getAuthStoredUser();
 }
@@ -276,8 +274,6 @@ function buildWorkspaceStudySets(flashcards) {
 
 function WorkSpacePage() {
   const WORKSPACE_NAME_MAX_LENGTH = 20;
-
-
   const { workspaceId } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
@@ -550,7 +546,6 @@ function WorkSpacePage() {
       (isWorkspaceOwner || backendMembers.length === 0 ? "Admin" : "Viewer"),
   );
 
-  const canManageTopics = currentWorkspaceRole === "admin" || isWorkspaceOwner;
   const canManageWorkspace = currentWorkspaceRole === "admin" || isWorkspaceOwner;
   const normalizedMemberSearch = normalizeIdentity(memberSearchQuery);
 
@@ -586,11 +581,8 @@ function WorkSpacePage() {
     setWorkspaceNameInput(workspace.name);
   }, [workspace?.name]);
 
-
-
   useEffect(() => {
     if (!workspaceId) return;
-
     let isMounted = true;
 
     async function loadWorkspaceMessages() {
@@ -807,8 +799,6 @@ function WorkSpacePage() {
     );
   }, [activeTab, currentStudyCard?.id]);
 
-
-
   if (!workspace) {
     return (
       <main className="workspace_page">
@@ -825,8 +815,6 @@ function WorkSpacePage() {
       </main>
     );
   }
-
-
 
   /*
   const sampleStudySets = [
@@ -919,7 +907,6 @@ function WorkSpacePage() {
     showAlert(`Only workspace admins can ${actionLabel}.`);
     return false;
   }
-
 
   async function resolveWorkspaceUploadSelection(files) {
     const { candidates, duplicateBatchFileNames } =
@@ -1658,7 +1645,7 @@ function handleNextStudyCard() {
 }
 
 function handleViewWorkspaceDocument(document) {
-  if (!canManageTopics || !document?.id) return;
+  if (!canManageWorkspace || !document?.id) return;
 
   navigate(`/dashboard/documents/${document.id}`, {
     state: {
@@ -1697,11 +1684,6 @@ async function handleDownloadWorkspaceDocument(workspaceDocument) {
     );
   }
 }
-
-
-
-
-
 
 function renderMessagesTab() {
   return (
@@ -2655,7 +2637,7 @@ function renderDocumentsTab() {
                   </span>
 
                   <div className="workspace_document_actions">
-                    {canManageTopics && (
+                    {canManageWorkspace && (
                       <button
                         type="button"
                         className="view"
@@ -2818,39 +2800,8 @@ function renderSettingsTab() {
             <div>
               <h3>Transfer Admin ownership</h3>
               <p>
-                Promote a member to Admin and choose your role after the
-                transfer.
+                Promote a member to Admin and continue as a contributor.
               </p>
-            </div>
-          </div>
-
-          <div className="workspace_transfer_role_choice">
-            <span>Your role after transfer</span>
-            <div role="radiogroup" aria-label="Your role after Admin transfer">
-              {[
-                { value: "Viewer", label: "Contributor", description: "Can upload files and contribute" },
-              ].map((roleOption) => (
-                <button
-                  type="button"
-                  role="radio"
-                  aria-checked={roleAfterAdminTransfer === roleOption.value}
-                  className={
-                    roleAfterAdminTransfer === roleOption.value ? "selected" : ""
-                  }
-                  key={roleOption.value}
-                  onClick={() => setRoleAfterAdminTransfer(roleOption.value)}
-                >
-                  <i
-                    className="ti-user"
-                    aria-hidden="true"
-                  ></i>
-                  <span>
-                    <strong>{roleOption.label}</strong>
-                    <small>{roleOption.description}</small>
-                  </span>
-                  <i className="ti-check" aria-hidden="true"></i>
-                </button>
-              ))}
             </div>
           </div>
 
@@ -2960,7 +2911,7 @@ function renderSettingsTab() {
       )}
 
       {canManageWorkspace && (
-        <section className="workspace_settings_card danger" style={{ marginTop: "16px" }}>
+        <section className="workspace_settings_card danger workspace_delete_card" style={{ marginTop: "16px" }}>
           <div className="workspace_settings_card_header">
             <div className="workspace_settings_icon danger">
               <i className="ti-trash"></i>
@@ -2974,7 +2925,7 @@ function renderSettingsTab() {
 
           <button
             type="button"
-            className="workspace_delete_btn"
+            className="workspace_delete_btn workspace_delete_workspace_btn"
             onClick={handleDeleteWorkspace}
           >
             Delete workspace
@@ -3140,7 +3091,7 @@ function renderInviteMemberModal() {
         <section className="workspace_invite_permission">
           <p>
             <i className="ti-shield"></i>
-            Select default permissions
+            Member role
           </p>
 
           <div className="workspace_invite_permission_buttons">
@@ -3438,8 +3389,8 @@ return (
             <i className="ti-alert" aria-hidden="true"></i>
             <span>
               {isSoleAdminLeaving
-                ? "Leaving removes the workspace documents, discussions and study data. This action cannot be undone."
-                : "Make sure you no longer need the workspace documents, discussions and study data before continuing."}
+                ? "Leaving removes the workspace documents and study data. This action cannot be undone."
+                : "Make sure you no longer need the workspace documents and study data before continuing."}
             </span>
           </div>
 

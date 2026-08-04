@@ -173,6 +173,182 @@
 .workspace_ai_composer button:disabled { background: #1d293a; color: #64748b; cursor: not-allowed; }
 .workspace_ai_error { width: min(760px, 100%); margin: 0 auto 7px; color: #fb7185; font-size: 11px; text-align: center; }
 
+body[data-theme="white"] .workspace_ai_chat {
+  border-left-color: #e2e8f0;
+  background: #f8fafc;
+  color: #0f172a;
+}
+
+body[data-theme="white"] .workspace_ai_sources {
+  border-right-color: #e2e8f0;
+  background: #ffffff;
+}
+
+body[data-theme="white"] .workspace_ai_sources header,
+body[data-theme="white"] .workspace_ai_view_header {
+  border-bottom-color: #e2e8f0;
+}
+
+body[data-theme="white"] .workspace_ai_sources h2,
+body[data-theme="white"] .workspace_ai_select_all,
+body[data-theme="white"] .workspace_ai_welcome h1 {
+  color: #0f172a;
+}
+
+body[data-theme="white"] .workspace_ai_sources header span,
+body[data-theme="white"] .workspace_ai_composer span {
+  border-color: #bfdbfe;
+  background: #eff6ff;
+  color: #2563eb;
+}
+
+body[data-theme="white"] .workspace_ai_chat input[type="checkbox"] {
+  accent-color: #2563eb;
+}
+
+body[data-theme="white"] .workspace_ai_source_list {
+  scrollbar-color: rgba(2, 132, 199, 0.58) transparent;
+}
+
+body[data-theme="white"] .workspace_ai_source_list::-webkit-scrollbar-track,
+body[data-theme="white"] .workspace_ai_thread::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+body[data-theme="white"] .workspace_ai_source_list::-webkit-scrollbar-thumb,
+body[data-theme="white"] .workspace_ai_thread::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background: rgba(2, 132, 199, 0.5);
+  background-clip: padding-box;
+}
+
+body[data-theme="white"] .workspace_ai_source_list::-webkit-scrollbar-button,
+body[data-theme="white"] .workspace_ai_thread::-webkit-scrollbar-button {
+  width: 0;
+  height: 0;
+  display: none;
+}
+
+body[data-theme="white"] .workspace_ai_source {
+  border-color: #e2e8f0;
+  background: #ffffff;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.04);
+}
+
+body[data-theme="white"] .workspace_ai_source:hover,
+body[data-theme="white"] .workspace_ai_source:has(input:checked) {
+  border-color: #60a5fa;
+  background: #eff6ff;
+}
+
+body[data-theme="white"] .workspace_ai_source i { color: #2563eb; }
+body[data-theme="white"] .workspace_ai_source span { color: #0f172a; }
+body[data-theme="white"] .workspace_ai_no_sources { color: #64748b; }
+
+body[data-theme="white"] .workspace_ai_main {
+  background: #f8fafc;
+}
+
+body[data-theme="white"] .workspace_ai_view_header .workspace_file_view_tabs button {
+  color: #475569;
+}
+
+body[data-theme="white"] .workspace_ai_view_header .workspace_file_view_tabs button:hover,
+body[data-theme="white"] .workspace_ai_view_header .workspace_file_view_tabs button.active {
+  border-color: #bfdbfe;
+  background: #eff6ff;
+  color: #2563eb;
+}
+
+body[data-theme="white"] .workspace_ai_mark {
+  border-color: #bfdbfe;
+  background: #eff6ff;
+  color: #2563eb;
+  box-shadow: 0 10px 30px rgba(37, 99, 235, 0.1);
+}
+
+body[data-theme="white"] .workspace_ai_welcome > p,
+body[data-theme="white"] .workspace_ai_starters small,
+body[data-theme="white"] .workspace_ai_typing {
+  color: #64748b;
+}
+
+body[data-theme="white"] .workspace_ai_starters button {
+  border-color: #e2e8f0;
+  background: #ffffff;
+  color: #0f172a;
+  box-shadow: 0 8px 22px rgba(15, 23, 42, 0.05);
+}
+
+body[data-theme="white"] .workspace_ai_starters button:hover {
+  border-color: #60a5fa;
+  background: #eff6ff;
+}
+
+body[data-theme="white"] .workspace_ai_starters button > i {
+  background: #eff6ff;
+  color: #2563eb;
+}
+
+body[data-theme="white"] .workspace_ai_thread {
+  scrollbar-color: rgba(2, 132, 199, 0.58) transparent;
+  scrollbar-width: thin;
+}
+
+body[data-theme="white"] .workspace_ai_thread::-webkit-scrollbar { width: 8px; }
+
+body[data-theme="white"] .workspace_ai_message p {
+  border-color: #e2e8f0;
+  background: #ffffff;
+  color: #0f172a;
+}
+
+body[data-theme="white"] .workspace_ai_message.user p {
+  border-color: #bfdbfe;
+  background: #eff6ff;
+}
+
+body[data-theme="white"] .workspace_ai_message > span { color: #2563eb; }
+
+body[data-theme="white"] .workspace_ai_composer {
+  background: linear-gradient(transparent, #f8fafc 34%);
+}
+
+body[data-theme="white"] .workspace_ai_composer > div {
+  border-color: #cbd5e1;
+  background: #ffffff;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.1);
+}
+
+body[data-theme="white"] .workspace_ai_composer > div:focus-within {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12), 0 10px 30px rgba(15, 23, 42, 0.1);
+}
+
+body[data-theme="white"] .workspace_ai_composer textarea {
+  color: #0f172a;
+  caret-color: #2563eb;
+}
+
+body[data-theme="white"] .workspace_ai_composer textarea::placeholder {
+  color: #94a3b8 !important;
+}
+
+body[data-theme="white"] .workspace_ai_composer button {
+  background: #2563eb;
+  color: #ffffff;
+}
+
+body[data-theme="white"] .workspace_ai_composer button:hover:not(:disabled) {
+  background: #1d4ed8;
+}
+
+body[data-theme="white"] .workspace_ai_composer button:disabled {
+  background: #e2e8f0;
+  color: #94a3b8;
+}
+
 @media (max-width: 700px) {
   .workspace_ai_chat { height: auto; min-height: 100dvh; margin: 0; grid-template-columns: 1fr; overflow: visible; }
   .workspace_ai_sources { max-height: 300px; border-right: 0; border-bottom: 1px solid #2b3545; }
