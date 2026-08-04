@@ -356,6 +356,87 @@ body[data-theme="white"] .notebook_workspace_container
   color: #94a3b8;
 }
 
+.doc_tagging_pending,
+.doc_tagging_error {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 5px;
+  font-size: 10px;
+  line-height: 1.35;
+}
+
+.doc_tagging_pending {
+  color: #fbbf24;
+}
+
+.doc_tagging_pending svg {
+  flex: 0 0 auto;
+  animation: document-tagging-spin 1s linear infinite;
+}
+
+@keyframes document-tagging-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.doc_tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 5px;
+}
+
+.doc_tags > span {
+  max-width: 100%;
+  padding: 2px 6px;
+  overflow: hidden;
+  color: #bae6fd;
+  font-size: 9px;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  background: rgba(14, 165, 233, 0.14);
+  border: 1px solid rgba(56, 189, 248, 0.25);
+  border-radius: 999px;
+}
+
+.doc_tagging_failed {
+  display: flex;
+  align-items: flex-start;
+  flex-direction: column;
+}
+
+.doc_tagging_error {
+  color: #fca5a5;
+}
+
+.doc_tag_retry {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 5px;
+  padding: 3px 7px;
+  color: #fecaca;
+  font-size: 10px;
+  font-weight: 600;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(248, 113, 113, 0.3);
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.doc_tag_retry:hover:not(:disabled) {
+  color: #ffffff;
+  background: rgba(239, 68, 68, 0.22);
+}
+
+.doc_tag_retry:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
 .doc_item_actions {
   display: flex;
   align-items: center;

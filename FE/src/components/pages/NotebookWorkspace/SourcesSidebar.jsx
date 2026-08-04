@@ -4,6 +4,7 @@ import {
   HiOutlineEye,
   HiOutlineArrowDownTray,
   HiOutlineTrash,
+  HiOutlineArrowPath,
 } from "react-icons/hi2";
 import { LuPanelLeftClose } from "react-icons/lu";
 import { MdHistory } from "react-icons/md";
@@ -29,6 +30,8 @@ export default function SourcesSidebar({
   onViewDoc,
   onDownloadDoc,
   onDeleteDoc,
+  onRetryDocumentTags,
+  retryingDocumentIds = new Set(),
   chatHistory = [],
   activeConversationId = "",
   onOpenHistoryConversation,
@@ -99,8 +102,19 @@ export default function SourcesSidebar({
                 <span>Upload PDF, DOCX, TXT, MD, CSV, Audio, or Code files to synthesize with AI.</span>
               </div>
             ) : (
-              documents.map((doc) => (
-                <div
+              documents.map((doc) => {
+                const taggingStatus = String(
+                  doc.tagging_status || (doc.tags ? "COMPLETED" : "PENDING"),
+                ).toUpperCase();
+                const tagNames = [
+                  doc.tags?.level1,
+                  doc.tags?.level2,
+                  doc.tags?.level3,
+                ].filter(Boolean);
+                const isRetrying = retryingDocumentIds.has(doc.id);
+
+                return (
+                  <div
                   key={doc.id}
                   className={`source_item ${selectedDocIds.has(doc.id) ? "selected" : ""}`}
                 >
@@ -115,6 +129,44 @@ export default function SourcesSidebar({
                     <span className="doc_size">
                       {((doc.file_size_bytes || 0) / (1024 * 1024)).toFixed(2)} MB
                     </span>
+                    {(taggingStatus === "PENDING" ||
+                      taggingStatus === "PROCESSING") && (
+                      <span className="doc_tagging_pending">
+                        <HiOutlineArrowPath aria-hidden="true" />
+                        Pending generating tags...
+                      </span>
+                    )}
+                    {taggingStatus === "COMPLETED" && tagNames.length > 0 && (
+                      <span className="doc_tags" aria-label="AI generated tags">
+                        {tagNames.map((tagName) => (
+                          <span key={tagName}>{tagName}</span>
+                        ))}
+                      </span>
+                    )}
+                    {taggingStatus === "FAILED" && (
+                      <span className="doc_tagging_failed">
+                        <span className="doc_tags">
+                          <span>{doc.tags?.level1 || "Other"}</span>
+                        </span>
+                        <span className="doc_tagging_error">
+                          {doc.tagging_error || "AI tagging failed. Please retry."}
+                        </span>
+                        {canManageLibrary && (
+                          <button
+                            type="button"
+                            className="doc_tag_retry"
+                            disabled={isRetrying}
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              onRetryDocumentTags?.(doc.id);
+                            }}
+                          >
+                            <HiOutlineArrowPath aria-hidden="true" />
+                            {isRetrying ? "Retrying..." : "Retry tags"}
+                          </button>
+                        )}
+                      </span>
+                    )}
                   </div>
 
                   {/* View, Download & Delete Action Buttons */}
@@ -147,7 +199,8 @@ export default function SourcesSidebar({
                     )}
                   </div>
                 </div>
-              ))
+                );
+              })
             )}
           </div>
 

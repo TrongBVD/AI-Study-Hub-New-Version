@@ -116,6 +116,59 @@ describe("Document & Library Main Flow Tests", () => {
         expect.objectContaining({ message: expect.stringMatching(/tệp|file|files/i) })
       );
     });
+
+    test("starts an unlimited background tag retry for the uploader", async () => {
+      const mockChain = supabase.from();
+      mockChain.maybeSingle.mockResolvedValueOnce({
+        data: {
+          id: "doc-1",
+          uploader_id: "user-1",
+          library_id: "lib-1",
+          workspace_id: null,
+          title: "Algebra.pdf",
+          file_url: "user-1/algebra.pdf",
+          file_size_bytes: 1024,
+          status: "APPROVED",
+        },
+        error: null,
+      });
+      supabase.storage.from.mockReturnValueOnce({
+        download: jest.fn(() => new Promise(() => {})),
+      });
+      req.params = { documentId: "doc-1" };
+
+      await documentController.retryDocumentTags(req, res);
+
+      expect(mockChain.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          tagging_status: "PENDING",
+          tagging_error: null,
+        }),
+      );
+      expect(res.status).toHaveBeenCalledWith(202);
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ tagging_status: "PENDING" }),
+        }),
+      );
+    });
+
+    test("does not allow another user to retry document tags", async () => {
+      const mockChain = supabase.from();
+      mockChain.maybeSingle.mockResolvedValueOnce({
+        data: {
+          id: "doc-2",
+          uploader_id: "user-2",
+          title: "Private.pdf",
+        },
+        error: null,
+      });
+      req.params = { documentId: "doc-2" };
+
+      await documentController.retryDocumentTags(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(403);
+    });
   });
 
   describe("Document Access & Deletion Flow", () => {

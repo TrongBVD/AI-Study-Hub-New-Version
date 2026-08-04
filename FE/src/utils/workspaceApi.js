@@ -52,6 +52,17 @@ export const getWorkspaceFlashcards = (workspaceId) =>
 export const getWorkspaceDocuments = (workspaceId) =>
   api.get(`/workspaces/${workspaceId}/documents`).then((res) => res.data.data);
 
+export const viewWorkspaceDiscussionAttachment = (
+  workspaceId,
+  topicId,
+  attachmentId,
+) =>
+  api
+    .get(
+      `/workspaces/${workspaceId}/discussion/topics/${topicId}/attachments/${attachmentId}/view`,
+    )
+    .then((res) => res.data.data);
+
 export const reviewWorkspaceDocument = (workspaceId, documentId, payload) =>
   api.patch(`/workspaces/${workspaceId}/documents/${documentId}/review`, payload)
     .then((res) => res.data.data);

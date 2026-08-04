@@ -82,7 +82,7 @@ function matchLevel1Tag(inputTag) {
 /**
  * Inserts or retrieves a tag record in DB.
  */
-async function findOrCreateTag(name, level, parentId = null) {
+async function findOrCreateTag(name, level, parentId = null, options = {}) {
   const normName = normalizeTagName(name);
   if (!normName) return null;
 
@@ -114,12 +114,22 @@ async function findOrCreateTag(name, level, parentId = null) {
 
     if (insertError) {
       // Re-query if concurrent insert happened
-      const { data: retryTag } = await supabase
+      let retryQuery = supabase
         .from("tags")
         .select("id, name, level, parent_id")
         .eq("level", level)
-        .ilike("name", normName)
-        .maybeSingle();
+        .ilike("name", normName);
+
+      retryQuery = parentId
+        ? retryQuery.eq("parent_id", parentId)
+        : retryQuery.is("parent_id", null);
+
+      const { data: retryTag, error: retryError } =
+        await retryQuery.maybeSingle();
+
+      if (!retryTag && options.throwOnError) {
+        throw insertError || retryError || new Error(`Could not persist tag "${normName}".`);
+      }
 
       return retryTag || null;
     }
@@ -127,6 +137,7 @@ async function findOrCreateTag(name, level, parentId = null) {
     return newTag;
   } catch (err) {
     console.error(`findOrCreateTag failed for level ${level} tag "${name}":`, err.message);
+    if (options.throwOnError) throw err;
     return null;
   }
 }
@@ -134,23 +145,34 @@ async function findOrCreateTag(name, level, parentId = null) {
 /**
  * Persists 3-level document tags into `document_tags` table.
  */
-async function ensureAndLinkDocumentTags(documentId, classificationResult = {}) {
+async function ensureAndLinkDocumentTags(
+  documentId,
+  classificationResult = {},
+  options = {},
+) {
   try {
     if (!documentId) return null;
 
     const rawL1 = classificationResult.level1 || classificationResult.subject || "Other";
     const matchedL1Name = matchLevel1Tag(rawL1);
 
-    const level1Tag = await findOrCreateTag(matchedL1Name, 1, null);
+    const level1Tag = await findOrCreateTag(
+      matchedL1Name,
+      1,
+      null,
+      options,
+    );
     if (!level1Tag) {
-      console.warn("Could not find/create Level 1 tag for document:", documentId);
+      const error = new Error("Could not find or create the Level 1 tag.");
+      if (options.throwOnError) throw error;
+      console.warn(error.message, documentId);
       return null;
     }
 
     let level2Tag = null;
     const rawL2 = classificationResult.level2;
     if (rawL2 && String(rawL2).trim().toLowerCase() !== "none" && String(rawL2).trim().toLowerCase() !== "other") {
-      level2Tag = await findOrCreateTag(rawL2, 2, level1Tag.id);
+      level2Tag = await findOrCreateTag(rawL2, 2, level1Tag.id, options);
     }
 
     let level3Tag = null;
@@ -161,7 +183,7 @@ async function ensureAndLinkDocumentTags(documentId, classificationResult = {}) 
       String(rawL3).trim().toLowerCase() !== "none" &&
       String(rawL3).trim().toLowerCase() !== "other"
     ) {
-      level3Tag = await findOrCreateTag(rawL3, 3, level2Tag.id);
+      level3Tag = await findOrCreateTag(rawL3, 3, level2Tag.id, options);
     }
 
     const { data: docTag, error } = await supabase
@@ -185,6 +207,7 @@ async function ensureAndLinkDocumentTags(documentId, classificationResult = {}) 
       .single();
 
     if (error) {
+      if (options.throwOnError) throw error;
       console.warn("ensureAndLinkDocumentTags upsert warning:", error.message);
     }
 
@@ -196,6 +219,7 @@ async function ensureAndLinkDocumentTags(documentId, classificationResult = {}) 
     };
   } catch (err) {
     console.error("ensureAndLinkDocumentTags error:", err.message);
+    if (options.throwOnError) throw err;
     return null;
   }
 }
