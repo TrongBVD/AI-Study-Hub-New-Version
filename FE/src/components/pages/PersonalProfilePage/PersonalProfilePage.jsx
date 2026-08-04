@@ -257,7 +257,7 @@ function PersonalProfile() {
   const displayAvatar = avatar || defaultAvatar;
   const bioWordCount = draftBio.trim() === "" ? 0 : draftBio.trim().split(/\s+/).length;
   const sortedLibraries = [...libraries].sort(
-    (a, b) => getLibraryStars(b) - getLibraryStars(a),
+    (a, b) => (Date.parse(b.created_at || b.createdAt || 0) || 0) - (Date.parse(a.created_at || a.createdAt || 0) || 0),
   );
   const visibleLibraries = showAllLibraries
     ? sortedLibraries
@@ -429,10 +429,6 @@ function PersonalProfile() {
       )}
     </main>
   );
-}
-
-function getLibraryStars(library) {
-  return Number(library?.stars || library?.star_count || library?.starCount || 0);
 }
 
 function LibraryCard({ library, onView }) {

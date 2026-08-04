@@ -105,7 +105,7 @@ function DiscoverCategoryEmpty({ children }) {
   return <p className="discover_category_empty">{children}</p>;
 }
 
-function DiscoverLibraryCard({ library, rank, metricLabel, activeTag, wide }) {
+function DiscoverLibraryCard({ library, rank, activeTag, wide }) {
   const theme = getLibraryTheme(library.coverIndex || 0);
 
   return (
@@ -135,9 +135,6 @@ function DiscoverLibraryCard({ library, rank, metricLabel, activeTag, wide }) {
         </div>
         <footer>
           <span>
-          <i className="ti-download" /> {formatNumber(library.downloads)}
-          </span>
-          <span>
             <i className="ti-download" /> {formatNumber(library.downloads)}
           </span>
           <span title="Total Documents">
@@ -151,7 +148,6 @@ function DiscoverLibraryCard({ library, rank, metricLabel, activeTag, wide }) {
           <span className="discover_card_created">
             <i className="ti-calendar" /> {formatCreatedDate(library.createdAt)}
           </span>
-          {metricLabel && <em>{metricLabel}</em>}
         </footer>
       </div>
     </Link>
@@ -227,23 +223,6 @@ function DiscoverPage() {
     setSelectedTag(tagInput.trim());
   };
 
-  const favoriteLibraries = useMemo(() => {
-    return [...libraries].sort((a, b) => {
-      if (selectedTag) {
-        return (
-          b.matchingFileCount - a.matchingFileCount ||
-          b.downloads - a.downloads ||
-          getCreatedTimestamp(b) - getCreatedTimestamp(a)
-        );
-      }
-      return (
-        b.downloads - a.downloads ||
-        b.documents - a.documents ||
-        getCreatedTimestamp(b) - getCreatedTimestamp(a)
-      );
-    });
-  }, [libraries, selectedTag]);
-
   const filteredLibraries = useMemo(() => {
     const normalizedQuery = searchQuery.trim().toLocaleLowerCase();
     if (!normalizedQuery) return libraries;
@@ -257,19 +236,23 @@ function DiscoverPage() {
     );
   }, [libraries, searchQuery]);
 
-  const favoriteLibraries = useMemo(
-    () =>
-      [...filteredLibraries]
-        .sort(
-          (a, b) =>
-            b.stars - a.stars ||
-            b.downloads - a.downloads ||
-            b.documents - a.documents ||
-            getCreatedTimestamp(b) - getCreatedTimestamp(a),
-        )
-        .slice(0, 5),
-    [filteredLibraries],
-  );
+  const displayLibraries = useMemo(() => {
+    return [...filteredLibraries].sort((a, b) => {
+      if (selectedTag) {
+        return (
+          b.matchingFileCount - a.matchingFileCount ||
+          b.downloads - a.downloads ||
+          getCreatedTimestamp(b) - getCreatedTimestamp(a)
+        );
+      }
+      return (
+        b.downloads - a.downloads ||
+        b.documents - a.documents ||
+        getCreatedTimestamp(b) - getCreatedTimestamp(a)
+      );
+    });
+  }, [filteredLibraries, selectedTag]);
+
   return (
     <main className="discover_page">
       <section className="discover_shell">
@@ -369,7 +352,7 @@ function DiscoverPage() {
           <section className="discover_split">
             <section className="discover_section">
               <div className="discover_section_title">
-                <h2>{selectedTag ? `Libraries for "${selectedTag}"` : "Most favorite"}</h2>
+                <h2>{selectedTag ? `Libraries for "${selectedTag}"` : "Public Libraries"}</h2>
                 <p>
                   {selectedTag
                     ? `Sorted by number of files matching tag "${selectedTag}"`
@@ -377,14 +360,13 @@ function DiscoverPage() {
                 </p>
               </div>
               <div className="discover_list">
-                {favoriteLibraries.length > 0 ? (
-                  favoriteLibraries.map((library, index) => (
+                {displayLibraries.length > 0 ? (
+                  displayLibraries.map((library, index) => (
                     <DiscoverLibraryCard
                       key={library.id}
                       library={library}
                       rank={index + 1}
                       activeTag={selectedTag}
-                      metricLabel={selectedTag ? `${library.matchingFileCount} files` : "Favorite"}
                     />
                   ))
                 ) : (
