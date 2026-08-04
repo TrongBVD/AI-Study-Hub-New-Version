@@ -97,7 +97,13 @@ async function updateDocumentTaggingState(
     })
     .eq("id", documentId);
 
-  if (error) throw error;
+  if (error) {
+    if (error.code === "42703" || String(error.message || "").includes("tagging_status")) {
+      console.warn("tagging_status column missing from documents table, skipping state update");
+      return;
+    }
+    throw error;
+  }
 }
 
 async function markDocumentTaggingFailed(documentId, error, context = {}) {
@@ -449,7 +455,47 @@ exports.listMyDocuments = async (req, res) => {
       query = query.eq("workspace_id", workspaceId);
     }
 
-    const { data, error } = await query.order("created_at", { ascending: false });
+    let { data, error } = await query.order("created_at", { ascending: false });
+
+    if (error && (error.code === "42703" || String(error.message || "").includes("tagging_status"))) {
+      let fallbackQuery = supabase
+        .from("documents")
+        .select(
+          `
+          id,
+          uploader_id,
+          workspace_id,
+          library_id,
+          title,
+          file_size_bytes,
+          is_public,
+          status,
+          ai_reject_reason,
+          created_at
+        `
+        )
+        .eq("uploader_id", userID)
+        .is("deleted_at", null);
+
+      if (libraryId) {
+        fallbackQuery = fallbackQuery.eq("library_id", libraryId);
+      }
+
+      if (workspaceId) {
+        fallbackQuery = fallbackQuery.eq("workspace_id", workspaceId);
+      }
+
+      const fallbackResult = await fallbackQuery.order("created_at", { ascending: false });
+      if (!fallbackResult.error) {
+        data = (fallbackResult.data || []).map((doc) => ({
+          ...doc,
+          tagging_status: "COMPLETED",
+          tagging_error: null,
+          tagging_updated_at: doc.created_at,
+        }));
+        error = null;
+      }
+    }
 
     if (error) {
       throw error;
@@ -911,7 +957,7 @@ exports.uploadDocuments = async (req, res) => {
       let aiRejectReason = null;
 
       // Lưu thông tin vào DB, bao gồm cả library_id
-      const { data: document, error: insertError } = await supabase
+      let { data: document, error: insertError } = await supabase
         .from("documents")
         .insert({
           uploader_id: userID,
@@ -928,6 +974,26 @@ exports.uploadDocuments = async (req, res) => {
           tagging_updated_at: new Date().toISOString(),
         })
         .select("*").single();
+
+      if (insertError && (insertError.code === "42703" || String(insertError.message || "").includes("tagging_status"))) {
+        const fallbackInsert = await supabase
+          .from("documents")
+          .insert({
+            uploader_id: userID,
+            workspace_id: workspaceId,
+            library_id: libraryId,
+            title: file.originalname,
+            file_url: storagePath,
+            file_size_bytes: file.size,
+            is_public: targetLibrary ? Boolean(targetLibrary.is_public) : false,
+            status: status,
+            ai_reject_reason: aiRejectReason,
+          })
+          .select("*").single();
+
+        document = fallbackInsert.data;
+        insertError = fallbackInsert.error;
+      }
 
       if (insertError) throw insertError;
 
