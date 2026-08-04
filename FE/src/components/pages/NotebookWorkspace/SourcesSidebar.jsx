@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   HiOutlinePlus,
   HiOutlineDocumentText,
@@ -39,6 +40,22 @@ export default function SourcesSidebar({
   onClearHistory,
   historyActionBusy = false,
 }) {
+  const [expandedTagKeys, setExpandedTagKeys] = useState(() => new Set());
+
+  const toggleTag = (tagKey) => {
+    setExpandedTagKeys((currentKeys) => {
+      const nextKeys = new Set(currentKeys);
+
+      if (nextKeys.has(tagKey)) {
+        nextKeys.delete(tagKey);
+      } else {
+        nextKeys.add(tagKey);
+      }
+
+      return nextKeys;
+    });
+  };
+
   return (
     <aside className={`workspace_panel sources_panel ${showLeftPanel ? "" : "collapsed"}`}>
       <div className="panel_header">
@@ -138,9 +155,26 @@ export default function SourcesSidebar({
                     )}
                     {taggingStatus === "COMPLETED" && tagNames.length > 0 && (
                       <span className="doc_tags" aria-label="AI generated tags">
-                        {tagNames.map((tagName) => (
-                          <span key={tagName}>{tagName}</span>
-                        ))}
+                        {tagNames.map((tagName, tagIndex) => {
+                          const tagKey = `${doc.id}-${tagIndex}`;
+                          const isExpanded = expandedTagKeys.has(tagKey);
+
+                          return (
+                            <button
+                              key={tagKey}
+                              type="button"
+                              className={`doc_tag ${isExpanded ? "expanded" : ""}`}
+                              title={isExpanded ? "Collapse tag" : tagName}
+                              aria-expanded={isExpanded}
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                toggleTag(tagKey);
+                              }}
+                            >
+                              {tagName}
+                            </button>
+                          );
+                        })}
                       </span>
                     )}
                     {taggingStatus === "FAILED" && (

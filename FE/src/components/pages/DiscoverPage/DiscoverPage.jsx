@@ -113,7 +113,7 @@ function DiscoverLibraryCard({ library, activeTag, wide }) {
       }}
     >
       <div className="discover_card_art">
-        <i className="ti-archive" />
+        <i className="ti-book" />
       </div>
       <div className="discover_card_body">
         <div>
@@ -336,7 +336,7 @@ function DiscoverPage() {
           </section>
         ) : libraries.length === 0 ? (
           <section className="discover_empty">
-            <i className="ti-archive" />
+            <i className="ti-book" />
             <h2>No matching public libraries found</h2>
             <p>
               {selectedTag

@@ -10,7 +10,7 @@ import "./SearchResultPage.css";
 const FILTERS = [
   { value: "all", label: "All", icon: "ti-search" },
   { value: "user", label: "Users", icon: "ti-user" },
-  { value: "library", label: "Libraries", icon: "ti-archive" },
+  { value: "library", label: "Libraries", icon: "ti-book" },
   { value: "workspace", label: "Workspaces", icon: "ti-layout-grid2" },
 ];
 
@@ -148,7 +148,7 @@ function SearchResultPage() {
         description:
           library.description || "A saved collection in your study hub.",
         badge: library.visibility || "Library",
-        icon: library.icon || "ti-archive",
+        icon: library.icon || "ti-book",
         to: `/dashboard/libraries/${library.id}`,
         state: {
           library: isGuest

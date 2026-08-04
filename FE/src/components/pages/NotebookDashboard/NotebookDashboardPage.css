@@ -43,6 +43,7 @@
   border-radius: 20px;
   padding: 8px 14px 8px 36px;
   color: #f8fafc;
+  caret-color: #38bdf8;
   caret-color: transparent;
   font-size: 14px;
   outline: none;
@@ -800,6 +801,10 @@ body[data-theme="white"] .notebook_dashboard_container
   box-shadow: 0 8px 24px rgba(15, 23, 42, 0.04);
 }
 
+body[data-theme="white"] .notebook_dashboard_container .search_input_wrapper input {
+  caret-color: #000000;
+}
+
 body[data-theme="white"] .notebook_dashboard_container .sort_dropdown_menu {
   background: #ffffff;
   border-color: #dbe3ef;
@@ -871,4 +876,10 @@ body[data-theme="white"] .notebook_dashboard_container .card_dropdown_menu butto
 body[data-theme="white"] .notebook_dashboard_container .card_dropdown_menu button:hover {
   background: #eff6ff;
   color: #1d4ed8;
+}
+
+body[data-theme="white"] .notebook_dashboard_container
+  .card_dropdown_menu button.danger:hover {
+  background: #fef2f2;
+  color: #dc2626;
 }

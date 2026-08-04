@@ -74,7 +74,7 @@ function saveRecentLibrary(library) {
     name: library.name || library.libraryName || "Untitled Library",
     description: library.description || "",
     documents: Number(library.documents) || 0,
-    icon: library.icon || "ti-archive",
+    icon: library.icon || "ti-book",
     visitedAt: Date.now(),
   };
 
@@ -390,7 +390,7 @@ function Navbar({
         type: "library",
         title: library.name || library.libraryName || "Untitled Library",
         description: library.description || `${Number(library.documents) || 0} documents`,
-        icon: library.icon || "ti-archive",
+        icon: library.icon || "ti-book",
         data: library,
       }));
 
