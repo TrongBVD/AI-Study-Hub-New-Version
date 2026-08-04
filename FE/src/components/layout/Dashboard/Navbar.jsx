@@ -125,6 +125,7 @@ function Navbar({
   onOpenSidebar,
   profilePath = "/dashboard/profile",
   searchPlaceholder = "Search library or workspace...",
+  showSearch = true,
 }) {
   const navigate = useNavigate();
   const isLoggedIn = !!getStoredUser();
@@ -487,8 +488,8 @@ function Navbar({
         </button>
       </div>
 
-      {/* Global Search Bar */}
-      <form className="search_box" onSubmit={handleSearchSubmit}>
+      {showSearch && (
+        <form className="search_box" onSubmit={handleSearchSubmit}>
         <input
           type="text"
           value={searchValue}
@@ -537,7 +538,8 @@ function Navbar({
             </button>
           </div>
         )}
-      </form>
+        </form>
+      )}
 
       {/* Navbar Actions & Profile */}
       <div className="nav_actions">

@@ -40,13 +40,7 @@ function normalizeLibrary(library, index) {
   const name = library.name || library.libraryName || "Untitled library";
   const documents = Number(library.documents || library.document_count || 0);
   const matchingFileCount = Number(library.matchingFileCount || 0);
-  const downloads = Number(
-    library.downloads ?? library.download_count ?? library.downloadCount ?? 0,
-  );
   const createdAt = library.created_at || library.createdAt || "";
-  const ageInDays = createdAt
-    ? Math.max(1, (Date.now() - Date.parse(createdAt)) / 86400000)
-    : null;
   const owner = library.owner || library.user || {};
   const ownerId = library.user_id || owner.id || owner.user_id || "";
   const ownerName =
@@ -64,8 +58,6 @@ function normalizeLibrary(library, index) {
     name,
     documents,
     matchingFileCount,
-    downloads,
-    trendingScore: ageInDays ? downloads / Math.sqrt(ageInDays) : 0,
     ownerId,
     ownerName,
     ownerAvatar,
@@ -105,7 +97,7 @@ function DiscoverCategoryEmpty({ children }) {
   return <p className="discover_category_empty">{children}</p>;
 }
 
-function DiscoverLibraryCard({ library, rank, activeTag, wide }) {
+function DiscoverLibraryCard({ library, activeTag, wide }) {
   const theme = getLibraryTheme(library.coverIndex || 0);
 
   return (
@@ -121,7 +113,6 @@ function DiscoverLibraryCard({ library, rank, activeTag, wide }) {
       }}
     >
       <div className="discover_card_art">
-        <span>{String(rank).padStart(2, "0")}</span>
         <i className="ti-archive" />
       </div>
       <div className="discover_card_body">
@@ -134,9 +125,6 @@ function DiscoverLibraryCard({ library, rank, activeTag, wide }) {
           <p>{library.description}</p>
         </div>
         <footer>
-          <span>
-            <i className="ti-download" /> {formatNumber(library.downloads)}
-          </span>
           <span title="Total Documents">
             <i className="ti-files" /> {formatNumber(library.documents)}{" "}
             {library.documents === 1 ? "document" : "documents"}
@@ -246,12 +234,11 @@ function DiscoverPage() {
       if (selectedTag) {
         return (
           b.matchingFileCount - a.matchingFileCount ||
-          b.downloads - a.downloads ||
+          b.documents - a.documents ||
           getCreatedTimestamp(b) - getCreatedTimestamp(a)
         );
       }
       return (
-        b.downloads - a.downloads ||
         b.documents - a.documents ||
         getCreatedTimestamp(b) - getCreatedTimestamp(a)
       );
@@ -375,16 +362,15 @@ function DiscoverPage() {
                 <p>
                   {selectedTag
                     ? `Sorted by number of files matching tag "${selectedTag}"`
-                    : "Public libraries ranked by downloads, documents and recency."}
+                    : "Libraries publish by orther students."}
                 </p>
               </div>
               <div className="discover_list">
                 {displayLibraries.length > 0 ? (
-                  displayLibraries.map((library, index) => (
+                  displayLibraries.map((library) => (
                     <DiscoverLibraryCard
                       key={library.id}
                       library={library}
-                      rank={index + 1}
                       activeTag={selectedTag}
                     />
                   ))
