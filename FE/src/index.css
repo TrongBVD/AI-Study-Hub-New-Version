@@ -965,13 +965,10 @@ body[data-theme="black"] .settings_theme_option.active {
   .hashtag_modal,
   .library_confirm_modal,
   .storage_limit_modal,
-  .duplicate_confirm_modal,
   .discussion_topic_modal_card,
   .workspace_solution_detail_modal,
   .workspace_solution_comments_modal,
-  .workspace_invite_modal,
-  .library_settings_modal,
-  .modal_card.sleek_modal
+  .workspace_invite_modal
 ) {
   background: #171b24 !important;
   border-color: #2b3545 !important;
@@ -990,13 +987,10 @@ body[data-theme="black"] .settings_theme_option.active {
   .hashtag_modal,
   .library_confirm_modal,
   .storage_limit_modal,
-  .duplicate_confirm_modal,
   .discussion_topic_modal_card,
   .workspace_solution_detail_modal,
   .workspace_solution_comments_modal,
-  .workspace_invite_modal,
-  .library_settings_modal,
-  .modal_card.sleek_modal
+  .workspace_invite_modal
 ) :is(h1, h2, h3, h4, strong, label) {
   color: #f8fafc !important;
 }
@@ -1012,13 +1006,10 @@ body[data-theme="black"] .settings_theme_option.active {
   .hashtag_modal,
   .library_confirm_modal,
   .storage_limit_modal,
-  .duplicate_confirm_modal,
   .discussion_topic_modal_card,
   .workspace_solution_detail_modal,
   .workspace_solution_comments_modal,
-  .workspace_invite_modal,
-  .library_settings_modal,
-  .modal_card.sleek_modal
+  .workspace_invite_modal
 ) :is(p, span, small) {
   color: #cbd5e1;
 }
@@ -1034,13 +1025,10 @@ body[data-theme="black"] .settings_theme_option.active {
   .hashtag_modal,
   .library_confirm_modal,
   .storage_limit_modal,
-  .duplicate_confirm_modal,
   .discussion_topic_modal_card,
   .workspace_solution_detail_modal,
   .workspace_solution_comments_modal,
-  .workspace_invite_modal,
-  .library_settings_modal,
-  .modal_card.sleek_modal
+  .workspace_invite_modal
 ) :is(input, textarea, select) {
   background: #0d0f12 !important;
   border-color: #334155 !important;

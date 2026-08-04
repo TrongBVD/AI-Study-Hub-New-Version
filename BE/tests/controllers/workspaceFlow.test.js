@@ -40,18 +40,8 @@ jest.mock("../../src/services/workspaceLimitService", () => ({
   countActiveOwnedWorkspaces: jest.fn().mockResolvedValue(1),
 }));
 
-jest.mock("../../src/services/textExtractService", () => ({
-  extractTextFromFile: jest.fn(),
-}));
-
-jest.mock("../../src/services/aiService", () => ({
-  moderateDocument: jest.fn(),
-}));
-
 const supabase = require("../../src/config/supabase");
 const { createMailTransporter } = require("../../src/utils/mailerService");
-const { extractTextFromFile } = require("../../src/services/textExtractService");
-const { moderateDocument } = require("../../src/services/aiService");
 const workspaceController = require("../../src/controllers/workspaceController");
 
 describe("Workspace & Collaboration Main Flow Tests", () => {
@@ -181,60 +171,4 @@ describe("Workspace & Collaboration Main Flow Tests", () => {
     });
   });
 
-  describe("4. Workspace Discussion Topics Flow", () => {
-    test("validates required title when creating a discussion topic", async () => {
-      const mockChain = supabase.from();
-      mockChain.maybeSingle
-        .mockResolvedValueOnce({ data: { id: "ws-100" }, error: null })
-        .mockResolvedValueOnce({ data: { role: "Editor" }, error: null });
-
-      req.params = { workspaceId: "ws-100" };
-      req.body = { title: "" };
-
-      await workspaceController.createDiscussionTopic(req, res);
-
-      expect(res.status).toHaveBeenCalledWith(400);
-    });
-
-    test("lists workspace discussion topics for members", async () => {
-      const mockChain = supabase.from();
-      mockChain.maybeSingle
-        .mockResolvedValueOnce({ data: { id: "ws-100" }, error: null })
-        .mockResolvedValueOnce({ data: { role: "Editor" }, error: null });
-
-      req.params = { workspaceId: "ws-100" };
-
-      await workspaceController.listDiscussionTopics(req, res);
-
-      expect(res.status).toHaveBeenCalledWith(200);
-    });
-
-    test.each(["attachment", "solution"])(
-      "uploads a %s file without calling AI moderation",
-      async (kind) => {
-        const mockChain = supabase.from();
-        mockChain.maybeSingle
-          .mockResolvedValueOnce({ data: { id: "ws-100" }, error: null })
-          .mockResolvedValueOnce({ data: { role: "Editor" }, error: null })
-          .mockResolvedValueOnce({ data: { id: "topic-1", created_by: "user-admin" }, error: null });
-
-        req.params = { workspaceId: "ws-100", topicId: "topic-1" };
-        req.body = { kind };
-        req.files = [
-          {
-            originalname: `${kind}.txt`,
-            mimetype: "text/plain",
-            size: 72,
-            buffer: Buffer.from("rejected content"),
-          },
-        ];
-
-        await workspaceController.uploadDiscussionAttachments(req, res);
-
-        expect(extractTextFromFile).not.toHaveBeenCalled();
-        expect(moderateDocument).not.toHaveBeenCalled();
-        expect(res.status).toHaveBeenCalledWith(201);
-      },
-    );
-  });
 });

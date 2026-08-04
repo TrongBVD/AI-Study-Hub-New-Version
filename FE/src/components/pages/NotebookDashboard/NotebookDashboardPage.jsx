@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   HiOutlinePlus,
@@ -10,14 +10,12 @@ import {
   HiOutlineShare,
   HiOutlinePencil,
   HiOutlineCircleStack,
-  HiOutlineSparkles,
   HiEllipsisVertical,
   HiOutlineFolderPlus,
   HiOutlineXMark,
   HiOutlineChevronDown,
 } from "react-icons/hi2";
 import { getMyLibraries, createLibrary, deleteLibrary } from "../../../utils/documentApi.js";
-import { getPublicLibraries } from "../../../utils/publicApi.js";
 import { getStoredUser } from "../../../utils/authToken.js";
 import Toast from "../../common/Toast/Toast.jsx";
 import { showPopupConfirm } from "../../common/ActionPopup/actionPopupService.js";
@@ -34,17 +32,15 @@ export default function NotebookDashboardPage() {
   const user = getStoredUser();
   const isGuest = String(user?.role || "").toUpperCase() === "GUEST";
 
-  // Active filter tab: 'all' | 'my' | 'featured' | 'collections'
-  const [activeTab, setActiveTab] = useState("all");
-
   // Search query & view mode state
   const [searchQuery, setSearchQuery] = useState("");
   const [viewMode, setViewMode] = useState("grid"); // 'grid' | 'list'
   const [sortBy, setSortBy] = useState("recent"); // 'recent' | 'name'
+  const [isSortOpen, setIsSortOpen] = useState(false);
+  const sortDropdownRef = useRef(null);
 
   // Data states for libraries & storage
   const [libraries, setLibraries] = useState([]);
-  const [featuredLibraries, setFeaturedLibraries] = useState([]);
   const [loading, setLoading] = useState(true);
   const [totalStorageBytes, setTotalStorageBytes] = useState(0);
 
@@ -59,6 +55,17 @@ export default function NotebookDashboardPage() {
   // Toast Notification state
   const [toast, setToast] = useState({ message: "", title: "", type: "error" });
 
+  useEffect(() => {
+    const closeSortDropdown = (event) => {
+      if (!sortDropdownRef.current?.contains(event.target)) {
+        setIsSortOpen(false);
+      }
+    };
+
+    document.addEventListener("pointerdown", closeSortDropdown);
+    return () => document.removeEventListener("pointerdown", closeSortDropdown);
+  }, []);
+
   /**
    * Helper to trigger custom English toast popup
    */
@@ -67,28 +74,18 @@ export default function NotebookDashboardPage() {
   };
 
   /**
-   * Fetches personal and featured libraries on mount
+   * Fetches personal libraries on mount
    */
   useEffect(() => {
     let isMounted = true;
     async function loadDashboardData() {
       setLoading(true);
       try {
-        if (isGuest) {
-          const publicLibs = await getPublicLibraries();
-          if (isMounted) {
-            setLibraries([]);
-            setFeaturedLibraries(publicLibs || []);
-          }
-        } else {
-          const [myLibs, publicLibs] = await Promise.all([
-            getMyLibraries(),
-            getPublicLibraries(),
-          ]);
+        if (!isGuest) {
+          const myLibs = await getMyLibraries();
 
           if (isMounted) {
             setLibraries(myLibs || []);
-            setFeaturedLibraries(publicLibs || []);
 
             // Compute total storage used across all libraries (50MB limit)
             const usedBytes = (myLibs || []).reduce((acc, lib) => {
@@ -169,17 +166,7 @@ export default function NotebookDashboardPage() {
    * Filtered and sorted library list computation
    */
   const filteredLibraries = useMemo(() => {
-    let sourceList = libraries;
-
-    if (activeTab === "my") {
-      sourceList = libraries;
-    } else if (activeTab === "featured") {
-      sourceList = featuredLibraries;
-    } else if (activeTab === "collections") {
-      sourceList = libraries.filter((l) => l.is_public);
-    }
-
-    let list = sourceList.filter((lib) => {
+    let list = libraries.filter((lib) => {
       const name = lib.name || lib.libraryName || "";
       const desc = lib.description || "";
       return (
@@ -199,7 +186,7 @@ export default function NotebookDashboardPage() {
     }
 
     return list;
-  }, [libraries, featuredLibraries, activeTab, searchQuery, sortBy]);
+  }, [libraries, searchQuery, sortBy]);
 
   // Compute 50MB storage stats
   const MAX_STORAGE_BYTES = 50 * 1024 * 1024;
@@ -219,39 +206,8 @@ export default function NotebookDashboardPage() {
         onClose={() => setToast({ message: "", title: "", type: "error" })}
       />
 
-      {/* Top Filter Tabs & Action Bar */}
+      {/* Top Action Bar */}
       <header className="notebook_dashboard_header">
-        <div className="tab_navigation">
-          <button
-            type="button"
-            className={`tab_btn ${activeTab === "all" ? "active" : ""}`}
-            onClick={() => setActiveTab("all")}
-          >
-            All
-          </button>
-          <button
-            type="button"
-            className={`tab_btn ${activeTab === "my" ? "active" : ""}`}
-            onClick={() => setActiveTab("my")}
-          >
-            My Libraries
-          </button>
-          <button
-            type="button"
-            className={`tab_btn ${activeTab === "featured" ? "active" : ""}`}
-            onClick={() => setActiveTab("featured")}
-          >
-            Featured Libraries
-          </button>
-          <button
-            type="button"
-            className={`tab_btn ${activeTab === "collections" ? "active" : ""}`}
-            onClick={() => setActiveTab("collections")}
-          >
-            Collections
-          </button>
-        </div>
-
         <div className="dashboard_controls">
           {/* Search Box */}
           <div className="search_input_wrapper">
@@ -285,17 +241,41 @@ export default function NotebookDashboardPage() {
           </div>
 
           {/* Sort Dropdown */}
-          <div className="sort_dropdown_wrapper">
-            <select
-              className="sort_dropdown"
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
+          <div className="sort_dropdown_wrapper" ref={sortDropdownRef}>
+            <button
+              type="button"
+              className={`sort_dropdown_trigger ${isSortOpen ? "open" : ""}`}
+              onClick={() => setIsSortOpen((open) => !open)}
               aria-label="Sort libraries"
+              aria-haspopup="listbox"
+              aria-expanded={isSortOpen}
             >
-              <option value="recent">Most recent</option>
-              <option value="name">Name (A-Z)</option>
-            </select>
-            <HiOutlineChevronDown aria-hidden="true" />
+              <span>{sortBy === "recent" ? "Most recent" : "Name (A-Z)"}</span>
+              <HiOutlineChevronDown aria-hidden="true" />
+            </button>
+
+            {isSortOpen && (
+              <div className="sort_dropdown_menu" role="listbox" aria-label="Sort libraries">
+                {[
+                  { value: "recent", label: "Most recent" },
+                  { value: "name", label: "Name (A-Z)" },
+                ].map((option) => (
+                  <button
+                    type="button"
+                    role="option"
+                    aria-selected={sortBy === option.value}
+                    className={`sort_dropdown_option ${sortBy === option.value ? "selected" : ""}`}
+                    key={option.value}
+                    onClick={() => {
+                      setSortBy(option.value);
+                      setIsSortOpen(false);
+                    }}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Create New Library Button */}
@@ -330,41 +310,10 @@ export default function NotebookDashboardPage() {
         </div>
       )}
 
-      {/* Featured Libraries Banner Section */}
-      {featuredLibraries.length > 0 && activeTab === "all" && (
-        <section className="featured_section">
-          <div className="section_title">
-            <HiOutlineSparkles className="sparkle_icon" />
-            <h2>Featured Libraries</h2>
-          </div>
-          <div className="featured_grid">
-            {featuredLibraries.slice(0, 4).map((lib, idx) => (
-              <div
-                key={lib.id || idx}
-                className="featured_card"
-                onClick={() => navigate(`/dashboard/libraries/${lib.id}`)}
-              >
-                <div
-                  className="featured_cover"
-                  style={{
-                    background: `linear-gradient(135deg, ${["#1e293b, #334155", "#0f172a, #1e1b4b", "#172554, #1e3a8a", "#311042, #581c87"][idx % 4]
-                      })`,
-                  }}
-                >
-                  <span className="featured_badge">Featured</span>
-                  <h3>{lib.name || lib.libraryName}</h3>
-                  <p>{lib.documents || 0} sources</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* Recent Libraries Grid / List Section */}
-      <section className="recent_section">
+      {/* All Libraries Grid / List Section */}
+      <section className="all_libraries_section">
         <div className="section_title">
-          <h2>Recent Libraries</h2>
+          <h2>All Libraries</h2>
         </div>
 
         {loading ? (
@@ -373,19 +322,6 @@ export default function NotebookDashboardPage() {
           </div>
         ) : (
           <div className={`libraries_layout ${viewMode}`}>
-            {/* Create New Card (First item in Grid) */}
-            {!isGuest && viewMode === "grid" && (
-              <div
-                className="library_card create_card"
-                onClick={() => setIsCreateModalOpen(true)}
-              >
-                <div className="create_icon_circle">
-                  <HiOutlinePlus />
-                </div>
-                <span>Create new library</span>
-              </div>
-            )}
-
             {filteredLibraries.map((lib) => (
               <div
                 key={lib.id}

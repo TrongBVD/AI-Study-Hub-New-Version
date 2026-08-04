@@ -13,13 +13,14 @@ import "./ReportIssuePage.css";
 import "./ReportIssueSelect.css";
 
 const categoryLabels = {
-  BUG: "Bug / system error",
-  ACCOUNT: "Account",
   WORKSPACE: "Workspace",
+  DISCOVER: "Discover",
   DOCUMENT: "Document / library",
   AI: "AI features",
   OTHER: "Other",
 };
+
+const DEFAULT_CATEGORY = Object.keys(categoryLabels)[0];
 
 function CategorySelect({ value, onChange }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -84,7 +85,7 @@ function CategorySelect({ value, onChange }) {
 
 export default function ReportIssuePage() {
   const [form, setForm] = useState({
-    category: "BUG",
+    category: DEFAULT_CATEGORY,
     title: "",
     description: "",
     stepsToReproduce: "",
@@ -112,7 +113,7 @@ export default function ReportIssuePage() {
         "Your report has been submitted. Thank you for helping us improve.",
       );
       setForm({
-        category: "BUG",
+        category: DEFAULT_CATEGORY,
         title: "",
         description: "",
         stepsToReproduce: "",

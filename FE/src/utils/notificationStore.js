@@ -8,11 +8,6 @@ export const defaultNotificationSettings = {
   showBadge: true,
   sound: false,
 
-  discussion: {
-    newTopic: true,
-    solved: true,
-  },
-
   task: {
     assigned: true,
     completed: false,
@@ -52,11 +47,6 @@ export function getNotificationSettings() {
     return {
       ...defaultNotificationSettings,
       ...savedSettings,
-
-      discussion: {
-        ...defaultNotificationSettings.discussion,
-        ...(savedSettings.discussion || {}),
-      },
 
       task: {
         ...defaultNotificationSettings.task,

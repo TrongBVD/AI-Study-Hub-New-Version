@@ -20,10 +20,6 @@ function getLoggedInUserId() {
   return storedUser?.id || storedUser?._id || storedUser?.user_id || "";
 }
 
-function getLoggedInUserEmail() {
-  return getStoredUser()?.email || "";
-}
-
 function getStoredProfileBio() {
   const storedUser = getStoredUser();
   return storedUser?.bio || getUserStoredItem(PROFILE_BIO_KEY) || "";
@@ -46,7 +42,6 @@ function PersonalProfile() {
   const isOwnProfile = !profileId || profileId === loggedInUserId;
 
   const [userName, setUserName] = useState(getStoredProfileName);
-  const [userEmail, setUserEmail] = useState(getLoggedInUserEmail);
   const [profileBio, setProfileBio] = useState(getStoredProfileBio);
   const [draftBio, setDraftBio] = useState(getStoredProfileBio);
   const [isEditingBio, setIsEditingBio] = useState(false);
@@ -82,7 +77,6 @@ function PersonalProfile() {
           profile?.username || profile?.full_name || profile?.email || "User";
 
         setUserName(nextName);
-        setUserEmail(profile?.email || "");
         const nextBio = profile?.bio || "";
         setProfileBio(nextBio);
         setDraftBio(nextBio);
@@ -293,7 +287,6 @@ function PersonalProfile() {
         <div className="profile_name_area">
           <div className="profile_name_row">
             <h2>{userName}</h2>
-            <h2 className="profile_email">{userEmail || "Email unavailable"}</h2>
           </div>
         </div>
 

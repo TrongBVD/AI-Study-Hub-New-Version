@@ -14,6 +14,7 @@ import { MdHistory } from "react-icons/md";
  * and individual document action buttons (View, Download, Delete).
  */
 export default function SourcesSidebar({
+  libraryName = "Library",
   documents = [],
   selectedDocIds = new Set(),
   selectAll = false,
@@ -39,14 +40,14 @@ export default function SourcesSidebar({
     <aside className={`workspace_panel sources_panel ${showLeftPanel ? "" : "collapsed"}`}>
       <div className="panel_header">
         <div className="panel_title">
-          <h3>Sources</h3>
+          <h3 title={libraryName}>{libraryName}</h3>
         </div>
         <button
           type="button"
           className="icon_btn collapse_sidebar_btn"
           onClick={onTogglePanel}
-          title="Collapse sources sidebar"
-          aria-label="Collapse sources sidebar"
+          title="Collapse library sidebar"
+          aria-label="Collapse library sidebar"
         >
           <LuPanelLeftClose />
         </button>
@@ -86,6 +87,7 @@ export default function SourcesSidebar({
               />
               <span>Select all</span>
             </label>
+            <span className="selected_count_tag">{selectedDocIds.size} selected</span>
           </div>
 
           {/* Document Sources List */}
