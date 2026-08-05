@@ -317,6 +317,10 @@
   font-weight: 900;
 }
 
+.form_group label .required_star {
+  color: #dc2626;
+}
+
 .form_group input,
 .form_group textarea {
   width: 100%;

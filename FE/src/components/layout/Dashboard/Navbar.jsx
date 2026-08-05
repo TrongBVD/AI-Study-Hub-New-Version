@@ -2,8 +2,6 @@ import { Link, useNavigate } from "react-router-dom";
 import { useEffect, useMemo, useState } from "react";
 import {
   HiOutlineBell,
-  HiOutlinePlus,
-  HiOutlineSquaresPlus,
   HiOutlineBars3,
 } from "react-icons/hi2";
 import {
@@ -553,20 +551,6 @@ function Navbar({
           </div>
         ) : (
           <>
-            {/* Create Dropdown */}
-            <div className="create_dropdown">
-              <button type="button" className="create_dropdown_btn" aria-label="Create new item">
-                <HiOutlinePlus aria-hidden="true" />
-              </button>
-
-              <div className="create_dropdown_menu">
-                <Link to="/dashboard/create-workspace">
-                  <HiOutlineSquaresPlus aria-hidden="true" />
-                  Create Workspace
-                </Link>
-              </div>
-            </div>
-
             {/* Notification Panel */}
             <div className="notification_dropdown">
               <button type="button" className="notification_btn" aria-label="Notifications">

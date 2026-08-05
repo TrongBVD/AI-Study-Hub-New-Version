@@ -131,6 +131,7 @@ export default function NotebookWorkspacePage() {
   // Library settings state
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [libraryName, setLibraryName] = useState("");
+  const [libraryDescription, setLibraryDescription] = useState("");
   const [allowPublish, setAllowPublish] = useState(false);
   const [isSavingSettings, setIsSavingSettings] = useState(false);
   const [isDeletingLibrary, setIsDeletingLibrary] = useState(false);
@@ -539,6 +540,7 @@ export default function NotebookWorkspacePage() {
   const handleOpenSettings = () => {
     if (!canManageLibrary) return;
     setLibraryName(library?.name || library?.libraryName || "");
+    setLibraryDescription(library?.description || "");
     setAllowPublish(Boolean(library?.is_public ?? library?.isPublic));
     setIsSettingsOpen(true);
   };
@@ -557,10 +559,12 @@ export default function NotebookWorkspacePage() {
     try {
       const updatedLibrary = await updateLibrary(libraryId, {
         name: trimmedName,
+        description: libraryDescription.trim(),
         is_public: Boolean(library?.is_public) || allowPublish,
       });
       setLibrary(updatedLibrary);
       setLibraryName(updatedLibrary.name || trimmedName);
+      setLibraryDescription(updatedLibrary.description || "");
       setAllowPublish(Boolean(updatedLibrary.is_public));
       setIsSettingsOpen(false);
       showToast("Library settings saved successfully.", "Settings Updated", "success");
@@ -1369,6 +1373,20 @@ export default function NotebookWorkspacePage() {
                   maxLength={100}
                   required
                 />
+              </label>
+
+              <label>
+                <span>Description</span>
+                <textarea
+                  value={libraryDescription}
+                  onChange={(event) => setLibraryDescription(event.target.value)}
+                  maxLength={500}
+                  rows={4}
+                  placeholder="Briefly describe the topics or documents in this library..."
+                />
+                <small className="library_description_count">
+                  {libraryDescription.length} / 500
+                </small>
               </label>
 
               <div className="library_publish_setting">

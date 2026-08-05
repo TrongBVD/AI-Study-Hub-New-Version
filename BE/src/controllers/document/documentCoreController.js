@@ -1495,6 +1495,82 @@ exports.deleteDocument = async (req, res) => {
 };
 
 // Hàm API cập nhật trạng thái của thư viện
+exports.createLibrary = async (req, res) => {
+  try {
+    const userID = req.user.id;
+    const name = String(req.body?.name || "").trim();
+    const description = String(req.body?.description || "").trim();
+    const isPublic = req.body?.is_public === true;
+
+    if (
+      userID === "guest" ||
+      userID === "00000000-0000-0000-0000-000000000000" ||
+      req.user.role === "GUEST"
+    ) {
+      return res.status(403).json({
+        status: "error",
+        message: "Guest users cannot create libraries.",
+      });
+    }
+
+    if (!name) {
+      return res.status(400).json({
+        status: "error",
+        message: "Library name is required.",
+      });
+    }
+
+    if (name.length > 100 || description.length > 500) {
+      return res.status(400).json({
+        status: "error",
+        message: "Library names can contain up to 100 characters and descriptions up to 500 characters.",
+      });
+    }
+
+    const { data: existingLibrary, error: searchError } = await supabase
+      .from("libraries")
+      .select("id")
+      .eq("user_id", userID)
+      .ilike("name", name)
+      .maybeSingle();
+
+    if (searchError) throw searchError;
+
+    if (existingLibrary) {
+      return res.status(409).json({
+        status: "error",
+        message: `A library named "${name}" already exists.`,
+      });
+    }
+
+    const { data, error } = await supabase
+      .from("libraries")
+      .insert({
+        user_id: userID,
+        name,
+        description: description || null,
+        is_public: isPublic,
+        share_on_profile: false,
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    return res.status(201).json({
+      status: "success",
+      data: { ...data, documents: 0 },
+    });
+  } catch (error) {
+    console.error("createLibrary error:", error);
+    return res.status(500).json({
+      status: "error",
+      message: "Could not create the library.",
+      error: error.message,
+    });
+  }
+};
+
 exports.updateLibrary = async (req, res) => {
   try {
     const { id } = req.params;

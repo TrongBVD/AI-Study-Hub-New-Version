@@ -6,6 +6,7 @@ jest.mock("../../src/config/supabase", () => {
     delete: jest.fn().mockReturnThis(),
     eq: jest.fn().mockReturnThis(),
     neq: jest.fn().mockReturnThis(),
+    ilike: jest.fn().mockReturnThis(),
     in: jest.fn().mockReturnThis(),
     is: jest.fn().mockReturnThis(),
     order: jest.fn().mockReturnThis(),
@@ -71,6 +72,44 @@ describe("Document & Library Main Flow Tests", () => {
   });
 
   describe("Library Operations", () => {
+    test("creates a library with the selected public visibility", async () => {
+      const mockChain = supabase.from();
+      mockChain.maybeSingle.mockResolvedValueOnce({ data: null, error: null });
+      mockChain.single.mockResolvedValueOnce({
+        data: {
+          id: "lib-new",
+          user_id: "user-1",
+          name: "Biology",
+          description: "Exam notes",
+          is_public: true,
+          share_on_profile: false,
+        },
+        error: null,
+      });
+      req.body = {
+        name: "  Biology  ",
+        description: "  Exam notes  ",
+        is_public: true,
+      };
+
+      await documentController.createLibrary(req, res);
+
+      expect(mockChain.insert).toHaveBeenCalledWith({
+        user_id: "user-1",
+        name: "Biology",
+        description: "Exam notes",
+        is_public: true,
+        share_on_profile: false,
+      });
+      expect(res.status).toHaveBeenCalledWith(201);
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          status: "success",
+          data: expect.objectContaining({ id: "lib-new", documents: 0 }),
+        }),
+      );
+    });
+
     test("returns 404 when updating non-existent library", async () => {
       const mockChain = supabase.from();
       mockChain.maybeSingle.mockResolvedValueOnce({ data: null, error: null });
