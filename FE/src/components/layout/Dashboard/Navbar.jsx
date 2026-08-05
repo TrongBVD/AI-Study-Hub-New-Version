@@ -4,7 +4,6 @@ import {
   HiOutlineBell,
   HiOutlinePlus,
   HiOutlineSquaresPlus,
-  HiOutlineBookOpen,
   HiOutlineBars3,
 } from "react-icons/hi2";
 import {
@@ -561,11 +560,6 @@ function Navbar({
               </button>
 
               <div className="create_dropdown_menu">
-                <Link to="/dashboard/create-library">
-                  <HiOutlineBookOpen aria-hidden="true" />
-                  Create Library
-                </Link>
-
                 <Link to="/dashboard/create-workspace">
                   <HiOutlineSquaresPlus aria-hidden="true" />
                   Create Workspace

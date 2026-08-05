@@ -10,6 +10,14 @@ import {
 import { LuPanelLeftClose } from "react-icons/lu";
 import { MdHistory } from "react-icons/md";
 
+function getDocumentType(document) {
+  const explicitType = String(document.file_type || document.mime_type || "");
+  if (explicitType) return explicitType.split("/").pop().toUpperCase();
+
+  const extension = String(document.title || "").match(/\.([a-z0-9]+)$/i)?.[1];
+  return extension ? extension.toUpperCase() : "FILE";
+}
+
 /**
  * SourcesSidebar Component
  * Encapsulates the Left Panel sources list, file upload trigger, select all checkbox,
@@ -39,6 +47,7 @@ export default function SourcesSidebar({
   onDeleteHistoryConversation,
   onClearHistory,
   historyActionBusy = false,
+  sourceSelectionEnabled = true,
 }) {
   const [expandedTagKeys, setExpandedTagKeys] = useState(() => new Set());
 
@@ -98,17 +107,19 @@ export default function SourcesSidebar({
           />
 
           {/* Select All Checkbox */}
-          <div className="select_all_bar">
-            <label className="checkbox_label">
-              <input
-                type="checkbox"
-                checked={selectAll}
-                onChange={onToggleSelectAll}
-              />
-              <span>Select all</span>
-            </label>
-            <span className="selected_count_tag">{selectedDocIds.size} selected</span>
-          </div>
+          {sourceSelectionEnabled && (
+            <div className="select_all_bar">
+              <label className="checkbox_label">
+                <input
+                  type="checkbox"
+                  checked={selectAll}
+                  onChange={onToggleSelectAll}
+                />
+                <span>Select all</span>
+              </label>
+              <span className="selected_count_tag">{selectedDocIds.size} selected</span>
+            </div>
+          )}
 
           {/* Document Sources List */}
           <div className="sources_list">
@@ -133,17 +144,21 @@ export default function SourcesSidebar({
                 return (
                   <div
                   key={doc.id}
-                  className={`source_item ${selectedDocIds.has(doc.id) ? "selected" : ""}`}
+                  className={`source_item ${sourceSelectionEnabled && selectedDocIds.has(doc.id) ? "selected" : ""}`}
                 >
-                  <input
-                    type="checkbox"
-                    checked={selectedDocIds.has(doc.id)}
-                    onChange={() => onToggleDocSelect(doc.id)}
-                  />
+                  {sourceSelectionEnabled && (
+                    <input
+                      type="checkbox"
+                      checked={selectedDocIds.has(doc.id)}
+                      onChange={() => onToggleDocSelect(doc.id)}
+                    />
+                  )}
                   <HiOutlineDocumentText className="doc_icon" />
                   <div className="doc_info">
                     <span className="doc_title">{doc.title || "Untitled Document"}</span>
                     <span className="doc_size">
+                      {getDocumentType(doc)}
+                      {" · "}
                       {((doc.file_size_bytes || 0) / (1024 * 1024)).toFixed(2)} MB
                     </span>
                     {(taggingStatus === "PENDING" ||

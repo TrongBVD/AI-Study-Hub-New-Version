@@ -17,7 +17,6 @@ import OTPVerification from "./components/pages/RegisterPage/OTPVerification.jsx
 import Dashboard from "./components/layout/Dashboard/Dashboard.jsx";
 
 // ================= USER PAGE IMPORTS =================
-import CreateLibraryPage from "./components/pages/CreateLibraryPage/CreateLibraryPage.jsx";
 import MyWorkSpace from "./components/pages/MyWorkSpace/MyWorkSpace.jsx";
 import PersonalProfilePage from "./components/pages/PersonalProfilePage/PersonalProfilePage.jsx";
 import CreateWorkSpacePage from "./components/pages/CreateWorkSpacePage/CreateWorkSpacePage.jsx";
@@ -99,7 +98,7 @@ function App() {
               element={<Navigate to="/dashboard/libraries" replace />}
             />
 
-            <Route path="create-library" element={<CreateLibraryPage />} />
+            <Route path="create-library" element={<Navigate to="/dashboard/home" replace />} />
             <Route path="documents/:documentId" element={<DocumentViewerPage />} />
             <Route path="settings" element={<SettingPage />} />
             <Route path="create-workspace" element={<CreateWorkSpacePage />} />

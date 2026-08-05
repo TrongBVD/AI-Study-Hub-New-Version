@@ -1,4 +1,5 @@
 const authMiddleware = require("../../src/middleware/authMiddleware");
+const requireAuthenticatedUser = require("../../src/middleware/requireAuthenticatedUser");
 const workspaceController = require("../../src/controllers/workspaceController");
 const documentController = require("../../src/controllers/documentController");
 
@@ -65,6 +66,15 @@ describe("Security & Workspace Verification Tests", () => {
   });
 
   describe("2. Guest Role Block Checks", () => {
+    it("should block GUEST role from all authenticated AI features", () => {
+      req.user = { id: "guest", role: "GUEST" };
+
+      requireAuthenticatedUser(req, res, next);
+
+      expect(res.status).toHaveBeenCalledWith(403);
+      expect(next).not.toHaveBeenCalled();
+    });
+
     it("should block GUEST role from creating workspaces", async () => {
       req.user = { id: "guest", role: "GUEST" };
       req.body = { name: "Test Workspace" };
@@ -73,13 +83,6 @@ describe("Security & Workspace Verification Tests", () => {
       expect(res.json).toHaveBeenCalledWith(
         expect.objectContaining({ message: expect.stringMatching(/guest/i) })
       );
-    });
-
-    it("should block GUEST role from creating libraries", async () => {
-      req.user = { id: "guest", role: "GUEST" };
-      req.body = { name: "Test Library" };
-      await documentController.createLibrary(req, res);
-      expect(res.status).toHaveBeenCalledWith(403);
     });
 
     it("should block GUEST role from updating libraries", async () => {

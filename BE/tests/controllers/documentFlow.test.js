@@ -71,26 +71,6 @@ describe("Document & Library Main Flow Tests", () => {
   });
 
   describe("Library Operations", () => {
-    test("blocks GUEST user from creating a library", async () => {
-      req.user = { id: "guest", role: "GUEST" };
-      req.body = { name: "My Library" };
-
-      await documentController.createLibrary(req, res);
-
-      expect(res.status).toHaveBeenCalledWith(403);
-    });
-
-    test("requires name when creating a library", async () => {
-      req.body = { name: "   " };
-
-      await documentController.createLibrary(req, res);
-
-      expect(res.status).toHaveBeenCalledWith(400);
-      expect(res.json).toHaveBeenCalledWith(
-        expect.objectContaining({ message: expect.stringMatching(/name/i) })
-      );
-    });
-
     test("returns 404 when updating non-existent library", async () => {
       const mockChain = supabase.from();
       mockChain.maybeSingle.mockResolvedValueOnce({ data: null, error: null });

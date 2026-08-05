@@ -16,7 +16,6 @@ const {
 } = require("../controllers/document/documentManagementController");
 
 const {
-    createLibrary,
     listMyLibraries,
     updateLibrary,
     getLibrary,
@@ -84,7 +83,6 @@ router.post(
 
 router.get("/libraries", authMiddleware, listMyLibraries);
 router.get("/libraries/:libraryId", authMiddleware, getLibrary);
-router.post("/libraries", authMiddleware, createLibrary);
 router.put("/libraries/:id", authMiddleware, updateLibrary);
 router.delete("/libraries/:id", authMiddleware, deleteLibrary);
 
