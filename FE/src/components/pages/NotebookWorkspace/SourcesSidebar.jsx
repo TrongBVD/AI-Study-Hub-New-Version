@@ -109,7 +109,7 @@ export default function SourcesSidebar({
             ref={fileInputRef}
             style={{ display: "none" }}
             multiple
-            accept=".pdf,.docx,.doc,.txt,.md,.csv,.json,.mp3,.wav,.m4a,.py,.js,.html,.css"
+            accept=".pdf,.docx,.txt"
             onChange={onFileUpload}
           />
 
@@ -135,7 +135,7 @@ export default function SourcesSidebar({
               <div className="empty_sources">
                 <HiOutlineDocumentText className="empty_icon" />
                 <p>No source documents added yet.</p>
-                <span>Upload PDF, DOCX, TXT, MD, CSV, Audio, or Code files to synthesize with AI.</span>
+                <span>Upload PDF, DOCX, or TXT files to synthesize with AI.</span>
               </div>
             ) : (
               documents.map((doc) => {
