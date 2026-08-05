@@ -149,6 +149,36 @@ describe("AI Pipeline Main Flow Tests", () => {
       );
     });
 
+    test("returns 409 when a selected content source is not approved yet", async () => {
+      req.body = {
+        scope: "SELECTED",
+        documentIds: ["doc-pending-1"],
+        question: "Summarize this document",
+      };
+
+      const mockChain = supabase.from();
+      mockChain.maybeSingle.mockResolvedValueOnce({
+        data: {
+          id: "doc-pending-1",
+          status: "PENDING",
+          title: "processing.pdf",
+          file_url: "user/processing.pdf",
+        },
+        error: null,
+      });
+      canAccessDocument.mockResolvedValueOnce(true);
+
+      await aiController.chatWithDocument(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(409);
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          code: "DOCUMENT_NOT_READY",
+        }),
+      );
+      expect(aiService.answerWithContext).not.toHaveBeenCalled();
+    });
+
     test("auto-repairs missing chunks on-demand and returns AI response", async () => {
       req.body = { documentId: "doc-no-chunks", question: "Explain gravity" };
 
@@ -187,6 +217,49 @@ describe("AI Pipeline Main Flow Tests", () => {
           }),
         })
       );
+    });
+
+    test("auto-repair stores raw chunks when document embedding is unavailable", async () => {
+      req.body = {
+        documentId: "doc-raw-chunks",
+        question: "Explain gravity",
+      };
+
+      const mockChain = supabase.from();
+      mockChain.maybeSingle.mockResolvedValueOnce({
+        data: {
+          id: "doc-raw-chunks",
+          status: "APPROVED",
+          title: "physics.pdf",
+          file_url: "user/physics.pdf",
+        },
+        error: null,
+      });
+      canAccessDocument.mockResolvedValueOnce(true);
+      supabase.rpc.mockResolvedValueOnce({ data: [], error: null });
+      mockChain.order.mockResolvedValueOnce({ data: [], error: null });
+      aiService.createBatchEmbeddings.mockResolvedValueOnce([null]);
+      supabase.storage = {
+        from: jest.fn().mockReturnValue({
+          download: jest.fn().mockResolvedValue({
+            data: {
+              arrayBuffer: jest.fn().mockResolvedValue(Buffer.from("dummy")),
+            },
+            error: null,
+          }),
+        }),
+      };
+
+      await aiController.chatWithDocument(req, res);
+
+      expect(mockChain.insert).toHaveBeenCalledWith([
+        expect.objectContaining({
+          document_id: "doc-raw-chunks",
+          content: "Sample extracted text for study.",
+          embedding: null,
+        }),
+      ]);
+      expect(res.status).toHaveBeenCalledWith(200);
     });
 
     test("returns a flashcard navigation action instead of a chat answer", async () => {

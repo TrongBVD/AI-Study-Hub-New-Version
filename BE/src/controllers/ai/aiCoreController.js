@@ -74,12 +74,11 @@ async function ensureDocumentChunks(document) {
       return [];
     }
 
-    const embeddings = await createBatchEmbeddings(chunks, "document");
     const chunkRows = chunks.map((chunk, index) => ({
       document_id: document.id,
       chunk_index: index,
       content: chunk,
-      embedding: toVectorLiteral(embeddings[index]),
+      embedding: null,
     }));
 
     await supabase.from("document_chunks").delete().eq("document_id", document.id);
@@ -89,6 +88,29 @@ async function ensureDocumentChunks(document) {
       console.error("Auto-repair insert chunks error:", insertError);
       return [];
     }
+
+    const embeddings = await createBatchEmbeddings(chunks, "document");
+    const embeddingUpdates = embeddings
+      .map((embedding, index) => ({ embedding, index }))
+      .filter(({ embedding }) => Array.isArray(embedding));
+
+    await mapWithConcurrency(
+      embeddingUpdates,
+      RAG_RETRIEVAL_CONCURRENCY,
+      async ({ embedding, index }) => {
+        const { error: updateError } = await supabase
+          .from("document_chunks")
+          .update({ embedding: toVectorLiteral(embedding) })
+          .eq("document_id", document.id)
+          .eq("chunk_index", index);
+        if (updateError) {
+          console.warn(
+            `Auto-repair embedding update failed for document ${document.id}, chunk ${index}:`,
+            updateError.message,
+          );
+        }
+      },
+    );
 
     return chunkRows.map((r) => ({ chunk_index: r.chunk_index, content: r.content }));
   } catch (err) {
@@ -846,6 +868,24 @@ exports.chatWithDocument = async (req, res) => {
     }
 
     const isGeneralQuestion = intentRoute.intent === "GENERAL";
+    const requiresDocumentContent = ["CONTENT", "MIXED"].includes(
+      intentRoute.intent,
+    );
+    const unavailableDocuments = requiresDocumentContent
+      ? documents.filter(
+          (document) =>
+            String(document.status || "").toUpperCase() !== "APPROVED",
+        )
+      : [];
+
+    if (unavailableDocuments.length > 0) {
+      return res.status(409).json({
+        status: "error",
+        code: "DOCUMENT_NOT_READY",
+        message:
+          "One or more selected documents are still being processed and cannot be used for AI Chat yet.",
+      });
+    }
     const shouldUseDetectedMetadataScope =
       requestedMetadataScope === "AUTO" ||
       !requestedMetadataScope;
@@ -927,6 +967,19 @@ exports.chatWithDocument = async (req, res) => {
           ragDocuments,
           intentRoute.contentMode,
         );
+
+    if (
+      requiresDocumentContent &&
+      documents.length > 0 &&
+      matchedChunks.length === 0
+    ) {
+      return res.status(409).json({
+        status: "error",
+        code: "DOCUMENT_NOT_READY",
+        message:
+          "The selected documents do not have readable AI content yet. Retry processing before asking a content question.",
+      });
+    }
     const groundedChunks = metadataSnapshot
       ? [
           {

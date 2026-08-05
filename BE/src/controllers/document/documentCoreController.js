@@ -122,14 +122,6 @@ async function updateDocumentTaggingState(
 async function markDocumentTaggingFailed(documentId, error, context = {}) {
   const message = getTaggingErrorMessage(error);
 
-  // Keep the document discoverable under a safe fallback classification while
-  // still exposing FAILED so the owner can request a better classification.
-  await ensureAndLinkDocumentTags(documentId, {
-    level1: "Other",
-    level2: null,
-    level3: null,
-  });
-
   await updateDocumentTaggingState(documentId, "FAILED", message);
   await notifyDocumentTaggingFailed({
     ...context,
@@ -263,32 +255,53 @@ async function processDocumentWithAI(
       await markDocumentTaggingFailed(documentId, tagErr, taggingContext);
     }
 
-    // Process vector embeddings for RAG search
+    // Persist readable chunks even when the embedding provider is unavailable.
+    // This keeps overview chat and the text fallback usable while embeddings
+    // can be regenerated later.
     if (chunks.length > 0) {
-      try {
-        const embeddings = await createBatchEmbeddings(chunks, "document");
-        if (Array.isArray(embeddings) && embeddings.length > 0) {
-          const chunkRows = chunks
-            .map((chunk, index) => {
-              const emb = embeddings[index];
-              if (!emb) return null;
-              return {
-                document_id: documentId,
-                chunk_index: index,
-                content: chunk,
-                embedding: toVectorLiteral(emb),
-              };
-            })
-            .filter(Boolean);
+      const chunkRows = chunks.map((chunk, index) => {
+        return {
+          document_id: documentId,
+          chunk_index: index,
+          content: chunk,
+          embedding: null,
+        };
+      });
 
-          if (chunkRows.length > 0) {
-            await supabase.from("document_chunks").delete().eq("document_id", documentId);
-            await supabase.from("document_chunks").insert(chunkRows);
+      const { error: deleteChunksError } = await supabase
+        .from("document_chunks")
+        .delete()
+        .eq("document_id", documentId);
+      if (deleteChunksError) throw deleteChunksError;
+
+      const { error: insertChunksError } = await supabase
+        .from("document_chunks")
+        .insert(chunkRows);
+      if (insertChunksError) throw insertChunksError;
+
+      const embeddings = await createBatchEmbeddings(chunks, "document");
+      const embeddingUpdates = embeddings
+        .map((embedding, index) => ({ embedding, index }))
+        .filter(({ embedding }) => Array.isArray(embedding));
+
+      await mapWithConcurrency(
+        embeddingUpdates,
+        EMBEDDING_CONCURRENCY,
+        async ({ embedding, index }) => {
+          const { error: updateEmbeddingError } = await supabase
+            .from("document_chunks")
+            .update({ embedding: toVectorLiteral(embedding) })
+            .eq("document_id", documentId)
+            .eq("chunk_index", index);
+
+          if (updateEmbeddingError) {
+            console.warn(
+              `Could not persist embedding for document ${documentId}, chunk ${index}:`,
+              updateEmbeddingError.message,
+            );
           }
-        }
-      } catch (embErr) {
-        console.warn("RAG Vector embedding warning (quota/rate-limit):", embErr.message);
-      }
+        },
+      );
     }
 
     return {
@@ -674,7 +687,9 @@ exports.uploadDocuments = async (req, res) => {
 
     // CHECK GIỚI HẠN 50MB NẾU UP VÀO WORKSPACE
     const isDirectWorkspaceUpload = Boolean(workspaceId && !libraryId);
-    const isBackgroundUpload = Boolean(workspaceId || libraryId);
+    // Workspace moderation may continue after the upload response. Library
+    // uploads must finish tagging/chunk persistence before reporting success.
+    const isBackgroundUpload = Boolean(workspaceId && !libraryId);
 
     let targetLibrary = null;
     if (libraryId) {
@@ -887,6 +902,7 @@ exports.uploadDocuments = async (req, res) => {
               extractedText,
               file.originalname,
               userTags,
+              { throwOnError: true },
             );
             const sensitivity = tagValidationResult.sensitivity || {
               classification: "NONE",
@@ -1211,42 +1227,36 @@ exports.retryDocumentTags = async (req, res) => {
     }
 
     await updateDocumentTaggingState(documentId, "PENDING");
+    const file = await loadDocumentFileForProcessing(document);
+    const result = await processDocumentWithAI(
+      file,
+      document.id,
+      null,
+      ["APPROVED", "FLAGGED"].includes(
+        String(document.status || "").toUpperCase(),
+      )
+        ? document.status
+        : null,
+      null,
+      {
+        userId: userID,
+        documentTitle: document.title,
+        libraryId: document.library_id,
+        workspaceId: document.workspace_id,
+      },
+    );
 
-    void (async () => {
-      try {
-        const file = await loadDocumentFileForProcessing(document);
-        await processDocumentWithAI(
-          file,
-          document.id,
-          null,
-          ["APPROVED", "FLAGGED"].includes(
-            String(document.status || "").toUpperCase(),
-          )
-            ? document.status
-            : null,
-          null,
-          {
-            userId: userID,
-            documentTitle: document.title,
-            libraryId: document.library_id,
-            workspaceId: document.workspace_id,
-          },
-        );
-      } catch (retryError) {
-        await markDocumentTaggingFailed(document.id, retryError, {
-          userId: userID,
-          documentTitle: document.title,
-          libraryId: document.library_id,
-          workspaceId: document.workspace_id,
-        }).catch(() => {});
-      }
-    })();
-
-    return res.status(202).json({
-      status: "success",
+    const taggingCompleted = result.tagging_status === "COMPLETED";
+    return res.status(taggingCompleted ? 200 : 503).json({
+      status: taggingCompleted ? "success" : "error",
+      code: taggingCompleted ? undefined : "TAGGING_RETRY_FAILED",
+      message: taggingCompleted
+        ? "AI tags and document content were regenerated successfully."
+        : result.error || "AI tag regeneration did not complete.",
       data: {
         documentId,
-        tagging_status: "PENDING",
+        tagging_status: result.tagging_status,
+        ai_ready: Number(result.chunkCount || 0) > 0,
       },
     });
   } catch (error) {
