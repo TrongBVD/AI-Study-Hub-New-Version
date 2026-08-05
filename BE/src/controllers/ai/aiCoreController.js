@@ -940,6 +940,11 @@ exports.chatWithDocument = async (req, res) => {
       : isMetadataOnly
         ? await answerMetadataWithContext(question, metadataSnapshot)
         : await answerWithContext(question, groundedChunks);
+
+    // The user may stop the response while the AI provider is still working.
+    // Do not charge usage or persist a reply after the client disconnects.
+    if (req.aborted || res.destroyed) return;
+
     await increaseChatUsage(userId);
     let chatHistory = null;
     const primaryDocumentId = documents[0]?.id || null;

@@ -4,12 +4,12 @@ import api from "./api";
  * Sends a question to AI chat service with document/library context
  * Supports both object payload ({ documentId, question, selectedDocIds }) and positional args
  */
-export async function chatWithDocument(payloadOrId, questionText) {
+export async function chatWithDocument(payloadOrId, questionText, requestConfig = {}) {
   const payload = typeof payloadOrId === "object" && payloadOrId !== null
     ? payloadOrId
     : { documentId: payloadOrId, question: questionText };
 
-  const response = await api.post("/ai/chat", payload);
+  const response = await api.post("/ai/chat", payload, requestConfig);
   return response.data.data;
 }
 

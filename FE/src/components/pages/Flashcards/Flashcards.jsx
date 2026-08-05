@@ -12,41 +12,13 @@ import {
   FaTrash,
 } from "react-icons/fa";
 import api from "../../../utils/api.js";
-import {
-  getUserStoredItem,
-  setUserStoredItem,
-} from "../../../utils/userStorage.js";
 import "./Flashcards.css";
 
-const FLASHCARD_HISTORY_STORAGE_KEY = "aiStudyHubFlashcardHistory";
 const MAX_FLASHCARD_HISTORY_SETS = 30;
 const MAX_FLASHCARD_DOCUMENTS = 5;
 
 function getCardResultKey(card, index) {
   return String(card?.id || `${index}:${card?.question || "card"}`);
-}
-
-function loadFlashcardHistory() {
-  try {
-    const storedHistory = JSON.parse(
-      getUserStoredItem(FLASHCARD_HISTORY_STORAGE_KEY) || "[]",
-    );
-
-    if (!Array.isArray(storedHistory)) return [];
-
-    return storedHistory
-      .filter(
-        (savedSet) =>
-          savedSet &&
-          savedSet.id &&
-          savedSet.documentId &&
-          Array.isArray(savedSet.cards),
-      )
-      .slice(0, MAX_FLASHCARD_HISTORY_SETS);
-  } catch (error) {
-    console.warn("Could not load flashcard history:", error);
-    return [];
-  }
 }
 
 function getFlashcardSetId(documentId, cards) {
@@ -73,7 +45,8 @@ function Flashcards() {
   const [message, setMessage] = useState("");
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
-  const [history, setHistory] = useState(loadFlashcardHistory);
+  const [history, setHistory] = useState([]);
+  const [historyLoading, setHistoryLoading] = useState(true);
   const [activeSetId, setActiveSetId] = useState("");
   const [displayedSetTitle, setDisplayedSetTitle] = useState("");
   const [sessionComplete, setSessionComplete] = useState(false);
@@ -114,11 +87,44 @@ function Flashcards() {
     : null;
 
   useEffect(() => {
-    setUserStoredItem(
-      FLASHCARD_HISTORY_STORAGE_KEY,
-      JSON.stringify(history.slice(0, MAX_FLASHCARD_HISTORY_SETS)),
-    );
-  }, [history]);
+    let isMounted = true;
+
+    async function loadFlashcardHistory() {
+      try {
+        const response = await api.get("/ai/flashcard-sets");
+        const savedSets = Array.isArray(response.data?.data)
+          ? response.data.data
+          : [];
+
+        if (!isMounted) return;
+
+        setHistory(
+          savedSets.slice(0, MAX_FLASHCARD_HISTORY_SETS).map((savedSet) => ({
+            id: savedSet.id,
+            documentId: savedSet.document_id,
+            title: savedSet.title || "AI Flashcards",
+            createdAt: savedSet.created_at,
+            cardCount: savedSet.card_count || 0,
+            cards: null,
+          })),
+        );
+      } catch (error) {
+        if (isMounted) {
+          setMessage(
+            error.response?.data?.message || "Could not load flashcard history.",
+          );
+        }
+      } finally {
+        if (isMounted) setHistoryLoading(false);
+      }
+    }
+
+    loadFlashcardHistory();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   useEffect(() => {
     if (!currentCard || !sessionStarted || sessionComplete) return undefined;
@@ -208,6 +214,7 @@ function Flashcards() {
           documentIds: [...selectedDocumentIds],
           title: generatedSetTitle,
           createdAt: new Date().toISOString(),
+          cardCount: cards.length,
           cards,
         };
 
@@ -280,8 +287,8 @@ function Flashcards() {
     setIsFlipped(false);
   }
 
-  function openHistorySet(savedSet) {
-    setFlashcards(savedSet.cards || []);
+  function showHistorySet(savedSet, cards) {
+    setFlashcards(cards);
     setDisplayedSetTitle(savedSet.title || "AI Flashcards");
     setCurrentCardIndex(0);
     setIsFlipped(false);
@@ -290,21 +297,62 @@ function Flashcards() {
     setElapsedSeconds(0);
     setSessionStarted(false);
     setCardResults({});
-    setMessage("");
   }
 
-  function deleteHistorySet(event, setId) {
-    event.stopPropagation();
-    setHistory((current) => current.filter((item) => item.id !== setId));
+  async function openHistorySet(savedSet) {
+    setMessage("");
 
-    if (activeSetId === setId) {
-      setFlashcards([]);
-      setActiveSetId("");
-      setDisplayedSetTitle("");
-      setSessionComplete(false);
-      setElapsedSeconds(0);
-      setSessionStarted(false);
-      setCardResults({});
+    if (Array.isArray(savedSet.cards)) {
+      showHistorySet(savedSet, savedSet.cards);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const response = await api.get(`/ai/flashcard-sets/${savedSet.id}`);
+      const loadedSet = response.data?.data;
+      const cards = Array.isArray(loadedSet?.cards) ? loadedSet.cards : [];
+      const hydratedSet = {
+        ...savedSet,
+        title: loadedSet?.title || savedSet.title,
+        cardCount: cards.length,
+        cards,
+      };
+
+      setHistory((current) =>
+        current.map((item) => (item.id === savedSet.id ? hydratedSet : item)),
+      );
+      showHistorySet(hydratedSet, cards);
+    } catch (error) {
+      setMessage(
+        error.response?.data?.message || "Could not load this flashcard set.",
+      );
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function deleteHistorySet(event, setId) {
+    event.stopPropagation();
+
+    try {
+      await api.delete(`/ai/flashcard-sets/${setId}`);
+      setHistory((current) => current.filter((item) => item.id !== setId));
+
+      if (activeSetId === setId) {
+        setFlashcards([]);
+        setActiveSetId("");
+        setDisplayedSetTitle("");
+        setSessionComplete(false);
+        setElapsedSeconds(0);
+        setSessionStarted(false);
+        setCardResults({});
+      }
+      setMessage("Flashcard set deleted.");
+    } catch (error) {
+      setMessage(
+        error.response?.data?.message || "Could not delete this flashcard set.",
+      );
     }
   }
 
@@ -383,7 +431,9 @@ function Flashcards() {
           </button>
 
           <div className="flashcard-history-list">
-            {history.length === 0 ? (
+            {historyLoading ? (
+              <p className="flashcard-history-empty">Loading saved sets...</p>
+            ) : history.length === 0 ? (
               <p className="flashcard-history-empty">Your generated sets will appear here.</p>
             ) : (
               history.map((savedSet) => (
@@ -397,7 +447,7 @@ function Flashcards() {
                 >
                   <strong>{savedSet.title?.replace(/\.[^/.]+$/, "")}</strong>
                   <span>
-                    {savedSet.cards?.length || 0} cards · {formatHistoryDate(savedSet.createdAt)}
+                    {savedSet.cardCount ?? savedSet.cards?.length ?? 0} cards · {formatHistoryDate(savedSet.createdAt)}
                   </span>
                   <FaTrash
                     role="button"

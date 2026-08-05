@@ -15,6 +15,7 @@ import {
   HiOutlineCog6Tooth,
   HiOutlineTrash,
   HiOutlineXMark,
+  HiMiniStop,
 } from "react-icons/hi2";
 import {
   getLibrary,
@@ -142,6 +143,7 @@ export default function NotebookWorkspacePage() {
   };
 
   const chatContainerRef = useRef(null);
+  const chatRequestAbortRef = useRef(null);
   const fileInputRef = useRef(null);
   const pendingChatHandledRef = useRef(false);
   const primarySelectedDocumentId = Array.from(selectedDocIds)[0] || "";
@@ -607,6 +609,8 @@ export default function NotebookWorkspacePage() {
     setMessages((prev) => [...prev, userMsg]);
     setInputQuery("");
     setIsAsking(true);
+    const abortController = new AbortController();
+    chatRequestAbortRef.current = abortController;
 
     try {
       const res = await chatWithDocument({
@@ -616,7 +620,7 @@ export default function NotebookWorkspacePage() {
         currentLibraryId: libraryId,
         conversationId: sessionConversationIdRef.current,
         question: query,
-      });
+      }, undefined, { signal: abortController.signal });
 
       if (res?.action === "OPEN_FLASHCARDS") {
         const flashcardParams = new URLSearchParams();
@@ -695,6 +699,11 @@ export default function NotebookWorkspacePage() {
         setActiveConversationId(savedConversationId);
       }
     } catch (err) {
+      if (abortController.signal.aborted || err.code === "ERR_CANCELED") {
+        showToast("AI response stopped.", "Stopped", "info");
+        return;
+      }
+
       console.error("Chat AI error:", err);
       setMessages((prev) => [
         ...prev,
@@ -706,9 +715,23 @@ export default function NotebookWorkspacePage() {
         },
       ]);
     } finally {
+      if (chatRequestAbortRef.current === abortController) {
+        chatRequestAbortRef.current = null;
+      }
       setIsAsking(false);
     }
   };
+
+  const handleStopResponse = () => {
+    chatRequestAbortRef.current?.abort();
+  };
+
+  useEffect(
+    () => () => {
+      chatRequestAbortRef.current?.abort();
+    },
+    [],
+  );
 
   useEffect(() => {
     const pendingDocumentId = location.state?.chatDocumentId;
@@ -1190,11 +1213,14 @@ export default function NotebookWorkspacePage() {
                 <span>Reset Chat</span>
               </button>
               <button
-                type="submit"
-                className="send_btn"
-                disabled={!inputQuery.trim() || isAsking}
+                type={isAsking ? "button" : "submit"}
+                className={`send_btn ${isAsking ? "stop_btn" : ""}`}
+                onClick={isAsking ? handleStopResponse : undefined}
+                disabled={!isAsking && !inputQuery.trim()}
+                aria-label={isAsking ? "Stop AI response" : "Send message"}
+                title={isAsking ? "Stop response" : "Send message"}
               >
-                <HiOutlinePaperAirplane />
+                {isAsking ? <HiMiniStop /> : <HiOutlinePaperAirplane />}
               </button>
             </div>
           </div>
