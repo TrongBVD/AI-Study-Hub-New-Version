@@ -231,10 +231,10 @@ export default function NotebookWorkspacePage() {
           const history = await getChatHistory();
           if (isMounted && Array.isArray(history)) {
             const documentIds = new Set(docs.map((document) => String(document.id)));
-            const libraryHistory = history
-              .filter((conversation) =>
-                documentIds.has(String(conversation.documentId || "")),
-              );
+            const libraryHistory = history.filter((conversation) => {
+              const docId = String(conversation.documentId || "");
+              return !docId || documentIds.has(docId);
+            });
             setChatHistory(libraryHistory);
           }
         }

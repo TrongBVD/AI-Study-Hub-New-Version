@@ -55,11 +55,14 @@ function getInitialAdminSettings() {
   };
 
   try {
-    return {
-      ...defaults,
-      ...JSON.parse(localStorage.getItem(ADMIN_SETTINGS_KEY) || "{}"),
+    const stored = JSON.parse(localStorage.getItem(ADMIN_SETTINGS_KEY) || "{}");
+    const sanitized = {
+      securityAlerts: typeof stored.securityAlerts === "boolean" ? stored.securityAlerts : true,
     };
+    localStorage.setItem(ADMIN_SETTINGS_KEY, JSON.stringify(sanitized));
+    return sanitized;
   } catch {
+    localStorage.setItem(ADMIN_SETTINGS_KEY, JSON.stringify(defaults));
     return defaults;
   }
 }

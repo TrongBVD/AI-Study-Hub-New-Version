@@ -18,30 +18,15 @@ export const THEME_OPTIONS = [
   },
 ];
 
-const SUPPORTED_THEMES = new Set(THEME_OPTIONS.map((theme) => theme.value));
-
-const LEGACY_THEME_MAP = {
-  current: "white",
-  warm: "white",
-  light: "white",
-  dark: "white",
-  black: "white",
-};
-
-const STUDY_THEME_MAP = {
-  black: "light",
-  white: "light",
-};
-
 const ThemeContext = createContext(null);
 
-export function normalizeTheme(theme) {
-  return "white";
+export function normalizeTheme() {
+  return DEFAULT_THEME;
 }
 
 function getStoredTheme() {
   if (typeof window === "undefined") return DEFAULT_THEME;
-  return normalizeTheme(window.localStorage.getItem(THEME_STORAGE_KEY));
+  return DEFAULT_THEME;
 }
 
 function persistTheme(theme) {
@@ -50,17 +35,16 @@ function persistTheme(theme) {
   }
 }
 
-function applyTheme(nextTheme) {
-  const theme = normalizeTheme(nextTheme);
-  const legacyStudyTheme = STUDY_THEME_MAP[theme] || STUDY_THEME_MAP.black;
+function applyTheme() {
+  const theme = DEFAULT_THEME;
 
   if (typeof document !== "undefined") {
     document.documentElement.dataset.theme = theme;
-    document.documentElement.dataset.studyTheme = legacyStudyTheme;
+    document.documentElement.dataset.studyTheme = "light";
 
     if (document.body) {
       document.body.dataset.theme = theme;
-      document.body.dataset.studyTheme = legacyStudyTheme;
+      document.body.dataset.studyTheme = "light";
     }
   }
 

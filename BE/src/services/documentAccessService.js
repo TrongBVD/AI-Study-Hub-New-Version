@@ -55,11 +55,9 @@ async function canAccessDocument(document, userId, options = {}) {
 
     if (libraryError) throw libraryError;
 
-    return Boolean(
-      library &&
-      document.is_public === true &&
-      document.status === "APPROVED",
-    );
+    if (library && String(document.status || "").toUpperCase() === "APPROVED") {
+      return true;
+    }
   }
 
   return false;
