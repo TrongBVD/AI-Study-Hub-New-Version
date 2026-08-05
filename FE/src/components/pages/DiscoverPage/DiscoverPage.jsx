@@ -40,13 +40,7 @@ function normalizeLibrary(library, index) {
   const name = library.name || library.libraryName || "Untitled library";
   const documents = Number(library.documents || library.document_count || 0);
   const matchingFileCount = Number(library.matchingFileCount || 0);
-  const downloads = Number(
-    library.downloads ?? library.download_count ?? library.downloadCount ?? 0,
-  );
   const createdAt = library.created_at || library.createdAt || "";
-  const ageInDays = createdAt
-    ? Math.max(1, (Date.now() - Date.parse(createdAt)) / 86400000)
-    : null;
   const owner = library.owner || library.user || {};
   const ownerId = library.user_id || owner.id || owner.user_id || "";
   const ownerName =
@@ -64,8 +58,6 @@ function normalizeLibrary(library, index) {
     name,
     documents,
     matchingFileCount,
-    downloads,
-    trendingScore: ageInDays ? downloads / Math.sqrt(ageInDays) : 0,
     ownerId,
     ownerName,
     ownerAvatar,
@@ -105,7 +97,7 @@ function DiscoverCategoryEmpty({ children }) {
   return <p className="discover_category_empty">{children}</p>;
 }
 
-function DiscoverLibraryCard({ library, rank, activeTag, wide }) {
+function DiscoverLibraryCard({ library, activeTag, wide }) {
   const theme = getLibraryTheme(library.coverIndex || 0);
 
   return (
@@ -121,8 +113,7 @@ function DiscoverLibraryCard({ library, rank, activeTag, wide }) {
       }}
     >
       <div className="discover_card_art">
-        <span>{String(rank).padStart(2, "0")}</span>
-        <i className="ti-archive" />
+        <i className="ti-book" />
       </div>
       <div className="discover_card_body">
         <div>
@@ -134,15 +125,17 @@ function DiscoverLibraryCard({ library, rank, activeTag, wide }) {
           <p>{library.description}</p>
         </div>
         <footer>
-          <span>
-            <i className="ti-download" /> {formatNumber(library.downloads)}
-          </span>
           <span title="Total Documents">
-            <i className="ti-files" /> {formatNumber(library.documents)} {library.documents === 1 ? "document" : "documents"}
+            <i className="ti-files" /> {formatNumber(library.documents)}{" "}
+            {library.documents === 1 ? "document" : "documents"}
           </span>
           {activeTag && library.matchingFileCount > 0 && (
-            <span className="matching_count_badge" title={`Matching tag: ${activeTag}`}>
-              <i className="ti-tag" /> {library.matchingFileCount} matching {library.matchingFileCount === 1 ? "file" : "files"}
+            <span
+              className="matching_count_badge"
+              title={`Matching tag: ${activeTag}`}
+            >
+              <i className="ti-tag" /> {library.matchingFileCount} matching{" "}
+              {library.matchingFileCount === 1 ? "file" : "files"}
             </span>
           )}
           <span className="discover_card_created">
@@ -161,7 +154,7 @@ function DiscoverPage() {
   const [tagInput, setTagInput] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery] = useState("");
 
   useEffect(() => {
     async function loadTags() {
@@ -241,12 +234,11 @@ function DiscoverPage() {
       if (selectedTag) {
         return (
           b.matchingFileCount - a.matchingFileCount ||
-          b.downloads - a.downloads ||
+          b.documents - a.documents ||
           getCreatedTimestamp(b) - getCreatedTimestamp(a)
         );
       }
       return (
-        b.downloads - a.downloads ||
         b.documents - a.documents ||
         getCreatedTimestamp(b) - getCreatedTimestamp(a)
       );
@@ -261,11 +253,15 @@ function DiscoverPage() {
             <span>StudyHub Discover</span>
             <h1>Find the collections everyone is studying from.</h1>
             <p>
-              Explore public study collections categorized by AI subjects and sub-topics.
+              Explore public study collections categorized by AI subjects and
+              sub-topics.
             </p>
 
             <div className="discover_tag_bar">
-              <form className="discover_tag_search_box" onSubmit={handleTagSearchSubmit}>
+              <form
+                className="discover_tag_search_box"
+                onSubmit={handleTagSearchSubmit}
+              >
                 <i className="ti-search" />
                 <input
                   type="text"
@@ -276,7 +272,12 @@ function DiscoverPage() {
                 {tagInput && (
                   <button
                     type="button"
-                    style={{ background: "none", border: "none", color: "#64748b", cursor: "pointer" }}
+                    style={{
+                      background: "none",
+                      border: "none",
+                      color: "#64748b",
+                      cursor: "pointer",
+                    }}
                     onClick={() => {
                       setTagInput("");
                       setSelectedTag("");
@@ -300,7 +301,8 @@ function DiscoverPage() {
                 </button>
                 {tagsList.map((tagObj) => {
                   const tagName = tagObj.name || tagObj;
-                  const isActive = selectedTag.toLowerCase() === tagName.toLowerCase();
+                  const isActive =
+                    selectedTag.toLowerCase() === tagName.toLowerCase();
                   return (
                     <button
                       type="button"
@@ -334,7 +336,7 @@ function DiscoverPage() {
           </section>
         ) : libraries.length === 0 ? (
           <section className="discover_empty">
-            <i className="ti-archive" />
+            <i className="ti-book" />
             <h2>No matching public libraries found</h2>
             <p>
               {selectedTag
@@ -352,20 +354,23 @@ function DiscoverPage() {
           <section className="discover_split">
             <section className="discover_section">
               <div className="discover_section_title">
-                <h2>{selectedTag ? `Libraries for "${selectedTag}"` : "Public Libraries"}</h2>
+                <h2>
+                  {selectedTag
+                    ? `Libraries for "${selectedTag}"`
+                    : "Public Libraries"}
+                </h2>
                 <p>
                   {selectedTag
                     ? `Sorted by number of files matching tag "${selectedTag}"`
-                    : "Public libraries ranked by downloads, documents and recency."}
+                    : "Libraries publish by orther students."}
                 </p>
               </div>
               <div className="discover_list">
                 {displayLibraries.length > 0 ? (
-                  displayLibraries.map((library, index) => (
+                  displayLibraries.map((library) => (
                     <DiscoverLibraryCard
                       key={library.id}
                       library={library}
-                      rank={index + 1}
                       activeTag={selectedTag}
                     />
                   ))

@@ -74,7 +74,7 @@ function saveRecentLibrary(library) {
     name: library.name || library.libraryName || "Untitled Library",
     description: library.description || "",
     documents: Number(library.documents) || 0,
-    icon: library.icon || "ti-archive",
+    icon: library.icon || "ti-book",
     visitedAt: Date.now(),
   };
 
@@ -125,6 +125,7 @@ function Navbar({
   onOpenSidebar,
   profilePath = "/dashboard/profile",
   searchPlaceholder = "Search library or workspace...",
+  showSearch = true,
 }) {
   const navigate = useNavigate();
   const isLoggedIn = !!getStoredUser();
@@ -389,7 +390,7 @@ function Navbar({
         type: "library",
         title: library.name || library.libraryName || "Untitled Library",
         description: library.description || `${Number(library.documents) || 0} documents`,
-        icon: library.icon || "ti-archive",
+        icon: library.icon || "ti-book",
         data: library,
       }));
 
@@ -487,8 +488,8 @@ function Navbar({
         </button>
       </div>
 
-      {/* Global Search Bar */}
-      <form className="search_box" onSubmit={handleSearchSubmit}>
+      {showSearch && (
+        <form className="search_box" onSubmit={handleSearchSubmit}>
         <input
           type="text"
           value={searchValue}
@@ -537,7 +538,8 @@ function Navbar({
             </button>
           </div>
         )}
-      </form>
+        </form>
+      )}
 
       {/* Navbar Actions & Profile */}
       <div className="nav_actions">

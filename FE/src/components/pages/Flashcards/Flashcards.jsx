@@ -1,12 +1,14 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { FaArrowLeft, FaArrowRight, FaRotate } from "react-icons/fa6";
+import { FaArrowLeft, FaArrowRight } from "react-icons/fa6";
 import {
   FaCheck,
   FaClock,
+  FaHandPointer,
   FaHistory,
   FaLayerGroup,
   FaPlus,
+  FaTimes,
   FaTrash,
 } from "react-icons/fa";
 import api from "../../../utils/api.js";
@@ -19,6 +21,10 @@ import "./Flashcards.css";
 const FLASHCARD_HISTORY_STORAGE_KEY = "aiStudyHubFlashcardHistory";
 const MAX_FLASHCARD_HISTORY_SETS = 30;
 const MAX_FLASHCARD_DOCUMENTS = 5;
+
+function getCardResultKey(card, index) {
+  return String(card?.id || `${index}:${card?.question || "card"}`);
+}
 
 function loadFlashcardHistory() {
   try {
@@ -54,8 +60,10 @@ function getFlashcardSetId(documentId, cards) {
 
 function Flashcards() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const requestedDocumentIds = searchParams.getAll("documentId").slice(0, MAX_FLASHCARD_DOCUMENTS);
-  const requestedDocumentIdsKey = requestedDocumentIds.join(",");
+  const requestedDocumentIds = useMemo(
+    () => searchParams.getAll("documentId").slice(0, MAX_FLASHCARD_DOCUMENTS),
+    [searchParams],
+  );
   const shouldAutoGenerate = searchParams.get("generate") === "1";
   const autoGenerateHandledRef = useRef(false);
   const [documents, setDocuments] = useState([]);
@@ -71,6 +79,7 @@ function Flashcards() {
   const [sessionComplete, setSessionComplete] = useState(false);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [sessionStarted, setSessionStarted] = useState(false);
+  const [cardResults, setCardResults] = useState({});
 
   const selectedDocuments = documents.filter((doc) =>
     selectedDocumentIds.some((documentId) => String(doc.id) === String(documentId)),
@@ -83,6 +92,26 @@ function Flashcards() {
   const selectedSetTitle = selectedDocuments.length > 1
     ? `Combined flashcards (${selectedDocuments.length} sources)`
     : selectedDocument?.title?.replace(/\.[^/.]+$/, "") || "AI Flashcards";
+  const sessionResults = flashcards.map((card, index) => ({
+    card,
+    index,
+    status: cardResults[getCardResultKey(card, index)] || "unreviewed",
+  }));
+  const rememberedResults = sessionResults.filter(
+    (result) => result.status === "remembered",
+  );
+  const missedResults = sessionResults.filter(
+    (result) => result.status === "missed",
+  );
+  const skippedResults = sessionResults.filter(
+    (result) => result.status === "skipped",
+  );
+  const rememberedPercentage = flashcards.length
+    ? Math.round((rememberedResults.length / flashcards.length) * 100)
+    : 0;
+  const currentCardStatus = currentCard
+    ? cardResults[getCardResultKey(currentCard, currentCardIndex)]
+    : null;
 
   useEffect(() => {
     setUserStoredItem(
@@ -146,7 +175,7 @@ function Flashcards() {
     }
 
     loadDocuments();
-  }, [requestedDocumentIdsKey, shouldAutoGenerate]);
+  }, [requestedDocumentIds, shouldAutoGenerate]);
 
   async function generateFlashcards() {
     if (selectedDocumentIds.length === 0 || loading) return;
@@ -159,6 +188,7 @@ function Flashcards() {
     setSessionComplete(false);
     setElapsedSeconds(0);
     setSessionStarted(false);
+    setCardResults({});
 
     try {
       const response = await api.post("/ai/flashcards", {
@@ -259,6 +289,7 @@ function Flashcards() {
     setActiveSetId(savedSet.id);
     setElapsedSeconds(0);
     setSessionStarted(false);
+    setCardResults({});
     setMessage("");
   }
 
@@ -273,6 +304,7 @@ function Flashcards() {
       setSessionComplete(false);
       setElapsedSeconds(0);
       setSessionStarted(false);
+      setCardResults({});
     }
   }
 
@@ -285,6 +317,7 @@ function Flashcards() {
     setActiveSetId("");
     setElapsedSeconds(0);
     setSessionStarted(false);
+    setCardResults({});
     setMessage("");
   }
 
@@ -299,6 +332,7 @@ function Flashcards() {
     setSessionComplete(false);
     setElapsedSeconds(0);
     setSessionStarted(true);
+    setCardResults({});
   }
 
   function startSession() {
@@ -307,6 +341,32 @@ function Flashcards() {
     setSessionComplete(false);
     setElapsedSeconds(0);
     setSessionStarted(true);
+    setCardResults({});
+  }
+
+  function selectCurrentCardResult(status) {
+    if (!currentCard) return;
+
+    const resultKey = getCardResultKey(currentCard, currentCardIndex);
+    setCardResults((current) => ({ ...current, [resultKey]: status }));
+  }
+
+  function goToNextCard() {
+    if (!currentCard) return;
+
+    if (!currentCardStatus) {
+      const resultKey = getCardResultKey(currentCard, currentCardIndex);
+      setCardResults((current) => ({ ...current, [resultKey]: "skipped" }));
+    }
+
+    setIsFlipped(false);
+
+    if (currentCardIndex === flashcards.length - 1) {
+      finishSession();
+      return;
+    }
+
+    setCurrentCardIndex((current) => current + 1);
   }
 
   return (
@@ -402,7 +462,12 @@ function Flashcards() {
               <FaLayerGroup aria-hidden="true" />
             </div>
             <span>Flashcard Set</span>
-            <h1 id="flashcard-set-title">{displayedSetTitle || "AI Flashcards"}</h1>
+            <h1
+              id="flashcard-set-title"
+              title={displayedSetTitle || "AI Flashcards"}
+            >
+              {displayedSetTitle || "AI Flashcards"}
+            </h1>
             <p>{flashcards.length} cards ready to review</p>
             <button type="button" className="flashcards-primary-btn" onClick={startSession}>
               Start Studying <FaArrowRight />
@@ -414,7 +479,9 @@ function Flashcards() {
           <section className="flashcard-study" aria-live="polite">
             <header className="flashcard-study-header">
               <div>
-                <h1>{displayedSetTitle || "AI Flashcards"}</h1>
+                <h1 title={displayedSetTitle || "AI Flashcards"}>
+                  {displayedSetTitle || "AI Flashcards"}
+                </h1>
                 <p>Review the generated questions one card at a time</p>
               </div>
 
@@ -447,14 +514,18 @@ function Flashcards() {
             >
               <div className="flashcard-stage-inner">
                 <div className="flashcard-face flashcard-front">
-                  <span>Question</span>
+                  <span className="flashcard-card-number">
+                    Card {currentCardIndex + 1}/{flashcards.length}
+                  </span>
                   <h2>{currentCard.question}</h2>
-                  <small><FaRotate /> Click to flip</small>
+                  <small><FaHandPointer /> Click to reveal answer</small>
                 </div>
                 <div className="flashcard-face flashcard-back">
-                  <span>Answer</span>
+                  <span>
+                    Answer <em>Card {currentCardIndex + 1}/{flashcards.length}</em>
+                  </span>
                   <h2>{currentCard.answer}</h2>
-                  <small><FaRotate /> Click to see question</small>
+                  <small><FaHandPointer /> Click to see question</small>
                 </div>
               </div>
             </button>
@@ -471,28 +542,39 @@ function Flashcards() {
               </button>
               <button
                 type="button"
-                className="flashcard-flip-button"
-                onClick={() => setIsFlipped((current) => !current)}
+                className={`flashcard-result-button is-missed ${
+                  currentCardStatus === "missed" ? "is-selected" : ""
+                }`}
+                onClick={() => selectCurrentCardResult("missed")}
+                aria-label="Mark as need review"
+                aria-pressed={currentCardStatus === "missed"}
               >
-                <FaRotate /> Flip Card
+                <FaTimes />
+                <strong>{missedResults.length}</strong>
               </button>
               <button
                 type="button"
-                className={`flashcard-arrow ${
-                  currentCardIndex === flashcards.length - 1 ? "is-finish" : ""
+                className={`flashcard-result-button is-remembered ${
+                  currentCardStatus === "remembered" ? "is-selected" : ""
                 }`}
-                onClick={() =>
-                  currentCardIndex === flashcards.length - 1
-                    ? finishSession()
-                    : moveToCard(currentCardIndex + 1)
-                }
+                onClick={() => selectCurrentCardResult("remembered")}
+                aria-label="Mark as known"
+                aria-pressed={currentCardStatus === "remembered"}
+              >
+                <strong>{rememberedResults.length}</strong>
+                <FaCheck />
+              </button>
+              <button
+                type="button"
+                className="flashcard-arrow flashcard-next-arrow"
+                onClick={goToNextCard}
                 aria-label={
                   currentCardIndex === flashcards.length - 1
                     ? "Finish session"
                     : "Next card"
                 }
               >
-                {currentCardIndex === flashcards.length - 1 ? <FaCheck /> : <FaArrowRight />}
+                <FaArrowRight />
               </button>
             </nav>
           </section>
@@ -500,15 +582,62 @@ function Flashcards() {
 
         {sessionComplete && (
           <section className="flashcard-complete" aria-labelledby="flashcard-complete-title">
-            <div className="flashcard-complete-icon"><FaCheck /></div>
-            <span>Session complete</span>
-            <h1 id="flashcard-complete-title">You finished all {flashcards.length} cards!</h1>
-            <div className="flashcard-total-time">
-              <FaClock aria-hidden="true" />
-              <span>Total study time</span>
-              <strong>{formatDuration(elapsedSeconds)}</strong>
+            <h1 id="flashcard-complete-title">
+              {rememberedPercentage >= 70
+                ? "Great work — keep the momentum going!"
+                : "You’ll get it next time."}
+            </h1>
+
+            <div className="flashcard-report-summary">
+              <div
+                className="flashcard-score-ring"
+                style={{ "--flashcard-score": `${rememberedPercentage * 3.6}deg` }}
+                aria-label={`${rememberedPercentage}% marked known`}
+              >
+                <div>
+                  <strong>{rememberedResults.length}/{flashcards.length}</strong>
+                  <span>{rememberedPercentage}%</span>
+                  <small>{formatDuration(elapsedSeconds)}</small>
+                </div>
+              </div>
+
+              <dl className="flashcard-report-counts">
+                <div className="remembered">
+                  <dt>Known</dt>
+                  <dd>{rememberedResults.length}</dd>
+                </div>
+                <div className="missed">
+                  <dt>Need review</dt>
+                  <dd>{missedResults.length}</dd>
+                </div>
+                <div className="skipped">
+                  <dt>Skipped</dt>
+                  <dd>{skippedResults.length}</dd>
+                </div>
+              </dl>
             </div>
-            <p>Would you like to continue studying this set?</p>
+
+            <div className="flashcard-report-groups">
+              <FlashcardResultGroup
+                title="Known"
+                status="remembered"
+                results={rememberedResults}
+                emptyText="No cards marked as known yet."
+              />
+              <FlashcardResultGroup
+                title="Need review"
+                status="missed"
+                results={missedResults}
+                emptyText="No cards marked as need review."
+              />
+              <FlashcardResultGroup
+                title="Skipped"
+                status="skipped"
+                results={skippedResults}
+                emptyText="No skipped cards."
+              />
+            </div>
+
             <div className="flashcard-complete-actions">
               <button type="button" className="flashcards-primary-btn" onClick={restartSession}>
                 Study Again
@@ -532,6 +661,29 @@ function Flashcards() {
         </main>
       </div>
     </div>
+  );
+}
+
+function FlashcardResultGroup({ title, status, results, emptyText }) {
+  return (
+    <section className={`flashcard-report-group ${status}`}>
+      <header>
+        <span>{title}</span>
+        <strong>{results.length}</strong>
+      </header>
+      {results.length === 0 ? (
+        <p>{emptyText}</p>
+      ) : (
+        <ol>
+          {results.map(({ card, index }) => (
+            <li key={getCardResultKey(card, index)}>
+              <span>Card {index + 1}</span>
+              <strong>{card.question}</strong>
+            </li>
+          ))}
+        </ol>
+      )}
+    </section>
   );
 }
 

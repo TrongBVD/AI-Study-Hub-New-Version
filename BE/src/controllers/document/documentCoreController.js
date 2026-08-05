@@ -190,34 +190,37 @@ async function processDocumentWithAI(
       return { status: "REJECTED", reason: "Could not extract enough readable text", chunkCount: 0 };
     }
 
-    let status = overrideStatus || "APPROVED";
-    let aiRejectReason = overrideRejectReason || null;
+    const status = overrideStatus || "APPROVED";
+    const aiRejectReason = overrideRejectReason || null;
+    const chunks = splitTextIntoChunks(extractedText);
 
-      const chunks = splitTextIntoChunks(extractedText);
+    if (chunks.length === 0) {
+      await markDocumentTaggingFailed(
+        documentId,
+        new Error("No readable text chunks could be created."),
+        taggingContext,
+      );
+      await supabase
+        .from("documents")
+        .update({
+          status: "REJECTED",
+          ai_reject_reason: { reason: "No readable text chunks could be created." },
+        })
+        .eq("id", documentId);
 
-      if (chunks.length === 0) {
-        await markDocumentTaggingFailed(
-          documentId,
-          new Error("No readable text chunks could be created."),
-          taggingContext,
-        );
-        await supabase
-          .from("documents")
-          .update({
-            status: "REJECTED",
-            ai_reject_reason: { reason: "No readable text chunks could be created." },
-          })
-          .eq("id", documentId);
-
-        return { status: "REJECTED", reason: "No readable text chunks could be created.", chunkCount: 0 };
-      }
-
-      const updatePayload = {
-        status,
-        ai_reject_reason: aiRejectReason,
+      return {
+        status: "REJECTED",
+        reason: "No readable text chunks could be created.",
+        chunkCount: 0,
       };
+    }
 
-      await supabase.from("documents").update(updatePayload).eq("id", documentId);
+    const updatePayload = {
+      status,
+      ai_reject_reason: aiRejectReason,
+    };
+
+    await supabase.from("documents").update(updatePayload).eq("id", documentId);
 
     let taggingStatus = "COMPLETED";
 
@@ -564,7 +567,6 @@ exports.listMyDocuments = async (req, res) => {
     });
   }
 };
-
 exports.getMyLibraryStorageUsage = async (req, res) => {
   try {
     const userID = req.user.id;
@@ -1865,4 +1867,3 @@ exports.deleteLibrary = async (req, res) => {
     });
   }
 };
-

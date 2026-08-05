@@ -388,18 +388,34 @@ body[data-theme="white"] .notebook_workspace_container
   margin-top: 5px;
 }
 
-.doc_tags > span {
+.doc_tags > span,
+.doc_tag {
   max-width: 100%;
+  min-width: 0;
   padding: 2px 6px;
   overflow: hidden;
+  appearance: none;
   color: #bae6fd;
+  font-family: inherit;
   font-size: 9px;
   line-height: 1.35;
+  text-align: left;
   text-overflow: ellipsis;
   white-space: nowrap;
   background: rgba(14, 165, 233, 0.14);
   border: 1px solid rgba(56, 189, 248, 0.25);
   border-radius: 999px;
+}
+
+.doc_tag {
+  cursor: pointer;
+}
+
+.doc_tag.expanded {
+  overflow: visible;
+  overflow-wrap: anywhere;
+  text-overflow: clip;
+  white-space: normal;
 }
 
 .doc_tagging_failed {
@@ -2366,6 +2382,27 @@ body[data-theme="white"] .notebook_workspace_container .add_source_btn:disabled 
   box-shadow: none;
 }
 
+body[data-theme="white"] .notebook_workspace_container
+  :is(.back_to_libraries_btn, .toggle_sidebar_header_btn,
+  .collapse_sidebar_btn, .expand_sources_btn, .expand_studio_btn) {
+  background: #ffffff;
+  border: 1px solid #bae6fd;
+  color: #0284c7;
+  box-shadow: 0 4px 12px rgba(2, 132, 199, 0.08);
+}
+
+body[data-theme="white"] .notebook_workspace_container
+  :is(.back_to_libraries_btn, .toggle_sidebar_header_btn,
+  .collapse_sidebar_btn, .expand_sources_btn, .expand_studio_btn):hover,
+body[data-theme="white"] .notebook_workspace_container
+  :is(.back_to_libraries_btn, .toggle_sidebar_header_btn,
+  .collapse_sidebar_btn, .expand_sources_btn, .expand_studio_btn):focus-visible {
+  background: #eff6ff;
+  border-color: #38bdf8;
+  color: #0369a1;
+  outline: none;
+}
+
 body[data-theme="white"] .notebook_workspace_container .input_box_wrapper input {
   color: #0f172a !important;
   caret-color: #2563eb;
@@ -2493,4 +2530,71 @@ body[data-theme="white"] .notebook_workspace_container
 
 body[data-theme="white"] .notebook_workspace_container .chat_history_delete {
   background: transparent;
+}
+
+/* Give the light workspace clear visual layers without returning to a dark
+   theme: a blue-grey header, softly tinted sidebars and a calmer chat canvas. */
+body[data-theme="white"] .notebook_workspace_container {
+  background: #e9eff6;
+}
+
+body[data-theme="white"] .notebook_workspace_container .sources_panel,
+body[data-theme="white"] .notebook_workspace_container .studio_panel {
+  background: #f2f6fa;
+}
+
+body[data-theme="white"] .notebook_workspace_container
+  :is(.sources_panel .panel_content, .studio_panel_content) {
+  background: #f2f6fa;
+}
+
+body[data-theme="white"] .notebook_workspace_container .sources_panel {
+  border-right: 0;
+  box-shadow: none;
+}
+
+body[data-theme="white"] .notebook_workspace_container .studio_panel {
+  border-left: 0;
+  box-shadow: none;
+}
+
+body[data-theme="white"] .notebook_workspace_container .chat_panel.full_width {
+  background: #edf2f7;
+}
+
+body[data-theme="white"] .notebook_workspace_container
+  :is(.panel_header, .chat_header, .studio_panel_header) {
+  background-color: #e4ecf6;
+  background-image: none;
+  border-bottom: 0;
+  box-shadow: none;
+}
+
+body[data-theme="white"] .notebook_workspace_container .chat_stream {
+  background: #edf2f7;
+}
+
+body[data-theme="white"] .notebook_workspace_container .chat_input_form {
+  background: transparent;
+}
+
+/* Keep transient AI copy and generated document tags readable on light
+   surfaces. These elements otherwise retain their dark-theme text colors. */
+body[data-theme="white"] .notebook_workspace_container
+  .chat_message_row.ai.loading .message_bubble {
+  color: #0f172a;
+}
+
+body[data-theme="white"] .notebook_workspace_container
+  .chat_message_row.ai.loading .message_bubble p {
+  color: #0f172a;
+  opacity: 1;
+}
+
+body[data-theme="white"] .notebook_workspace_container
+  .doc_tags > :is(span, .doc_tag) {
+  background: #e0f2fe;
+  border-color: #7dd3fc;
+  color: #075985;
+  font-weight: 600;
 }
