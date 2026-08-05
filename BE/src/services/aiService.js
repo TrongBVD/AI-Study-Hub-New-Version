@@ -203,10 +203,10 @@ async function generateText(prompt) {
 async function createEmbedding(
   text,
   mode = "document",
-  maxRetries = DEFAULT_EMBEDDING_RETRIES,
+  maxRetries = 1,
 ) {
   const ai = await getAiClient();
-  const effectiveMaxRetries = mode === "query" ? 1 : maxRetries;
+  const effectiveMaxRetries = 1;
 
   const prefix =
     mode === "query"
@@ -670,23 +670,43 @@ MUST return strictly in the following JSON format:
 
 async function createBatchEmbeddings(chunks, mode = "document") {
   if (!Array.isArray(chunks) || chunks.length === 0) return [];
+
+  // Cap background embedding chunks to max 30 to preserve free-tier API quota for all users
+  const MAX_DOCUMENT_EMBEDDING_CHUNKS = 30;
+  const targetChunks = mode === "document" ? chunks.slice(0, MAX_DOCUMENT_EMBEDDING_CHUNKS) : chunks;
+
   const results = [];
-  for (let i = 0; i < chunks.length; i += EMBEDDING_BATCH_SIZE) {
+  let isRateLimited = false;
+
+  for (let i = 0; i < targetChunks.length; i += EMBEDDING_BATCH_SIZE) {
+    if (isRateLimited) break;
+
     if (i > 0) {
-      // Pause 2.5s between batches to strictly keep API rate under Google Gemini Free Tier 15 RPM
-      await new Promise((resolve) => setTimeout(resolve, 2500));
+      await new Promise((resolve) => setTimeout(resolve, 1500));
     }
-    const batch = chunks.slice(i, i + EMBEDDING_BATCH_SIZE);
+    const batch = targetChunks.slice(i, i + EMBEDDING_BATCH_SIZE);
     for (let j = 0; j < batch.length; j += 1) {
       if (j > 0) {
-        // Micro-pause 600ms between single requests within batch to prevent burst spikes
-        await new Promise((resolve) => setTimeout(resolve, 600));
+        await new Promise((resolve) => setTimeout(resolve, 400));
       }
       try {
         const emb = await createEmbedding(batch[j], mode);
         results.push(emb);
       } catch (err) {
-        console.warn(`[Gemini Embedding] Non-blocking warning for chunk ${i + j + 1}/${chunks.length}:`, err.message);
+        const isQuota =
+          String(err?.message || "").includes("quota") ||
+          Number(err?.status || err?.statusCode) === 429;
+        if (isQuota) {
+          console.warn(
+            `[Gemini Embedding] Quota limit reached on chunk ${i + j + 1}/${targetChunks.length}. Stopping batch gracefully to save API quota for other users.`,
+          );
+          isRateLimited = true;
+          break;
+        }
+        console.warn(
+          `[Gemini Embedding] Non-blocking warning for chunk ${i + j + 1}/${targetChunks.length}:`,
+          err.message,
+        );
         results.push(null);
       }
     }

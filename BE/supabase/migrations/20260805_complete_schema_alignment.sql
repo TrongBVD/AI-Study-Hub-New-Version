@@ -1,5 +1,5 @@
 -- Complete Schema Alignment Migration Script for Supabase Database
--- Run this script in your Supabase SQL Editor to add all missing columns, foreign keys, and indexes.
+-- Run this script in your Supabase SQL Editor to add all missing columns, foreign keys, and tables.
 
 -- 1. Ensure tagging status columns exist on 'documents' table
 ALTER TABLE public.documents
@@ -53,5 +53,52 @@ BEGIN
   END IF;
 END $$;
 
--- 5. Force PostgREST schema cache reload so backend APIs pick up new columns immediately
+-- 5. Ensure Admin Usage Monitor tables exist ('daily_quota_usage' and 'ai_usage_logs') and have all columns
+CREATE TABLE IF NOT EXISTS public.daily_quota_usage (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  usage_date DATE NOT NULL DEFAULT CURRENT_DATE,
+  bytes_uploaded BIGINT NOT NULL DEFAULT 0,
+  bytes_downloaded BIGINT NOT NULL DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  CONSTRAINT daily_quota_usage_user_date_key UNIQUE (user_id, usage_date)
+);
+
+-- Ensure bytes_uploaded and bytes_downloaded columns exist if table was created previously without them
+ALTER TABLE public.daily_quota_usage
+  ADD COLUMN IF NOT EXISTS bytes_uploaded BIGINT NOT NULL DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS bytes_downloaded BIGINT NOT NULL DEFAULT 0;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'daily_quota_usage_user_id_fkey') THEN
+    ALTER TABLE public.daily_quota_usage ADD CONSTRAINT daily_quota_usage_user_id_fkey
+      FOREIGN KEY (user_id) REFERENCES public.profiles(id) ON DELETE CASCADE;
+  END IF;
+END $$;
+
+CREATE TABLE IF NOT EXISTS public.ai_usage_logs (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  usage_date DATE NOT NULL DEFAULT CURRENT_DATE,
+  tokens_consumed INTEGER NOT NULL DEFAULT 0,
+  chat_count INTEGER NOT NULL DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  CONSTRAINT ai_usage_logs_user_date_key UNIQUE (user_id, usage_date)
+);
+
+-- Ensure tokens_consumed and chat_count columns exist if table was created previously without them
+ALTER TABLE public.ai_usage_logs
+  ADD COLUMN IF NOT EXISTS tokens_consumed INTEGER NOT NULL DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS chat_count INTEGER NOT NULL DEFAULT 0;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'ai_usage_logs_user_id_fkey') THEN
+    ALTER TABLE public.ai_usage_logs ADD CONSTRAINT ai_usage_logs_user_id_fkey
+      FOREIGN KEY (user_id) REFERENCES public.profiles(id) ON DELETE CASCADE;
+  END IF;
+END $$;
+
+-- 6. Force PostgREST schema cache reload so backend APIs pick up new tables and columns immediately
 NOTIFY pgrst, 'reload schema';

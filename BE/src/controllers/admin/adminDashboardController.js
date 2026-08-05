@@ -187,28 +187,97 @@ exports.getUsage = async (req, res) => {
     if (startDate) aiQuery = aiQuery.gte("usage_date", startDate);
     if (endDate) aiQuery = aiQuery.lte("usage_date", endDate);
 
-    const [
-      { data: quotaUsage, error: quotaError, count: quotaCount },
-      { data: aiUsage, error: aiError, count: aiCount },
-    ] = await Promise.all([quotaQuery, aiQuery]);
+    let quotaResult = await quotaQuery;
+    if (quotaResult.error) {
+      console.warn("getUsage quotaQuery warning, using basic select:", quotaResult.error.message);
+      let basicQuotaQuery = supabase
+        .from("daily_quota_usage")
+        .select("id, user_id, usage_date, bytes_uploaded, bytes_downloaded", { count: "exact" })
+        .order("usage_date", { ascending: false })
+        .range(from, to);
 
-    if (quotaError) throw quotaError;
-    if (aiError) throw aiError;
+      if (userId) basicQuotaQuery = basicQuotaQuery.eq("user_id", userId);
+      if (startDate) basicQuotaQuery = basicQuotaQuery.gte("usage_date", startDate);
+      if (endDate) basicQuotaQuery = basicQuotaQuery.lte("usage_date", endDate);
+
+      const fallbackQuota = await basicQuotaQuery;
+      if (fallbackQuota.error) {
+        console.warn("daily_quota_usage table missing or empty:", fallbackQuota.error.message);
+        quotaResult = { data: [], count: 0, error: null };
+      } else {
+        quotaResult = fallbackQuota;
+      }
+    }
+
+    let aiResult = await aiQuery;
+    if (aiResult.error) {
+      console.warn("getUsage aiQuery warning, using basic select:", aiResult.error.message);
+      let basicAiQuery = supabase
+        .from("ai_usage_logs")
+        .select("id, user_id, usage_date, tokens_consumed, chat_count", { count: "exact" })
+        .order("usage_date", { ascending: false })
+        .range(from, to);
+
+      if (userId) basicAiQuery = basicAiQuery.eq("user_id", userId);
+      if (startDate) basicAiQuery = basicAiQuery.gte("usage_date", startDate);
+      if (endDate) basicAiQuery = basicAiQuery.lte("usage_date", endDate);
+
+      const fallbackAi = await basicAiQuery;
+      if (fallbackAi.error) {
+        console.warn("ai_usage_logs table missing or empty:", fallbackAi.error.message);
+        aiResult = { data: [], count: 0, error: null };
+      } else {
+        aiResult = fallbackAi;
+      }
+    }
+
+    const quotaUsage = quotaResult.data || [];
+    const aiUsage = aiResult.data || [];
+    const quotaCount = quotaResult.count || 0;
+    const aiCount = aiResult.count || 0;
+
+    // Fetch user profiles for quota and ai usage if not populated by relationship
+    const missingUserIds = [...new Set([
+      ...quotaUsage.filter((item) => !item.user).map((item) => item.user_id),
+      ...aiUsage.filter((item) => !item.user).map((item) => item.user_id),
+    ].filter(Boolean))];
+
+    const userProfileMap = new Map();
+    if (missingUserIds.length > 0) {
+      const { data: userProfiles } = await supabase
+        .from("profiles")
+        .select("id, email, username, full_name")
+        .in("id", missingUserIds);
+
+      (userProfiles || []).forEach((profile) => {
+        userProfileMap.set(String(profile.id), profile);
+      });
+    }
+
+    const mappedQuotaUsage = quotaUsage.map((item) => ({
+      ...item,
+      user: item.user || userProfileMap.get(String(item.user_id)) || null,
+    }));
+
+    const mappedAiUsage = aiUsage.map((item) => ({
+      ...item,
+      user: item.user || userProfileMap.get(String(item.user_id)) || null,
+    }));
 
     return res.status(200).json({
       status: "success",
       data: {
-        quotaUsage: quotaUsage || [],
-        aiUsage: aiUsage || [],
+        quotaUsage: mappedQuotaUsage,
+        aiUsage: mappedAiUsage,
       },
       pagination: {
         page,
         pageSize,
-        quotaItems: quotaCount || 0,
-        aiItems: aiCount || 0,
+        quotaItems: quotaCount,
+        aiItems: aiCount,
         totalPages: Math.max(
           1,
-          Math.ceil(Math.max(quotaCount || 0, aiCount || 0) / pageSize),
+          Math.ceil(Math.max(quotaCount, aiCount) / pageSize),
         ),
       },
     });
