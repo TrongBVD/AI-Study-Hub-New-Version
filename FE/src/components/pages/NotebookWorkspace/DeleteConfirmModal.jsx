@@ -8,15 +8,25 @@ export default function DeleteConfirmModal({ isOpen, filename, onConfirm, onClos
 
   return (
     <div className="modal_overlay">
-      <div className="sleek_modal" style={{ maxWidth: "440px", padding: "24px", background: "#14171d", border: "1px solid #2a2e37", borderRadius: "16px" }}>
+      <div
+        className="sleek_modal"
+        style={{
+          maxWidth: "440px",
+          padding: "24px",
+          background: "#ffffff",
+          border: "1px solid #e2e8f0",
+          borderRadius: "16px",
+          boxShadow: "0 24px 60px rgba(15, 23, 42, 0.22)",
+        }}
+      >
         <div className="sleek_modal_header" style={{ marginBottom: "12px" }}>
           <h2 style={{ fontSize: "18px", fontWeight: "600", color: "#f87171" }}>
             Delete File
           </h2>
         </div>
         <div className="sleek_modal_body">
-          <p style={{ color: "#e2e8f0", fontSize: "14px", lineHeight: "1.6" }}>
-            Are you sure you want to delete <strong style={{ color: "#38bdf8" }}>"{filename}"</strong>? This action will permanently remove the file from your library and storage.
+          <p style={{ color: "#334155", fontSize: "14px", lineHeight: "1.6" }}>
+            Are you sure you want to delete <strong style={{ color: "#0284c7" }}>"{filename}"</strong>? This action will permanently remove the file from your library and storage.
           </p>
         </div>
         <div
@@ -29,9 +39,9 @@ export default function DeleteConfirmModal({ isOpen, filename, onConfirm, onClos
             style={{
               padding: "10px 18px",
               borderRadius: "10px",
-              border: "1px solid #334155",
-              background: "#1e2229",
-              color: "#cbd5e1",
+              border: "1px solid #cbd5e1",
+              background: "#ffffff",
+              color: "#334155",
               cursor: "pointer",
               fontSize: "14px",
               fontWeight: "500",

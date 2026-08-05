@@ -211,7 +211,9 @@ function CreateWorkSpacePage() {
             <div className="workspace_name_row">
               <div className="form_group owner_group">
                 <div className="label_row">
-                  <label>Owner *</label>
+                  <label>
+                    Owner <span className="required_star">*</span>
+                  </label>
                 </div>
 
                 <button type="button" className="owner_btn">
@@ -229,7 +231,9 @@ function CreateWorkSpacePage() {
 
               <div className="form_group workspace_name_group">
                 <div className="label_row">
-                  <label htmlFor="workspaceName">Workspace name *</label>
+                  <label htmlFor="workspaceName">
+                    Workspace name <span className="required_star">*</span>
+                  </label>
                   <span
                     className={
                       workspaceName.length >= TITLE_LIMIT

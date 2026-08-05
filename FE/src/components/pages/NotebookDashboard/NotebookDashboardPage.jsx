@@ -5,14 +5,19 @@ import {
   HiOutlineSquares2X2,
   HiOutlineListBullet,
   HiOutlineBookOpen,
+  HiOutlineFolderPlus,
   HiOutlineTrash,
   HiOutlinePencil,
   HiOutlineCircleStack,
   HiEllipsisVertical,
   HiOutlineChevronDown,
   HiOutlineUserCircle,
+  HiOutlinePlus,
+  HiOutlineSquaresPlus,
+  HiOutlineXMark,
 } from "react-icons/hi2";
 import {
+  createLibrary,
   getMyLibraries,
   getMyLibraryStorageUsage,
   deleteLibrary,
@@ -38,7 +43,9 @@ export default function NotebookDashboardPage() {
   const [viewMode, setViewMode] = useState("grid"); // 'grid' | 'list'
   const [sortBy, setSortBy] = useState("recent"); // 'recent' | 'name'
   const [isSortOpen, setIsSortOpen] = useState(false);
+  const [isCreateMenuOpen, setIsCreateMenuOpen] = useState(false);
   const sortDropdownRef = useRef(null);
+  const createDropdownRef = useRef(null);
   const activeMenuRef = useRef(null);
 
   // Data states for libraries & storage
@@ -48,6 +55,13 @@ export default function NotebookDashboardPage() {
   const [storageLimitBytes, setStorageLimitBytes] = useState(50 * 1024 * 1024);
 
   const [activeMenuId, setActiveMenuId] = useState(null);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [newLibrary, setNewLibrary] = useState({
+    name: "",
+    description: "",
+    isPublic: false,
+  });
+  const [isCreating, setIsCreating] = useState(false);
 
   // Toast Notification state
   const [toast, setToast] = useState({ message: "", title: "", type: "error" });
@@ -56,6 +70,9 @@ export default function NotebookDashboardPage() {
     const closeSortDropdown = (event) => {
       if (!sortDropdownRef.current?.contains(event.target)) {
         setIsSortOpen(false);
+      }
+      if (!createDropdownRef.current?.contains(event.target)) {
+        setIsCreateMenuOpen(false);
       }
     };
 
@@ -152,6 +169,43 @@ export default function NotebookDashboardPage() {
     }
   };
 
+  const closeCreateModal = () => {
+    if (isCreating) return;
+    setIsCreateModalOpen(false);
+    setNewLibrary({ name: "", description: "", isPublic: false });
+  };
+
+  const handleCreateLibrary = async (event) => {
+    event.preventDefault();
+    const name = newLibrary.name.trim();
+
+    if (!name) {
+      showToast("Please enter a library name.", "Name required", "error");
+      return;
+    }
+
+    setIsCreating(true);
+    try {
+      const createdLibrary = await createLibrary({
+        name,
+        description: newLibrary.description.trim(),
+        is_public: newLibrary.isPublic,
+      });
+      setLibraries((current) => [createdLibrary, ...current]);
+      setIsCreateModalOpen(false);
+      setNewLibrary({ name: "", description: "", isPublic: false });
+      navigate(`/dashboard/libraries/${createdLibrary.id}`);
+    } catch (error) {
+      showToast(
+        error.response?.data?.message || error.message || "Could not create the library.",
+        "Create library failed",
+        "error",
+      );
+    } finally {
+      setIsCreating(false);
+    }
+  };
+
   /**
    * Filtered and sorted library list computation
    */
@@ -236,7 +290,10 @@ export default function NotebookDashboardPage() {
               <button
                 type="button"
                 className={`sort_dropdown_trigger ${isSortOpen ? "open" : ""}`}
-                onClick={() => setIsSortOpen((open) => !open)}
+                onClick={() => {
+                  setIsSortOpen((open) => !open);
+                  setIsCreateMenuOpen(false);
+                }}
                 aria-label="Sort libraries"
                 aria-haspopup="listbox"
                 aria-expanded={isSortOpen}
@@ -265,6 +322,52 @@ export default function NotebookDashboardPage() {
                       {option.label}
                     </button>
                   ))}
+                </div>
+              )}
+            </div>
+
+            <div className="dashboard_create_dropdown" ref={createDropdownRef}>
+              <button
+                type="button"
+                className={`create_new_btn ${isCreateMenuOpen ? "open" : ""}`}
+                onClick={() => {
+                  setIsCreateMenuOpen((open) => !open);
+                  setIsSortOpen(false);
+                }}
+                aria-haspopup="menu"
+                aria-expanded={isCreateMenuOpen}
+              >
+                <HiOutlinePlus aria-hidden="true" />
+                <span>Create new</span>
+              </button>
+
+              {isCreateMenuOpen && (
+                <div className="dashboard_create_menu" role="menu">
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => {
+                      setIsCreateMenuOpen(false);
+                      setIsCreateModalOpen(true);
+                    }}
+                  >
+                    <HiOutlineBookOpen aria-hidden="true" />
+                    <span>
+                      <strong>New library</strong>
+                      <small>Create a personal study collection</small>
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => navigate("/dashboard/create-workspace")}
+                  >
+                    <HiOutlineSquaresPlus aria-hidden="true" />
+                    <span>
+                      <strong>New workspace</strong>
+                      <small>Create a collaborative study space</small>
+                    </span>
+                  </button>
                 </div>
               )}
             </div>
@@ -319,6 +422,19 @@ export default function NotebookDashboardPage() {
           </div>
         ) : (
           <div className={`libraries_layout ${viewMode}`}>
+            {!isGuest && (
+              <button
+                type="button"
+                className="create_library_card"
+                onClick={() => setIsCreateModalOpen(true)}
+                aria-label="Create a new library"
+              >
+                <span className="create_library_card_icon" aria-hidden="true">
+                  <HiOutlinePlus />
+                </span>
+                <span>Create new library</span>
+              </button>
+            )}
             {filteredLibraries.map((lib) => (
               <div
                 key={lib.id}
@@ -392,6 +508,107 @@ export default function NotebookDashboardPage() {
           </div>
         )}
       </section>
+
+      {isCreateModalOpen && (
+        <div
+          className="modal_overlay"
+          role="presentation"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) closeCreateModal();
+          }}
+        >
+          <div
+            className="sleek_modal create_library_modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="create-library-title"
+          >
+            <div className="modal_header">
+              <div className="modal_title_group">
+                <div className="modal_icon_badge" aria-hidden="true">
+                  <HiOutlineFolderPlus />
+                </div>
+                <div>
+                  <h3 id="create-library-title">Create New Library</h3>
+                  <p>Organize your sources and generate AI insights</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                className="close_modal_btn"
+                onClick={closeCreateModal}
+                aria-label="Close create library dialog"
+              >
+                <HiOutlineXMark />
+              </button>
+            </div>
+
+            <form className="modal_form" onSubmit={handleCreateLibrary}>
+              <div className="form_group">
+                <label htmlFor="new-library-name">
+                  Library name <span className="required_star">*</span>
+                </label>
+                <input
+                  id="new-library-name"
+                  type="text"
+                  maxLength={100}
+                  autoFocus
+                  value={newLibrary.name}
+                  onChange={(event) =>
+                    setNewLibrary((current) => ({ ...current, name: event.target.value }))
+                  }
+                  placeholder="e.g. Machine Learning & IoT Systems"
+                  disabled={isCreating}
+                />
+              </div>
+
+              <div className="form_group">
+                <label htmlFor="new-library-description">Description</label>
+                <textarea
+                  id="new-library-description"
+                  maxLength={500}
+                  value={newLibrary.description}
+                  onChange={(event) =>
+                    setNewLibrary((current) => ({ ...current, description: event.target.value }))
+                  }
+                  placeholder="Brief summary of topics or documents contained..."
+                  disabled={isCreating}
+                />
+              </div>
+
+              <div className="toggle_switch_row">
+                <div className="toggle_info">
+                  <strong>Make Library Public</strong>
+                  <span>Allow other AI Study Hub users to discover and view this library</span>
+                </div>
+                <label className="toggle_switch" aria-label="Make library public">
+                  <input
+                    type="checkbox"
+                    checked={newLibrary.isPublic}
+                    onChange={(event) =>
+                      setNewLibrary((current) => ({
+                        ...current,
+                        isPublic: event.target.checked,
+                      }))
+                    }
+                    disabled={isCreating}
+                  />
+                  <span className="toggle_slider" />
+                </label>
+              </div>
+
+              <div className="modal_actions">
+                <button type="button" className="cancel_btn" onClick={closeCreateModal} disabled={isCreating}>
+                  Cancel
+                </button>
+                <button type="submit" className="submit_btn" disabled={isCreating || !newLibrary.name.trim()}>
+                  {isCreating ? "Creating..." : "Create Library"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
     </div>
   );

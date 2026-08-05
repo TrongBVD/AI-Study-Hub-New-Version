@@ -106,6 +106,11 @@ export async function getMyLibraries() {
   return response.data.data;
 }
 
+export async function createLibrary(payload) {
+  const response = await api.post("/documents/libraries", payload);
+  return response.data.data;
+}
+
 export async function updateLibrary(libraryId, payload) {
   const response = await api.put(`/documents/libraries/${libraryId}`, payload);
   return response.data.data;

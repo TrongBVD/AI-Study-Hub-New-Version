@@ -859,7 +859,8 @@ body[data-theme] .notebook_workspace_container .workspace_context_badges {
   font-weight: 650;
 }
 
-.library_settings_form input {
+.library_settings_form input,
+.library_settings_form textarea {
   width: 100%;
   padding: 11px 13px;
   border: 1px solid #334155;
@@ -870,9 +871,23 @@ body[data-theme] .notebook_workspace_container .workspace_context_badges {
   font: inherit;
 }
 
-.library_settings_form input:focus {
+.library_settings_form textarea {
+  min-height: 96px;
+  resize: vertical;
+  line-height: 1.5;
+}
+
+.library_settings_form input:focus,
+.library_settings_form textarea:focus {
   border-color: #38bdf8;
   box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.13);
+}
+
+.library_description_count {
+  justify-self: end;
+  margin-top: -3px;
+  color: #94a3b8;
+  font-size: 11px;
 }
 
 .library_publish_setting {
@@ -1010,15 +1025,21 @@ body[data-theme="white"] .library_settings_modal_header button:hover {
   color: #0f172a;
 }
 
-body[data-theme="white"] .library_settings_form input {
+body[data-theme="white"] .library_settings_form input,
+body[data-theme="white"] .library_settings_form textarea {
   border-color: #cbd5e1;
   background: #ffffff;
   color: #0f172a;
 }
 
-body[data-theme="white"] .library_settings_form input:focus {
+body[data-theme="white"] .library_settings_form input:focus,
+body[data-theme="white"] .library_settings_form textarea:focus {
   border-color: #2563eb;
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
+body[data-theme="white"] .library_description_count {
+  color: #64748b;
 }
 
 body[data-theme="white"] .library_publish_setting {
