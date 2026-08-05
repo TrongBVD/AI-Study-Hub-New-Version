@@ -36,6 +36,7 @@ import GlobalActionPopup from "./components/common/ActionPopup/GlobalActionPopup
 // ================= ADMIN IMPORTS =================
 import AdminLayout from "./components/pages/Admin/AdminLayout/AdminLayout.jsx";
 import ReportIssuePage from "./components/pages/ReportIssuePage/ReportIssuePage.jsx";
+import ReportIssueDetailPage from "./components/pages/ReportIssueDetailPage/ReportIssueDetailPage.jsx";
 
 const DocumentViewerPage = lazy(() => import("./components/pages/DocumentViewerPage/DocumentViewerPage.jsx"));
 const WorkSpacePage = lazy(() => import("./components/pages/WorkSpacePage/WorkSpacePage.jsx"));
@@ -113,6 +114,7 @@ function App() {
             <Route path="search-user" element={<SearchUserPage />} />
             <Route path="search" element={<SearchResultPage />} />
             <Route path="report-issue" element={<ReportIssuePage />} />
+            <Route path="report-issue/:issueId" element={<ReportIssueDetailPage />} />
           </Route>
 
           {/* Admin Protected Routes */}

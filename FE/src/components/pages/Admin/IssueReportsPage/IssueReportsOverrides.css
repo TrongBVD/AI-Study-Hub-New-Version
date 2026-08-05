@@ -1,0 +1,164 @@
+.admin-issues__edit-row.admin-issues__edit-row--single {
+  grid-template-columns: 1fr;
+}
+
+.admin-issues__attachments-section {
+  margin-top: 18px;
+  padding-top: 17px;
+  border-top: 1px solid var(--border-color);
+}
+
+.admin-issues__attachments-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.admin-issues__attachments-heading p {
+  margin-top: 4px;
+  font-size: 9px;
+}
+
+.admin-issues__attachments-heading > span {
+  min-width: 25px;
+  height: 25px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent-color);
+  display: grid;
+  place-items: center;
+  font-size: 9px;
+  font-weight: 850;
+}
+
+.admin-issues__attachments-list {
+  margin-top: 11px;
+  display: grid;
+  gap: 7px;
+}
+
+.admin-issues__attachments-list a {
+  min-height: 54px;
+  padding: 8px 10px;
+  border: 1px solid var(--border-color);
+  border-radius: 9px;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr) 30px;
+  align-items: center;
+  gap: 9px;
+  text-decoration: none;
+  transition: border-color 160ms ease, background 160ms ease;
+}
+
+.admin-issues__attachments-list a:hover {
+  border-color: var(--accent-color);
+  background: var(--accent-soft);
+}
+
+.admin-issues__attachment-icon,
+.admin-issues__attachment-action {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  color: var(--accent-color);
+  font-size: 16px;
+}
+
+.admin-issues__attachment-icon { background: var(--accent-soft); }
+.admin-issues__attachment-action { color: var(--text-muted); }
+.admin-issues__attachment-copy { min-width: 0; }
+.admin-issues__attachment-copy strong,
+.admin-issues__attachment-copy small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.admin-issues__attachment-copy strong { font-size: 10px; }
+.admin-issues__attachment-copy small { margin-top: 4px; color: var(--text-muted); font-size: 9px; }
+.admin-issues__attachments-empty { margin-top: 10px !important; padding: 12px; border-radius: 9px; background: var(--bg-secondary); text-align: center; font-size: 10px !important; }
+
+.admin-issues__drawer {
+  height: min(760px, calc(100dvh - 40px));
+  max-height: calc(100dvh - 40px);
+  padding: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.admin-issues__drawer > header {
+  flex: 0 0 auto;
+  padding: 24px 24px 17px;
+  border-bottom: 1px solid var(--border-color);
+  background: var(--bg-card);
+}
+
+.admin-issues__drawer-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 0 24px 20px;
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--accent-color) 65%, transparent) transparent;
+}
+
+.admin-issues__drawer-scroll::-webkit-scrollbar { width: 8px; }
+.admin-issues__drawer-scroll::-webkit-scrollbar-track { margin: 8px 0; background: transparent; }
+.admin-issues__drawer-scroll::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent-color) 62%, transparent);
+  background-clip: padding-box;
+}
+.admin-issues__drawer-scroll::-webkit-scrollbar-thumb:hover {
+  background: var(--accent-color);
+  background-clip: padding-box;
+}
+
+.admin-issues__drawer > footer {
+  flex: 0 0 auto;
+  margin: 0;
+  padding: 15px 24px 24px;
+  border-top: 1px solid var(--border-color);
+  background: var(--bg-card);
+}
+
+body:has(.admin-issues__overlay) { overflow: hidden; }
+
+@media (max-width: 600px) {
+  .admin-issues__overlay { padding: 10px; }
+  .admin-issues__drawer { height: calc(100dvh - 20px); max-height: calc(100dvh - 20px); }
+  .admin-issues__drawer > header { padding: 18px 18px 14px; }
+  .admin-issues__drawer-scroll { padding: 0 18px 16px; }
+  .admin-issues__drawer > footer { padding: 13px 18px 18px; }
+}
+
+.admin-issues__category-filter {
+  width: 155px;
+  position: relative;
+  z-index: 30;
+}
+
+.admin-issues__category-filter .admin-issues__select-trigger {
+  height: 36px;
+  border-radius: 9px;
+  background: var(--input-bg);
+}
+
+.admin-issues__category-filter .admin-issues__select-menu {
+  min-width: 175px;
+  right: 0;
+  left: auto;
+}
+
+@media (max-width: 600px) {
+  .admin-issues__category-filter { width: 100%; }
+  .admin-issues__category-filter .admin-issues__select-menu { width: 100%; min-width: 0; }
+}

@@ -1,22 +1,27 @@
 import { useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   LuCheck,
   LuChevronDown,
   LuCircleHelp,
   LuClock3,
   LuFileText,
+  LuImage,
+  LuPaperclip,
   LuSend,
+  LuUpload,
   LuX,
 } from "react-icons/lu";
 import { getMyIssues, submitIssue } from "../../../utils/issueApi";
 import "./ReportIssuePage.css";
+import "./ReportIssueUpload.css";
 import "./ReportIssueSelect.css";
 
 const categoryLabels = {
+  LIBRARY: "Library",
   WORKSPACE: "Workspace",
-  DISCOVER: "Discover",
-  DOCUMENT: "Document / library",
-  AI: "AI features",
+  DISCOVERY: "Discovery",
+  AI_CHATBOT: "AI chatbot",
   OTHER: "Other",
 };
 
@@ -84,17 +89,39 @@ function CategorySelect({ value, onChange }) {
 }
 
 export default function ReportIssuePage() {
+  const navigate = useNavigate();
+  const fileInputRef = useRef(null);
   const [form, setForm] = useState({
     category: DEFAULT_CATEGORY,
     title: "",
     description: "",
-    stepsToReproduce: "",
     pagePath: window.location.pathname,
   });
   const [reports, setReports] = useState([]);
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [attachments, setAttachments] = useState([]);
+  const [dragging, setDragging] = useState(false);
+
+  function addFiles(fileList) {
+    const accepted = Array.from(fileList || []);
+    if (accepted.some((file) => file.size > 50 * 1024 * 1024)) {
+      setError("The total attachment size must not exceed 50 MB.");
+      return;
+    }
+    setAttachments((current) => {
+      const unique = accepted.filter((file) => !current.some((item) => item.name === file.name && item.size === file.size));
+      const candidates = [...current, ...unique].slice(0, 5);
+      const totalSize = candidates.reduce((sum, file) => sum + file.size, 0);
+      if (totalSize > 50 * 1024 * 1024) {
+        setError("The total attachment size must not exceed 50 MB.");
+        return current;
+      }
+      setError("");
+      return candidates;
+    });
+  }
 
   useEffect(() => {
     getMyIssues()
@@ -107,7 +134,7 @@ export default function ReportIssuePage() {
     try {
       setSubmitting(true);
       setError("");
-      const report = await submitIssue(form);
+      const report = await submitIssue(form, attachments);
       setReports((items) => [report, ...items]);
       setNotice(
         "Your report has been submitted. Thank you for helping us improve.",
@@ -116,9 +143,9 @@ export default function ReportIssuePage() {
         category: DEFAULT_CATEGORY,
         title: "",
         description: "",
-        stepsToReproduce: "",
         pagePath: window.location.pathname,
       });
+      setAttachments([]);
     } catch (err) {
       setError(err.response?.data?.message || "Could not submit report.");
     } finally {
@@ -177,10 +204,28 @@ export default function ReportIssuePage() {
               Describe the issue
               <textarea required minLength="20" maxLength="5000" placeholder="What happened? What did you expect to happen?" value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} />
             </label>
-            <label>
-              Steps to reproduce <small>Optional</small>
-              <textarea placeholder={"1. Open…\n2. Click…\n3. Notice…"} maxLength="3000" value={form.stepsToReproduce} onChange={(event) => setForm({ ...form, stepsToReproduce: event.target.value })} />
-            </label>
+            <div className="report-issue__field">
+              <div className="report-issue__upload-heading">
+                <span>Attachments</span>
+                <small>Optional · up to 5 files, 50 MB total</small>
+              </div>
+              <input ref={fileInputRef} className="report-issue__file-input" type="file" multiple accept="image/*,.svg,.pdf,.doc,.docx,.txt" onChange={(event) => { addFiles(event.target.files); event.target.value = ""; }} />
+              <button type="button" className={`report-issue__dropzone ${dragging ? "is-dragging" : ""}`} onClick={() => fileInputRef.current?.click()} onDragEnter={(event) => { event.preventDefault(); setDragging(true); }} onDragOver={(event) => event.preventDefault()} onDragLeave={(event) => { event.preventDefault(); setDragging(false); }} onDrop={(event) => { event.preventDefault(); setDragging(false); addFiles(event.dataTransfer.files); }}>
+                <span className="report-issue__upload-icon"><LuUpload aria-hidden="true" /></span>
+                <span className="report-issue__upload-copy">
+                  <strong>Drop your files here</strong>
+                  <small>or <b>browse from your device</b></small>
+                </span>
+                <span className="report-issue__upload-types">PNG, JPG, WEBP, SVG, PDF, DOC, DOCX or TXT</span>
+              </button>
+              {!!attachments.length && <div className="report-issue__attachment-list">
+                {attachments.map((file, index) => <div key={`${file.name}-${file.size}`}>
+                  {file.type.startsWith("image/") ? <LuImage /> : <LuPaperclip />}
+                  <span><strong>{file.name}</strong><small>{(file.size / 1024 / 1024).toFixed(2)} MB</small></span>
+                  <button type="button" aria-label={`Remove ${file.name}`} onClick={() => setAttachments((items) => items.filter((_, itemIndex) => itemIndex !== index))}><LuX /></button>
+                </div>)}
+              </div>}
+            </div>
 
             <div className="report-issue__form-footer">
               <span>Your report is visible only to you and system administrators.</span>
@@ -210,7 +255,7 @@ export default function ReportIssuePage() {
         {reports.length ? (
           <div className="report-issue__reports">
             {reports.map((report) => (
-              <article key={report.id}>
+              <article key={report.id} role="link" tabIndex="0" onClick={() => navigate(`/dashboard/report-issue/${report.id}`)} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") navigate(`/dashboard/report-issue/${report.id}`); }}>
                 <div className="report-issue__report-icon"><LuFileText /></div>
                 <div>
                   <strong>{report.title}</strong>

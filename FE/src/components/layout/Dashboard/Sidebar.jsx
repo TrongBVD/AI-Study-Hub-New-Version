@@ -146,7 +146,7 @@ function Sidebar({ isOpen, onClose }) {
         <div className="sidebar_bottom_actions">
           <button type="button" className="logout_btn" onClick={handleLogout}>
             <HiOutlineArrowRightOnRectangle aria-hidden="true" />
-            <span>Sign Out</span>
+            <span>{isGuest ? "Return to Log In" : "Sign Out"}</span>
           </button>
         </div>
       </aside>

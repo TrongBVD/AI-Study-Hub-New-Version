@@ -55,7 +55,7 @@ body {
   width: 42px;
   height: 42px;
   border-radius: 11px;
-  background: #ffffff;
+  background: #2563eb;
   border: 0;
   display: flex;
   align-items: center;
@@ -69,11 +69,11 @@ body {
   height: 36px;
   display: block;
   object-fit: contain;
-  filter: brightness(0) saturate(100%) invert(66%) sepia(70%) saturate(1624%) hue-rotate(165deg) brightness(99%) contrast(95%);
+  filter: brightness(0) invert(1);
 }
 
 .github_logo_white {
-  background: #ffffff;
+  background: #2563eb;
 }
 
 .github_logo_white img {

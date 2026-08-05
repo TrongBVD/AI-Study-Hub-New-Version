@@ -1,0 +1,115 @@
+.report-issue__upload-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.report-issue__upload-heading > span {
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.report-issue__upload-heading > small {
+  color: var(--study-theme-muted, var(--text-muted));
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.report-issue input.report-issue__file-input {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
+.report-issue button.report-issue__dropzone {
+  width: 100%;
+  min-height: 170px;
+  padding: 24px;
+  border: 1.5px dashed var(--study-theme-input-border, #cbd5e1);
+  border-radius: 14px;
+  background: linear-gradient(180deg, var(--study-theme-input, #fff), var(--study-theme-surface-strong, #f8fafc));
+  color: var(--study-theme-text, var(--text-primary));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  font: inherit;
+  text-align: center;
+  cursor: pointer;
+  box-shadow: none;
+  transition: border-color 180ms ease, background 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+}
+
+.report-issue__upload-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  background: var(--study-theme-surface-strong, #eff6ff);
+  color: var(--study-theme-accent, #2563eb);
+  display: grid;
+  place-items: center;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--study-theme-accent, #2563eb) 12%, transparent);
+}
+
+.report-issue__upload-icon svg { width: 22px; height: 22px; }
+.report-issue__upload-copy { display: grid; gap: 4px; }
+.report-issue__upload-copy strong { font-size: 13px; font-weight: 850; }
+.report-issue__upload-copy small { color: var(--study-theme-muted, var(--text-muted)); font-size: 11px; font-weight: 600; }
+.report-issue__upload-copy b { color: var(--study-theme-accent, #2563eb); font-weight: 850; }
+
+.report-issue__upload-types {
+  border-radius: 999px;
+  background: var(--study-theme-surface-strong, #f1f5f9);
+  color: var(--study-theme-muted, var(--text-muted));
+  padding: 6px 10px;
+  font-size: 9px;
+  font-weight: 750;
+  letter-spacing: .025em;
+}
+
+.report-issue button.report-issue__dropzone:hover,
+.report-issue button.report-issue__dropzone.is-dragging {
+  border-color: var(--study-theme-accent, #2563eb);
+  background: var(--study-theme-surface-strong, #eff6ff);
+  box-shadow: 0 0 0 4px var(--study-theme-focus-ring, rgba(37, 99, 235, .12));
+}
+
+.report-issue button.report-issue__dropzone.is-dragging { transform: scale(.995); }
+
+.report-issue__attachment-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.report-issue__attachment-list > div {
+  min-height: 54px;
+  padding: 8px 9px;
+  border: 1px solid var(--study-theme-border, var(--border-color));
+  border-radius: 10px;
+  background: var(--study-theme-surface-strong, var(--bg-secondary));
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr) 30px;
+  align-items: center;
+  gap: 8px;
+}
+.report-issue__attachment-list > div > svg { font-size: 18px; color: var(--study-theme-accent, var(--accent-color)); }
+.report-issue__attachment-list span strong,
+.report-issue__attachment-list span small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.report-issue__attachment-list span strong { font-size: 10px; }
+.report-issue__attachment-list span small { margin-top: 3px; color: var(--study-theme-muted, var(--text-muted)); font-size: 9px; }
+.report-issue__attachment-list button { width: 28px; height: 28px; border: 0; border-radius: 7px; background: transparent; color: var(--study-theme-muted, var(--text-muted)); display: grid; place-items: center; cursor: pointer; }
+.report-issue__attachment-list button:hover { background: var(--study-theme-surface, var(--bg-card)); color: #dc2626; }
+
+@media (max-width: 600px) {
+  .report-issue__upload-heading { align-items: flex-start; flex-direction: column; gap: 3px; }
+  .report-issue button.report-issue__dropzone { min-height: 155px; padding: 20px 14px; }
+  .report-issue__attachment-list { grid-template-columns: 1fr; }
+}
+
+.report-issue__reports article[role="link"] { cursor: pointer; border-radius: 9px; }
+.report-issue__reports article[role="link"]:hover { background: var(--study-theme-surface-strong, var(--bg-secondary)); }
+.report-issue__reports article[role="link"]:focus-visible { outline: 2px solid var(--study-theme-accent, var(--accent-color)); outline-offset: 3px; }
