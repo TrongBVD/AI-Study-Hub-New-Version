@@ -220,10 +220,10 @@ export default function NotebookWorkspacePage() {
           setDocuments(docs);
           setAccessMode(resolvedAccessMode);
 
-          // Select all files by default for AI context
-          const allIds = new Set(docs.map((d) => d.id));
+          // Guests can inspect public files, but they never enter AI source state.
+          const allIds = isGuest ? new Set() : new Set(docs.map((d) => d.id));
           setSelectedDocIds(allIds);
-          setSelectAll(docs.length > 0);
+          setSelectAll(!isGuest && docs.length > 0);
         }
 
         // Fetch DB chat history (no localStorage)
@@ -321,6 +321,7 @@ export default function NotebookWorkspacePage() {
    * Toggle individual document selection for AI context
    */
   const handleToggleDocSelect = (docId) => {
+    if (isGuest) return;
     const next = new Set(selectedDocIds);
     if (next.has(docId)) {
       next.delete(docId);
@@ -335,6 +336,7 @@ export default function NotebookWorkspacePage() {
    * Toggle Select All documents
    */
   const handleToggleSelectAll = () => {
+    if (isGuest) return;
     if (selectAll) {
       setSelectedDocIds(new Set());
       setSelectAll(false);
@@ -600,6 +602,7 @@ export default function NotebookWorkspacePage() {
    * Send question to AI
    */
   const handleSendMessage = async (queryText = null, documentIdsOverride = null) => {
+    if (isGuest) return;
     const query = (queryText || inputQuery).trim();
     if (!query || isAsking) return;
 
@@ -738,6 +741,7 @@ export default function NotebookWorkspacePage() {
     const pendingQuestion = String(location.state?.chatQuestion || "").trim();
     if (
       pendingChatHandledRef.current ||
+      isGuest ||
       !pendingDocumentId ||
       !pendingQuestion ||
       !documents.some((document) => String(document.id) === String(pendingDocumentId))
@@ -753,7 +757,7 @@ export default function NotebookWorkspacePage() {
     handleSendMessage(pendingQuestion, [selectedId]);
     // The route state is consumed once after this library's documents load.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [documents, location.pathname, location.state, navigate]);
+  }, [documents, isGuest, location.pathname, location.state, navigate]);
 
   const mapHistoryMessages = (conversations) =>
     [...conversations]
@@ -854,6 +858,7 @@ export default function NotebookWorkspacePage() {
   };
 
   const handleOpenFlashcards = () => {
+    if (isGuest) return;
     if (selectedDocIds.size === 0 || selectedDocIds.size > 5) {
       showToast(
         "Select between one and five source documents before generating flashcards.",
@@ -953,6 +958,7 @@ export default function NotebookWorkspacePage() {
         onDeleteHistoryConversation={handleDeleteHistoryConversation}
         onClearHistory={handleClearLibraryHistory}
         historyActionBusy={historyActionBusy}
+        sourceSelectionEnabled={!isGuest}
       />
 
       {/* 2. MAIN PANEL: CHAT STREAM & WORKSPACE */}
@@ -1046,13 +1052,15 @@ export default function NotebookWorkspacePage() {
               <div className="sparkle_badge_hero">
                 <HiOutlineSparkles />
               </div>
-              <h1>What do you want to explore today?</h1>
+              <h1>{isGuest ? "Explore this public library" : "What do you want to explore today?"}</h1>
               <p>
-                Select your source documents on the left panel and click a prompt below or type your question.
+                {isGuest
+                  ? "Browse the public source documents on the left. Log in to use AI learning features."
+                  : "Select your source documents on the left panel and click a prompt below or type your question."}
               </p>
 
               {/* Starter Action Cards Grid */}
-              <div className="starter_cards_grid">
+              {!isGuest && <div className="starter_cards_grid">
                 {starterPrompts.map((item, idx) => {
                   const Icon = item.icon;
                   return (
@@ -1074,7 +1082,7 @@ export default function NotebookWorkspacePage() {
                     </div>
                   );
                 })}
-              </div>
+              </div>}
             </div>
           ) : (
             messages.map((msg, index) => (
@@ -1194,23 +1202,24 @@ export default function NotebookWorkspacePage() {
           className="chat_input_form"
           onSubmit={(e) => {
             e.preventDefault();
+            if (isGuest) return;
             handleSendMessage();
           }}
         >
           <div className="input_box_wrapper">
             <input
               type="text"
-              placeholder="You can also ask general-knowledge questions directly in the chat."
+              placeholder={isGuest ? "Log in to chat with AI." : "You can also ask general-knowledge questions directly in the chat."}
               value={inputQuery}
               onChange={(e) => setInputQuery(e.target.value)}
-              disabled={isAsking}
+              disabled={isGuest || isAsking}
             />
             <div className="input_actions_right">
               <button
                 type="button"
                 className="reset_chat_btn"
                 onClick={handleResetChat}
-                disabled={isAsking || (messages.length === 0 && !activeConversationId)}
+                disabled={isGuest || isAsking || (messages.length === 0 && !activeConversationId)}
                 title="Start a new chat without deleting history"
               >
                 <HiOutlineArrowPath aria-hidden="true" />
@@ -1220,7 +1229,7 @@ export default function NotebookWorkspacePage() {
                 type={isAsking ? "button" : "submit"}
                 className={`send_btn ${isAsking ? "stop_btn" : ""}`}
                 onClick={isAsking ? handleStopResponse : undefined}
-                disabled={!isAsking && !inputQuery.trim()}
+                disabled={isGuest || (!isAsking && !inputQuery.trim())}
                 aria-label={isAsking ? "Stop AI response" : "Send message"}
                 title={isAsking ? "Stop response" : "Send message"}
               >
@@ -1247,7 +1256,14 @@ export default function NotebookWorkspacePage() {
         </div>
 
         <div className="studio_panel_content">
-          <div className="studio_tool_list">
+          {isGuest && (
+            <div className="guest_feature_notice" role="status">
+              <HiOutlineSparkles aria-hidden="true" />
+              <strong>Log in to use our app features.</strong>
+              <span>Study Tools are available to signed-in learners.</span>
+            </div>
+          )}
+          <div className={`studio_tool_list ${isGuest ? "guest_tools_disabled" : ""}`} aria-disabled={isGuest}>
             {starterPrompts.map((tool) => {
               const Icon = tool.icon;
               return (
@@ -1256,7 +1272,7 @@ export default function NotebookWorkspacePage() {
                   className="studio_tool_button"
                   key={tool.title}
                   onClick={() => handleSendMessage(tool.prompt)}
-                  disabled={selectedDocIds.size === 0 || isAsking}
+                  disabled={isGuest || selectedDocIds.size === 0 || isAsking}
                 >
                   <span className="studio_tool_icon">
                     <Icon />

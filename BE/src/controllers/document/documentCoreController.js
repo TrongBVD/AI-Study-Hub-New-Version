@@ -1,7 +1,6 @@
 const crypto = require("crypto");
 const path = require("path");
 const supabase = require("../../config/supabase");
-const MAX_LIBRARIES_PER_USER = 5;
 
 const {
   extractTextFromFile,
@@ -1492,84 +1491,6 @@ exports.deleteDocument = async (req, res) => {
       message: "Không thể xóa tài liệu.",
       error: error.message,
     });
-  }
-};
-
-// Hàm API tạo thư viện mới vào Supabase
-exports.createLibrary = async (req, res) => {
-  try {
-    const { name, description, is_public, share_on_profile } = req.body;
-    const userID = req.user.id;
-
-    if (!userID) {
-      return res.status(401).json({
-        status: "error",
-        message: "Authenticated user id is missing.",
-      });
-    }
-
-    if (userID === "guest" || userID === "00000000-0000-0000-0000-000000000000" || req.user?.role === "GUEST") {
-      return res.status(403).json({
-        status: "error",
-        message: "Guest users cannot create libraries.",
-      });
-    }
-
-    if (!name || name.trim() === "") {
-      return res.status(400).json({
-        status: "error",
-        message: "Library name is required.",
-      });
-    }
-
-    const { count: libraryCount, error: countError } = await supabase
-      .from("libraries")
-      .select("*", { count: "exact", head: true })
-      .eq("user_id", userID);
-
-    if (countError) throw countError;
-
-    if ((libraryCount || 0) >= MAX_LIBRARIES_PER_USER) {
-      return res.status(409).json({
-        status: "error",
-        code: "LIBRARY_LIMIT_REACHED",
-        message: `You can create up to ${MAX_LIBRARIES_PER_USER} libraries. Delete an existing library before creating another one.`,
-      });
-    }
-
-    // Kiểm tra xem người dùng đã có thư viện nào trùng tên chưa (không phân biệt hoa thường)
-    const { data: existingLib, error: searchError } = await supabase
-      .from("libraries")
-      .select("id")
-      .eq("user_id", userID)
-      .ilike("name", name.trim())
-      .maybeSingle();
-
-    if (searchError) throw searchError;
-
-    if (existingLib) {
-      return res.status(400).json({
-        status: "error",
-        message: "Bạn đã có một thư viện khác tên là \"" + name.trim() + "\". Vui lòng chọn tên khác!",
-      });
-    }
-
-    const { data, error } = await supabase
-      .from("libraries")
-      .insert({
-        user_id: userID,
-        name: name.trim(),
-        description,
-        is_public,
-        share_on_profile
-      })
-      .select().single();
-
-    if (error) throw error;
-    return res.status(201).json({ status: "success", data });
-  } catch (error) {
-    console.error("Create library error:", error);
-    return res.status(500).json({ status: "error", message: error.message });
   }
 };
 

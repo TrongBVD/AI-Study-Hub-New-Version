@@ -76,7 +76,7 @@ function Sidebar({ isOpen, onClose }) {
 
   // Filter visible items for guest users
   const visibleMenuItems = isGuest
-    ? menuItems.filter((item) => ["Discover", "Settings"].includes(item.label))
+    ? menuItems.filter((item) => item.label === "Discover")
     : menuItems;
 
   /**

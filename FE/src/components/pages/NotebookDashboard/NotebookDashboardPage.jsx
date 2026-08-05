@@ -1,7 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  HiOutlinePlus,
   HiOutlineMagnifyingGlass,
   HiOutlineSquares2X2,
   HiOutlineListBullet,
@@ -10,15 +9,12 @@ import {
   HiOutlinePencil,
   HiOutlineCircleStack,
   HiEllipsisVertical,
-  HiOutlineFolderPlus,
-  HiOutlineXMark,
   HiOutlineChevronDown,
   HiOutlineUserCircle,
 } from "react-icons/hi2";
 import {
   getMyLibraries,
   getMyLibraryStorageUsage,
-  createLibrary,
   deleteLibrary,
 } from "../../../utils/documentApi.js";
 import { getStoredUser } from "../../../utils/authToken.js";
@@ -30,7 +26,7 @@ import "./NotebookDashboardPage.css";
  * NotebookDashboardPage Component
  * Provides a Google NotebookLM-style dashboard for managing AI Study Hub libraries.
  * Features 100% English UI, dark-mode aesthetics, custom English Toast popups,
- * sleek library creation modal, 50MB storage limit indicator, and grid/list view toggles.
+ * a 50MB storage limit indicator and grid/list view toggles.
  */
 export default function NotebookDashboardPage() {
   const navigate = useNavigate();
@@ -51,12 +47,6 @@ export default function NotebookDashboardPage() {
   const [totalStorageBytes, setTotalStorageBytes] = useState(0);
   const [storageLimitBytes, setStorageLimitBytes] = useState(50 * 1024 * 1024);
 
-  // Modal state for creating a new library
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [newLibName, setNewLibName] = useState("");
-  const [newLibDesc, setNewLibDesc] = useState("");
-  const [isPublic, setIsPublic] = useState(false);
-  const [creating, setCreating] = useState(false);
   const [activeMenuId, setActiveMenuId] = useState(null);
 
   // Toast Notification state
@@ -132,41 +122,6 @@ export default function NotebookDashboardPage() {
       isMounted = false;
     };
   }, [isGuest]);
-
-  /**
-   * Creates a new library with 50MB quota check & custom English Toast alert
-   */
-  const handleCreateLibrary = async (e) => {
-    e.preventDefault();
-    if (!newLibName.trim()) {
-      showToast("Please enter a library name.", "Validation Error", "error");
-      return;
-    }
-
-    setCreating(true);
-    try {
-      const created = await createLibrary({
-        name: newLibName.trim(),
-        description: newLibDesc.trim(),
-        is_public: isPublic,
-      });
-
-      if (created) {
-        setLibraries((prev) => [created, ...prev]);
-        setIsCreateModalOpen(false);
-        setNewLibName("");
-        setNewLibDesc("");
-        setIsPublic(false);
-        navigate(`/dashboard/libraries/${created.id}`);
-      }
-    } catch (err) {
-      const errorMsg =
-        err?.response?.data?.message || err?.message || "Failed to create library. Please try again.";
-      showToast(errorMsg, "Cannot Create Library", "error");
-    } finally {
-      setCreating(false);
-    }
-  };
 
   /**
    * Deletes a library
@@ -314,15 +269,6 @@ export default function NotebookDashboardPage() {
               )}
             </div>
 
-            {/* Create New Library Button */}
-            <button
-              type="button"
-              className="create_new_btn"
-              onClick={() => setIsCreateModalOpen(true)}
-            >
-              <HiOutlinePlus />
-              <span>Create new</span>
-            </button>
           </div>
         </header>
       )}
@@ -373,19 +319,6 @@ export default function NotebookDashboardPage() {
           </div>
         ) : (
           <div className={`libraries_layout ${viewMode}`}>
-            {!isGuest && (
-              <button
-                type="button"
-                className="create_library_tile"
-                onClick={() => setIsCreateModalOpen(true)}
-              >
-                <span className="create_library_tile_icon" aria-hidden="true">
-                  <HiOutlinePlus />
-                </span>
-                <span>Create new library</span>
-              </button>
-            )}
-
             {filteredLibraries.map((lib) => (
               <div
                 key={lib.id}
@@ -460,83 +393,6 @@ export default function NotebookDashboardPage() {
         )}
       </section>
 
-      {/* Modern Sleek NotebookLM Modal for Creating New Library */}
-      {isCreateModalOpen && (
-        <div className="modal_overlay" onClick={() => setIsCreateModalOpen(false)}>
-          <div className="modal_card sleek_modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal_header">
-              <div className="modal_title_group">
-                <div className="modal_icon_badge">
-                  <HiOutlineFolderPlus />
-                </div>
-                <div>
-                  <h3>Create New Library</h3>
-                  <p>Organize your sources and generate AI insights</p>
-                </div>
-              </div>
-              <button
-                type="button"
-                className="close_modal_btn"
-                onClick={() => setIsCreateModalOpen(false)}
-              >
-                <HiOutlineXMark />
-              </button>
-            </div>
-
-            <form onSubmit={handleCreateLibrary} className="modal_form">
-              <div className="form_group">
-                <label>Library Name <span className="required_star">*</span></label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. Machine Learning & IoT Systems"
-                  value={newLibName}
-                  onChange={(e) => setNewLibName(e.target.value)}
-                  autoFocus
-                />
-              </div>
-
-              <div className="form_group">
-                <label>Description</label>
-                <textarea
-                  rows={3}
-                  placeholder="Brief summary of topics or documents contained..."
-                  value={newLibDesc}
-                  onChange={(e) => setNewLibDesc(e.target.value)}
-                />
-              </div>
-
-              <div className="toggle_switch_row">
-                <div className="toggle_info">
-                  <strong>Make Library Public</strong>
-                  <span>Allow other AI Study Hub users to discover and view this library</span>
-                </div>
-                <label className="toggle_switch">
-                  <input
-                    type="checkbox"
-                    checked={isPublic}
-                    onChange={(e) => setIsPublic(e.target.checked)}
-                  />
-                  <span className="toggle_slider" />
-                </label>
-              </div>
-
-              <div className="modal_actions">
-                <button
-                  type="button"
-                  className="cancel_btn"
-                  onClick={() => setIsCreateModalOpen(false)}
-                >
-                  Cancel
-                </button>
-                <button type="submit" className="submit_btn" disabled={creating}>
-                  {creating ? "Creating Library..." : "Create Library"}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

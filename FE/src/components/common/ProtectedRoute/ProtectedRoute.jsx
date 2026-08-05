@@ -16,7 +16,6 @@ const GUEST_ALLOWED_PATHS = [
   "/dashboard/discover",
   "/dashboard/libraries",
   "/dashboard/search",
-  "/dashboard/settings",
 ];
 
 function isGuestAllowedPath(pathname) {
@@ -92,7 +91,7 @@ function ProtectedRoute({ children, allowedRoles }) {
       .then((profile) => {
         if (!isMounted) return;
 
-        let currentUser = {};
+        let currentUser;
         try {
           currentUser = JSON.parse(getAuthStorage().getItem("user") || "{}");
         } catch {

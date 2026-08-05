@@ -1,5 +1,6 @@
 const express = require("express");
 const authMiddleware = require("../middleware/authMiddleware");
+const requireAuthenticatedUser = require("../middleware/requireAuthenticatedUser");
 
 const {
   chatWithDocument,
@@ -18,16 +19,18 @@ const {
 
 const router = express.Router();
 
-router.post("/chat", authMiddleware, chatWithDocument);
-router.get("/chat-history", authMiddleware, getChatHistory);
-router.delete("/chat-history", authMiddleware, clearChatHistory);
-router.delete("/chat-history/:conversationId", authMiddleware, deleteChatHistoryItem);
-router.get("/summary", authMiddleware, getAiSummary);
-router.get("/flashcard-sets", authMiddleware, listFlashcardSets);
-router.get("/flashcard-sets/:setId", authMiddleware, getFlashcardSet);
-router.delete("/flashcard-sets/:setId", authMiddleware, deleteFlashcardSet);
-router.post("/flashcards", authMiddleware, generateFlashcards);
-router.get("/documents/:documentId/flashcards", authMiddleware, getDocumentFlashcards);
-router.post("/documents/:documentId/flashcards", authMiddleware, generateFlashcards);
+router.use(authMiddleware, requireAuthenticatedUser);
+
+router.post("/chat", chatWithDocument);
+router.get("/chat-history", getChatHistory);
+router.delete("/chat-history", clearChatHistory);
+router.delete("/chat-history/:conversationId", deleteChatHistoryItem);
+router.get("/summary", getAiSummary);
+router.get("/flashcard-sets", listFlashcardSets);
+router.get("/flashcard-sets/:setId", getFlashcardSet);
+router.delete("/flashcard-sets/:setId", deleteFlashcardSet);
+router.post("/flashcards", generateFlashcards);
+router.get("/documents/:documentId/flashcards", getDocumentFlashcards);
+router.post("/documents/:documentId/flashcards", generateFlashcards);
 
 module.exports = router;
