@@ -30,8 +30,8 @@ jest.mock("../../src/config/supabase", () => {
 });
 
 jest.mock("../../src/services/textExtractService", () => ({
-  extractTextFromFile: jest.fn(),
-  splitTextIntoChunks: jest.fn(),
+  extractTextFromFile: jest.fn().mockResolvedValue("Readable algebra study content."),
+  splitTextIntoChunks: jest.fn().mockReturnValue(["Readable algebra study content."]),
 }));
 
 jest.mock("../../src/services/aiService", () => ({
@@ -40,6 +40,20 @@ jest.mock("../../src/services/aiService", () => ({
   toVectorLiteral: jest.fn(),
   checkSensitiveContent: jest.fn(),
   validateTagsAndContent: jest.fn(),
+  classifyDocumentHierarchicalTags: jest.fn().mockResolvedValue({
+    level1: "Mathematics",
+    level2: "Algebra",
+    level3: null,
+  }),
+  createBatchEmbeddings: jest.fn().mockResolvedValue([[0.1, 0.2, 0.3]]),
+}));
+
+jest.mock("../../src/services/tagService", () => ({
+  ensureAndLinkDocumentTags: jest.fn().mockResolvedValue({
+    level1: "Mathematics",
+    level2: "Algebra",
+    level3: null,
+  }),
 }));
 
 jest.mock("../../src/services/activityLogService", () => ({
@@ -136,7 +150,7 @@ describe("Document & Library Main Flow Tests", () => {
       );
     });
 
-    test("starts an unlimited background tag retry for the uploader", async () => {
+    test("waits for a library tag retry to complete", async () => {
       const mockChain = supabase.from();
       mockChain.maybeSingle.mockResolvedValueOnce({
         data: {
@@ -152,22 +166,27 @@ describe("Document & Library Main Flow Tests", () => {
         error: null,
       });
       supabase.storage.from.mockReturnValueOnce({
-        download: jest.fn(() => new Promise(() => {})),
+        download: jest.fn().mockResolvedValue({
+          data: {
+            arrayBuffer: jest
+              .fn()
+              .mockResolvedValue(Buffer.from("Readable algebra study content.")),
+          },
+          error: null,
+        }),
       });
       req.params = { documentId: "doc-1" };
 
       await documentController.retryDocumentTags(req, res);
 
-      expect(mockChain.update).toHaveBeenCalledWith(
-        expect.objectContaining({
-          tagging_status: "PENDING",
-          tagging_error: null,
-        }),
-      );
-      expect(res.status).toHaveBeenCalledWith(202);
+      expect(res.status).toHaveBeenCalledWith(200);
       expect(res.json).toHaveBeenCalledWith(
         expect.objectContaining({
-          data: expect.objectContaining({ tagging_status: "PENDING" }),
+          status: "success",
+          data: expect.objectContaining({
+            tagging_status: "COMPLETED",
+            ai_ready: true,
+          }),
         }),
       );
     });

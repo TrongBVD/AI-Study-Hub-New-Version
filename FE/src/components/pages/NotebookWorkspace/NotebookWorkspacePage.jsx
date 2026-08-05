@@ -83,6 +83,13 @@ function formatLibraryDate(value) {
       });
 }
 
+function isDocumentAiReady(document) {
+  return (
+    String(document?.status || "").toUpperCase() === "APPROVED" &&
+    document?.ai_ready === true
+  );
+}
+
 /**
  * NotebookWorkspacePage Component
  * 2-Panel Google NotebookLM Style Workspace Interface:
@@ -222,9 +229,12 @@ export default function NotebookWorkspacePage() {
           setAccessMode(resolvedAccessMode);
 
           // Guests can inspect public files, but they never enter AI source state.
-          const allIds = isGuest ? new Set() : new Set(docs.map((d) => d.id));
+          const readyDocuments = docs.filter(isDocumentAiReady);
+          const allIds = isGuest
+            ? new Set()
+            : new Set(readyDocuments.map((document) => document.id));
           setSelectedDocIds(allIds);
-          setSelectAll(!isGuest && docs.length > 0);
+          setSelectAll(!isGuest && readyDocuments.length > 0);
         }
 
         // Fetch DB chat history (no localStorage)
@@ -309,6 +319,30 @@ export default function NotebookWorkspacePage() {
     };
   }, [accessMode, documents, isGuest, libraryId]);
 
+  useEffect(() => {
+    if (isGuest) return;
+
+    const readyDocumentIds = new Set(
+      documents
+        .filter(isDocumentAiReady)
+        .map((document) => String(document.id)),
+    );
+    setSelectedDocIds((current) => {
+      const next = new Set(
+        [...current].filter((documentId) =>
+          readyDocumentIds.has(String(documentId)),
+        ),
+      );
+      return next.size === current.size ? current : next;
+    });
+    setSelectAll(
+      readyDocumentIds.size > 0 &&
+        [...selectedDocIds].filter((documentId) =>
+          readyDocumentIds.has(String(documentId)),
+        ).length === readyDocumentIds.size,
+    );
+  }, [documents, isGuest, selectedDocIds]);
+
   /**
    * Scroll chat to bottom when messages update
    */
@@ -323,6 +357,11 @@ export default function NotebookWorkspacePage() {
    */
   const handleToggleDocSelect = (docId) => {
     if (isGuest) return;
+    const document = documents.find(
+      (candidate) => String(candidate.id) === String(docId),
+    );
+    if (!isDocumentAiReady(document)) return;
+
     const next = new Set(selectedDocIds);
     if (next.has(docId)) {
       next.delete(docId);
@@ -330,7 +369,8 @@ export default function NotebookWorkspacePage() {
       next.add(docId);
     }
     setSelectedDocIds(next);
-    setSelectAll(next.size === documents.length);
+    const readyDocumentCount = documents.filter(isDocumentAiReady).length;
+    setSelectAll(readyDocumentCount > 0 && next.size === readyDocumentCount);
   };
 
   /**
@@ -342,8 +382,11 @@ export default function NotebookWorkspacePage() {
       setSelectedDocIds(new Set());
       setSelectAll(false);
     } else {
-      setSelectedDocIds(new Set(documents.map((d) => d.id)));
-      setSelectAll(true);
+      const readyDocumentIds = documents
+        .filter(isDocumentAiReady)
+        .map((document) => document.id);
+      setSelectedDocIds(new Set(readyDocumentIds));
+      setSelectAll(readyDocumentIds.length > 0);
     }
   };
 
@@ -363,7 +406,11 @@ export default function NotebookWorkspacePage() {
         const updatedDocs = await getMyDocuments(libraryId);
         const docs = Array.isArray(updatedDocs) ? updatedDocs : (updatedDocs?.data || []);
         setDocuments(docs);
-        setSelectedDocIds(new Set(docs.map((d) => d.id)));
+        const readyDocumentIds = docs
+          .filter(isDocumentAiReady)
+          .map((document) => document.id);
+        setSelectedDocIds(new Set(readyDocumentIds));
+        setSelectAll(readyDocumentIds.length > 0);
         showToast("File uploaded successfully.", "Upload Complete", "success");
 
         // Trigger immediate in-app notification update on Bell icon
@@ -426,10 +473,15 @@ export default function NotebookWorkspacePage() {
 
     try {
       await retryDocumentTags(documentId);
+      const updatedDocuments = await getMyDocuments(libraryId);
+      const nextDocuments = Array.isArray(updatedDocuments)
+        ? updatedDocuments
+        : updatedDocuments?.data || [];
+      setDocuments(nextDocuments);
       showToast(
-        "AI tag generation has restarted.",
-        "Generating Tags",
-        "info",
+        "AI tags and document content were regenerated successfully.",
+        "Document Ready",
+        "success",
       );
     } catch (error) {
       const message =
@@ -748,7 +800,11 @@ export default function NotebookWorkspacePage() {
       isGuest ||
       !pendingDocumentId ||
       !pendingQuestion ||
-      !documents.some((document) => String(document.id) === String(pendingDocumentId))
+      !documents.some(
+        (document) =>
+          String(document.id) === String(pendingDocumentId) &&
+          isDocumentAiReady(document),
+      )
     ) {
       return;
     }
@@ -756,7 +812,7 @@ export default function NotebookWorkspacePage() {
     pendingChatHandledRef.current = true;
     const selectedId = String(pendingDocumentId);
     setSelectedDocIds(new Set([selectedId]));
-    setSelectAll(documents.length === 1);
+    setSelectAll(documents.filter(isDocumentAiReady).length === 1);
     navigate(location.pathname, { replace: true, state: null });
     handleSendMessage(pendingQuestion, [selectedId]);
     // The route state is consumed once after this library's documents load.

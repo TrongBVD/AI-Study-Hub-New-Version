@@ -89,11 +89,6 @@ async function run() {
       await updateTaggingState(document.id, "COMPLETED");
       completed += 1;
     } catch (error) {
-      await ensureAndLinkDocumentTags(document.id, {
-        level1: "Other",
-        level2: null,
-        level3: null,
-      });
       await updateTaggingState(document.id, "FAILED", error.message);
       failed += 1;
       console.error(`Failed ${document.id}: ${error.message}`);
