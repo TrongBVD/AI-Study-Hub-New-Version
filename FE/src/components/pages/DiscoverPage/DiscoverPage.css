@@ -105,7 +105,8 @@
   font-size: 1.05rem;
 }
 
-.discover_tag_search_box input {
+.discover_tag_search_box input,
+.discover_tag_search_box input[type="text"] {
   min-width: 0;
   flex: 1;
   border: 0 !important;
@@ -113,20 +114,24 @@
   background: transparent !important;
   box-shadow: none !important;
   appearance: none;
-  color: #0f172a;
+  color: #000000 !important;
   font: inherit;
 }
 
 .discover_tag_search_box input:focus,
-.discover_tag_search_box input:focus-visible {
+.discover_tag_search_box input:focus-visible,
+.discover_tag_search_box input[type="text"]:focus,
+.discover_tag_search_box input[type="text"]:focus-visible {
   border: 0 !important;
   outline: 0 !important;
   background: transparent !important;
   box-shadow: none !important;
+  color: #000000 !important;
 }
 
-.discover_tag_search_box input::placeholder {
-  color: #94a3b8;
+.discover_tag_search_box input::placeholder,
+.discover_tag_search_box input[type="text"]::placeholder {
+  color: #64748b !important;
 }
 
 .discover_tag_clear {

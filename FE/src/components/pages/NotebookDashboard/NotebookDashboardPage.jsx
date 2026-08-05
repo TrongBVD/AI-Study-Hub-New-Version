@@ -13,6 +13,7 @@ import {
   HiOutlineFolderPlus,
   HiOutlineXMark,
   HiOutlineChevronDown,
+  HiOutlineUserCircle,
 } from "react-icons/hi2";
 import {
   getMyLibraries,
@@ -240,80 +241,80 @@ export default function NotebookDashboardPage() {
         onClose={() => setToast({ message: "", title: "", type: "error" })}
       />
 
-      {/* Top Action Bar */}
-      <header className="notebook_dashboard_header">
-        <div className="dashboard_controls">
-          {/* Search Box */}
-          <div className="search_input_wrapper">
-            <HiOutlineMagnifyingGlass className="search_icon" />
-            <input
-              type="text"
-              placeholder="Search libraries..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </div>
+      {/* Top Action Bar (For logged-in users only) */}
+      {!isGuest && (
+        <header className="notebook_dashboard_header">
+          <div className="dashboard_controls">
+            {/* Search Box */}
+            <div className="search_input_wrapper">
+              <HiOutlineMagnifyingGlass className="search_icon" />
+              <input
+                type="text"
+                placeholder="Search libraries..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
 
-          {/* View Mode Toggle Button */}
-          <div className="view_mode_toggle">
-            <button
-              type="button"
-              className={`toggle_btn ${viewMode === "grid" ? "active" : ""}`}
-              onClick={() => setViewMode("grid")}
-              title="Grid View"
-            >
-              <HiOutlineSquares2X2 />
-            </button>
-            <button
-              type="button"
-              className={`toggle_btn ${viewMode === "list" ? "active" : ""}`}
-              onClick={() => setViewMode("list")}
-              title="List View"
-            >
-              <HiOutlineListBullet />
-            </button>
-          </div>
+            {/* View Mode Toggle Button */}
+            <div className="view_mode_toggle">
+              <button
+                type="button"
+                className={`toggle_btn ${viewMode === "grid" ? "active" : ""}`}
+                onClick={() => setViewMode("grid")}
+                title="Grid View"
+              >
+                <HiOutlineSquares2X2 />
+              </button>
+              <button
+                type="button"
+                className={`toggle_btn ${viewMode === "list" ? "active" : ""}`}
+                onClick={() => setViewMode("list")}
+                title="List View"
+              >
+                <HiOutlineListBullet />
+              </button>
+            </div>
 
-          {/* Sort Dropdown */}
-          <div className="sort_dropdown_wrapper" ref={sortDropdownRef}>
-            <button
-              type="button"
-              className={`sort_dropdown_trigger ${isSortOpen ? "open" : ""}`}
-              onClick={() => setIsSortOpen((open) => !open)}
-              aria-label="Sort libraries"
-              aria-haspopup="listbox"
-              aria-expanded={isSortOpen}
-            >
-              <span>{sortBy === "recent" ? "Most recent" : "Name (A-Z)"}</span>
-              <HiOutlineChevronDown aria-hidden="true" />
-            </button>
+            {/* Sort Dropdown */}
+            <div className="sort_dropdown_wrapper" ref={sortDropdownRef}>
+              <button
+                type="button"
+                className={`sort_dropdown_trigger ${isSortOpen ? "open" : ""}`}
+                onClick={() => setIsSortOpen((open) => !open)}
+                aria-label="Sort libraries"
+                aria-haspopup="listbox"
+                aria-expanded={isSortOpen}
+              >
+                <span>{sortBy === "recent" ? "Most recent" : "Name (A-Z)"}</span>
+                <HiOutlineChevronDown aria-hidden="true" />
+              </button>
 
-            {isSortOpen && (
-              <div className="sort_dropdown_menu" role="listbox" aria-label="Sort libraries">
-                {[
-                  { value: "recent", label: "Most recent" },
-                  { value: "name", label: "Name (A-Z)" },
-                ].map((option) => (
-                  <button
-                    type="button"
-                    role="option"
-                    aria-selected={sortBy === option.value}
-                    className={`sort_dropdown_option ${sortBy === option.value ? "selected" : ""}`}
-                    key={option.value}
-                    onClick={() => {
-                      setSortBy(option.value);
-                      setIsSortOpen(false);
-                    }}
-                  >
-                    {option.label}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
+              {isSortOpen && (
+                <div className="sort_dropdown_menu" role="listbox" aria-label="Sort libraries">
+                  {[
+                    { value: "recent", label: "Most recent" },
+                    { value: "name", label: "Name (A-Z)" },
+                  ].map((option) => (
+                    <button
+                      type="button"
+                      role="option"
+                      aria-selected={sortBy === option.value}
+                      className={`sort_dropdown_option ${sortBy === option.value ? "selected" : ""}`}
+                      key={option.value}
+                      onClick={() => {
+                        setSortBy(option.value);
+                        setIsSortOpen(false);
+                      }}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
 
-          {/* Create New Library Button */}
-          {!isGuest && (
+            {/* Create New Library Button */}
             <button
               type="button"
               className="create_new_btn"
@@ -322,9 +323,9 @@ export default function NotebookDashboardPage() {
               <HiOutlinePlus />
               <span>Create new</span>
             </button>
-          )}
-        </div>
-      </header>
+          </div>
+        </header>
+      )}
 
       {/* Total Storage Limit Indicator (50 MB Cap) */}
       {!isGuest && (
@@ -349,6 +350,22 @@ export default function NotebookDashboardPage() {
         <div className="section_title">
           <h2>All Libraries</h2>
         </div>
+
+        {/* Guest Authentication Banner */}
+        {isGuest && (
+          <div className="guest_auth_banner">
+            <div className="guest_banner_content">
+              <div className="guest_banner_badge">
+                <HiOutlineUserCircle />
+                <span>Guest Access Mode</span>
+              </div>
+              <h3>Sign in to create & manage your study libraries</h3>
+              <p>
+                Please log in or register an account to upload documents, create custom study libraries, generate AI flashcards, and save your chat history.
+              </p>
+            </div>
+          </div>
+        )}
 
         {loading ? (
           <div className="loading_state">

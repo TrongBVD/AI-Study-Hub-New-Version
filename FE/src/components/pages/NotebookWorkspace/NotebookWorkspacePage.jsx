@@ -741,11 +741,15 @@ export default function NotebookWorkspacePage() {
       )
       .flatMap((conversation) =>
         [...(conversation.messages || [])]
-          .sort(
-            (first, second) =>
+          .sort((first, second) => {
+            const timeDiff =
               new Date(first.createdAt || 0).getTime() -
-              new Date(second.createdAt || 0).getTime(),
-          )
+              new Date(second.createdAt || 0).getTime();
+            if (timeDiff !== 0) return timeDiff;
+            if (first.role === "user" && second.role !== "user") return -1;
+            if (first.role !== "user" && second.role === "user") return 1;
+            return 0;
+          })
           .map((message) => ({
             id: message.id,
             role: message.role === "user" ? "user" : "ai",

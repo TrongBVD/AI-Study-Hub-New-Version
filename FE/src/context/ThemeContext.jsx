@@ -8,14 +8,9 @@ import {
 } from "react";
 
 export const THEME_STORAGE_KEY = "aiStudyHub.theme";
-export const DEFAULT_THEME = "black";
+export const DEFAULT_THEME = "white";
 
 export const THEME_OPTIONS = [
-  {
-    value: "black",
-    label: "Dark",
-    description: "Black and deep-blue surfaces with sky-blue accents and white text.",
-  },
   {
     value: "white",
     label: "Light",
@@ -26,22 +21,22 @@ export const THEME_OPTIONS = [
 const SUPPORTED_THEMES = new Set(THEME_OPTIONS.map((theme) => theme.value));
 
 const LEGACY_THEME_MAP = {
-  current: "black",
-  warm: "black",
+  current: "white",
+  warm: "white",
   light: "white",
-  dark: "black",
+  dark: "white",
+  black: "white",
 };
 
 const STUDY_THEME_MAP = {
-  black: "dark",
+  black: "light",
   white: "light",
 };
 
 const ThemeContext = createContext(null);
 
 export function normalizeTheme(theme) {
-  const mappedTheme = LEGACY_THEME_MAP[theme] || theme;
-  return SUPPORTED_THEMES.has(mappedTheme) ? mappedTheme : DEFAULT_THEME;
+  return "white";
 }
 
 function getStoredTheme() {

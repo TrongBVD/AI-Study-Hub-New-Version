@@ -1463,26 +1463,29 @@ body[data-theme="white"] .chat_stream.has_conversation::-webkit-scrollbar-thumb:
   gap: 12px;
   margin-top: 14px;
   padding-top: 10px;
-  border-top: 1px solid rgba(255,255,255,0.05);
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
 }
 
 .message_actions button {
-  display: flex;
+  display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
-  background: transparent;
-  border: none;
-  color: #94a3b8;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  color: #475569;
   font-size: 13px;
   cursor: pointer;
-  padding: 4px 8px;
-  border-radius: 6px;
+  padding: 5px 9px;
+  border-radius: 8px;
   transition: all 0.2s ease;
 }
 
 .message_actions button:hover {
-  color: #f8fafc;
-  background: #202532;
+  color: #2563eb;
+  background: #eff6ff;
+  border-color: #bfdbfe;
+  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.12);
 }
 
 /* Sleek Floating Input Form at Bottom */

@@ -594,11 +594,15 @@ async function saveChatHistory({
     createdConversation = true;
   }
 
+  const now = Date.now();
+  const userTime = new Date(now).toISOString();
+  const aiTime = new Date(now + 10).toISOString();
+
   const { data: messages, error: messagesError } = await supabase
     .from("chat_messages")
     .insert([
-      { conversation_id: conversation.id, role: "user", content: question.trim() },
-      { conversation_id: conversation.id, role: "ai", content: answer },
+      { conversation_id: conversation.id, role: "user", content: question.trim(), created_at: userTime },
+      { conversation_id: conversation.id, role: "ai", content: answer, created_at: aiTime },
     ])
     .select("id, role, content, created_at");
 

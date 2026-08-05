@@ -83,6 +83,20 @@ function getTaggingErrorMessage(error) {
   return error?.message || "The AI could not generate tags for this file.";
 }
 
+function isMissingTaggingColumnError(error) {
+  if (!error) return false;
+  const code = String(error.code || "");
+  const message = String(error.message || "").toLowerCase();
+  return (
+    code === "42703" ||
+    code === "PGRST204" ||
+    message.includes("tagging_status") ||
+    message.includes("tagging_error") ||
+    message.includes("tagging_updated_at") ||
+    message.includes("tagging_")
+  );
+}
+
 async function updateDocumentTaggingState(
   documentId,
   taggingStatus,
@@ -98,8 +112,8 @@ async function updateDocumentTaggingState(
     .eq("id", documentId);
 
   if (error) {
-    if (error.code === "42703" || String(error.message || "").includes("tagging_status")) {
-      console.warn("tagging_status column missing from documents table, skipping state update");
+    if (isMissingTaggingColumnError(error)) {
+      console.warn("tagging_status/tagging_error columns missing from documents table, skipping state update");
       return;
     }
     throw error;
@@ -460,7 +474,7 @@ exports.listMyDocuments = async (req, res) => {
 
     let { data, error } = await query.order("created_at", { ascending: false });
 
-    if (error && (error.code === "42703" || String(error.message || "").includes("tagging_status"))) {
+    if (error && isMissingTaggingColumnError(error)) {
       let fallbackQuery = supabase
         .from("documents")
         .select(
@@ -977,7 +991,7 @@ exports.uploadDocuments = async (req, res) => {
         })
         .select("*").single();
 
-      if (insertError && (insertError.code === "42703" || String(insertError.message || "").includes("tagging_status"))) {
+      if (insertError && isMissingTaggingColumnError(insertError)) {
         const fallbackInsert = await supabase
           .from("documents")
           .insert({

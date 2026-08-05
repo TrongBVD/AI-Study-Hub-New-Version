@@ -28,6 +28,9 @@ function mapDocument(document) {
     title: document.title,
     file_size_bytes: document.file_size_bytes,
     status: document.status,
+    tagging_status: document.tagging_status || "COMPLETED",
+    tagging_error: document.tagging_error || null,
+    tags: document.tags || null,
     created_at: document.created_at,
   };
 }
@@ -212,7 +215,6 @@ exports.getPublicLibrary = async (req, res) => {
       .from("documents")
       .select("id, library_id, title, file_size_bytes, status, tagging_status, tagging_error, created_at")
       .eq("library_id", libraryId)
-      .eq("is_public", true)
       .eq("status", "APPROVED")
       .is("deleted_at", null)
       .order("created_at", { ascending: false });
@@ -222,7 +224,6 @@ exports.getPublicLibrary = async (req, res) => {
         .from("documents")
         .select("id, library_id, title, file_size_bytes, status, created_at")
         .eq("library_id", libraryId)
-        .eq("is_public", true)
         .eq("status", "APPROVED")
         .is("deleted_at", null)
         .order("created_at", { ascending: false });
