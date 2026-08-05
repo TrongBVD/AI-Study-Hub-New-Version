@@ -336,13 +336,16 @@ async function processWorkspaceDocumentInBackground(
 ) {
   try {
     const extractedText = await extractTextFromFile(file);
-    const [moderation, tagValidation] = await Promise.all([
-      moderateDocument(extractedText),
-      validateTagsAndContent(extractedText, file.originalname, userTags, {
-        throwOnError: true,
-      }),
-    ]);
-    const isFlagged = isSensitiveClassification(moderation.classification);
+    const tagValidation = await validateTagsAndContent(
+      extractedText,
+      file.originalname,
+      userTags,
+      { throwOnError: true },
+    );
+    const sensitivity = tagValidation?.sensitivity || {};
+    const isFlagged = ["SEVERE", "MILD"].includes(
+      String(sensitivity.classification || "").toUpperCase(),
+    );
 
     if (!tagValidation.isValid) {
       await markDocumentTaggingFailed(
@@ -372,7 +375,7 @@ async function processWorkspaceDocumentInBackground(
         : taggingContext.workspaceId
           ? "PENDING"
           : "APPROVED",
-      isFlagged ? moderation : null,
+      isFlagged ? sensitivity : null,
       taggingContext,
       tagValidation.hierarchicalTags,
     );
