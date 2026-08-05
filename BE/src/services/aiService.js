@@ -374,6 +374,7 @@ For METADATA or MIXED, also choose the intended metadata scope:
 
 Scope rules:
 - Choose ACCOUNT whenever the user refers to totals or information across all libraries, the whole collection, or the whole account.
+- Choose ACCOUNT when the user asks which library contains a named document, because the document may be stored in any of the user's libraries.
 - Choose LIBRARY only when the user refers to one current/open library.
 - Choose SELECTED only when the user explicitly refers to checked, chosen, or selected files.
 - Determine scope from the user's meaning, not from whether the interface currently has files selected.
@@ -442,6 +443,7 @@ Answer the user's question using ONLY the metadata JSON supplied below.
 Rules:
 - Answer in the same language as the user's question.
 - Use only values present in the JSON. Never invent libraries, files, dates, sizes, counts, or percentages.
+- Match document titles case-insensitively while preserving the original title in the answer.
 - Answer only what the user asked for; do not volunteer unrelated metadata such as storage, dates, or file names.
 - Distinguish bytes from the human-readable size fields already provided.
 - If the requested information is not available in the JSON, clearly say that it is not available.

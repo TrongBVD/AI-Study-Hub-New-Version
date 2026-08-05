@@ -154,6 +154,8 @@ export default function NotebookWorkspacePage() {
   const chatRequestAbortRef = useRef(null);
   const fileInputRef = useRef(null);
   const pendingChatHandledRef = useRef(false);
+  const uploadOperationIdRef = useRef(0);
+  const uploadBaselineDocumentIdsRef = useRef(new Set());
   const primarySelectedDocumentId = Array.from(selectedDocIds)[0] || "";
   const userDisplayName =
     user?.full_name || user?.username || user?.email || "User";
@@ -297,10 +299,13 @@ export default function NotebookWorkspacePage() {
         String(document.tagging_status || "").toUpperCase(),
       ),
     );
-    if (!hasPendingTagging) return undefined;
+    // The upload endpoint stores the document before its AI processing has
+    // finished. Keep refreshing while the request is active as well, so the
+    // newly inserted source appears without requiring a browser refresh.
+    if (!uploading && !hasPendingTagging) return undefined;
 
     let isMounted = true;
-    const intervalId = window.setInterval(async () => {
+    const refreshDocuments = async () => {
       try {
         const updatedDocuments = await getMyDocuments(libraryId);
         if (!isMounted) return;
@@ -308,16 +313,33 @@ export default function NotebookWorkspacePage() {
           ? updatedDocuments
           : updatedDocuments?.data || [];
         setDocuments(nextDocuments);
+
+        if (
+          uploading &&
+          nextDocuments.some(
+            (document) =>
+              !uploadBaselineDocumentIdsRef.current.has(String(document.id)),
+          )
+        ) {
+          // The file is now persisted and visible. AI tagging/chunking may
+          // continue, but that is processing rather than uploading.
+          setUploading(false);
+        }
       } catch (error) {
         console.warn("Could not refresh AI tagging status:", error);
       }
-    }, 2500);
+    };
+
+    const intervalId = window.setInterval(
+      refreshDocuments,
+      uploading ? 750 : 2500,
+    );
 
     return () => {
       isMounted = false;
       window.clearInterval(intervalId);
     };
-  }, [accessMode, documents, isGuest, libraryId]);
+  }, [accessMode, documents, isGuest, libraryId, uploading]);
 
   useEffect(() => {
     if (isGuest) return;
@@ -399,6 +421,11 @@ export default function NotebookWorkspacePage() {
   const performUpload = async (files, replacementIds = []) => {
     if (!canManageLibrary) return;
 
+    const uploadOperationId = uploadOperationIdRef.current + 1;
+    uploadOperationIdRef.current = uploadOperationId;
+    uploadBaselineDocumentIdsRef.current = new Set(
+      documents.map((document) => String(document.id)),
+    );
     setUploading(true);
     try {
       const res = await uploadDocuments(files, null, libraryId, [], null, replacementIds);
@@ -441,7 +468,9 @@ export default function NotebookWorkspacePage() {
         showToast("Failed to upload document: " + (err.response?.data?.message || err.message || "Unknown error"), "Upload Error", "error");
       }
     } finally {
-      setUploading(false);
+      if (uploadOperationIdRef.current === uploadOperationId) {
+        setUploading(false);
+      }
     }
   };
 
