@@ -208,24 +208,38 @@ exports.getPublicLibrary = async (req, res) => {
       });
     }
 
-    const [
-      { data: documents, error: documentError },
-      { data: owner, error: ownerError },
-    ] = await Promise.all([
-      supabase
+    let { data: documents, error: documentError } = await supabase
+      .from("documents")
+      .select("id, library_id, title, file_size_bytes, status, tagging_status, tagging_error, created_at")
+      .eq("library_id", libraryId)
+      .eq("is_public", true)
+      .eq("status", "APPROVED")
+      .is("deleted_at", null)
+      .order("created_at", { ascending: false });
+
+    if (documentError && (documentError.code === "42703" || String(documentError.message || "").includes("tagging_status"))) {
+      const fallbackDocs = await supabase
         .from("documents")
         .select("id, library_id, title, file_size_bytes, status, created_at")
         .eq("library_id", libraryId)
         .eq("is_public", true)
         .eq("status", "APPROVED")
         .is("deleted_at", null)
-        .order("created_at", { ascending: false }),
-      supabase
-        .from("profiles")
-        .select("id, username, full_name, avatar_url")
-        .eq("id", library.user_id)
-        .maybeSingle(),
-    ]);
+        .order("created_at", { ascending: false });
+
+      documents = (fallbackDocs.data || []).map((doc) => ({
+        ...doc,
+        tagging_status: "COMPLETED",
+        tagging_error: null,
+      }));
+      documentError = fallbackDocs.error;
+    }
+
+    const { data: owner, error: ownerError } = await supabase
+      .from("profiles")
+      .select("id, username, full_name, avatar_url")
+      .eq("id", library.user_id)
+      .maybeSingle();
 
     if (documentError) throw documentError;
     const { downloadsByLibrary } =
@@ -237,18 +251,48 @@ exports.getPublicLibrary = async (req, res) => {
       .select("*", { count: "exact", head: true })
       .eq("library_id", libraryId);
 
+    // Fetch 3-level document tags for public documents
+    const tagsByDocumentId = new Map();
+    const docIds = (documents || []).map((doc) => doc.id).filter(Boolean);
+    if (docIds.length > 0) {
+      const { data: documentTagRows } = await supabase
+        .from("document_tags")
+        .select(`
+          document_id,
+          l1:tags!document_tags_level_1_tag_id_fkey(name),
+          l2:tags!document_tags_level_2_tag_id_fkey(name),
+          l3:tags!document_tags_level_3_tag_id_fkey(name)
+        `)
+        .in("document_id", docIds);
+
+      (documentTagRows || []).forEach((row) => {
+        tagsByDocumentId.set(String(row.document_id), {
+          level1: row.l1?.name || null,
+          level2: row.l2?.name || null,
+          level3: row.l3?.name || null,
+        });
+      });
+    }
+
+    const mappedDocuments = (documents || []).map((doc) =>
+      mapDocument({
+        ...doc,
+        tags: tagsByDocumentId.get(String(doc.id)) || null,
+      }),
+    );
+
     return res.status(200).json({
       status: "success",
       data: {
         library: {
           ...library,
           owner: owner || null,
-          documents: documents?.length || 0,
+          documents: mappedDocuments.length,
           downloads: downloadsCount || 0,
           visibility: "public",
           downloads: downloadsByLibrary.get(String(library.id)) || 0,
         },
-        documents: (documents || []).map(mapDocument),
+        documents: mappedDocuments,
       },
     });
   } catch (error) {

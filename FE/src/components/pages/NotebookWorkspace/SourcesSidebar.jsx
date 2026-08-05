@@ -104,7 +104,7 @@ export default function SourcesSidebar({
             ) : (
               documents.map((doc) => {
                 const taggingStatus = String(
-                  doc.tagging_status || (doc.tags ? "COMPLETED" : "PENDING"),
+                  doc.tagging_status || "COMPLETED",
                 ).toUpperCase();
                 const tagNames = [
                   doc.tags?.level1,
