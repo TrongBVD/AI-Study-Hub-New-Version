@@ -8,7 +8,7 @@ const {
   splitTextIntoChunks,
 } = require("../../services/textExtractService");
 
-const DAILY_AI_REQUEST_LIMIT = 20;
+const DAILY_AI_REQUEST_LIMIT = 30;
 const MAX_CHAT_QUESTION_LENGTH = 2000;
 const MAX_CHAT_HISTORY_TITLE_LENGTH = 120;
 const MAX_SELECTED_CHAT_DOCUMENTS = 25;
