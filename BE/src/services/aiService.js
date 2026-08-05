@@ -12,10 +12,12 @@ const DEFAULT_GEMINI_EMBEDDING_MODEL = "gemini-embedding-2";
 const TEXT_GENERATION_TEMPERATURE = 0.2;
 const GEMINI_FALLBACK_DELAY_MS = 1000;
 const MODERATION_INPUT_MAX_CHARS = 12000;
-const DEFAULT_EMBEDDING_RETRIES = 5;
+const DOCUMENT_EMBEDDING_MAX_ATTEMPTS = 5;
+const QUERY_EMBEDDING_MAX_ATTEMPTS = 2;
 const EMBEDDING_INPUT_MAX_CHARS = 7000;
 const EMBEDDING_OUTPUT_DIMENSIONS = 768;
-const EMBEDDING_RETRY_BASE_DELAY_MS = 4000;
+const EMBEDDING_RETRY_BASE_DELAY_MS = 1000;
+const EMBEDDING_RETRY_MAX_DELAY_MS = 8000;
 const SOURCE_TITLE_MAX_CHARS = 180;
 const RAG_CONTEXT_MAX_CHARS = 150000;
 const CHAT_CLASSIFICATION_MAX_CHARS = 2000;
@@ -23,6 +25,8 @@ const FLASHCARD_CONTEXT_MAX_CHARS = 150000;
 const DOCUMENT_ANALYSIS_MAX_CHARS = 8000;
 const MAX_GENERATED_FLASHCARDS = 20;
 const EMBEDDING_BATCH_SIZE = 4;
+const EMBEDDING_BATCH_DELAY_MS = 1250;
+const EMBEDDING_REQUEST_DELAY_MS = 400;
 
 /**
  * Create and reuse Gemini client.
@@ -203,10 +207,18 @@ async function generateText(prompt) {
 async function createEmbedding(
   text,
   mode = "document",
-  maxRetries = 1,
+  maxAttempts = null,
 ) {
   const ai = await getAiClient();
-  const effectiveMaxRetries = 1;
+  const hasConfiguredMaxAttempts =
+    maxAttempts !== null && maxAttempts !== undefined;
+  const configuredMaxAttempts = Number(maxAttempts);
+  const effectiveMaxAttempts =
+    hasConfiguredMaxAttempts && Number.isInteger(configuredMaxAttempts)
+    ? Math.max(1, configuredMaxAttempts)
+    : mode === "query"
+      ? QUERY_EMBEDDING_MAX_ATTEMPTS
+      : DOCUMENT_EMBEDDING_MAX_ATTEMPTS;
 
   const prefix =
     mode === "query"
@@ -216,7 +228,7 @@ async function createEmbedding(
   const promptText =
     prefix + String(text || "").slice(0, EMBEDDING_INPUT_MAX_CHARS);
 
-  for (let attempt = 1; attempt <= effectiveMaxRetries; attempt += 1) {
+  for (let attempt = 1; attempt <= effectiveMaxAttempts; attempt += 1) {
     try {
       const response = await ai.models.embedContent({
         model:
@@ -237,13 +249,20 @@ async function createEmbedding(
       return values;
     } catch (error) {
       const statusCode = Number(error?.status || error?.statusCode);
-      const isQuotaError =
-        statusCode === 429 || String(error?.message).includes("quota");
+      const errorMessage = String(error?.message || "").toLowerCase();
+      const isRetryableError =
+        [408, 429, 500, 502, 503, 504].includes(statusCode) ||
+        errorMessage.includes("timeout") ||
+        errorMessage.includes("network") ||
+        errorMessage.includes("temporarily unavailable");
 
-      if (isQuotaError && attempt < effectiveMaxRetries) {
-        const delayMs = attempt * EMBEDDING_RETRY_BASE_DELAY_MS;
+      if (isRetryableError && attempt < effectiveMaxAttempts) {
+        const delayMs = Math.min(
+          EMBEDDING_RETRY_BASE_DELAY_MS * 2 ** (attempt - 1),
+          EMBEDDING_RETRY_MAX_DELAY_MS,
+        );
         console.warn(
-          `[Gemini Embedding] 429 Rate-limited/Quota exceeded. Retrying batch in ${delayMs}ms (Attempt ${attempt}/${effectiveMaxRetries})...`,
+          `[Gemini Embedding] Temporary failure (${statusCode || "network"}). Retrying in ${delayMs}ms (attempt ${attempt + 1}/${effectiveMaxAttempts})...`,
         );
         await new Promise((resolve) => setTimeout(resolve, delayMs));
         continue;
@@ -673,43 +692,46 @@ MUST return strictly in the following JSON format:
 async function createBatchEmbeddings(chunks, mode = "document") {
   if (!Array.isArray(chunks) || chunks.length === 0) return [];
 
-  // Cap background embedding chunks to max 30 to preserve free-tier API quota for all users
-  const MAX_DOCUMENT_EMBEDDING_CHUNKS = 30;
-  const targetChunks = mode === "document" ? chunks.slice(0, MAX_DOCUMENT_EMBEDDING_CHUNKS) : chunks;
+  // Keep one result slot per source chunk. A null value means that the text
+  // chunk was persisted but its embedding can be retried later.
+  const results = Array(chunks.length).fill(null);
+  let quotaCircuitOpen = false;
 
-  const results = [];
-  let isRateLimited = false;
-
-  for (let i = 0; i < targetChunks.length; i += EMBEDDING_BATCH_SIZE) {
-    if (isRateLimited) break;
+  for (let i = 0; i < chunks.length; i += EMBEDDING_BATCH_SIZE) {
+    if (quotaCircuitOpen) break;
 
     if (i > 0) {
-      await new Promise((resolve) => setTimeout(resolve, 1500));
+      await new Promise((resolve) =>
+        setTimeout(resolve, EMBEDDING_BATCH_DELAY_MS),
+      );
     }
-    const batch = targetChunks.slice(i, i + EMBEDDING_BATCH_SIZE);
+    const batch = chunks.slice(i, i + EMBEDDING_BATCH_SIZE);
     for (let j = 0; j < batch.length; j += 1) {
       if (j > 0) {
-        await new Promise((resolve) => setTimeout(resolve, 400));
+        await new Promise((resolve) =>
+          setTimeout(resolve, EMBEDDING_REQUEST_DELAY_MS),
+        );
       }
+
+      const chunkIndex = i + j;
       try {
         const emb = await createEmbedding(batch[j], mode);
-        results.push(emb);
+        results[chunkIndex] = emb;
       } catch (err) {
         const isQuota =
-          String(err?.message || "").includes("quota") ||
+          String(err?.message || "").toLowerCase().includes("quota") ||
           Number(err?.status || err?.statusCode) === 429;
         if (isQuota) {
           console.warn(
-            `[Gemini Embedding] Quota limit reached on chunk ${i + j + 1}/${targetChunks.length}. Stopping batch gracefully to save API quota for other users.`,
+            `[Gemini Embedding] Quota unavailable on chunk ${chunkIndex + 1}/${chunks.length}. Remaining chunks will stay pending for a later retry.`,
           );
-          isRateLimited = true;
+          quotaCircuitOpen = true;
           break;
         }
         console.warn(
-          `[Gemini Embedding] Non-blocking warning for chunk ${i + j + 1}/${targetChunks.length}:`,
+          `[Gemini Embedding] Non-blocking warning for chunk ${chunkIndex + 1}/${chunks.length}:`,
           err.message,
         );
-        results.push(null);
       }
     }
   }

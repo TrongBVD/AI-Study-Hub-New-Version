@@ -342,9 +342,9 @@ describe("AI Pipeline Main Flow Tests", () => {
         expect.objectContaining({
           status: "success",
           data: expect.objectContaining({
-            chatLimit: 20,
+            chatLimit: 30,
             chatsUsed: 5,
-            chatsRemaining: 15,
+            chatsRemaining: 25,
           }),
         })
       );
