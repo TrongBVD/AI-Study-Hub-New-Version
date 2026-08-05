@@ -624,7 +624,11 @@ MUST return strictly in the following JSON format:
       : "NONE";
 
     const hTags = result.hierarchicalTags || {};
-    const level1 = String(hTags.level1 || hTags.level_1 || "Other").trim();
+    const rawLevel1 = hTags.level1 || hTags.level_1;
+    if (!rawLevel1 && options.throwOnError) {
+      throw new Error("AI did not return a hierarchical document classification.");
+    }
+    const level1 = String(rawLevel1 || "Other").trim();
     const level2 = hTags.level2 || hTags.level_2 ? String(hTags.level2 || hTags.level_2).trim() : null;
     const level3 = level2 && (hTags.level3 || hTags.level_3) ? String(hTags.level3 || hTags.level_3).trim() : null;
 

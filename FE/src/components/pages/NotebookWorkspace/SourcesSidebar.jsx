@@ -18,6 +18,13 @@ function getDocumentType(document) {
   return extension ? extension.toUpperCase() : "FILE";
 }
 
+function isDocumentAiReady(document) {
+  return (
+    String(document?.status || "").toUpperCase() === "APPROVED" &&
+    document?.ai_ready === true
+  );
+}
+
 /**
  * SourcesSidebar Component
  * Encapsulates the Left Panel sources list, file upload trigger, select all checkbox,
@@ -114,6 +121,7 @@ export default function SourcesSidebar({
                   type="checkbox"
                   checked={selectAll}
                   onChange={onToggleSelectAll}
+                  disabled={!documents.some(isDocumentAiReady)}
                 />
                 <span>Select all</span>
               </label>
@@ -140,6 +148,7 @@ export default function SourcesSidebar({
                   doc.tags?.level3,
                 ].filter(Boolean);
                 const isRetrying = retryingDocumentIds.has(doc.id);
+                const aiReady = isDocumentAiReady(doc);
 
                 return (
                   <div
@@ -151,6 +160,12 @@ export default function SourcesSidebar({
                       type="checkbox"
                       checked={selectedDocIds.has(doc.id)}
                       onChange={() => onToggleDocSelect(doc.id)}
+                      disabled={!aiReady}
+                      title={
+                        aiReady
+                          ? "Use this document in AI Chat"
+                          : "This document is not ready for AI Chat yet"
+                      }
                     />
                   )}
                   <HiOutlineDocumentText className="doc_icon" />
@@ -194,9 +209,6 @@ export default function SourcesSidebar({
                     )}
                     {taggingStatus === "FAILED" && (
                       <span className="doc_tagging_failed">
-                        <span className="doc_tags">
-                          <span>{doc.tags?.level1 || "Other"}</span>
-                        </span>
                         <span className="doc_tagging_error">
                           {doc.tagging_error || "AI tagging failed. Please retry."}
                         </span>
