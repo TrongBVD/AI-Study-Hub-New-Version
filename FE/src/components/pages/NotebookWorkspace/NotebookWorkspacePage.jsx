@@ -1091,6 +1091,7 @@ export default function NotebookWorkspacePage() {
       {/* 1. LEFT PANEL: SOURCES */}
       <SourcesSidebar
         libraryName={library?.name || library?.libraryName || "Library"}
+        isPublic={Boolean(library?.is_public ?? library?.isPublic)}
         documents={documents}
         selectedDocIds={selectedDocIds}
         selectAll={selectAll}
@@ -1509,26 +1510,7 @@ export default function NotebookWorkspacePage() {
                 </small>
               </label>
 
-              <div className="library_publish_setting">
-                <div>
-                  <strong>Allow publish</strong>
-                  <p>
-                    {library?.is_public
-                      ? "This library is public. Publishing cannot be turned off."
-                      : "Make this library available publicly. This action cannot be reversed."}
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  className={`library_publish_switch ${allowPublish ? "is_on" : ""}`}
-                  onClick={() => setAllowPublish(true)}
-                  disabled={Boolean(library?.is_public)}
-                  role="switch"
-                  aria-checked={allowPublish}
-                >
-                  <span />
-                </button>
-              </div>
+
 
               <div className="library_settings_actions">
                 <button

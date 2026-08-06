@@ -56,6 +56,52 @@
   white-space: nowrap;
 }
 
+.workspace_mode_badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  margin-top: 4px;
+}
+
+.workspace_mode_badge.public {
+  background: #e0f2fe;
+  color: #0369a1;
+  border: 1px solid #bae6fd;
+}
+
+.workspace_mode_badge.private {
+  background: #f1f5f9;
+  color: #475569;
+  border: 1px solid #e2e8f0;
+}
+
+.workspace_header_mode_badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  margin-left: 8px;
+}
+
+.workspace_header_mode_badge.public {
+  background: #e0f2fe;
+  color: #0369a1;
+  border: 1px solid #bae6fd;
+}
+
+.workspace_header_mode_badge.private {
+  background: #f1f5f9;
+  color: #475569;
+  border: 1px solid #e2e8f0;
+}
+
 .selected_count_tag {
   padding: 4px 7px;
   border: 1px solid #2b3545;

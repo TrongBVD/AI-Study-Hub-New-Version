@@ -32,6 +32,7 @@ function mapDocument(document) {
     tagging_error: document.tagging_error || null,
     tags: document.tags || null,
     created_at: document.created_at,
+    ai_ready: true,
   };
 }
 

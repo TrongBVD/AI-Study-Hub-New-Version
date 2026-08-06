@@ -32,6 +32,7 @@ function isDocumentAiReady(document) {
  */
 export default function SourcesSidebar({
   libraryName = "Library",
+  isPublic = false,
   documents = [],
   selectedDocIds = new Set(),
   selectAll = false,

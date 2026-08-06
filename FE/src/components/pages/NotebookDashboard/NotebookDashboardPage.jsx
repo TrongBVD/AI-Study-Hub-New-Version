@@ -492,6 +492,10 @@ export default function NotebookDashboardPage() {
                     {lib.description || "No description provided."}
                   </p>
                   <div className="card_meta">
+                    <span className={`library_badge ${lib.is_public ? "public" : "private"}`}>
+                      {lib.is_public ? "Public" : "Private"}
+                    </span>
+                    <span>•</span>
                     <span>{lib.documents || 0} sources</span>
                     <span>•</span>
                     <span>
