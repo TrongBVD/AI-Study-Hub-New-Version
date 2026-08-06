@@ -384,16 +384,16 @@ For CONTENT or MIXED, also choose one content mode:
 - NONE: use only when document content is not needed.
 
 For METADATA or MIXED, also choose the intended metadata scope:
-- ACCOUNT: the user asks about all of their libraries or their whole account.
-- LIBRARY: the user asks about the current, open, or selected library.
-- SELECTED: the user explicitly asks only about the files they selected.
+- ACCOUNT: the user asks about all libraries, the whole account, or wants to search across their entire document collection.
+- LIBRARY: the user refers to one specific current/open library or asks within a specific library.
+- SELECTED: the user explicitly asks only about files they selected, checked, or chosen.
 
 Scope rules:
-- Choose ACCOUNT whenever the user refers to totals or information across all libraries, the whole collection, or the whole account.
-- Choose ACCOUNT when the user asks which library contains a named document, because the document may be stored in any of the user's libraries.
-- Choose LIBRARY only when the user refers to one current/open library.
-- Choose SELECTED only when the user explicitly refers to checked, chosen, or selected files.
-- Determine scope from the user's meaning, not from whether the interface currently has files selected.
+- Choose ACCOUNT when the user refers to all documents, all libraries, the whole collection, or does not specify a particular library.
+- Choose LIBRARY when the user refers to the current/open library or a specific named library.
+- Choose SELECTED only when the user explicitly refers to selected, checked, or chosen files.
+- For MIXED questions, determine scope based on where the information should be searched, not only on the metadata part of the question.
+- Do not assume SELECTED scope because files are selected in the interface.
 
 Return JSON only in this exact shape:
 {
