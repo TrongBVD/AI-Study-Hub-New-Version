@@ -1,6 +1,6 @@
 const pdfParse = require("pdf-parse");
 const mammoth = require("mammoth");
-
+const MAX_DOCUMENT_CHUNKS = 500;
 /**
  * Extract readable text from an uploaded file.
  *
@@ -83,7 +83,10 @@ function splitTextIntoChunks(text, chunkSize = 1200, overlap = 150) {
   const chunks = [];
   let start = 0;
 
-  while (start < cleanText.length) {
+  while (
+    start < cleanText.length &&
+    chunks.length < MAX_DOCUMENT_CHUNKS
+  ) {
     const end = Math.min(start + chunkSize, cleanText.length);
     const chunk = cleanText.slice(start, end).trim();
 

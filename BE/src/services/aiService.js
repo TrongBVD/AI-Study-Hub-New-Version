@@ -210,11 +210,8 @@ async function createEmbedding(
   maxAttempts = null,
 ) {
   const ai = await getAiClient();
-  const hasConfiguredMaxAttempts =
-    maxAttempts !== null && maxAttempts !== undefined;
   const configuredMaxAttempts = Number(maxAttempts);
-  const effectiveMaxAttempts =
-    hasConfiguredMaxAttempts && Number.isInteger(configuredMaxAttempts)
+  const effectiveMaxAttempts = Number.isInteger(configuredMaxAttempts)
     ? Math.max(1, configuredMaxAttempts)
     : mode === "query"
       ? QUERY_EMBEDDING_MAX_ATTEMPTS
