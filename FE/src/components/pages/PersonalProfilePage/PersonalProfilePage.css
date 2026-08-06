@@ -743,6 +743,11 @@ body[data-theme="white"] .profile_bio_meta button:hover {
   color: #0f172a;
 }
 
+body[data-theme="white"] .profile_bio_header button,
+body[data-theme="white"] .profile_bio_header button:hover {
+  color: #ffffff;
+}
+
 body[data-theme="white"] .profile_empty_library {
   background: #f8fafc;
   border-color: #93c5fd;

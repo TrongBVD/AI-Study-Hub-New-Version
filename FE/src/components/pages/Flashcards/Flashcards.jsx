@@ -47,6 +47,7 @@ function Flashcards() {
   const [isFlipped, setIsFlipped] = useState(false);
   const [history, setHistory] = useState([]);
   const [historyLoading, setHistoryLoading] = useState(true);
+  const [historySetLoadingId, setHistorySetLoadingId] = useState("");
   const [activeSetId, setActiveSetId] = useState("");
   const [displayedSetTitle, setDisplayedSetTitle] = useState("");
   const [sessionComplete, setSessionComplete] = useState(false);
@@ -308,7 +309,7 @@ function Flashcards() {
     }
 
     try {
-      setLoading(true);
+      setHistorySetLoadingId(String(savedSet.id));
       const response = await api.get(`/ai/flashcard-sets/${savedSet.id}`);
       const loadedSet = response.data?.data;
       const cards = Array.isArray(loadedSet?.cards) ? loadedSet.cards : [];
@@ -328,7 +329,7 @@ function Flashcards() {
         error.response?.data?.message || "Could not load this flashcard set.",
       );
     } finally {
-      setLoading(false);
+      setHistorySetLoadingId("");
     }
   }
 
@@ -444,6 +445,8 @@ function Flashcards() {
                     activeSetId === savedSet.id ? "is-active" : ""
                   }`}
                   onClick={() => openHistorySet(savedSet)}
+                  aria-busy={historySetLoadingId === String(savedSet.id)}
+                  disabled={historySetLoadingId === String(savedSet.id)}
                 >
                   <strong>{savedSet.title?.replace(/\.[^/.]+$/, "")}</strong>
                   <span>

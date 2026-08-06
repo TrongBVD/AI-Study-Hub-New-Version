@@ -23,13 +23,14 @@ function DocumentViewerPage() {
   const [errorMessage, setErrorMessage] = useState("");
   const isGuest = getStoredUser()?.role === "GUEST";
   const returnContext = location.state?.returnContext;
+  const documentLibraryId = documentData?.libraryId || documentData?.library_id;
 
-  function handleReturnToWorkspace() {
-    const destination = location.state?.from;
-    if (!destination) {
-      navigate(-1);
-      return;
-    }
+  function handleReturn() {
+    const destination =
+      location.state?.from ||
+      (documentLibraryId
+        ? `/dashboard/libraries/${documentLibraryId}`
+        : "/dashboard/libraries");
 
     navigate(destination, {
       state:
@@ -111,11 +112,13 @@ function DocumentViewerPage() {
           ? "Back to Solution"
           : returnContext === "topic"
             ? "Back to Topic"
-          : returnContext === "files"
-            ? "Back to Files"
-            : ""
+            : returnContext === "files"
+              ? "Back to Files"
+              : returnContext === "library" || documentLibraryId
+                ? "Back to Library"
+                : "Back to Libraries"
       }
-      onBack={returnContext ? handleReturnToWorkspace : undefined}
+      onBack={handleReturn}
     />
   );
 }

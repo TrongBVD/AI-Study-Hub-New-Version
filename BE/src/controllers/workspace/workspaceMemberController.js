@@ -8,6 +8,14 @@ const {
   getWorkspaceRoleLabel,
 } = require("./workspaceHelpers");
 
+function isSystemAdmin(user) {
+  const role = String(user?.role || "")
+    .trim()
+    .toUpperCase();
+
+  return role === "ADMIN" || role === "SYSTEM_ADMIN";
+}
+
 exports.listMembers = async (req, res) => {
   try {
     const { workspace, member } = await getWorkspaceAccess(
@@ -102,7 +110,7 @@ exports.searchUsers = async (req, res) => {
 
     const { data: users, error: userError } = await supabase
       .from("profiles")
-      .select("id, username, full_name, email, status")
+      .select("id, username, full_name, email, status, role")
       .neq("status", "DISABLED")
       .or(
         `username.ilike.%${q}%,full_name.ilike.%${q}%,email.ilike.%${q}%`,
@@ -113,10 +121,12 @@ exports.searchUsers = async (req, res) => {
 
     return res.status(200).json({
       status: "success",
-      data: (users || []).map((user) => ({
-        ...user,
-        isWorkspaceMember: existingIds.has(String(user.id)),
-      })),
+      data: (users || [])
+        .filter((user) => !isSystemAdmin(user))
+        .map((user) => ({
+          ...user,
+          isWorkspaceMember: existingIds.has(String(user.id)),
+        })),
     });
   } catch (error) {
     return res
@@ -144,7 +154,7 @@ exports.addMember = async (req, res) => {
 
     const { data: invitedUser, error: invitedUserError } = await supabase
       .from("profiles")
-      .select("id, email, username, full_name, status")
+      .select("id, email, username, full_name, status, role")
       .eq("id", userId)
       .maybeSingle();
 
@@ -157,6 +167,13 @@ exports.addMember = async (req, res) => {
           status: "error",
           message: "The invited user was not found or is disabled.",
         });
+    }
+
+    if (isSystemAdmin(invitedUser)) {
+      return res.status(403).json({
+        status: "error",
+        message: "System administrators cannot be added to workspaces.",
+      });
     }
 
     const access = await getWorkspaceAccess(
@@ -503,11 +520,11 @@ exports.respondToInvitation = async (req, res) => {
       await supabase.from("activity_logs").insert({
         user_id: userId,
         admin_id: userId,
-        action_type: "WORKSPACE_ROLE_CHANGED",
+        action_type: "WORKSPACE_MEMBER_JOINED",
         entity_type: "workspace",
         entity_id: workspaceId,
         new_data: {
-          notificationType: "roleChanged",
+          notificationType: "joined",
           role,
           workspaceName,
         },
@@ -525,11 +542,11 @@ exports.respondToInvitation = async (req, res) => {
         const notifyRows = adminsAndEditors.map((m) => ({
           user_id: m.user_id,
           admin_id: userId,
-          action_type: "WORKSPACE_ROLE_CHANGED",
+          action_type: "WORKSPACE_MEMBER_JOINED",
           entity_type: "workspace",
           entity_id: workspaceId,
           new_data: {
-            notificationType: "roleChanged",
+            notificationType: "joined",
             role,
             workspaceName,
           },

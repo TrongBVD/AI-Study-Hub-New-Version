@@ -3,7 +3,6 @@ const {
   FLASHCARD_SELECT,
   WORKSPACE_DOCUMENT_SELECT,
   DOCUMENT_BUCKET,
-  WAITING_BUCKET,
   getWorkspaceAccess,
   mapWorkspaceFlashcard,
   mapWorkspaceDocument,
@@ -177,20 +176,35 @@ exports.reviewDocument = async (req, res) => {
     }
 
     const newStatus = decision === "APPROVE" ? "APPROVED" : "REJECTED";
-    const storageMove = await moveWorkspaceDocumentToBucket(
-      document,
-      decision === "APPROVE" ? DOCUMENT_BUCKET : WAITING_BUCKET,
-    );
+    const reviewedAt = new Date().toISOString();
+    const replacementDocumentIds = Array.isArray(
+      document.replacement_document_ids,
+    )
+      ? document.replacement_document_ids.filter(
+          (id) => id && String(id) !== String(documentId),
+        )
+      : [];
+    // Approved files belong in the active documents bucket. Rejected files are
+    // soft-deleted below, so moving them to an optional waiting bucket would
+    // only make rejection fail when that bucket is not configured.
+    const storageMove =
+      decision === "APPROVE"
+        ? await moveWorkspaceDocumentToBucket(document, DOCUMENT_BUCKET)
+        : { moved: false, sourceBucket: null, targetBucket: null };
 
     const { data: updatedDocument, error: updateError } = await supabase
       .from("documents")
       .update({
         status: newStatus,
         reviewed_by_admin_id: userId,
-        reviewed_at: new Date().toISOString(),
+        reviewed_at: reviewedAt,
+        // Rejected workspace uploads are removed from the active document list.
+        // Background AI jobs may still finish, but they never clear deleted_at.
+        deleted_at: decision === "REJECT" ? reviewedAt : null,
         admin_review_reason:
           String(reason || "").trim() ||
           `${newStatus.toLowerCase()} by workspace admin.`,
+        replacement_document_ids: [],
       })
       .eq("id", documentId)
       .eq("workspace_id", workspaceId)
@@ -212,6 +226,49 @@ exports.reviewDocument = async (req, res) => {
         }
       }
       throw updateError;
+    }
+
+    // Keep the currently approved source available while its replacement is
+    // waiting for review. It is retired only after the new upload is approved.
+    if (decision === "APPROVE" && replacementDocumentIds.length > 0) {
+      const { error: replacementDeleteError } = await supabase
+        .from("documents")
+        .update({ deleted_at: reviewedAt })
+        .in("id", replacementDocumentIds)
+        .eq("workspace_id", workspaceId)
+        .neq("id", documentId)
+        .is("deleted_at", null);
+
+      if (replacementDeleteError) {
+        await supabase
+          .from("documents")
+          .update({
+            status: document.status,
+            reviewed_by_admin_id: document.reviewed_by_admin_id,
+            reviewed_at: document.reviewed_at,
+            deleted_at: document.deleted_at,
+            admin_review_reason: document.admin_review_reason,
+            replacement_document_ids: replacementDocumentIds,
+          })
+          .eq("id", documentId)
+          .eq("workspace_id", workspaceId);
+
+        if (storageMove.moved && storageMove.sourceBucket) {
+          try {
+            await moveWorkspaceDocumentToBucket(
+              document,
+              storageMove.sourceBucket,
+            );
+          } catch (rollbackError) {
+            console.error(
+              "Could not roll back replacement storage move:",
+              rollbackError,
+            );
+          }
+        }
+
+        throw replacementDeleteError;
+      }
     }
 
     return res.status(200).json({
