@@ -82,6 +82,7 @@ exports.listMyWorkspaceNotifications = async (req, res) => {
         "DOCUMENT_TAGGING_FAILED",
         "DOCUMENT_DELETED",
         "WORKSPACE_INVITATION_PENDING",
+        "WORKSPACE_MEMBER_JOINED",
         "WORKSPACE_MEMBER_LEFT",
       ])
       .order("created_at", { ascending: false })
@@ -156,6 +157,21 @@ exports.listMyWorkspaceNotifications = async (req, res) => {
             category: "member",
             action: "memberLeft",
             title: "Member left workspace",
+            message: item.details,
+            isRead,
+            icon: "ti-user",
+            link: `/dashboard/workspaces/${item.entity_id}`,
+            createdAt: formatRelativeTime(item.created_at),
+            createdAtMs,
+          };
+        }
+
+        if (actionType === "joined") {
+          return {
+            id: `member-joined-${item.id}`,
+            category: "member",
+            action: "joined",
+            title: "New member joined",
             message: item.details,
             isRead,
             icon: "ti-user",

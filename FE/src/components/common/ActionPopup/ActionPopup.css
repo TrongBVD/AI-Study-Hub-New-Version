@@ -12,16 +12,16 @@
 }
 
 .action_popup {
-  --action-tone: #38bdf8;
-  --action-soft: rgba(56, 189, 248, 0.12);
+  --action-tone: var(--accent-color);
+  --action-soft: var(--accent-soft);
   position: relative;
   width: min(460px, 100%);
-  border: 1px solid #2b3545;
+  border: 1px solid var(--border-color);
   border-radius: 24px;
   padding: 34px;
-  background: #171b24;
-  color: #f8fafc;
-  box-shadow: 0 28px 80px rgba(0, 0, 0, 0.55);
+  background: var(--bg-card);
+  color: var(--text-primary);
+  box-shadow: var(--shadow-lg, 0 28px 80px rgba(15, 23, 42, 0.28));
   text-align: center;
   animation: action-popup-rise 180ms ease-out;
 }
@@ -32,73 +32,32 @@
 }
 
 .action_popup--prompt {
-  --action-tone: #38bdf8;
-  --action-soft: rgba(56, 189, 248, 0.12);
+  --action-tone: var(--accent-color);
+  --action-soft: var(--accent-soft);
 }
 
 /* The light theme uses blue as its interaction color. Keep every step in a
    popup flow (confirm, prompt, and notice) on that palette instead of falling
    back to the warm warning color from the default theme. */
-body[data-theme="white"] .action_popup {
-  --action-tone: var(--accent-color);
-  --action-soft: var(--accent-soft);
-  border-color: #dbe5f1;
-  background: #ffffff;
-  color: #0f172a;
-  box-shadow: 0 28px 70px rgba(15, 23, 42, 0.2);
-}
-
-body[data-theme="white"] .action_popup_overlay {
-  background: rgba(71, 85, 105, 0.32);
-}
-
-body[data-theme="white"] .action_popup_close {
-  border-color: #dbe5f1;
-  background: #f8fafc;
-  color: #64748b;
-}
-
-body[data-theme="white"] .action_popup_close:hover {
-  border-color: #bfdbfe;
-  background: #eff6ff;
-  color: #2563eb;
-}
-
-body[data-theme="white"] .action_popup > p {
-  color: #475569;
-}
-
-body[data-theme="white"] .action_popup_input {
-  border-color: #cbd5e1;
-  background: #ffffff;
-  color: #0f172a;
-}
-
-body[data-theme="white"] .action_popup_cancel {
-  border-color: #cbd5e1;
-  background: #f8fafc;
-  color: #334155;
-}
-
-body[data-theme="white"] .action_popup_cancel:hover {
-  border-color: #bfdbfe;
-  background: #eff6ff;
-  color: #1d4ed8;
-}
-
 .action_popup_close {
   position: absolute;
   top: 16px;
   right: 16px;
   width: 36px;
   height: 36px;
-  border: 1px solid #334155;
+  border: 1px solid var(--border-color);
   border-radius: 50%;
   display: grid;
   place-items: center;
-  background: #11151d;
-  color: #cbd5e1;
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
   cursor: pointer;
+}
+
+.action_popup_close:hover {
+  border-color: var(--accent-color);
+  background: var(--accent-soft);
+  color: var(--accent-color);
 }
 
 .action_popup_icon {
@@ -135,7 +94,7 @@ body[data-theme="white"] .action_popup_cancel:hover {
   overflow-wrap: anywhere;
   word-break: break-word;
   margin: 14px auto 0;
-  color: #cbd5e1;
+  color: var(--text-secondary);
   font-size: 14px;
   line-height: 1.65;
   white-space: pre-line;
@@ -145,18 +104,18 @@ body[data-theme="white"] .action_popup_cancel:hover {
   width: 100%;
   min-height: 50px;
   margin-top: 22px;
-  border: 1px solid #334155;
+  border: 1px solid var(--border-color);
   border-radius: 12px;
   padding: 0 14px;
   outline: none;
-  background: #0d0f12;
-  color: #f8fafc;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
   font: inherit;
 }
 
 .action_popup_input:focus {
-  border-color: #38bdf8;
-  box-shadow: 0 0 0 4px rgba(56, 189, 248, 0.14);
+  border-color: var(--accent-color);
+  box-shadow: 0 0 0 4px var(--accent-soft);
 }
 
 .action_popup_actions {
@@ -182,9 +141,15 @@ body[data-theme="white"] .action_popup_cancel:hover {
 }
 
 .action_popup_cancel {
-  border: 1px solid #334155;
-  background: #11151d;
-  color: #f8fafc;
+  border: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+}
+
+.action_popup_cancel:hover {
+  border-color: var(--accent-color);
+  background: var(--accent-soft);
+  color: var(--accent-color);
 }
 
 .action_popup_confirm {

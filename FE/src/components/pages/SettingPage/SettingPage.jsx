@@ -1,9 +1,5 @@
 import { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
-import {
-  getNotificationSettings,
-  saveNotificationSettings,
-} from "../../../utils/notificationStore.js";
 import api from "../../../utils/api.js";
 import {
   clearStoredSession,
@@ -25,12 +21,6 @@ const SETTING_MENUS = [
     title: "Personal",
     items: [
       { icon: "ti-user", label: "Profile & appearance" },
-    ],
-  },
-  {
-    title: "Notifications",
-    items: [
-      { icon: "ti-bell", label: "Notification settings" },
     ],
   },
   {
@@ -66,39 +56,6 @@ function getInitialAdminSettings() {
     return defaults;
   }
 }
-
-const NOTIFICATION_CATEGORIES = [
-  {
-    key: "file",
-    icon: "ti-folder",
-    title: "File",
-    description: "Document uploads and deletions.",
-    options: [
-      ["uploaded", "File uploaded"],
-      ["deleted", "File deleted"],
-    ],
-  },
-  {
-    key: "member",
-    icon: "ti-user",
-    title: "Member",
-    description: "New members and role changes.",
-    options: [
-      ["joined", "New member joined"],
-      ["roleChanged", "Role changed"],
-    ],
-  },
-  {
-    key: "workspace",
-    icon: "ti-layout-grid2",
-    title: "Workspace",
-    description: "Workspace name changes and deletions.",
-    options: [
-      ["renamed", "Workspace renamed"],
-      ["deleted", "Workspace deleted"],
-    ],
-  },
-];
 
 const PROFILE_NAME_KEY = "aiStudyHubProfileName";
 const PROFILE_NAME_CHANGED_AT_KEY = "aiStudyHubProfileNameChangedAt";
@@ -178,9 +135,6 @@ function SettingPage() {
   const [profileNameStatus, setProfileNameStatus] = useState("");
   const [isSavingProfileName, setIsSavingProfileName] = useState(false);
   const [activeSetting, setActiveSetting] = useState("Profile & appearance");
-  const [notificationSettings, setNotificationSettings] = useState(() =>
-    getNotificationSettings(),
-  );
   const [adminSettings, setAdminSettings] = useState(getInitialAdminSettings);
 
   const settingMenus = isAdminSettings
@@ -189,10 +143,6 @@ function SettingPage() {
         ADMIN_SETTING_MENU,
       ]
     : SETTING_MENUS;
-
-  useEffect(() => {
-    saveNotificationSettings(notificationSettings);
-  }, [notificationSettings]);
 
   useEffect(() => {
     let isMounted = true;
@@ -237,23 +187,6 @@ function SettingPage() {
     if (!isAdminSettings) return;
     localStorage.setItem(ADMIN_SETTINGS_KEY, JSON.stringify(adminSettings));
   }, [adminSettings, isAdminSettings]);
-
-  function toggleNotificationSetting(key) {
-    setNotificationSettings((previousSettings) => ({
-      ...previousSettings,
-      [key]: !previousSettings[key],
-    }));
-  }
-
-  function toggleNotificationCategory(category, key) {
-    setNotificationSettings((previousSettings) => ({
-      ...previousSettings,
-      [category]: {
-        ...previousSettings[category],
-        [key]: !previousSettings[category][key],
-      },
-    }));
-  }
 
   function handleProfileNameChange(value) {
     setWorkspaceName(value.slice(0, PROFILE_NAME_MAX_LENGTH));
@@ -384,14 +317,6 @@ function SettingPage() {
               isSavingProfileName={isSavingProfileName}
               onWorkspaceNameChange={handleProfileNameChange}
               onSaveProfileName={handleSaveProfileName}
-            />
-          )}
-
-          {activeSetting === "Notification settings" && (
-            <NotificationSettings
-              notificationSettings={notificationSettings}
-              toggleNotificationSetting={toggleNotificationSetting}
-              toggleNotificationCategory={toggleNotificationCategory}
             />
           )}
 
@@ -589,96 +514,6 @@ function ProfileAppearanceSettings({
               </p>
             </div>
           </SettingRow>
-        </div>
-      </SettingsPanel>
-
-    </>
-  );
-}
-
-function NotificationSettings({
-  notificationSettings,
-  toggleNotificationSetting,
-  toggleNotificationCategory,
-}) {
-  return (
-    <>
-      <SettingsHeader
-        icon="ti-bell"
-        eyebrow="Notifications"
-        title="Notification settings"
-        description="Choose which activity deserves your attention inside AI Study Hub."
-        badge="Saved automatically"
-      />
-
-      <SettingsPanel
-        title="Notification behavior"
-        description="Control how new activity appears while you use the app."
-      >
-        <div className="settings_table">
-          <SettingRow
-            title="Enable notifications"
-            description="Allow the app to create notifications for important activity."
-          >
-            <SettingsSwitch
-              checked={notificationSettings.enabled}
-              onClick={() => toggleNotificationSetting("enabled")}
-              label="Toggle notifications"
-            />
-          </SettingRow>
-
-          <SettingRow
-            title="Show unread badge"
-            description="Display the unread count on the notification bell."
-          >
-            <SettingsSwitch
-              checked={notificationSettings.showBadge}
-              onClick={() => toggleNotificationSetting("showBadge")}
-              label="Toggle unread badge"
-            />
-          </SettingRow>
-
-        </div>
-      </SettingsPanel>
-
-      <SettingsPanel
-        title="Activity categories"
-        description="Fine-tune which events are added to your notification feed."
-      >
-        <div className="notification_category_grid">
-          {NOTIFICATION_CATEGORIES.map((category) => (
-            <article
-              className={`notification_category_card ${
-                category.key === "file"
-                  ? "is_compact"
-                  : ""
-              }`}
-              key={category.key}
-            >
-              <header className="notification_category_header">
-                <i className={category.icon} aria-hidden="true"></i>
-                <div>
-                  <h3>{category.title}</h3>
-                  <p>{category.description}</p>
-                </div>
-              </header>
-
-              <div className="notification_category_options">
-                {category.options.map(([key, label]) => (
-                  <label key={key}>
-                    <span>{label}</span>
-                    <input
-                      type="checkbox"
-                      checked={notificationSettings[category.key][key]}
-                      onChange={() =>
-                        toggleNotificationCategory(category.key, key)
-                      }
-                    />
-                  </label>
-                ))}
-              </div>
-            </article>
-          ))}
         </div>
       </SettingsPanel>
 

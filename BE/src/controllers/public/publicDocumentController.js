@@ -48,6 +48,7 @@ exports.viewPublicDocument = async (req, res) => {
       status: "success",
       data: {
         documentId: document.id,
+        libraryId: document.library_id,
         fileName: document.title,
         fileSizeBytes: document.file_size_bytes,
         status: document.status,

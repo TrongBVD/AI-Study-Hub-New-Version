@@ -110,10 +110,10 @@ exports.getUserProfileById = async (req, res) => {
 
     const { data: libraries, error: libError } = await supabase
       .from("libraries")
-      .select("id, name, description, created_at")
+      .select("id, user_id, name, description, is_public, created_at")
       .eq("user_id", id)
-      .eq("share_on_profile", true)
-      .eq("is_public", true);
+      .eq("is_public", true)
+      .order("created_at", { ascending: false });
 
     if (libError) {
       console.warn("Unable to load personal libraries, skipping:", libError);
@@ -123,7 +123,10 @@ exports.getUserProfileById = async (req, res) => {
       status: "success",
       data: {
         profile,
-        libraries: libraries || []
+        libraries: (libraries || []).map((library) => ({
+          ...library,
+          visibility: "public",
+        }))
       }
     });
 

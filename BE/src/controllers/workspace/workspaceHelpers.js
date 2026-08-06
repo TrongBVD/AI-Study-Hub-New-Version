@@ -139,11 +139,12 @@ const WORKSPACE_DOCUMENT_SELECT = `
   reviewed_by_admin_id,
   reviewed_at,
   admin_review_reason,
+  replacement_document_ids,
   created_at,
   uploader:profiles!documents_uploader_id_fkey (
     id,
     email,
-    username,
+    username
   )
 `;
 
@@ -327,6 +328,9 @@ function mapWorkspaceDocument(row) {
     reviewedByAdminId: row.reviewed_by_admin_id,
     reviewedAt: row.reviewed_at,
     adminReviewReason: row.admin_review_reason,
+    replacementDocumentIds: Array.isArray(row.replacement_document_ids)
+      ? row.replacement_document_ids
+      : [],
     createdAt: row.created_at,
     created_at: row.created_at,
     uploaderName:

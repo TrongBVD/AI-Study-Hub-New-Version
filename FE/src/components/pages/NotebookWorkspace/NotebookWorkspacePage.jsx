@@ -10,7 +10,6 @@ import {
   HiOutlineAcademicCap,
   HiOutlineQuestionMarkCircle,
   HiOutlineArrowLeft,
-  HiOutlineArrowPath,
   HiOutlineArrowRight,
   HiOutlineCog6Tooth,
   HiOutlineTrash,
@@ -49,7 +48,18 @@ import { showPopupConfirm } from "../../common/ActionPopup/actionPopupService.js
 import SourcesSidebar from "./SourcesSidebar.jsx";
 import DeleteConfirmModal from "./DeleteConfirmModal.jsx";
 import DuplicateConfirmModal from "./DuplicateConfirmModal.jsx";
+import LibrarySummaryCard from "./LibrarySummaryCard.jsx";
 import "./NotebookWorkspacePage.css";
+
+function shortenFileName(value, maxLength = 48) {
+  const fileName = String(value || "Document");
+  if (fileName.length <= maxLength) return fileName;
+
+  const extensionIndex = fileName.lastIndexOf(".");
+  const extension = extensionIndex > 0 ? fileName.slice(extensionIndex) : "";
+  const visibleLength = Math.max(16, maxLength - extension.length - 3);
+  return `${fileName.slice(0, visibleLength)}...${extension}`;
+}
 
 function createConversationId() {
   if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID();
@@ -109,7 +119,7 @@ export default function NotebookWorkspacePage() {
   const [library, setLibrary] = useState(null);
   const [documents, setDocuments] = useState([]);
   const [selectedDocIds, setSelectedDocIds] = useState(new Set());
-  const [selectAll, setSelectAll] = useState(true);
+  const [selectAll, setSelectAll] = useState(false);
   const [accessMode, setAccessMode] = useState("loading");
   const [libraryLoadError, setLibraryLoadError] = useState("");
 
@@ -228,13 +238,10 @@ export default function NotebookWorkspacePage() {
           setDocuments(docs);
           setAccessMode(resolvedAccessMode);
 
-          // Guests can inspect public files, but they never enter AI source state.
-          const readyDocuments = docs.filter(isDocumentAiReady);
-          const allIds = isGuest
-            ? new Set()
-            : new Set(readyDocuments.map((document) => document.id));
-          setSelectedDocIds(allIds);
-          setSelectAll(!isGuest && readyDocuments.length > 0);
+          // Selecting AI sources must always be an explicit user action.
+          // Opening or switching libraries starts with no selected files.
+          setSelectedDocIds(new Set());
+          setSelectAll(false);
         }
 
         // Fetch DB chat history (no localStorage)
@@ -403,26 +410,65 @@ export default function NotebookWorkspacePage() {
     try {
       const res = await uploadDocuments(files, null, libraryId, [], null, replacementIds);
       if (res) {
-        const updatedDocs = await getMyDocuments(libraryId);
-        const docs = Array.isArray(updatedDocs) ? updatedDocs : (updatedDocs?.data || []);
-        setDocuments(docs);
-        const readyDocumentIds = docs
-          .filter(isDocumentAiReady)
-          .map((document) => document.id);
-        setSelectedDocIds(new Set(readyDocumentIds));
-        setSelectAll(readyDocumentIds.length > 0);
+        const uploadResults = Array.isArray(res) ? res : [res];
+        const replacedDocumentIds = new Set(
+          uploadResults
+            .flatMap((document) => document?.replaced_document_ids || [])
+            .map((documentId) => String(documentId)),
+        );
+
+        if (replacedDocumentIds.size > 0) {
+          setDocuments((currentDocuments) =>
+            currentDocuments.filter(
+              (document) => !replacedDocumentIds.has(String(document.id)),
+            ),
+          );
+        }
+
         showToast("File uploaded successfully.", "Upload Complete", "success");
 
-        // Trigger immediate in-app notification update on Bell icon
+        // Update the bell immediately after the upload request succeeds. A
+        // slower document-list refresh must not delay this user feedback.
         const libNameText = library?.name ? `library "${library.name}"` : "library";
-        createAppNotification({
-          category: "file",
-          action: "uploaded",
-          title: "Document uploaded",
-          message: `File "${files[0]?.name || "Document"}" has been uploaded to ${libNameText} successfully.`,
-          icon: "ti-file",
-          link: `/dashboard/libraries/${libraryId}`,
+        files.forEach((file) => {
+          createAppNotification({
+            category: "file",
+            action: "uploaded",
+            title: "Document uploaded",
+            message: `File "${file?.name || "Document"}" has been uploaded to ${libNameText} successfully.`,
+            icon: "ti-file",
+            link: `/dashboard/libraries/${libraryId}`,
+          });
         });
+
+        try {
+          const updatedDocs = await getMyDocuments(libraryId);
+          const latestDocs = Array.isArray(updatedDocs)
+            ? updatedDocs
+            : updatedDocs?.data || [];
+          const docs = latestDocs.filter(
+            (document) => !replacedDocumentIds.has(String(document.id)),
+          );
+          setDocuments(docs);
+          setSelectedDocIds((currentIds) => {
+            const readyDocumentIds = new Set(
+              docs
+                .filter(isDocumentAiReady)
+                .map((document) => String(document.id)),
+            );
+            return new Set(
+              [...currentIds].filter((documentId) =>
+                readyDocumentIds.has(String(documentId)),
+              ),
+            );
+          });
+          setSelectAll(false);
+        } catch (refreshError) {
+          console.error(
+            "Document uploaded, but the library list could not refresh:",
+            refreshError,
+          );
+        }
       }
     } catch (err) {
       const duplicateData = err.response?.data;
@@ -564,7 +610,11 @@ export default function NotebookWorkspacePage() {
 
     try {
       await deleteDocument(docId);
-      showToast(`"${title}" has been deleted.`, "File Deleted", "success");
+      showToast(
+        `"${shortenFileName(title)}" has been deleted.`,
+        "File Deleted",
+        "success",
+      );
 
       // Trigger immediate in-app notification update on Bell icon
       const libNameText = library?.name ? `library "${library.name}"` : "library";
@@ -860,7 +910,15 @@ export default function NotebookWorkspacePage() {
 
   const handleDeleteHistoryConversation = async (conversation) => {
     if (historyActionBusy || !conversation?.id) return;
-    if (!window.confirm(`Delete chat history "${conversation.title || "Untitled conversation"}"?`)) {
+    const confirmed = await showPopupConfirm(
+      `Delete chat history "${conversation.title || "Untitled conversation"}"?`,
+      {
+        title: "Delete conversation?",
+        confirmText: "Delete",
+        tone: "danger",
+      },
+    );
+    if (!confirmed) {
       return;
     }
 
@@ -892,7 +950,15 @@ export default function NotebookWorkspacePage() {
 
   const handleClearLibraryHistory = async () => {
     if (historyActionBusy || chatHistory.length === 0) return;
-    if (!window.confirm("Delete all chat history in this library? This cannot be undone.")) {
+    const confirmed = await showPopupConfirm(
+      "Delete all chat history in this library? This cannot be undone.",
+      {
+        title: "Clear chat history?",
+        confirmText: "Delete all",
+        tone: "danger",
+      },
+    );
+    if (!confirmed) {
       return;
     }
 
@@ -1185,31 +1251,6 @@ export default function NotebookWorkspacePage() {
                         ? formatAiMessageText(msg.content)
                         : msg.content}
                     </p>
-                    {msg.citations && msg.citations.length > 0 && (
-                      <div className="citations_row">
-                        {msg.citations.map((citation) => {
-                          const documentId = typeof citation === "string"
-                            ? documents.find((document) => document.title === citation)?.id
-                            : citation.documentId;
-                          const title = typeof citation === "string"
-                            ? citation
-                            : citation.title;
-
-                          return (
-                            <button
-                              type="button"
-                              key={documentId || title}
-                              className="citation_chip"
-                              disabled={!documentId}
-                              title={`View ${title}`}
-                              onClick={() => handleViewDocument(documentId)}
-                            >
-                              {title}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    )}
                   </div>
 
                   {/* Action Buttons Below AI Message */}
@@ -1275,16 +1316,6 @@ export default function NotebookWorkspacePage() {
               disabled={isGuest || isAsking}
             />
             <div className="input_actions_right">
-              <button
-                type="button"
-                className="reset_chat_btn"
-                onClick={handleResetChat}
-                disabled={isGuest || isAsking || (messages.length === 0 && !activeConversationId)}
-                title="Start a new chat without deleting history"
-              >
-                <HiOutlineArrowPath aria-hidden="true" />
-                <span>Reset Chat</span>
-              </button>
               <button
                 type={isAsking ? "button" : "submit"}
                 className={`send_btn ${isAsking ? "stop_btn" : ""}`}
@@ -1363,11 +1394,15 @@ export default function NotebookWorkspacePage() {
             </button>
           </div>
 
-          <div className="library_summary_box">
-            <span className="library_file_count">
-              {documents.length} total {documents.length === 1 ? "file" : "files"}
-            </span>
-          </div>
+          <LibrarySummaryCard
+            documentCount={documents.length}
+            onResetChat={handleResetChat}
+            resetDisabled={
+              isGuest ||
+              isAsking ||
+              (messages.length === 0 && !activeConversationId)
+            }
+          />
 
         </div>
       </aside>

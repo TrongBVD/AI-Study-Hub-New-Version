@@ -23,6 +23,22 @@ function mapProfile(profile) {
   };
 }
 
+async function getPublishedLibraries(userId) {
+  const { data, error } = await supabase
+    .from("libraries")
+    .select("id, user_id, name, description, is_public, created_at")
+    .eq("user_id", userId)
+    .eq("is_public", true)
+    .order("created_at", { ascending: false });
+
+  if (error) throw error;
+
+  return (data || []).map((library) => ({
+    ...library,
+    visibility: "public",
+  }));
+}
+
 exports.getMyProfile = async (req, res) => {
   try {
     const userId = req.user.id;
@@ -58,9 +74,14 @@ exports.getMyProfile = async (req, res) => {
       });
     }
 
+    const libraries = await getPublishedLibraries(userId);
+
     return res.status(200).json({
       status: "success",
-      data: mapProfile(profile),
+      data: {
+        ...mapProfile(profile),
+        libraries,
+      },
     });
   } catch (error) {
     console.error("Failed to load profile:", error);

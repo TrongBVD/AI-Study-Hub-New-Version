@@ -25,7 +25,11 @@ import {
   leaveWorkspace,
   transferAdminOwnership,
 } from "../../../utils/workspaceApi";
-import { downloadDocument, uploadDocuments } from "../../../utils/documentApi";
+import {
+  deleteDocument,
+  downloadDocument,
+  uploadDocuments,
+} from "../../../utils/documentApi";
 import { getStoredUser as getAuthStoredUser } from "../../../utils/authToken.js";
 import WorkspaceAiChat from "./WorkspaceAiChat.jsx";
 import "./WorkSpacePage.css";
@@ -74,6 +78,14 @@ function normalizeIdentity(value) {
   return String(value || "")
     .trim()
     .toLowerCase();
+}
+
+function isSystemAdminUser(user) {
+  const role = String(user?.role || user?.system_role || user?.systemRole || "")
+    .trim()
+    .toUpperCase();
+
+  return role === "ADMIN" || role === "SYSTEM_ADMIN";
 }
 
 function shortenPopupFileName(fileName, maxLength = 48) {
@@ -201,14 +213,28 @@ function buildWorkspaceUploadCandidates(files, documents) {
 
   return {
     duplicateBatchFileNames,
-    candidates: uniqueFiles.map((file) => ({
-      file,
-      existingDocument: replaceableDocuments.find(
+    candidates: uniqueFiles.map((file) => {
+      const matchingDocuments = replaceableDocuments.filter(
         (document) =>
           normalizeWorkspaceDocumentTitle(document?.title) ===
           normalizeWorkspaceDocumentTitle(file?.name),
-      ),
-    })),
+      );
+      const pendingDocument = matchingDocuments.find((document) =>
+        ["PENDING", "PENDING_RETRY", "FLAGGED"].includes(
+          String(document?.status || "").toUpperCase(),
+        ),
+      );
+
+      return {
+        file,
+        pendingDocument,
+        existingDocument:
+          matchingDocuments.find(
+            (document) =>
+              String(document?.status || "").toUpperCase() === "APPROVED",
+          ) || matchingDocuments[0],
+      };
+    }),
   };
 }
 
@@ -405,6 +431,8 @@ function WorkSpacePage() {
   const [workspaceDocuments, setWorkspaceDocuments] = useState([]);
   const [workspaceFileView, setWorkspaceFileView] = useState("documents");
   const [workspaceUploadFiles, setWorkspaceUploadFiles] = useState([]);
+  const [isWorkspaceUploadDragging, setIsWorkspaceUploadDragging] =
+    useState(false);
   const [workspaceReplacementDocumentIds, setWorkspaceReplacementDocumentIds] =
     useState([]);
   const [workspaceDocumentStatus, setWorkspaceDocumentStatus] = useState("");
@@ -653,7 +681,7 @@ function WorkSpacePage() {
       ),
     [workspaceDocuments],
   );
-  const waitingWorkspaceDocuments = useMemo(
+  const reviewQueueWorkspaceDocuments = useMemo(
     () =>
       workspaceDocuments.filter((document) =>
         ["PENDING", "PENDING_RETRY", "FLAGGED"].includes(
@@ -924,7 +952,15 @@ function WorkSpacePage() {
   const replacementDocumentIds = [];
   const keptExistingFileNames = [];
 
-  for (const { file, existingDocument } of candidates) {
+  for (const { file, existingDocument, pendingDocument } of candidates) {
+    if (pendingDocument) {
+      showAlert(
+        `"${shortenPopupFileName(file.name)}" is already waiting for approval. Please approve or reject the pending file before uploading another file with the same name.`,
+      );
+      keptExistingFileNames.push(file.name);
+      continue;
+    }
+
     if (!existingDocument) {
       acceptedFiles.push(file);
       replacementDocumentIds.push(null);
@@ -1103,11 +1139,16 @@ async function handleSearchInviteMember() {
     setIsInviteSearching(true);
     setInviteError("");
     const users = await searchWorkspaceUsers(workspaceId, query);
-    const firstAvailableUser = users?.find((user) => !user.isWorkspaceMember);
+    const visibleUsers = (users || []).filter(
+      (user) => !isSystemAdminUser(user),
+    );
+    const firstAvailableUser = visibleUsers.find(
+      (user) => !user.isWorkspaceMember,
+    );
 
-    setCandidateUsers(users || []);
+    setCandidateUsers(visibleUsers);
     setSelectedUserId(firstAvailableUser?.id || "");
-    setInviteStatus(users?.length ? "found" : "not-found");
+    setInviteStatus(visibleUsers.length ? "found" : "not-found");
   } catch (error) {
     console.error("Cannot search workspace users:", error);
     setCandidateUsers([]);
@@ -1453,15 +1494,72 @@ async function handleGenerateWorkspaceFlashcards() {
   }
 }
 
-async function handleWorkspaceDocumentFileChange(event) {
-  const selectedFiles = Array.from(event.target.files || []);
+async function processWorkspaceDocumentSelection(selectedFiles, append = false) {
+  const getFileSelectionKey = (file) =>
+    [
+      String(file.name || "").trim().toLowerCase(),
+      Number(file.size || 0),
+      Number(file.lastModified || 0),
+      String(file.type || "").toLowerCase(),
+    ].join("::");
+
+  const selectedFileKeys = new Set(
+    (append ? workspaceUploadFiles : []).map(getFileSelectionKey),
+  );
+  const uniqueSelectedFiles = [];
+  let skippedSelectedDuplicates = 0;
+
+  selectedFiles.forEach((file) => {
+    const fileKey = getFileSelectionKey(file);
+    if (selectedFileKeys.has(fileKey)) {
+      skippedSelectedDuplicates += 1;
+      return;
+    }
+
+    selectedFileKeys.add(fileKey);
+    uniqueSelectedFiles.push(file);
+  });
+
+  if (uniqueSelectedFiles.length === 0) {
+    if (!append) {
+      setWorkspaceUploadFiles([]);
+      setWorkspaceReplacementDocumentIds([]);
+    }
+    await showAlert(
+      skippedSelectedDuplicates === 1
+        ? "You cannot upload a file that already exists in the selection."
+        : "You cannot upload files that already exist in the selection.",
+      {
+        title: "File already exists",
+        confirmText: "OK",
+        tone: "danger",
+      },
+    );
+    return;
+  }
+
   const { acceptedFiles, replacementDocumentIds, keptExistingFileNames } =
-    await resolveWorkspaceUploadSelection(selectedFiles);
+    await resolveWorkspaceUploadSelection(uniqueSelectedFiles);
 
-  setWorkspaceUploadFiles(acceptedFiles);
-  setWorkspaceReplacementDocumentIds(replacementDocumentIds);
+  setWorkspaceUploadFiles((currentFiles) =>
+    append ? [...currentFiles, ...acceptedFiles] : acceptedFiles,
+  );
+  setWorkspaceReplacementDocumentIds((currentIds) =>
+    append ? [...currentIds, ...replacementDocumentIds] : replacementDocumentIds,
+  );
 
-  if (keptExistingFileNames.length > 0) {
+  if (skippedSelectedDuplicates > 0) {
+    await showAlert(
+      skippedSelectedDuplicates === 1
+        ? "You cannot upload a file that already exists in the selection. The duplicate file was removed."
+        : "You cannot upload files that already exist in the selection. The duplicate files were removed.",
+      {
+        title: "File already exists",
+        confirmText: "OK",
+        tone: "danger",
+      },
+    );
+  } else if (keptExistingFileNames.length > 0) {
     setWorkspaceDocumentStatus(
       `${keptExistingFileNames.length} existing ${
         keptExistingFileNames.length === 1 ? "document was" : "documents were"
@@ -1474,8 +1572,45 @@ async function handleWorkspaceDocumentFileChange(event) {
   } else {
     setWorkspaceDocumentStatus("");
   }
+}
+
+async function handleWorkspaceDocumentFileChange(event) {
+  const selectedFiles = Array.from(event.target.files || []);
+  await processWorkspaceDocumentSelection(selectedFiles);
 
   event.target.value = "";
+}
+
+async function handleAddWorkspaceDocumentFiles(event) {
+  const selectedFiles = Array.from(event.target.files || []);
+  await processWorkspaceDocumentSelection(selectedFiles, true);
+
+  event.target.value = "";
+}
+
+async function handleWorkspaceDocumentDrop(event) {
+  event.preventDefault();
+  setIsWorkspaceUploadDragging(false);
+
+  if (isUploadingWorkspaceDocuments) return;
+
+  const droppedFiles = Array.from(event.dataTransfer.files || []);
+  await processWorkspaceDocumentSelection(droppedFiles);
+}
+
+function handleRemoveWorkspaceUploadFile(fileIndex) {
+  if (isUploadingWorkspaceDocuments) return;
+
+  setWorkspaceUploadFiles((currentFiles) =>
+    currentFiles.filter((_, index) => index !== fileIndex),
+  );
+  setWorkspaceReplacementDocumentIds((currentIds) =>
+    currentIds.filter((_, index) => index !== fileIndex),
+  );
+
+  if (workspaceUploadFiles.length === 1) {
+    setWorkspaceDocumentStatus("");
+  }
 }
 
 async function handleUploadWorkspaceDocuments() {
@@ -1514,7 +1649,7 @@ async function handleUploadWorkspaceDocuments() {
             new Date().toISOString(),
         }))
       : [];
-    const replacedDocumentIds = new Set([
+    const pendingReplacementDocumentIds = new Set([
       ...uploadResult.replacementDocumentIds.filter(Boolean).map(String),
       ...(uploadedDocuments || []).flatMap((document) =>
         Array.isArray(document.replaced_document_ids)
@@ -1530,9 +1665,7 @@ async function handleUploadWorkspaceDocuments() {
         uploadedDocuments.map((document) => String(document.id)),
       );
       const retainedDocuments = currentDocuments.filter(
-        (document) =>
-          !replacedDocumentIds.has(String(document.id)) &&
-          !uploadedIds.has(String(document.id)),
+        (document) => !uploadedIds.has(String(document.id)),
       );
 
       return [...uploadedDocuments, ...retainedDocuments];
@@ -1560,10 +1693,10 @@ async function handleUploadWorkspaceDocuments() {
     );
 
     setWorkspaceDocumentStatus(
-      replacedDocumentIds.size > 0
-        ? `${replacedDocumentIds.size} existing ${
-            replacedDocumentIds.size === 1 ? "document was" : "documents were"
-          } replaced successfully.`
+      pendingReplacementDocumentIds.size > 0
+        ? `${pendingReplacementDocumentIds.size} replacement ${
+            pendingReplacementDocumentIds.size === 1 ? "is" : "files are"
+          } waiting for workspace admin approval.`
         : hasFlagged
           ? "Upload completed. Some documents were flagged for review."
           : "Workspace documents uploaded and waiting for workspace admin review.",
@@ -1588,6 +1721,45 @@ async function handleReviewWorkspaceDocument(documentId, decision) {
     return;
   }
 
+  const previousDocument = workspaceDocuments.find(
+    (document) => String(document.id) === String(documentId),
+  );
+  const previousDocuments = workspaceDocuments;
+  const replacementDocumentIds = new Set(
+    (Array.isArray(previousDocument?.replacementDocumentIds)
+      ? previousDocument.replacementDocumentIds
+      : Array.isArray(previousDocument?.replacement_document_ids)
+        ? previousDocument.replacement_document_ids
+        : []
+    ).map(String),
+  );
+  const optimisticStatus = decision === "APPROVE" ? "APPROVED" : "REJECTED";
+
+  setWorkspaceDocuments((currentDocuments) => {
+    const visibleDocuments =
+      decision === "APPROVE"
+        ? currentDocuments.filter(
+            (document) =>
+              !replacementDocumentIds.has(String(document.id)),
+          )
+        : currentDocuments;
+
+    return visibleDocuments.map((document) =>
+      String(document.id) === String(documentId)
+        ? {
+            ...document,
+            status: optimisticStatus,
+            reviewedAt: new Date().toISOString(),
+          }
+        : document,
+    );
+  });
+  setWorkspaceDocumentStatus(
+    decision === "APPROVE"
+      ? "Approving document..."
+      : "Rejecting document...",
+  );
+
   try {
     const updatedDocument = await reviewWorkspaceDocument(
       workspaceId,
@@ -1603,18 +1775,22 @@ async function handleReviewWorkspaceDocument(documentId, decision) {
 
     setWorkspaceDocuments((currentDocuments) =>
       currentDocuments.map((document) =>
-        document.id === documentId ? updatedDocument : document,
+        String(document.id) === String(documentId)
+          ? { ...document, ...updatedDocument }
+          : document,
       ),
     );
-    await loadWorkspaceDocuments();
 
     setWorkspaceDocumentStatus(
       decision === "APPROVE"
         ? "Document approved for workspace study tools."
         : "Document rejected by workspace admin.",
     );
+
+    void loadWorkspaceDocuments();
   } catch (error) {
     console.error("Workspace document review failed:", error);
+    setWorkspaceDocuments(previousDocuments);
     setWorkspaceDocumentStatus(
       error.response?.data?.message ||
         "Could not save workspace document review.",
@@ -1681,6 +1857,38 @@ async function handleDownloadWorkspaceDocument(workspaceDocument) {
         error.message ||
         "Could not download this document.",
       { title: "Download failed", confirmText: "Close" },
+    );
+  }
+}
+
+async function handleRemoveWorkspaceDocument(workspaceDocument) {
+  if (!canManageWorkspace || !workspaceDocument?.id) return;
+
+  const shouldRemove = await showConfirm(
+    `Remove "${shortenPopupFileName(workspaceDocument.title)}" from this workspace? This action cannot be undone.`,
+    {
+      title: "Remove workspace file?",
+      confirmText: "Remove file",
+      cancelText: "Cancel",
+      tone: "danger",
+    },
+  );
+
+  if (!shouldRemove) return;
+
+  try {
+    await deleteDocument(workspaceDocument.id);
+    setWorkspaceDocuments((currentDocuments) =>
+      currentDocuments.filter(
+        (document) => String(document.id) !== String(workspaceDocument.id),
+      ),
+    );
+    setWorkspaceDocumentStatus("Document removed from the workspace.");
+  } catch (error) {
+    console.error("Cannot remove workspace document:", error);
+    await showAlert(
+      error.response?.data?.message || "Could not remove this workspace file.",
+      { title: "Remove failed", confirmText: "Close", tone: "danger" },
     );
   }
 }
@@ -2477,6 +2685,105 @@ function renderDocumentsTab() {
     );
   }
 
+  function renderWorkspaceDocumentRow(document, showReviewActions = false) {
+    const status = String(document.status || "PENDING").toUpperCase();
+    const canReviewDocument = canManageWorkspace && showReviewActions;
+
+    return (
+      <article className="workspace_document_row" key={document.id}>
+        {canManageWorkspace && !showReviewActions && (
+          <button
+            type="button"
+            className="workspace_document_remove"
+            onClick={() => handleRemoveWorkspaceDocument(document)}
+            aria-label={`Remove ${document.title} from workspace`}
+            title="Remove from workspace"
+          >
+            ×
+          </button>
+        )}
+
+        <div className="workspace_document_icon">
+          <i className="ti-file"></i>
+        </div>
+
+        <div className="workspace_document_info">
+          <h3 title={document.title}>{document.title}</h3>
+          <p>
+            {formatWorkspaceFileSize(
+              document.fileSizeBytes ?? document.file_size_bytes,
+            )}
+            <span className="workspace_document_uploader">
+              Uploaded by {document.uploaderName || "Unknown user"}
+              <br />
+              {document.createdAt || document.created_at
+                ? new Date(
+                    document.createdAt || document.created_at,
+                  ).toLocaleString()
+                : "Just now"}
+            </span>
+          </p>
+        </div>
+
+        <span
+          className={`workspace_document_status ${status.toLowerCase()}`}
+        >
+          {getDocumentStatusLabel(status)}
+        </span>
+
+        <div className="workspace_document_actions">
+          {canManageWorkspace && (
+            <button
+              type="button"
+              className="view"
+              onClick={() => handleViewWorkspaceDocument(document)}
+            >
+              <i className="ti-eye" aria-hidden="true"></i>
+              View file
+            </button>
+          )}
+
+          {!showReviewActions && (
+            <button
+              type="button"
+              className="download"
+              onClick={() => handleDownloadWorkspaceDocument(document)}
+            >
+              <i className="ti-download" aria-hidden="true"></i>
+              Download
+            </button>
+          )}
+
+          {canReviewDocument && (
+            <>
+              <button
+                type="button"
+                className="approve"
+                onClick={() =>
+                  handleReviewWorkspaceDocument(document.id, "APPROVE")
+                }
+              >
+                <i className="ti-check" aria-hidden="true"></i>
+                Approve
+              </button>
+
+              <button
+                type="button"
+                className="reject"
+                onClick={() =>
+                  handleReviewWorkspaceDocument(document.id, "REJECT")
+                }
+              >
+                <i className="ti-close" aria-hidden="true"></i>
+                Reject
+              </button>
+            </>
+          )}
+        </div>
+      </article>
+    );
+  }
+
   return (
     <section className="workspace_documents_tab">
       <header className="workspace_documents_header">
@@ -2508,33 +2815,44 @@ function renderDocumentsTab() {
         </div>
 
         <div className="workspace_documents_count">
-          <strong>{workspaceDocuments.length}</strong>
+          <strong>
+            {approvedWorkspaceDocuments.length +
+              reviewQueueWorkspaceDocuments.length}
+          </strong>
           <span>Files</span>
         </div>
       </header>
 
       <section className="workspace_documents_upload_card">
-        <div className="workspace_documents_upload_copy">
-          <div className="workspace_documents_upload_icon">
-            <i className="ti-upload"></i>
-          </div>
-
-          <div>
-            <h3>Upload workspace documents</h3>
-            <p>
-              PDF, DOCX, and TXT files are supported. Files are checked before
-              becoming available for study tools.
-            </p>
-          </div>
-        </div>
-
-        <div className="workspace_documents_upload_actions">
-          <label className="workspace_documents_file_picker">
-            <i className="ti-folder"></i>
+        {workspaceUploadFiles.length === 0 ? (
+          <label
+            className={`workspace_documents_dropzone${
+              isWorkspaceUploadDragging ? " is-dragging" : ""
+            }`}
+            onDragEnter={(event) => {
+              event.preventDefault();
+              if (!isUploadingWorkspaceDocuments) {
+                setIsWorkspaceUploadDragging(true);
+              }
+            }}
+            onDragOver={(event) => event.preventDefault()}
+            onDragLeave={(event) => {
+              if (!event.currentTarget.contains(event.relatedTarget)) {
+                setIsWorkspaceUploadDragging(false);
+              }
+            }}
+            onDrop={handleWorkspaceDocumentDrop}
+          >
+            <span className="workspace_documents_dropzone_icon">
+              <i className="ti-upload"></i>
+            </span>
+            <strong>Drop your files here</strong>
             <span>
-              {workspaceUploadFiles.length > 0
-                ? `${workspaceUploadFiles.length} selected`
-                : "Choose files"}
+              or <b>browse from your device</b>
+            </span>
+            <small>PDF, DOCX, OR TXT</small>
+            <span className="workspace_documents_dropzone_selection">
+              Choose files to upload
             </span>
             <input
               type="file"
@@ -2544,7 +2862,56 @@ function renderDocumentsTab() {
               disabled={isUploadingWorkspaceDocuments}
             />
           </label>
+        ) : (
+          <div className="workspace_documents_upload_preview">
+            <div className="workspace_documents_upload_preview_header">
+              <div>
+                <span>Ready to upload</span>
+                <h3>
+                  {workspaceUploadFiles.length} file
+                  {workspaceUploadFiles.length === 1 ? "" : "s"} selected
+                </h3>
+              </div>
+              <label>
+                <i className="ti-plus"></i>
+                Add files
+                <input
+                  type="file"
+                  multiple
+                  accept=".pdf,.docx,.txt"
+                  onChange={handleAddWorkspaceDocumentFiles}
+                  disabled={isUploadingWorkspaceDocuments}
+                />
+              </label>
+            </div>
 
+            <div className="workspace_documents_upload_preview_list">
+              {workspaceUploadFiles.map((file, fileIndex) => (
+                <article key={`${file.name}-${file.size}-${fileIndex}`}>
+                  <span className="workspace_documents_upload_preview_icon">
+                    <i className="ti-file"></i>
+                  </span>
+                  <div>
+                    <strong title={file.name}>{file.name}</strong>
+                    <small>{formatWorkspaceFileSize(file.size)}</small>
+                  </div>
+                  <button
+                    type="button"
+                    className="workspace_documents_upload_preview_remove"
+                    onClick={() => handleRemoveWorkspaceUploadFile(fileIndex)}
+                    disabled={isUploadingWorkspaceDocuments}
+                    aria-label={`Remove ${file.name}`}
+                    title="Remove file"
+                  >
+                    ×
+                  </button>
+                </article>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div className="workspace_documents_upload_actions">
           <button
             type="button"
             onClick={handleUploadWorkspaceDocuments}
@@ -2556,17 +2923,6 @@ function renderDocumentsTab() {
           </button>
         </div>
 
-        {workspaceUploadFiles.length > 0 && (
-          <div className="workspace_documents_selected_files">
-            {workspaceUploadFiles.map((file) => (
-              <span className="workspace_documents_selected_file" key={`${file.name}-${file.size}`}>
-                <strong title={file.name}>{file.name}</strong>
-                <small>{formatWorkspaceFileSize(file.size)}</small>
-              </span>
-            ))}
-          </div>
-        )}
-
         {workspaceDocumentStatus && (
           <p className="workspace_documents_status">
             {workspaceDocumentStatus}
@@ -2574,119 +2930,60 @@ function renderDocumentsTab() {
         )}
       </section>
 
+      <section
+        className="workspace_documents_secondary_panel"
+        aria-label="Documents waiting for approval"
+      >
+        <div className="workspace_documents_review_header">
+          <div>
+            <span>Approval queue</span>
+            <h3>Waiting for review</h3>
+          </div>
+          <strong>{reviewQueueWorkspaceDocuments.length}</strong>
+        </div>
+
+        {reviewQueueWorkspaceDocuments.length === 0 ? (
+          <div className="workspace_documents_review_empty">
+            <i className="ti-check-box"></i>
+            <h3>No documents waiting for review</h3>
+            <p>New uploads will appear here before they become sources.</p>
+          </div>
+        ) : (
+          <div className="workspace_documents_review_list">
+            {reviewQueueWorkspaceDocuments.map((document) =>
+              renderWorkspaceDocumentRow(document, true),
+            )}
+          </div>
+        )}
+      </section>
+
       <section className="workspace_documents_list_card">
         <div className="workspace_documents_list_header">
           <h3>Sources</h3>
           <span>
-            {workspaceDocuments.length} file{workspaceDocuments.length === 1 ? "" : "s"}
+            {approvedWorkspaceDocuments.length} file{approvedWorkspaceDocuments.length === 1 ? "" : "s"}
           </span>
         </div>
 
         <div className="workspace_documents_source_summary">
           <span><i className="ti-check-box" /> Select all</span>
-          <small>{approvedWorkspaceDocuments.length} approved · {waitingWorkspaceDocuments.length} waiting</small>
+          <small>{approvedWorkspaceDocuments.length} approved</small>
         </div>
 
-        {workspaceDocuments.length === 0 ? (
+        {approvedWorkspaceDocuments.length === 0 ? (
           <div className="workspace_documents_empty">
             <i className="ti-files"></i>
-            <h3>No workspace documents yet</h3>
+            <h3>No approved sources yet</h3>
             <p>
-              Upload a document here, then use approved documents in the Study
-              tab.
+              Approved documents will appear here and become available in the
+              Study tab.
             </p>
           </div>
         ) : (
           <div className="workspace_documents_list">
-            {workspaceDocuments.map((document) => {
-              const status = String(document.status || "PENDING").toUpperCase();
-              const needsWorkspaceReview =
-                canManageWorkspace &&
-                ["PENDING", "FLAGGED", "PENDING_RETRY", "REJECTED"].includes(
-                  status,
-                );
-
-              return (
-                <article className="workspace_document_row" key={document.id}>
-                  <div className="workspace_document_icon">
-                    <i className="ti-file"></i>
-                  </div>
-
-                  <div className="workspace_document_info">
-                    <h3 title={document.title}>{document.title}</h3>
-                    <p>
-                      {formatWorkspaceFileSize(
-                        document.fileSizeBytes ?? document.file_size_bytes,
-                      )}
-                      <span className="workspace_document_uploader">
-                        Uploaded by {document.uploaderName || "Unknown user"}
-                        <br />
-                        {document.createdAt || document.created_at
-                          ? new Date(
-                              document.createdAt || document.created_at,
-                            ).toLocaleString()
-                          : "Just now"}
-                      </span>
-                    </p>
-                  </div>
-
-                  <span
-                    className={`workspace_document_status ${status.toLowerCase()}`}
-                  >
-                    {getDocumentStatusLabel(status)}
-                  </span>
-
-                  <div className="workspace_document_actions">
-                    {canManageWorkspace && (
-                      <button
-                        type="button"
-                        className="view"
-                        onClick={() => handleViewWorkspaceDocument(document)}
-                      >
-                        <i className="ti-eye" aria-hidden="true"></i>
-                        View file
-                      </button>
-                    )}
-
-                    <button
-                      type="button"
-                      className="download"
-                      onClick={() => handleDownloadWorkspaceDocument(document)}
-                    >
-                      <i className="ti-download" aria-hidden="true"></i>
-                      Download
-                    </button>
-
-                    {needsWorkspaceReview && (
-                      <>
-                        <button
-                          type="button"
-                          className="approve"
-                          onClick={() =>
-                            handleReviewWorkspaceDocument(
-                              document.id,
-                              "APPROVE",
-                            )
-                          }
-                        >
-                          Approve
-                        </button>
-
-                        <button
-                          type="button"
-                          className="reject"
-                          onClick={() =>
-                            handleReviewWorkspaceDocument(document.id, "REJECT")
-                          }
-                        >
-                          Reject
-                        </button>
-                      </>
-                    )}
-                  </div>
-                </article>
-              );
-            })}
+            {approvedWorkspaceDocuments.map((document) =>
+              renderWorkspaceDocumentRow(document),
+            )}
           </div>
         )}
       </section>
@@ -3210,19 +3507,6 @@ return (
                 : "Leaving will delete this workspace"
               : "Leave workspace"
           }
-          style={{
-            marginLeft: "auto",
-            color: "#dc2626",
-            border: "1px solid #fca5a5",
-            background: "#fef2f2",
-            display: "flex",
-            alignItems: "center",
-            gap: "6px",
-            borderRadius: "8px",
-            padding: "6px 14px",
-            cursor: "pointer",
-            fontWeight: 600,
-          }}
           onClick={handleLeaveWorkspace}
         >
           <i className="ti-export"></i>

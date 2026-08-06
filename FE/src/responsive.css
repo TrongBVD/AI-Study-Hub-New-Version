@@ -1,0 +1,294 @@
+/* Final application-wide responsive safety layer.
+   The supported compact viewport starts at 400px. Component styles remain
+   responsible for their visual design; this file prevents page-level overflow
+   and supplies consistent compact layout behavior. */
+
+html,
+body,
+#root {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
+body {
+  overflow-x: clip;
+}
+
+img,
+svg,
+video,
+canvas,
+iframe {
+  max-width: 100%;
+}
+
+input,
+textarea,
+select,
+button {
+  max-width: 100%;
+}
+
+:where(
+  .layout,
+  .main_area,
+  .content,
+  .user_dashboard_content,
+  .workspace_page,
+  .workspace_page > *,
+  .profile_page,
+  .profile_content,
+  .notebook_workspace_page,
+  .study_page,
+  .discover_page,
+  .settings_page,
+  .admin-layout__main,
+  .admin-layout__content
+) {
+  min-width: 0;
+  max-width: 100%;
+}
+
+:where(
+  .workspace_member_table,
+  .workspace_material_table_card,
+  .workspace_documents_list_card,
+  .admin_table_wrap,
+  .usage_admin_table_wrap,
+  .deleted-workspaces__table-wrap
+) {
+  max-width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+  scrollbar-width: thin;
+}
+
+.workspace_top_tabs .workspace_leave_tab_btn {
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+  border: 1px solid #dc2626;
+  border-radius: 12px;
+  background: #dc2626;
+  color: #ffffff;
+  padding: 8px 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  font-weight: 800;
+  line-height: 1.25;
+  text-align: center;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+}
+
+.workspace_top_tabs .workspace_leave_tab_btn:hover {
+  border-color: #b91c1c;
+  background: #b91c1c;
+  color: #ffffff;
+}
+
+@media (max-width: 900px) {
+  .top_navbar {
+    grid-template-columns: minmax(0, 1fr) auto;
+    height: 68px;
+    gap: 12px;
+    padding-inline: 18px;
+  }
+
+  .top_navbar .nav_left,
+  .top_navbar .nav_actions {
+    min-width: 0;
+  }
+
+  .workspace_page {
+    padding: 18px clamp(14px, 4vw, 24px) 44px;
+  }
+
+  .workspace_top_tabs {
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+    margin-bottom: 18px;
+    padding: 8px;
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    background: var(--bg-card);
+    overflow: visible;
+  }
+
+  .workspace_top_tabs button {
+    width: 100%;
+    min-width: 0;
+    min-height: 44px;
+    justify-content: center;
+    padding: 8px 6px;
+    border-radius: 12px;
+    line-height: 1.15;
+    white-space: normal;
+  }
+
+  .workspace_top_tabs button.active {
+    background: var(--accent-soft);
+    color: var(--accent-color);
+  }
+
+  .workspace_top_tabs button.active::after {
+    display: none;
+  }
+
+  .workspace_top_tabs .workspace_leave_tab_btn {
+    width: 100%;
+    min-width: 0;
+    margin-left: 0 !important;
+    justify-content: center;
+    white-space: normal;
+  }
+
+  .profile_page {
+    grid-template-columns: 1fr;
+    gap: 28px;
+    padding: 28px clamp(14px, 5vw, 28px);
+  }
+
+  .profile_sidebar,
+  .profile_name_area,
+  .profile_content {
+    width: 100%;
+  }
+
+  .profile_main_avatar {
+    width: min(260px, 72vw);
+    height: min(260px, 72vw);
+    margin-inline: auto;
+  }
+
+  :where(
+    .action_popup,
+    .inform_popup,
+    .workspace_invite_modal,
+    .crop_modal_content,
+    .duplicate_confirm_modal,
+    .delete_confirm_modal
+  ) {
+    max-width: calc(100vw - 28px);
+  }
+}
+
+@media (max-width: 640px) {
+  .top_navbar {
+    padding-inline: 14px;
+  }
+
+  .top_navbar .brand,
+  .top_navbar .guest_auth_actions {
+    display: none;
+  }
+
+  .notification_panel,
+  .global_search_panel {
+    position: fixed;
+    left: 14px;
+    right: 14px;
+    width: auto;
+    max-width: none;
+  }
+
+  .workspace_page {
+    padding-inline: 12px;
+  }
+
+  .workspace_top_tabs {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .workspace_top_tabs button {
+    font-size: 12px;
+  }
+
+  :where(
+    .workspace_documents_header,
+    .workspace_documents_list_header,
+    .workspace_documents_upload_actions,
+    .libraries_header,
+    .profile_bio_header,
+    .page_header
+  ) {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  :where(
+    .workspace_documents_file_picker,
+    .workspace_documents_upload_actions > button,
+    .profile_bio_header > button,
+    .page_header > button
+  ) {
+    width: 100%;
+  }
+
+  .workspace_documents_upload_card,
+  .workspace_documents_list_card,
+  .libraries_section,
+  .profile_bio_panel {
+    padding: 16px;
+    border-radius: 14px;
+  }
+
+  .workspace_documents_upload_copy h2 {
+    font-size: clamp(22px, 7vw, 30px);
+    overflow-wrap: anywhere;
+  }
+
+  .library_grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .profile_bio_meta,
+  .profile_bio_meta > div,
+  .crop_modal_actions {
+    width: 100%;
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .profile_bio_meta button,
+  .crop_modal_actions button {
+    width: 100%;
+  }
+
+  .sidebar {
+    width: min(310px, calc(100vw - 40px));
+  }
+}
+
+@media (max-width: 460px) {
+  .workspace_top_tabs {
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+    padding: 6px;
+  }
+
+  .workspace_top_tabs button {
+    min-height: 42px;
+    font-size: 11px;
+  }
+
+  .workspace_top_tabs button i,
+  .workspace_top_tabs button svg {
+    flex: 0 0 auto;
+  }
+
+  :where(
+    .workspace_invite_modal_footer,
+    .action_popup_actions,
+    .inform_popup_actions
+  ) {
+    grid-template-columns: 1fr;
+    flex-direction: column;
+  }
+}

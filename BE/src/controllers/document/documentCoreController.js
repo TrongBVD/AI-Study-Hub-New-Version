@@ -20,6 +20,7 @@ const {
 } = require("../../utils/asyncUtils");
 const { normalizeSuggestedTags } = require("../../utils/tagUtils");
 const {
+  normalizeDocumentTitle,
   parseReplacementDocumentIds,
   resolveDuplicateUploadDecisions,
 } = require("../../utils/documentDuplicateUtils");
@@ -119,6 +120,26 @@ async function updateDocumentTaggingState(
   }
 }
 
+async function updateDocumentProcessingResult(
+  documentId,
+  payload,
+  context = {},
+) {
+  let query = supabase
+    .from("documents")
+    .update(payload)
+    .eq("id", documentId);
+
+  // Workspace admins may approve/reject while AI processing is still running.
+  // Once reviewed, the background job must never overwrite that final decision.
+  if (context.workspaceId) {
+    query = query.is("reviewed_at", null);
+  }
+
+  const { error } = await query;
+  if (error) throw error;
+}
+
 async function markDocumentTaggingFailed(documentId, error, context = {}) {
   const message = getTaggingErrorMessage(error);
 
@@ -184,13 +205,14 @@ async function processDocumentWithAI(
         "The file does not contain enough readable text for AI tagging.",
       );
       await markDocumentTaggingFailed(documentId, taggingError, taggingContext);
-      await supabase
-        .from("documents")
-        .update({
+      await updateDocumentProcessingResult(
+        documentId,
+        {
           status: "REJECTED",
           ai_reject_reason: { reason: "Could not extract enough readable text from this file." },
-        })
-        .eq("id", documentId);
+        },
+        taggingContext,
+      );
       //file rỗng hoặc ít hơn 20 kí tự
       return { status: "REJECTED", reason: "Could not extract enough readable text", chunkCount: 0 };
     }
@@ -205,13 +227,14 @@ async function processDocumentWithAI(
         new Error("No readable text chunks could be created."),
         taggingContext,
       );
-      await supabase
-        .from("documents")
-        .update({
+      await updateDocumentProcessingResult(
+        documentId,
+        {
           status: "REJECTED",
           ai_reject_reason: { reason: "No readable text chunks could be created." },
-        })
-        .eq("id", documentId);
+        },
+        taggingContext,
+      );
 
       return {
         status: "REJECTED",
@@ -225,7 +248,11 @@ async function processDocumentWithAI(
       ai_reject_reason: aiRejectReason,
     };
 
-    await supabase.from("documents").update(updatePayload).eq("id", documentId);
+    await updateDocumentProcessingResult(
+      documentId,
+      updatePayload,
+      taggingContext,
+    );
 
     let taggingStatus = "COMPLETED";
 
@@ -363,16 +390,17 @@ async function processWorkspaceDocumentInBackground(
         new Error("The supplied tags do not match the document content."),
         taggingContext,
       );
-      await supabase
-        .from("documents")
-        .update({
+      await updateDocumentProcessingResult(
+        documentId,
+        {
           status: "REJECTED",
           ai_reject_reason: {
             reason: "Document tags do not match the uploaded content.",
             tagValidations: tagValidation.tagValidations || [],
           },
-        })
-        .eq("id", documentId);
+        },
+        taggingContext,
+      );
       return;
     }
 
@@ -396,16 +424,17 @@ async function processWorkspaceDocumentInBackground(
       error,
       taggingContext,
     ).catch(() => {});
-    await supabase
-      .from("documents")
-      .update({
+    await updateDocumentProcessingResult(
+      documentId,
+      {
         status: "PENDING_RETRY",
         ai_reject_reason: {
           reason: "AI processing failed. Manual review may be needed.",
           error: error.message,
         },
-      })
-      .eq("id", documentId);
+      },
+      taggingContext,
+    );
   }
 }
 
@@ -732,7 +761,7 @@ exports.uploadDocuments = async (req, res) => {
 
     let existingDocumentQuery = supabase
       .from("documents")
-      .select("id, uploader_id, title, file_size_bytes, created_at")
+      .select("id, uploader_id, title, file_size_bytes, status, created_at")
       .is("deleted_at", null);
 
     if (!isDirectWorkspaceUpload) {
@@ -752,6 +781,33 @@ exports.uploadDocuments = async (req, res) => {
     } = await existingDocumentQuery.order("created_at", { ascending: false });
 
     if (existingDocumentError) throw existingDocumentError;
+
+    if (isDirectWorkspaceUpload) {
+      const pendingTitles = new Set(
+        (scopedExistingDocuments || [])
+          .filter((document) =>
+            ["PENDING", "PENDING_RETRY", "FLAGGED"].includes(
+              String(document.status || "").toUpperCase(),
+            ),
+          )
+          .map((document) => normalizeDocumentTitle(document.title)),
+      );
+      const pendingDuplicateFileNames = files
+        .filter((file) =>
+          pendingTitles.has(normalizeDocumentTitle(file.originalname)),
+        )
+        .map((file) => file.originalname);
+
+      if (pendingDuplicateFileNames.length > 0) {
+        return res.status(409).json({
+          status: "error",
+          code: "DOCUMENT_ALREADY_PENDING",
+          message:
+            "A file with the same name is already waiting for approval. Approve or reject it before uploading another version.",
+          files: pendingDuplicateFileNames,
+        });
+      }
+    }
 
     const existingDocumentsById = new Map(
       (scopedExistingDocuments || []).map((document) => [
@@ -971,6 +1027,8 @@ exports.uploadDocuments = async (req, res) => {
       FILE_UPLOAD_CONCURRENCY,
       async (processedData) => {
       const { file, fileIndex, extractedText } = processedData;
+      const replacedDocumentIds =
+        duplicateDecision.replacementTargetIds[fileIndex] || [];
 
       const safeFileName = sanitizeFileName(file.originalname);
       const storagePath = `${userID}/${Date.now()}-${crypto.randomUUID()}-${safeFileName}`;
@@ -1003,6 +1061,9 @@ exports.uploadDocuments = async (req, res) => {
           tagging_status: "PENDING",
           tagging_error: null,
           tagging_updated_at: new Date().toISOString(),
+          replacement_document_ids: isDirectWorkspaceUpload
+            ? replacedDocumentIds
+            : [],
         })
         .select("*").single();
 
@@ -1019,6 +1080,9 @@ exports.uploadDocuments = async (req, res) => {
             is_public: targetLibrary ? Boolean(targetLibrary.is_public) : false,
             status: status,
             ai_reject_reason: aiRejectReason,
+            replacement_document_ids: isDirectWorkspaceUpload
+              ? replacedDocumentIds
+              : [],
           })
           .select("*").single();
 
@@ -1087,12 +1151,10 @@ exports.uploadDocuments = async (req, res) => {
         libraryName: targetLibrary?.name || null,
       });
 
-        const replacedDocumentIds =
-          duplicateDecision.replacementTargetIds[fileIndex] || [];
-
         if (
           replacedDocumentIds.length > 0 &&
-          (isBackgroundUpload || aiResult.status === "APPROVED")
+          !isDirectWorkspaceUpload &&
+          aiResult.status === "APPROVED"
         ) {
           const replacementTimestamp = new Date().toISOString();
           let replacementDeleteQuery = supabase
@@ -1379,6 +1441,7 @@ exports.viewDocument = async (req, res) => {
       status: "success",
       data: {
         documentId: document.id,
+        libraryId: document.library_id,
         fileName: document.title,
         fileSizeBytes: document.file_size_bytes,
         status: document.status,
