@@ -11,7 +11,7 @@ const {
 const DAILY_AI_REQUEST_LIMIT = 30;
 const MAX_CHAT_QUESTION_LENGTH = 2000;
 const MAX_CHAT_HISTORY_TITLE_LENGTH = 120;
-const MAX_SELECTED_CHAT_DOCUMENTS = 25;
+const MAX_SELECTED_CHAT_DOCUMENTS = 10;
 const MAX_LIBRARY_RAG_DOCUMENTS = 100;
 const RAG_RETRIEVAL_CONCURRENCY = 4;
 const MAX_RAG_CONTEXT_CHUNKS = 120;
@@ -469,13 +469,17 @@ async function retrieveChatChunks(question, documents, contentMode = "SEARCH") {
     documents,
     RAG_RETRIEVAL_CONCURRENCY,
     async (document) => {
+        const matchCount = Math.min(
+    20,
+    Math.max(12, Math.floor(MAX_RAG_CONTEXT_CHUNKS / documents.length))
+  );
       let chunks = [];
       if (vectorLiteral) {
         try {
           const { data, error } = await supabase.rpc("match_document_chunks", {
             match_document_id: document.id,
             query_embedding: vectorLiteral,
-            match_count: documents.length === 1 ? 20 : 10,
+            match_count: matchCount,
           });
           if (error) throw error;
           chunks = Array.isArray(data) ? data : [];
@@ -485,7 +489,7 @@ async function retrieveChatChunks(question, documents, contentMode = "SEARCH") {
       }
 
       if (chunks.length === 0) {
-        chunks = (await ensureDocumentChunks(document)).slice(0, documents.length === 1 ? 20 : 10);
+        chunks = (await ensureDocumentChunks(document)).slice(0, matchCount);
       }
 
       return chunks.map((chunk) => ({
