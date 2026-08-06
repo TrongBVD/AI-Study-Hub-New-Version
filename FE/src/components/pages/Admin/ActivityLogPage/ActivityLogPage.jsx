@@ -3,15 +3,16 @@ import { getActivityLogs } from "../../../../utils/adminApi";
 import "./ActivityLogPage.css";
 
 const ACTION_OPTIONS = [
-  { value: "DEFAULT", label: "Default (Select an action...)" },
-  { value: "ADMIN_REVIEW_DOCUMENT", label: "ADMIN_REVIEW_DOCUMENT (Admin Review)" },
-  { value: "DOCUMENT_APPROVED", label: "DOCUMENT_APPROVED (File Approved)" },
-  { value: "DOCUMENT_REJECTED", label: "DOCUMENT_REJECTED (File Rejected)" },
-  { value: "WORKSPACE_ROLE_CHANGED", label: "WORKSPACE_ROLE_CHANGED (Role Update)" },
-  { value: "WORKSPACE_DELETED", label: "WORKSPACE_DELETED (Workspace Removed)" },
-  { value: "WORKSPACE_RENAMED", label: "WORKSPACE_RENAMED (Workspace Renamed)" },
-  { value: "ADMIN_UPDATE_USER_STATUS", label: "ADMIN_UPDATE_USER_STATUS (User Status)" },
-  { value: "ADMIN_UPDATE_USER_ROLE", label: "ADMIN_UPDATE_USER_ROLE (User Role)" },
+  { value: "ALL", label: "All Activity Logs (Tất cả nhật ký)" },
+  { value: "ADMIN_UPDATE_USER_ROLE", label: "User Role Update (Quyền người dùng)" },
+  { value: "ADMIN_UPDATE_USER_STATUS", label: "User Status Change (Trạng thái tài khoản)" },
+  { value: "WORKSPACE_ROLE_CHANGED", label: "Workspace Role Change (Quyền thành viên Workspace)" },
+  { value: "WORKSPACE_RENAMED", label: "Workspace Renamed (Đổi tên Workspace)" },
+  { value: "WORKSPACE_DELETED", label: "Workspace Deleted (Xóa Workspace)" },
+  { value: "ADMIN_RESTORE_WORKSPACE", label: "Workspace Restored (Khôi phục Workspace)" },
+  { value: "ADMIN_PERMANENTLY_DELETE_WORKSPACE", label: "Workspace Permanently Deleted (Xóa vĩnh viễn)" },
+  { value: "SYSTEM_AI_REJECT_DOCUMENT", label: "AI Rejected Document (AI tự động chặn tài liệu)" },
+  { value: "ADMIN_UPDATE_ISSUE_REPORT", label: "Issue Report Updated (Cập nhật báo cáo sự cố)" },
 ];
 
 function getDisplayName(user) {
@@ -31,10 +32,10 @@ function getInitials(name = "") {
 }
 
 function getActionType(action = "") {
-  if (action.includes("DISABLE") || action.includes("SECURITY")) return "security";
+  if (action.includes("DISABLE") || action.includes("SECURITY") || action.includes("BAN")) return "security";
   if (action.includes("DELETE") || action.includes("REJECT")) return "danger";
   if (action.includes("QUOTA")) return "quota";
-  if (action.includes("CREATE") || action.includes("UPLOAD") || action.includes("APPROVED")) return "create";
+  if (action.includes("CREATE") || action.includes("UPLOAD") || action.includes("RESTORE")) return "create";
   return "update";
 }
 
@@ -59,9 +60,9 @@ function mapLog(row) {
   let workspaceName = row.entity_type === "workspaces" ? (newData.name || oldData.name || row.entity_id) : "System";
   let changeSummary;
 
-  if (action === "DOCUMENT_APPROVED" || action === "DOCUMENT_REJECTED") {
+  if (action === "SYSTEM_AI_REJECT_DOCUMENT") {
     targetUser = oldData.uploader_id ? (oldData.uploader_name || `User ID: ${oldData.uploader_id.slice(0, 8)}...`) : actorName;
-    changeSummary = row.details || `${newData.notificationType || action}`;
+    changeSummary = row.details || `AI moderation rejected sensitive content: ${documentTitle}`;
   } else if (action === "WORKSPACE_ROLE_CHANGED") {
     targetUser = newData.targetUserName || newData.targetUserId || "Workspace Member";
     changeSummary = `Role change: ${oldData.role || "Member"} → ${newData.role || "Updated"}`;
@@ -71,6 +72,15 @@ function mapLog(row) {
   } else if (action === "ADMIN_UPDATE_USER_ROLE") {
     targetUser = newData.username || newData.targetUserId || row.entity_id;
     changeSummary = `Role change: ${oldData.role || "USER"} → ${newData.role || "Updated"}`;
+  } else if (action === "ADMIN_RESTORE_WORKSPACE") {
+    targetUser = "Workspace Admin";
+    changeSummary = row.details || `Restored workspace "${workspaceName}"`;
+  } else if (action === "ADMIN_PERMANENTLY_DELETE_WORKSPACE") {
+    targetUser = "Workspace Owner";
+    changeSummary = row.details || `Permanently deleted workspace "${workspaceName}"`;
+  } else if (action === "ADMIN_UPDATE_ISSUE_REPORT") {
+    targetUser = oldData.reporter_email || "Reporter";
+    changeSummary = row.details || `Updated issue report state for ${oldData.title || row.entity_id}`;
   } else {
     changeSummary = row.details || `${action} on ${row.entity_type}`;
   }
@@ -184,7 +194,7 @@ function ActivityLogPage() {
   const [logs, setLogs] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [userFilter, setUserFilter] = useState("All users");
-  const [actionFilter, setActionFilter] = useState("DEFAULT");
+  const [actionFilter, setActionFilter] = useState("ALL");
   const [workspaceFilter, setWorkspaceFilter] = useState("All scopes");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
@@ -222,10 +232,6 @@ function ActivityLogPage() {
   );
 
   const filteredLogs = useMemo(() => {
-    if (actionFilter === "DEFAULT") {
-      return [];
-    }
-
     const keyword = searchTerm.trim().toLowerCase();
 
     return logs.filter((log) => {
@@ -246,7 +252,7 @@ function ActivityLogPage() {
           .toLowerCase()
           .includes(keyword);
       const matchesUser = userFilter === "All users" || log.user === userFilter;
-      const matchesAction = log.action === actionFilter;
+      const matchesAction = actionFilter === "ALL" || log.action === actionFilter;
       const matchesWorkspace =
         workspaceFilter === "All scopes" ||
         log.workspace === workspaceFilter;
