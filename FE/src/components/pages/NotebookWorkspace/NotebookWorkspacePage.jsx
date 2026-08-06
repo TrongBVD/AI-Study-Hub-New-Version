@@ -119,7 +119,8 @@ export default function NotebookWorkspacePage() {
   const [library, setLibrary] = useState(null);
   const [documents, setDocuments] = useState([]);
   const [selectedDocIds, setSelectedDocIds] = useState(new Set());
-  const [selectAll, setSelectAll] = useState(false);
+  // Keep selection as the single source of truth. `selectAll` is derived below
+  // so it cannot get out of sync while the document list is being refreshed.
   const [accessMode, setAccessMode] = useState("loading");
   const [libraryLoadError, setLibraryLoadError] = useState("");
 
@@ -243,7 +244,6 @@ export default function NotebookWorkspacePage() {
           // Selecting AI sources must always be an explicit user action.
           // Opening or switching libraries starts with no selected files.
           setSelectedDocIds(new Set());
-          setSelectAll(false);
         }
 
         // Fetch DB chat history (no localStorage)
@@ -264,7 +264,6 @@ export default function NotebookWorkspacePage() {
           setLibrary(null);
           setDocuments([]);
           setSelectedDocIds(new Set());
-          setSelectAll(false);
           setAccessMode("denied");
           setLibraryLoadError(
             err.response?.data?.message ||
@@ -364,13 +363,14 @@ export default function NotebookWorkspacePage() {
       );
       return next.size === current.size ? current : next;
     });
-    setSelectAll(
-      readyDocumentIds.size > 0 &&
-        [...selectedDocIds].filter((documentId) =>
-          readyDocumentIds.has(String(documentId)),
-        ).length === readyDocumentIds.size,
-    );
-  }, [documents, isGuest, selectedDocIds]);
+  }, [documents, isGuest]);
+
+  const readyDocumentIds = documents
+    .filter(isDocumentAiReady)
+    .map((document) => String(document.id));
+  const selectAll =
+    readyDocumentIds.length > 0 &&
+    readyDocumentIds.every((documentId) => selectedDocIds.has(documentId));
 
   /**
    * Scroll chat to bottom when messages update
@@ -391,15 +391,14 @@ export default function NotebookWorkspacePage() {
     );
     if (!isDocumentAiReady(document)) return;
 
+    const normalizedDocId = String(docId);
     const next = new Set(selectedDocIds);
-    if (next.has(docId)) {
-      next.delete(docId);
+    if (next.has(normalizedDocId)) {
+      next.delete(normalizedDocId);
     } else {
-      next.add(docId);
+      next.add(normalizedDocId);
     }
     setSelectedDocIds(next);
-    const readyDocumentCount = documents.filter(isDocumentAiReady).length;
-    setSelectAll(readyDocumentCount > 0 && next.size === readyDocumentCount);
   };
 
   /**
@@ -409,13 +408,8 @@ export default function NotebookWorkspacePage() {
     if (isGuest) return;
     if (selectAll) {
       setSelectedDocIds(new Set());
-      setSelectAll(false);
     } else {
-      const readyDocumentIds = documents
-        .filter(isDocumentAiReady)
-        .map((document) => document.id);
       setSelectedDocIds(new Set(readyDocumentIds));
-      setSelectAll(readyDocumentIds.length > 0);
     }
   };
 
@@ -489,7 +483,6 @@ export default function NotebookWorkspacePage() {
               ),
             );
           });
-          setSelectAll(false);
         } catch (refreshError) {
           console.error(
             "Document uploaded, but the library list could not refresh:",
@@ -891,7 +884,6 @@ export default function NotebookWorkspacePage() {
     pendingChatHandledRef.current = true;
     const selectedId = String(pendingDocumentId);
     setSelectedDocIds(new Set([selectedId]));
-    setSelectAll(documents.filter(isDocumentAiReady).length === 1);
     navigate(location.pathname, { replace: true, state: null });
     handleSendMessage(pendingQuestion, [selectedId]);
     // The route state is consumed once after this library's documents load.

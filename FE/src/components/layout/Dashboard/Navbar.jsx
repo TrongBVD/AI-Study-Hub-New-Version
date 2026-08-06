@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import {
   HiOutlineBell,
   HiOutlineBars3,
+  HiOutlineSparkles,
 } from "react-icons/hi2";
 import {
   getNotificationSettings,
@@ -19,6 +20,7 @@ import defaultAvatar from "../../../assets/images/account.png";
 import { getStoredUser } from "../../../utils/authToken.js";
 import { getUserStoredItem, setUserStoredItem } from "../../../utils/userStorage.js";
 import { WorkspaceInviteModal } from "./WorkspaceInviteModal.jsx";
+import { getAiSummary } from "../../../utils/aiApi.js";
 
 /**
  * Gets the current stored user's system role
@@ -131,12 +133,39 @@ function Navbar({
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [matchedUsers, setMatchedUsers] = useState([]);
   const [profileAvatar, setProfileAvatar] = useState("");
+  const [aiUsage, setAiUsage] = useState(null);
 
   const [notifications, setNotifications] = useState(() => getNotifications());
   const [selectedInviteNotification, setSelectedInviteNotification] = useState(null);
   const [notificationSettings, setNotificationSettings] = useState(() =>
     getNotificationSettings()
   );
+
+  useEffect(() => {
+    if (!isLoggedIn || isGuest) return undefined;
+
+    let isMounted = true;
+    const loadAiUsage = async () => {
+      try {
+        const summary = await getAiSummary();
+        if (isMounted) setAiUsage(summary);
+      } catch (error) {
+        console.warn("Could not load daily AI usage:", error);
+      }
+    };
+
+    loadAiUsage();
+    const intervalId = window.setInterval(loadAiUsage, 60 * 1000);
+    window.addEventListener("focus", loadAiUsage);
+    window.addEventListener("aiStudyHubAiUsageChanged", loadAiUsage);
+
+    return () => {
+      isMounted = false;
+      window.clearInterval(intervalId);
+      window.removeEventListener("focus", loadAiUsage);
+      window.removeEventListener("aiStudyHubAiUsageChanged", loadAiUsage);
+    };
+  }, [isGuest, isLoggedIn]);
 
   /**
    * Responds to workspace invitation (Accept/Reject)
@@ -485,7 +514,21 @@ function Navbar({
         </button>
       </div>
 
-      {showSearch && (
+      {showSearch ? (
+        <section className="daily_ai_quota" aria-label="Daily AI usage">
+          <span className="daily_ai_quota_icon" aria-hidden="true"><HiOutlineSparkles /></span>
+          <div className="daily_ai_quota_content">
+            <div className="daily_ai_quota_heading">
+              <span>Daily AI uses remaining</span>
+              <strong>{aiUsage ? aiUsage.chatsRemaining : "—"}<small> / {aiUsage?.chatLimit ?? "—"}</small></strong>
+            </div>
+            <div className="daily_ai_quota_progress" role="progressbar" aria-label="AI uses remaining today" aria-valuemin="0" aria-valuemax={aiUsage?.chatLimit || 0} aria-valuenow={aiUsage?.chatsRemaining || 0}>
+              <span style={{ width: aiUsage?.chatLimit ? `${Math.max(0, Math.min(100, (aiUsage.chatsRemaining / aiUsage.chatLimit) * 100))}%` : "0%" }} />
+            </div>
+          </div>
+          <span className="daily_ai_quota_reset">Resets daily</span>
+        </section>
+      ) : (
         <form className="search_box" onSubmit={handleSearchSubmit}>
         <input
           type="text"
