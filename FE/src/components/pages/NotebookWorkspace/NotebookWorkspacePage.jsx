@@ -100,6 +100,8 @@ function isDocumentAiReady(document) {
   );
 }
 
+const MAX_SELECTED_CHAT_DOCUMENTS = 10;
+
 /**
  * NotebookWorkspacePage Component
  * 2-Panel Google NotebookLM Style Workspace Interface:
@@ -367,6 +369,7 @@ export default function NotebookWorkspacePage() {
 
   const readyDocumentIds = documents
     .filter(isDocumentAiReady)
+    .slice(0, MAX_SELECTED_CHAT_DOCUMENTS)
     .map((document) => String(document.id));
   const selectAll =
     readyDocumentIds.length > 0 &&
@@ -396,6 +399,14 @@ export default function NotebookWorkspacePage() {
     if (next.has(normalizedDocId)) {
       next.delete(normalizedDocId);
     } else {
+      if (next.size >= MAX_SELECTED_CHAT_DOCUMENTS) {
+        showToast(
+          `You can select up to ${MAX_SELECTED_CHAT_DOCUMENTS} source documents.`,
+          "Maximum Sources Selected",
+          "info",
+        );
+        return;
+      }
       next.add(normalizedDocId);
     }
     setSelectedDocIds(next);
