@@ -265,6 +265,81 @@ body {
   box-shadow: 0 0 0 3px var(--study-theme-focus-ring, var(--focus-ring));
 }
 
+.daily_ai_quota {
+  width: 100%;
+  max-width: 520px;
+  min-height: 48px;
+  justify-self: center;
+  border: 1px solid rgba(255, 255, 255, 0.82);
+  border-radius: 14px;
+  padding: 7px 13px;
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 11px;
+  background: #ffffff;
+  color: #0f172a;
+  box-shadow: 0 7px 20px rgba(15, 23, 42, 0.14);
+  backdrop-filter: blur(10px);
+}
+
+.daily_ai_quota_icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  background: #eff6ff;
+  color: #2563eb;
+  font-size: 18px;
+}
+
+.daily_ai_quota_content { min-width: 0; }
+
+.daily_ai_quota_heading {
+  margin-bottom: 5px;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.daily_ai_quota_heading > span {
+  overflow: hidden;
+  color: #334155;
+  font-size: 11px;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.daily_ai_quota_heading strong { font-size: 15px; line-height: 1; }
+.daily_ai_quota_heading small { color: #94a3b8; font-size: 10px; }
+
+.daily_ai_quota_progress {
+  height: 4px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #dbeafe;
+}
+
+.daily_ai_quota_progress > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #2563eb, #60a5fa);
+  transition: width 300ms ease;
+}
+
+.daily_ai_quota_reset {
+  border-left: 1px solid #e2e8f0;
+  padding-left: 11px;
+  color: #64748b;
+  font-size: 9px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
 /* Actions */
 
 .nav_actions {
@@ -469,6 +544,9 @@ body {
   .search_box {
     display: none;
   }
+
+  .daily_ai_quota { max-width: 390px; }
+  .daily_ai_quota_reset { display: none; }
 
   .content {
     padding: 22px 16px;
@@ -884,6 +962,14 @@ body[data-theme="white"] .logout_btn:hover {
   flex-direction: column;
   gap: 8px;
   background: var(--bg-card);
+}
+
+@media (max-width: 620px) {
+  .top_navbar { grid-template-columns: auto minmax(0, 1fr) auto; gap: 10px; }
+  .daily_ai_quota { min-height: 42px; padding: 6px 9px; grid-template-columns: 30px minmax(0, 1fr); gap: 8px; }
+  .daily_ai_quota_icon { width: 30px; height: 30px; }
+  .daily_ai_quota_heading > span { font-size: 9px; }
+  .daily_ai_quota_heading strong { font-size: 13px; }
 }
 
 .notification_item {

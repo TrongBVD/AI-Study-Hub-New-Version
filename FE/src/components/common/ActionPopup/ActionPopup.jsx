@@ -33,6 +33,7 @@ function ActionPopup({ popup, onResolve }) {
         aria-labelledby="action-popup-title"
         aria-describedby="action-popup-message"
       >
+        <span className="action_popup_accent" aria-hidden="true" />
         <button
           type="button"
           className="action_popup_close"
@@ -46,15 +47,17 @@ function ActionPopup({ popup, onResolve }) {
           <i className={popup.type === "prompt" ? "ti-pencil-alt" : popup.tone === "danger" ? "ti-alert" : "ti-info-alt"}></i>
         </div>
 
-        <span className="action_popup_eyebrow">
-          {popup.type === "prompt"
-            ? "Enter information"
-            : popup.type === "alert"
-              ? "Notice"
-              : "Confirmation required"}
-        </span>
-        <h2 id="action-popup-title">{popup.title}</h2>
-        <p id="action-popup-message">{popup.message}</p>
+        <div className="action_popup_content">
+          <span className="action_popup_eyebrow">
+            {popup.type === "prompt"
+              ? "Enter information"
+              : popup.type === "alert"
+                ? "Notice"
+                : "Confirmation required"}
+          </span>
+          <h2 id="action-popup-title">{popup.title}</h2>
+          <p id="action-popup-message">{popup.message}</p>
+        </div>
 
         {popup.type === "prompt" && (
           <input
