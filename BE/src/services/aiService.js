@@ -570,10 +570,10 @@ Tasks:
 2. Suggest 3-5 high-quality, relevant hashtags based on key study topics in the document (written in standard English/Vietnamese hashtag format starting with #).
 3. Check for content policy violations or inappropriate text.
 4. Classify the document into a 3-level academic subject hierarchy:
-   - "level1": MUST select EXACTLY ONE string from this list of 15 primary subjects:
-     ["Literature", "Mathematics", "History", "Languages", "Geography", "Physics, Chemistry, Biology", "Information Technology", "Engineering & Technology: Engineering", "Architecture", "Economics", "Business Administration", "Finance & Banking", "Medicine", "Law", "Other"].
+   - "level1": MUST select EXACTLY ONE string from this list of 17 primary subjects:
+     ["Literature", "Mathematics", "History", "Languages", "Geography", "Physics", "Chemistry", "Biology", "Information Technology", "Engineering & Technology: Engineering", "Architecture", "Economics", "Business Administration", "Finance & Banking", "Medicine", "Law", "Other"].
      Rule: If the content fits a specific subject above, select it. Only pick "Other" if completely unrelated or multi-disciplinary without a clear core subject.
-   - "level2": A concise, standard academic sub-discipline within Level 1 (e.g., "Software Engineering" or "Artificial Intelligence" for IT; "Calculus" or "Algebra" for Math; "Macroeconomics" for Economics; "Organic Chemistry" for Physics, Chemistry, Biology). Set to null if not applicable. Do NOT use "Other".
+   - "level2": A concise, standard academic sub-discipline within Level 1 (e.g., "Software Engineering" or "Artificial Intelligence" for IT; "Calculus" or "Algebra" for Math; "Macroeconomics" for Economics; "Organic Chemistry" for Chemistry; "Mechanics" or "Thermodynamics" for Physics; "Genetics" or "Cell Biology" for Biology). Set to null if not applicable. Do NOT use "Other".
    - "level3": A specific key study concept or topic within Level 2 (e.g., "Design Patterns", "Definite Integrals", "Supply & Demand", "Esterification"). Set to null if Level 2 is null or not applicable. Do NOT use "Other".
 
 MUST return strictly in the following JSON format:

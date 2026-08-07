@@ -6,8 +6,8 @@ const {
 
 describe("tagService Unit Tests", () => {
   describe("HARDCODED_LEVEL_1_TAGS", () => {
-    test("contains the required 15 hardcoded Level 1 subjects", () => {
-      expect(HARDCODED_LEVEL_1_TAGS).toHaveLength(15);
+    test("contains the required 17 hardcoded Level 1 subjects", () => {
+      expect(HARDCODED_LEVEL_1_TAGS).toHaveLength(17);
       expect(HARDCODED_LEVEL_1_TAGS).toContain("Literature");
       expect(HARDCODED_LEVEL_1_TAGS).toContain("Mathematics");
       expect(HARDCODED_LEVEL_1_TAGS).toContain("Information Technology");
@@ -33,7 +33,9 @@ describe("tagService Unit Tests", () => {
     test("matches fuzzy/shortened keywords to Level 1 subjects", () => {
       expect(matchLevel1Tag("Math")).toBe("Mathematics");
       expect(matchLevel1Tag("IT")).toBe("Information Technology");
-      expect(matchLevel1Tag("Physics")).toBe("Physics, Chemistry, Biology");
+      expect(matchLevel1Tag("Physics")).toBe("Physics");
+      expect(matchLevel1Tag("Chemistry")).toBe("Chemistry");
+      expect(matchLevel1Tag("Biology")).toBe("Biology");
       expect(matchLevel1Tag("Medicine")).toBe("Medicine");
     });
 
