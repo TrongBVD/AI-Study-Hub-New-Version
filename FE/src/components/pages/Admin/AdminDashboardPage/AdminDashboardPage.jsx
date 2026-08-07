@@ -155,22 +155,44 @@ function AdminDashboardPage() {
 
   const visibleLogs = logs.slice(0, 5);
 
-  const quotaRows = useMemo(
-    () =>
-      usage.quotaUsage
-        .map((row) => {
-          const used = Number(row.bytes_uploaded || 0) + Number(row.bytes_downloaded || 0);
-          return {
-            id: row.id,
-            owner: getDisplayName(row.user),
-            used,
-            percent: getUsagePercent(used, STORAGE_LIMIT_BYTES),
-          };
-        })
-        .sort((a, b) => b.used - a.used)
-        .slice(0, 3),
-    [usage.quotaUsage],
-  );
+  const quotaRows = useMemo(() => {
+    const userStorageMap = new Map();
+
+    (users || []).forEach((u) => {
+      const uId = String(u.id || u.user_id || "");
+      if (!uId) return;
+      const name = getDisplayName(u);
+      const used = Number(u.storage_used_bytes ?? u.storageBytes ?? 0);
+
+      userStorageMap.set(uId, {
+        id: uId,
+        owner: name,
+        used,
+      });
+    });
+
+    (usage.quotaUsage || []).forEach((row) => {
+      const uId = String(row.user_id || row.user?.id || "");
+      if (!uId || userStorageMap.has(uId)) return;
+      const name = getDisplayName(row.user);
+      const used = Number(row.bytes_uploaded || 0);
+
+      userStorageMap.set(uId, {
+        id: uId,
+        owner: name,
+        used,
+      });
+    });
+
+    return Array.from(userStorageMap.values())
+      .filter((item) => item.owner && item.owner !== "Unknown User")
+      .map((item) => ({
+        ...item,
+        percent: getUsagePercent(item.used, STORAGE_LIMIT_BYTES),
+      }))
+      .sort((a, b) => b.used - a.used)
+      .slice(0, 5);
+  }, [users, usage.quotaUsage]);
   const aiRows = useMemo(
     () =>
       usage.aiUsage
@@ -186,7 +208,7 @@ function AdminDashboardPage() {
           };
         })
         .sort((a, b) => b.tokens - a.tokens)
-        .slice(0, 3),
+        .slice(0, 5),
     [usage.aiUsage],
   );
 
@@ -368,7 +390,7 @@ function AdminDashboardPage() {
                       <article className="admin-dashboard__quota-row" key={item.id}>
                         <div>
                           <strong>{item.owner}</strong>
-                          <span>Daily quota usage</span>
+                          <span>Storage used</span>
                         </div>
                         <div className="admin-dashboard__quota-meter">
                           <div><span style={{ width: `${item.percent}%` }} /></div>

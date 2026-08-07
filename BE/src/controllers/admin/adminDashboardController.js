@@ -271,7 +271,7 @@ exports.getUsage = async (req, res) => {
       const docBytes = documentBytesByUserDate.get(key) || 0;
       quotaMap.set(key, {
         ...item,
-        bytes_uploaded: Math.max(Number(item.bytes_uploaded || 0), docBytes),
+        bytes_uploaded: docBytes > 0 ? docBytes : Number(item.bytes_uploaded || 0),
       });
     });
 
