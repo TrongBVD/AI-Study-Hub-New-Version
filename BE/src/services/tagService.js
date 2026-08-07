@@ -6,7 +6,9 @@ const HARDCODED_LEVEL_1_TAGS = [
   "History",
   "Languages",
   "Geography",
-  "Physics, Chemistry, Biology",
+  "Physics",
+  "Chemistry",
+  "Biology",
   "Information Technology",
   "Engineering & Technology: Engineering",
   "Architecture",
@@ -71,7 +73,9 @@ function matchLevel1Tag(inputTag) {
   if (normalized.includes("info") || normalized === "it" || normalized.includes("software")) return "Information Technology";
   if (normalized.includes("econ")) return "Economics";
   if (normalized.includes("lit")) return "Literature";
-  if (normalized.includes("phys") || normalized.includes("chem") || normalized.includes("bio")) return "Physics, Chemistry, Biology";
+  if (normalized.includes("phys")) return "Physics";
+  if (normalized.includes("chem")) return "Chemistry";
+  if (normalized.includes("bio")) return "Biology";
   if (normalized.includes("eng")) return "Engineering & Technology: Engineering";
   if (normalized.includes("med")) return "Medicine";
   if (normalized.includes("law")) return "Law";
