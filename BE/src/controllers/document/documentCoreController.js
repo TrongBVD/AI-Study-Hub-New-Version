@@ -1369,17 +1369,6 @@ exports.downloadDocument = async (req, res) => {
       throw signedUrlError;
     }
 
-    if (document.library_id) {
-      try {
-        await supabase.from("library_downloads").insert({
-          library_id: document.library_id,
-          user_id: userID === "guest" || userID === "00000000-0000-0000-0000-000000000000" ? null : userID,
-        });
-      } catch (dlErr) {
-        console.warn("Could not log library download:", dlErr);
-      }
-    }
-
     return res.status(200).json({
       status: "success",
       data: {
@@ -1813,19 +1802,17 @@ exports.getLibrary = async (req, res) => {
       });
     }
 
-    const [{ count: docCount, error: docCountError }, { count: downloadCount, error: downloadCountError }] =
-      await Promise.all([
-        supabase.from("documents").select("id", { count: "exact", head: true }).eq("library_id", libraryId).is("deleted_at", null),
-        supabase.from("library_downloads").select("id", { count: "exact", head: true }).eq("library_id", libraryId),
-      ]);
+    const { count: docCount, error: docCountError } = await supabase
+      .from("documents")
+      .select("id", { count: "exact", head: true })
+      .eq("library_id", libraryId)
+      .is("deleted_at", null);
 
     if (docCountError) throw docCountError;
-    if (downloadCountError) throw downloadCountError;
 
     const mapped = {
       ...data,
       documents: docCount || 0,
-      downloads: downloadCount || 0,
     };
 
     return res.status(200).json({
@@ -1926,7 +1913,6 @@ exports.deleteLibrary = async (req, res) => {
 
     // Fallback if RPC fails or is missing on backend database
     if (!rpcSuccess) {
-      await supabase.from("library_downloads").delete().eq("library_id", id);
       await supabase
         .from("documents")
         .update({ library_id: null, is_public: false })
