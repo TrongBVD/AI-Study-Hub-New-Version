@@ -336,6 +336,14 @@
   cursor: pointer;
 }
 
+.select_all_limit {
+  margin-left: -4px;
+  color: var(--text-muted, #94a3b8);
+  font-size: 10px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
 .sources_list {
   display: flex;
   min-height: 0;

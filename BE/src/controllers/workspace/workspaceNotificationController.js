@@ -96,7 +96,8 @@ exports.listMyWorkspaceNotifications = async (req, res) => {
           .filter(
             (item) =>
               (item.new_data?.notificationType || "roleChanged") ===
-              "workspaceInvitation"
+                "workspaceInvitation" ||
+              item.action_type === "WORKSPACE_INVITATION_PENDING"
           )
           .map((item) => item.entity_id)
           .filter(Boolean)
@@ -125,7 +126,11 @@ exports.listMyWorkspaceNotifications = async (req, res) => {
         const isRead = Boolean(
           item.new_data?.is_read || (lastReadAtMs > 0 && createdAtMs <= lastReadAtMs)
         );
-        const actionType = item.new_data?.notificationType || "roleChanged";
+        const actionType =
+          item.new_data?.notificationType ||
+          (item.action_type === "WORKSPACE_INVITATION_PENDING"
+            ? "workspaceInvitation"
+            : "roleChanged");
         if (actionType === "workspaceInvitation") {
           const invStatus = item.new_data?.status || item.old_data?.status || "PENDING";
           return {

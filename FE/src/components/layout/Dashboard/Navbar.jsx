@@ -60,6 +60,24 @@ function getNotificationMessage(message) {
   return String(message || "").replace(/\bViewer\b/gi, "Contributor");
 }
 
+function isWorkspaceInvitation(notification) {
+  return Boolean(
+    notification?.isInvitation ||
+      notification?.category === "invitation" ||
+      notification?.action === "workspaceInvitation" ||
+      notification?.actionType === "WORKSPACE_INVITATION_PENDING" ||
+      String(notification?.title || "").toLowerCase() === "workspace invitation"
+  );
+}
+
+function getInvitationStatus(notification) {
+  return String(notification?.status || "PENDING").toUpperCase();
+}
+
+function getInvitationId(notification) {
+  return notification?.logId || String(notification?.id || "").replace(/^invitation-/, "");
+}
+
 /**
  * Saves library visit history
  */
@@ -648,7 +666,7 @@ function Navbar({
                         key={notification.id}
                         className={`notification_item ${notification.isRead ? "" : "unread"}`}
                         onClick={() => {
-                          if (notification.isInvitation) {
+                          if (isWorkspaceInvitation(notification)) {
                             setSelectedInviteNotification(notification);
                           } else if (notification.link) {
                             navigate(notification.link);
@@ -664,27 +682,27 @@ function Navbar({
                           <p>{getNotificationMessage(notification.message)}</p>
                           <span>{notification.createdAt}</span>
 
-                          {notification.isInvitation && (
+                          {isWorkspaceInvitation(notification) && (
                             <div
                               className="notification_invite_actions"
                               onClick={(e) => e.stopPropagation()}
                             >
-                              {notification.status === "PENDING" ? (
+                              {getInvitationStatus(notification) === "PENDING" ? (
                                 <>
                                   <button
                                     type="button"
                                     className="invite_btn_sm reject"
                                     onClick={() =>
-                                      handleRespondInvite(notification.logId, "reject")
+                                      handleRespondInvite(getInvitationId(notification), "reject")
                                     }
                                   >
-                                    Decline
+                                    Reject
                                   </button>
                                   <button
                                     type="button"
                                     className="invite_btn_sm accept"
                                     onClick={() =>
-                                      handleRespondInvite(notification.logId, "accept")
+                                      handleRespondInvite(getInvitationId(notification), "accept")
                                     }
                                   >
                                     Accept
@@ -692,13 +710,9 @@ function Navbar({
                                 </>
                               ) : (
                                 <span
-                                  className={`invite_status_tag ${
-                                    notification.status
-                                      ? notification.status.toLowerCase()
-                                      : ""
-                                  }`}
+                                  className={`invite_status_tag ${getInvitationStatus(notification).toLowerCase()}`}
                                 >
-                                  {notification.status === "ACCEPTED"
+                                  {getInvitationStatus(notification) === "ACCEPTED"
                                     ? "Accepted"
                                     : "Declined"}
                                 </span>

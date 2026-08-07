@@ -33,9 +33,7 @@ export function WorkspaceInviteModal({ invitation, onClose, onRespond }) {
   const roleLabel =
     role === "Admin"
       ? "Admin"
-      : role === "Editor"
-        ? "Editor"
-        : "Contributor";
+      : "Contributor";
 
   return (
     <div className="invite-modal-backdrop" onClick={onClose}>

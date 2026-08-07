@@ -32,7 +32,6 @@ function isDocumentAiReady(document) {
  */
 export default function SourcesSidebar({
   libraryName = "Library",
-  isPublic = false,
   documents = [],
   selectedDocIds = new Set(),
   selectAll = false,
@@ -125,6 +124,7 @@ export default function SourcesSidebar({
                   disabled={!documents.some(isDocumentAiReady)}
                 />
                 <span>Select all</span>
+                <small className="select_all_limit">(Maximum 10 files)</small>
               </label>
               <span className="selected_count_tag">{selectedDocIds.size} selected</span>
             </div>

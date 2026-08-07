@@ -457,16 +457,16 @@ body[data-theme="white"] .workspace_focus_card p {
   border-radius: 11px;
   display: grid;
   place-items: center;
-  background: var(--collection-action-bg, var(--bg-card));
-  color: var(--collection-action-text, var(--accent-color)) !important;
+  background: var(--button-bg);
+  color: var(--button-text) !important;
   font-size: 14px !important;
   transition: transform 220ms ease, background 220ms ease, color 220ms ease;
 }
 
 .workspace_card:hover .workspace_arrow {
   transform: translateX(3px);
-  background: var(--button-bg);
-  color: var(--button-text) !important;
+  background: var(--collection-action-bg, var(--bg-card));
+  color: var(--collection-action-text, var(--accent-color)) !important;
 }
 
 .empty_workspace_state {
