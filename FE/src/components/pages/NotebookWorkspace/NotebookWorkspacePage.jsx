@@ -15,6 +15,8 @@ import {
   HiOutlineTrash,
   HiOutlineXMark,
   HiMiniStop,
+  HiOutlineGlobeAlt,
+  HiOutlineLockClosed,
 } from "react-icons/hi2";
 import {
   getLibrary,
@@ -1130,6 +1132,21 @@ export default function NotebookWorkspacePage() {
               <HiOutlineArrowLeft />
               <span>{isPublicLearner ? "Discover" : "Libraries"}</span>
             </button>
+            <span
+              className={`workspace_header_mode_badge ${
+                Boolean(library?.is_public ?? library?.isPublic) ? "public" : "private"
+              }`}
+            >
+              {Boolean(library?.is_public ?? library?.isPublic) ? (
+                <>
+                  <HiOutlineGlobeAlt style={{ marginRight: 4 }} /> Public
+                </>
+              ) : (
+                <>
+                  <HiOutlineLockClosed style={{ marginRight: 4 }} /> Private
+                </>
+              )}
+            </span>
             {!showLeftPanel && (
               <button
                 type="button"

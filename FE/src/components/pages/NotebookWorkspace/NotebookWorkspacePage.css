@@ -83,23 +83,26 @@
 .workspace_header_mode_badge {
   display: inline-flex;
   align-items: center;
-  padding: 3px 10px;
-  border-radius: 12px;
+  gap: 4px;
+  padding: 4px 12px;
+  border-radius: 999px;
   font-size: 12px;
   font-weight: 600;
-  margin-left: 8px;
+  margin-left: 10px;
+  letter-spacing: 0.2px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
 .workspace_header_mode_badge.public {
   background: #e0f2fe;
-  color: #0369a1;
+  color: #0284c7;
   border: 1px solid #bae6fd;
 }
 
 .workspace_header_mode_badge.private {
-  background: #f1f5f9;
-  color: #475569;
-  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  color: #0284c7;
+  border: 1px solid #e0f2fe;
 }
 
 .selected_count_tag {
