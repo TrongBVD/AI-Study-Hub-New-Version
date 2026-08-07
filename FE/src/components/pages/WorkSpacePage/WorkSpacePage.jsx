@@ -2174,9 +2174,7 @@ function renderMembersTab() {
                     className={`workspace_member_status ${
                       member.role === "Admin"
                         ? "manager"
-                        : member.role === "Editor"
-                          ? "editor"
-                          : "member"
+                        : "member"
                     }`}
                   >
                     {getWorkspaceRoleLabel(member.role)}
@@ -2577,24 +2575,28 @@ function renderStudyTab() {
             className={`workspace_flashcard ${
               isStudyCardFlipped ? "flipped" : ""
             }`}
-            onClick={() =>
-              hasStudyCards && setIsStudyCardFlipped(!isStudyCardFlipped)
-            }
+            onClick={() => setIsStudyCardFlipped((current) => !current)}
+            aria-label={isStudyCardFlipped ? "Show question" : "Show answer"}
           >
-            <span>{isStudyCardFlipped ? "Answer" : "Question"}</span>
+            <div className="workspace_flashcard_inner">
+              <div className="workspace_flashcard_face workspace_flashcard_front">
+                <span>Question</span>
+                <h3>{currentStudyCard.question}</h3>
+                <small>
+                  <i className="ti-mouse"></i>
+                  Click to reveal answer
+                </small>
+              </div>
 
-            <h3>
-              {!hasStudyCards
-                ? "No flashcards are available for this workspace yet."
-                : isStudyCardFlipped
-                  ? currentStudyCard.answer
-                  : currentStudyCard.question}
-            </h3>
-
-            <small>
-              <i className="ti-mouse"></i>
-              Click to flip
-            </small>
+              <div className="workspace_flashcard_face workspace_flashcard_back">
+                <span>Answer</span>
+                <h3>{currentStudyCard.answer}</h3>
+                <small>
+                  <i className="ti-mouse"></i>
+                  Click to see question
+                </small>
+              </div>
+            </div>
           </button>
 
           <div className="workspace_study_controls">
@@ -2614,7 +2616,6 @@ function renderStudyTab() {
               }
               disabled={!hasStudyCards}
             >
-              <i className="ti-reload"></i>
               Flip Card
             </button>
 

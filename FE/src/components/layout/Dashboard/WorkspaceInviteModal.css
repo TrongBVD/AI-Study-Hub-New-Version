@@ -159,6 +159,8 @@
 
 .invite-btn {
   display: inline-flex !important;
+  width: auto !important;
+  max-width: none !important;
   align-items: center !important;
   justify-content: center !important;
   gap: 8px !important;
@@ -177,6 +179,19 @@
   position: relative !important;
   line-height: 1 !important;
   flex: 0 0 auto !important;
+}
+
+@media (max-width: 420px) {
+  .invite-modal-footer {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .invite-btn {
+    width: 100% !important;
+    min-width: 0 !important;
+    padding-inline: 12px !important;
+  }
 }
 
 .invite-btn.accept {

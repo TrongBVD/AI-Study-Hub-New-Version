@@ -2727,12 +2727,13 @@ body[data-theme="white"] .workspace_invite_footer button:not(.workspace_send_inv
   min-height: 300px;
   border: none;
   border-radius: 14px;
-  background: var(--bg-card);
+  background: transparent;
   color: var(--text-primary);
   cursor: pointer;
-  padding: 46px 54px;
+  padding: 0;
   box-shadow: var(--shadow-soft);
   text-align: center;
+  perspective: 1200px;
   transition:
     transform 0.22s ease,
     box-shadow 0.22s ease;
@@ -2743,11 +2744,39 @@ body[data-theme="white"] .workspace_invite_footer button:not(.workspace_send_inv
   box-shadow: var(--shadow-soft);
 }
 
-.workspace_flashcard.flipped {
-  background: var(--bg-card);
+.workspace_flashcard_inner {
+  position: relative;
+  width: 100%;
+  min-height: 300px;
+  border-radius: inherit;
+  transform-style: preserve-3d;
+  transition: transform 520ms cubic-bezier(0.2, 0.75, 0.25, 1);
 }
 
-.workspace_flashcard > span {
+.workspace_flashcard.flipped .workspace_flashcard_inner {
+  transform: rotateY(180deg);
+}
+
+.workspace_flashcard_face {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 46px 54px;
+  border-radius: inherit;
+  background: var(--bg-card);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+.workspace_flashcard_back {
+  transform: rotateY(180deg);
+  background: color-mix(in srgb, var(--accent-soft) 35%, var(--bg-card));
+}
+
+.workspace_flashcard_face > span {
   display: block;
   margin-bottom: 24px;
   color: var(--text-muted);
@@ -2757,7 +2786,7 @@ body[data-theme="white"] .workspace_invite_footer button:not(.workspace_send_inv
   text-transform: uppercase;
 }
 
-.workspace_flashcard h3 {
+.workspace_flashcard_face h3 {
   margin: 0 auto 28px;
   max-width: 520px;
   color: var(--text-primary);
@@ -2766,7 +2795,7 @@ body[data-theme="white"] .workspace_invite_footer button:not(.workspace_send_inv
   font-weight: 900;
 }
 
-.workspace_flashcard small {
+.workspace_flashcard_face small {
   color: var(--text-muted);
   font-size: 11px;
   display: inline-flex;
@@ -5022,6 +5051,10 @@ body[data-theme="white"] .workspace_invite_footer button:not(.workspace_send_inv
 
   .workspace_flashcard {
     width: 100%;
+    padding: 0;
+  }
+
+  .workspace_flashcard_face {
     padding: 34px 24px;
   }
 
@@ -8569,6 +8602,14 @@ body[data-theme="white"] .workspace_invite_footer button:not(.workspace_send_inv
   .workspace_flashcard {
     width: 100%;
     min-height: 240px;
+    padding: 0;
+  }
+
+  .workspace_flashcard_inner {
+    min-height: 240px;
+  }
+
+  .workspace_flashcard_face {
     padding: 32px 22px;
   }
 
@@ -8580,6 +8621,7 @@ body[data-theme="white"] .workspace_invite_footer button:not(.workspace_send_inv
 @media (prefers-reduced-motion: reduce) {
   .workspace_topic_info_item,
   .workspace_flashcard,
+  .workspace_flashcard_inner,
   .workspace_clickup_attachment_card {
     transition: none !important;
   }
