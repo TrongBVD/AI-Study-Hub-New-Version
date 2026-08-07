@@ -1,26 +1,5 @@
 const supabase = require("../../config/supabase");
 
-const downloadDeduplicationCache = new Map();
-
-async function getLibraryEngagement(libraryIds) {
-  const ids = (libraryIds || []).filter(Boolean);
-  const downloadsByLibrary = new Map();
-
-  if (ids.length === 0) return { downloadsByLibrary };
-
-  const { data: downloads, error: downloadsError } =
-    await supabase.from("library_downloads").select("library_id").in("library_id", ids);
-
-  if (downloadsError) throw downloadsError;
-
-  (downloads || []).forEach(({ library_id }) => {
-    const key = String(library_id);
-    downloadsByLibrary.set(key, (downloadsByLibrary.get(key) || 0) + 1);
-  });
-
-  return { downloadsByLibrary };
-}
-
 function mapDocument(document) {
   return {
     id: document.id,
@@ -73,10 +52,6 @@ exports.listPublicLibraries = async (req, res) => {
     let documentCounts = new Map();
     let matchingFileCounts = new Map();
     let ownersById = new Map();
-    const { downloadsByLibrary } =
-      await getLibraryEngagement(libraryIds);
-
-    let downloadCounts = new Map();
 
     if (libraryIds.length > 0) {
       const { data: documents, error: documentError } = await supabase
@@ -244,14 +219,7 @@ exports.getPublicLibrary = async (req, res) => {
       .maybeSingle();
 
     if (documentError) throw documentError;
-    const { downloadsByLibrary } =
-      await getLibraryEngagement([library.id]);
     if (ownerError) throw ownerError;
-
-    const { count: downloadsCount } = await supabase
-      .from("library_downloads")
-      .select("*", { count: "exact", head: true })
-      .eq("library_id", libraryId);
 
     // Fetch 3-level document tags for public documents
     const tagsByDocumentId = new Map();
@@ -290,9 +258,7 @@ exports.getPublicLibrary = async (req, res) => {
           ...library,
           owner: owner || null,
           documents: mappedDocuments.length,
-          downloads: downloadsCount || 0,
           visibility: "public",
-          downloads: downloadsByLibrary.get(String(library.id)) || 0,
         },
         documents: mappedDocuments,
       },
@@ -306,52 +272,3 @@ exports.getPublicLibrary = async (req, res) => {
     });
   }
 };
-
-exports.recordPublicLibraryDownload = async (req, res) => {
-  try {
-    const { libraryId } = req.params;
-    const { data: library, error: libraryError } = await supabase
-      .from("libraries")
-      .select("id")
-      .eq("id", libraryId)
-      .eq("is_public", true)
-      .maybeSingle();
-
-    if (libraryError) throw libraryError;
-    if (!library) {
-      return res.status(404).json({ status: "error", message: "Public library not found." });
-    }
-
-    const clientIp = req.headers["x-forwarded-for"] || req.socket.remoteAddress || "anonymous";
-    const dedupKey = `${clientIp}:${libraryId}`;
-    const nowMs = Date.now();
-    const lastMs = downloadDeduplicationCache.get(dedupKey) || 0;
-
-    if (nowMs - lastMs > 60000) {
-      downloadDeduplicationCache.set(dedupKey, nowMs);
-      await supabase
-        .from("library_downloads")
-        .insert({ library_id: libraryId });
-    }
-
-    const { count, error: countError } = await supabase
-      .from("library_downloads")
-      .select("id", { count: "exact", head: true })
-      .eq("library_id", libraryId);
-
-    if (countError) throw countError;
-    return res.status(201).json({
-      status: "success",
-      data: { libraryId, downloads: count || 0 },
-    });
-  } catch (error) {
-    console.error("Record public library download error:", error);
-    return res.status(500).json({
-      status: "error",
-      message: "Could not record library download.",
-      error: error.message,
-    });
-  }
-};
-
-exports.getLibraryEngagement = getLibraryEngagement;
