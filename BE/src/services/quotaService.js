@@ -86,7 +86,43 @@ async function recordDailyQuotaDownload(userId, bytesDownloaded) {
   }
 }
 
+/**
+ * Record or subtract bytes_uploaded for a user when a document is deleted.
+ */
+async function recordDailyQuotaDelete(userId, bytesDeleted) {
+  if (
+    !userId ||
+    userId === "guest" ||
+    userId === "00000000-0000-0000-0000-000000000000" ||
+    Number(bytesDeleted) <= 0
+  ) {
+    return;
+  }
+  const today = new Date().toISOString().slice(0, 10);
+  const bytes = Number(bytesDeleted) || 0;
+
+  try {
+    const { data: existing } = await supabase
+      .from("daily_quota_usage")
+      .select("id, bytes_uploaded")
+      .eq("user_id", userId)
+      .eq("usage_date", today)
+      .maybeSingle();
+
+    if (existing) {
+      const newBytes = Math.max(0, Number(existing.bytes_uploaded || 0) - bytes);
+      await supabase
+        .from("daily_quota_usage")
+        .update({ bytes_uploaded: newBytes })
+        .eq("id", existing.id);
+    }
+  } catch (err) {
+    console.warn("Could not record daily quota delete:", err.message);
+  }
+}
+
 module.exports = {
   recordDailyQuotaUpload,
   recordDailyQuotaDownload,
+  recordDailyQuotaDelete,
 };

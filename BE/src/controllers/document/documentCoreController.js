@@ -14,7 +14,7 @@ const {
   classifyDocumentHierarchicalTags,
 } = require("../../services/aiService");
 const { ensureAndLinkDocumentTags } = require("../../services/tagService");
-const { recordDailyQuotaUpload, recordDailyQuotaDownload } = require("../../services/quotaService");
+const { recordDailyQuotaUpload, recordDailyQuotaDownload, recordDailyQuotaDelete } = require("../../services/quotaService");
 const {
   mapWithConcurrency,
   normalizeConcurrency,
@@ -1379,6 +1379,12 @@ exports.downloadDocument = async (req, res) => {
       throw signedUrlError;
     }
 
+    if (Number(document.file_size_bytes || 0) > 0) {
+      recordDailyQuotaDownload(userID, document.file_size_bytes).catch((e) =>
+        console.warn("Could not log daily download quota:", e.message),
+      );
+    }
+
     return res.status(200).json({
       status: "success",
       data: {
@@ -1531,6 +1537,12 @@ exports.deleteDocument = async (req, res) => {
 
     if (updateError) {
       throw updateError;
+    }
+
+    if (Number(document.file_size_bytes || 0) > 0) {
+      recordDailyQuotaDelete(document.uploader_id || userID, document.file_size_bytes).catch((e) =>
+        console.warn("Could not log daily quota deletion:", e.message),
+      );
     }
 
     const { error: deleteTagsError } = await supabase

@@ -99,17 +99,6 @@ exports.listPublicLibraries = async (req, res) => {
           });
         }
       }
-
-      const { data: downloadsData } = await supabase
-        .from("library_downloads")
-        .select("library_id")
-        .in("library_id", libraryIds);
-
-      downloadCounts = (downloadsData || []).reduce((counts, row) => {
-        const key = String(row.library_id);
-        counts.set(key, (counts.get(key) || 0) + 1);
-        return counts;
-      }, new Map());
     }
 
     if (ownerIds.length > 0) {

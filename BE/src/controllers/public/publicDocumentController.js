@@ -72,7 +72,7 @@ exports.downloadPublicDocument = async (req, res) => {
 
     const { data: document, error: documentError } = await supabase
       .from("documents")
-      .select("id, library_id, title, file_url, is_public, status, deleted_at")
+      .select("id, library_id, uploader_id, title, file_url, file_size_bytes, is_public, status, deleted_at")
       .eq("id", documentId)
       .eq("is_public", true)
       .eq("status", "APPROVED")
@@ -110,6 +110,12 @@ exports.downloadPublicDocument = async (req, res) => {
       });
 
     if (signedUrlError) throw signedUrlError;
+
+    if (Number(document.file_size_bytes || 0) > 0) {
+      recordDailyQuotaDownload(req.user?.id || document.uploader_id, document.file_size_bytes).catch((e) =>
+        console.warn("Could not log daily public download quota:", e.message),
+      );
+    }
 
     return res.status(200).json({
       status: "success",
