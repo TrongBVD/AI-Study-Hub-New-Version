@@ -506,7 +506,7 @@ async function retrieveChatChunks(question, documents, contentMode = "SEARCH") {
     .slice(0, MAX_RAG_CONTEXT_CHUNKS);
 }
 
-async function increaseChatUsage(userId) {
+async function increaseChatUsage(userId, estimatedTokens = 1250) {
   if (
     userId === "guest" ||
     userId === "00000000-0000-0000-0000-000000000000"
@@ -530,10 +530,15 @@ async function increaseChatUsage(userId) {
     throw error;
   }
 
+  const addedTokens = Math.max(100, Number(estimatedTokens) || 1250);
+
   if (existing) {
     const { error: updateError } = await supabase
       .from("ai_usage_logs")
-      .update({ chat_count: existing.chat_count + 1 })
+      .update({
+        chat_count: Number(existing.chat_count || 0) + 1,
+        tokens_consumed: Number(existing.tokens_consumed || 0) + addedTokens,
+      })
       .eq("id", existing.id);
 
     if (updateError) throw updateError;
@@ -544,7 +549,7 @@ async function increaseChatUsage(userId) {
     user_id: userId,
     usage_date: today,
     chat_count: 1,
-    tokens_consumed: 0,
+    tokens_consumed: addedTokens,
   });
 
   if (insertError) throw insertError;

@@ -14,6 +14,7 @@ const {
   classifyDocumentHierarchicalTags,
 } = require("../../services/aiService");
 const { ensureAndLinkDocumentTags } = require("../../services/tagService");
+const { recordDailyQuotaUpload, recordDailyQuotaDownload } = require("../../services/quotaService");
 const {
   mapWithConcurrency,
   normalizeConcurrency,
@@ -711,6 +712,16 @@ exports.uploadDocuments = async (req, res) => {
 
     if (files.length === 0) {
       return res.status(400).json({ status: "error", message: "Vui lòng chọn tệp." });
+    }
+
+    const totalUploadedBytes = files.reduce(
+      (sum, f) => sum + Number(f.size || 0),
+      0,
+    );
+    if (totalUploadedBytes > 0) {
+      recordDailyQuotaUpload(userID, totalUploadedBytes).catch((e) =>
+        console.warn("Could not log daily upload quota:", e.message),
+      );
     }
 
     // CHECK GIỚI HẠN 50MB NẾU UP VÀO WORKSPACE
