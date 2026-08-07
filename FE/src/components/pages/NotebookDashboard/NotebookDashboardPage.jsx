@@ -582,23 +582,37 @@ export default function NotebookDashboardPage() {
 
               <div className="toggle_switch_row">
                 <div className="toggle_info">
-                  <strong>Make Library Public</strong>
-                  <span>Allow other AI Study Hub users to discover and view this library</span>
+                  <strong>Library visibility</strong>
+                  <span>
+                    {newLibrary.isPublic
+                      ? "Other AI Study Hub users can discover and view this library"
+                      : "Only you can discover and view this library"}
+                  </span>
                 </div>
-                <label className="toggle_switch" aria-label="Make library public">
-                  <input
-                    type="checkbox"
-                    checked={newLibrary.isPublic}
-                    onChange={(event) =>
-                      setNewLibrary((current) => ({
-                        ...current,
-                        isPublic: event.target.checked,
-                      }))
+                <div className="visibility_options" role="group" aria-label="Library visibility">
+                  <button
+                    type="button"
+                    className={`visibility_option ${newLibrary.isPublic ? "active" : ""}`}
+                    aria-pressed={newLibrary.isPublic}
+                    onClick={() =>
+                      setNewLibrary((current) => ({ ...current, isPublic: true }))
                     }
                     disabled={isCreating}
-                  />
-                  <span className="toggle_slider" />
-                </label>
+                  >
+                    Public
+                  </button>
+                  <button
+                    type="button"
+                    className={`visibility_option ${!newLibrary.isPublic ? "active" : ""}`}
+                    aria-pressed={!newLibrary.isPublic}
+                    onClick={() =>
+                      setNewLibrary((current) => ({ ...current, isPublic: false }))
+                    }
+                    disabled={isCreating}
+                  >
+                    Private
+                  </button>
+                </div>
               </div>
 
               <div className="modal_actions">
