@@ -134,7 +134,6 @@ exports.listPublicLibraries = async (req, res) => {
         ...library,
         documents: documentCounts.get(key) || 0,
         matchingFileCount: matchCount,
-        downloads: downloadsByLibrary.get(key) || downloadCounts.get(key) || 0,
         owner: ownersById.get(String(library.user_id)) || null,
         visibility: "public",
       };
