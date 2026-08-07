@@ -76,6 +76,7 @@ exports.listMyWorkspaceNotifications = async (req, res) => {
         "WORKSPACE_ROLE_CHANGED",
         "WORKSPACE_RENAMED",
         "WORKSPACE_DELETED",
+        "WORKSPACE_RESTORED",
         "DOCUMENT_APPROVED",
         "DOCUMENT_REJECTED",
         "DOCUMENT_UPLOADED",
@@ -130,6 +131,8 @@ exports.listMyWorkspaceNotifications = async (req, res) => {
           item.new_data?.notificationType ||
           (item.action_type === "WORKSPACE_INVITATION_PENDING"
             ? "workspaceInvitation"
+            : item.action_type === "WORKSPACE_RESTORED"
+              ? "restored"
             : "roleChanged");
         if (actionType === "workspaceInvitation") {
           const invStatus = item.new_data?.status || item.old_data?.status || "PENDING";
@@ -255,6 +258,9 @@ exports.listMyWorkspaceNotifications = async (req, res) => {
         }
 
         const isDeleted = actionType === "deleted";
+        const isRestored =
+          actionType === "restored" ||
+          item.action_type === "WORKSPACE_RESTORED";
         return {
           id: `workspace-event-${item.id}`,
           category: actionType === "roleChanged"
@@ -264,6 +270,8 @@ exports.listMyWorkspaceNotifications = async (req, res) => {
           title:
             actionType === "renamed"
               ? "Workspace renamed"
+              : isRestored
+                ? "Workspace restored"
               : isDeleted
                 ? "Workspace deleted"
                 : "Workspace role changed",
@@ -274,6 +282,8 @@ exports.listMyWorkspaceNotifications = async (req, res) => {
           isRead,
           icon: isDeleted
               ? "ti-trash"
+              : isRestored
+                ? "ti-reload"
               : actionType === "renamed"
                 ? "ti-pencil"
                 : "ti-user",
