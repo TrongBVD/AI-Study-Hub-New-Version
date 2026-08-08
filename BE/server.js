@@ -74,7 +74,7 @@ app.use(express.json());
 // production traffic requires a different threshold.
 const generalLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
-    max: Math.max(1, Number(process.env.GENERAL_RATE_LIMIT_MAX) || 10000),
+    max: Math.max(1, Number(process.env.GENERAL_RATE_LIMIT_MAX) || 100000000),
     standardHeaders: true,
     legacyHeaders: false,
     message: { status: 'error', message: 'Too many requests. Please try again later.' },
