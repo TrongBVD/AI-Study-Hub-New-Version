@@ -223,17 +223,28 @@ function AdminDashboardPage() {
 
   const usageTimeline = useMemo(() => {
     const byDate = new Map();
+
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      const dateStr = d.toISOString().slice(0, 10);
+      byDate.set(dateStr, { uploaded: 0, downloaded: 0, tokens: 0, chats: 0 });
+    }
+
     const ensureDate = (date) => {
       if (!byDate.has(date)) byDate.set(date, { uploaded: 0, downloaded: 0, tokens: 0, chats: 0 });
       return byDate.get(date);
     };
 
-    usage.quotaUsage.forEach((row) => {
+    (usage.quotaUsage || []).forEach((row) => {
+      if (!row.usage_date) return;
       const point = ensureDate(row.usage_date);
       point.uploaded += Number(row.bytes_uploaded || 0) / 1024 / 1024;
       point.downloaded += Number(row.bytes_downloaded || 0) / 1024 / 1024;
     });
-    usage.aiUsage.forEach((row) => {
+
+    (usage.aiUsage || []).forEach((row) => {
+      if (!row.usage_date) return;
       const point = ensureDate(row.usage_date);
       point.tokens += Number(row.tokens_consumed || 0);
       point.chats += Number(row.chat_count || 0);
@@ -270,14 +281,13 @@ function AdminDashboardPage() {
         options: {
           ...base,
           chart: { ...base.chart, type: "line" },
-          colors: [CHART_COLORS.orange, CHART_COLORS.teal],
-          yaxis: [
-            { ...base.yaxis, title: { text: "Tokens", style: { color: "#94887a" } } },
-            { opposite: true, labels: { style: { colors: "#71675b", fontSize: "10px" } }, title: { text: "Chats", style: { color: "#94887a" } } },
-          ],
+          colors: [CHART_COLORS.teal],
+          yaxis: {
+            ...base.yaxis,
+            title: { text: "Chats", style: { color: "#94887a" } },
+          },
         },
         series: [
-          { name: "Tokens", data: usageTimeline.map((point) => point.tokens) },
           { name: "Chats", data: usageTimeline.map((point) => point.chats) },
         ],
       },
